@@ -64,7 +64,15 @@ export default function App({ Component, pageProps, router }: AppProps) {
 
       <MarketplaceFooter />
 
-      <Loader layout={isCatalogPage ? 'bar' : 'overlay'} />
+      <Loader
+        layout={
+          isCatalogPage ||
+          router.pathname === '/' ||
+          router.pathname === '/listings'
+            ? 'bar'
+            : 'overlay'
+        }
+      />
       <Overlay />
 
       {isDev && isCatalogPage && <Dev />}

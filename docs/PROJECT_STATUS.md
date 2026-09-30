@@ -214,30 +214,47 @@ session tests mock the Auth transport. Neither replaces live cloud verification.
 Test commands and coverage are documented in [supabase-setup.md](supabase-setup.md)
 and [phase4-report.md](phase4-report.md).
 
-### Remaining legacy retail code
+### Legacy cleanup - completed safe removal pass
 
-The old storefront is no longer the primary experience. The root route and global
-navigation/footer now present Campus Marketplace; active navigation has no fashion,
-store finder, shopping bag, or catalog links.
+Removed 70 audited files, including `/catalog` (all catch-all paths) and
+`/product/[objectID]`. They now return 404; no redirects or replacement features
+were added. The exact deletion inventory and retention rationale are in
+[legacy-cleanup.md](legacy-cleanup.md).
 
-Retained after import inspection:
+Removed old header/footer/navigation/logo, retail product cards/details, fashion
+size/color/rating/discount UI, homepage showcases, retail InstantSearch widgets,
+refinement panels, retail AutocompleteBasic/popular-search adapter, search layout,
+results utility, and three exclusive retail stylesheets. Shared ProductImage remains.
 
-- `/catalog` and `/product/[objectID]`: directly addressable legacy routes, absent
-  from marketplace navigation. They still import retail search/Product code.
-- Original header/footer modules and `ProductsShowcase`: no active imports after
-  the takeover; candidates for a separate, reviewed removal pass.
-- Product components and Algolia/InstantSearch infrastructure: still consumed by
-  legacy routes. `ListingCard` also uses `ProductImage`, so do not delete the entire
-  Product directory. Shared UI, Container, and motion providers remain needed.
-- `AppLayout` still initializes Algolia and insights; packages, environment
-  variables, CLI, search configuration, demo kit routes, and assets are retained.
-- Original PWA icon artwork remains pending controlled visual work; app/manifest
-  text and social metadata now use Campus Marketplace. Old template social URLs
-  and promotional images were removed from the global document metadata.
+The current working-tree marketplace search, right drawer, chips, cards, layout,
+header/footer, PWA, domain and Supabase/auth/Storage/CRUD code were not edited in this
+cleanup. Existing uncommitted work was treated as the baseline and preserved.
 
-No retail source files were deleted in Phase 5. The old root homepage implementation
-was replaced. Decide separately whether to redirect/retire legacy routes and remove
-unused retail modules, rather than deleting shared dependencies indiscriminately.
+Algolia status:
+
+- Marketplace listing results come through getListings/Supabase, not an Algolia index.
+- Active marketplace search reuses Algolia Autocomplete UI/theme and original
+  animation/search-button plugins. These remain required.
+- AppLayout still initializes the Algolia client and search-insights, and utils/env
+  still requires the InstantSearch variables. This retained shared setup means
+  Algolia packages and environment placeholders are not yet safe to remove wholesale.
+- CLI/config/dev tooling, some retained hooks/types, and global CSS still reference
+  retail infrastructure/packages. They are explicitly deferred rather than severed
+  speculatively. No dependencies, environment variables, or config were removed.
+- No image/icon assets were deleted. Shared artwork and assets reachable through
+  dynamic/CLI configuration remain pending a dedicated asset audit. Current manifest
+  and document metadata already use Campus Marketplace; no icon redesign was needed.
+
+Validation: TypeScript, domain, homepage, session and SQL/RLS security tests passed.
+Production build with --no-lint passed. Ordinary scoped ESLint hits pre-existing
+CRLF/Prettier errors; the same scope passes with endOfLine:auto accepted in the lint
+invocation only. No lint config or source formatting was changed to suppress them.
+Test-file ESLint passed. Production Edge checks at 390px/1536px passed animated
+search, same-page queries, right drawer, Apply, all filter fields, chips/Clear,
+sorting, refresh/Back/Forward, shared URLs, Escape and no overflow. Retired routes
+returned 404. Cloud data was empty; no authenticated writes were performed. Code
+inspection confirms listing detail/create/edit/sold/delete/My Listings, auth next
+redirects and image uploads retain their original implementation/imports.
 
 ### Development code retained
 
@@ -287,7 +304,10 @@ Next recommended step: manual responsive and signed-in navigation acceptance, th
 an explicitly scoped legacy-route/dependency cleanup and incremental design pass.
 No full visual redesign or additional product modules were implemented.
 
-## Browse UX Refinement - Completed
+## Browse UX Refinement - Historical first pass
+
+Superseded by the search/drawer correction below; the bottom sheet and category
+shortcut grid described here are no longer the active experience.
 
 The listing grid remains the main browse content. Search and sorting stay visible;
 a Filter button opens a native modal bottom sheet on mobile and a compact right
@@ -370,6 +390,6 @@ Before making substantial changes:
 
 Last updated: 2026-09-30
 
-Current phase: Phase 5 Marketplace takeover - completed
+Current phase: Legacy cleanup - safe removal pass completed
 
-Next milestone: Manual navigation/responsive acceptance, then scoped legacy cleanup/design
+Next milestone: Explicit decision on retained Algolia runtime/CLI and asset cleanup; no redesign started

@@ -2,6 +2,8 @@
 
 Current development status: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
 
+Current marketplace setup: [Supabase setup](docs/supabase-setup.md). The template guide below is historical; its retail routes and widgets have been removed. See the [cleanup audit](docs/legacy-cleanup.md) for retained Algolia/CLI requirements.
+
 This is a React 18/Next.js based template for an ecommerce application, focused on delivering a rich search and discovery experience.
 The design is based on the [Algolia ecommerce UI design kit](https://www.algolia.com/doc/guides/solutions/ecommerce/ui-kits/) and the implementation focuses on performance and customization.
 

@@ -12,6 +12,10 @@ const element =
   ({ children, ...props }) =>
     React.createElement(tag, props, children)
 const mocks = {
+  '@/components/listings/listing-filters': {
+    ListingFilters: () =>
+      React.createElement('div', { 'data-testid': 'browse-controls' }),
+  },
   'next/head': { default: ({ children }) => children, __esModule: true },
   '@/components/container/container': { Container: element('div') },
   '@/components/listings/listing-grid': {
@@ -64,6 +68,11 @@ async function main() {
   }
   const empty = await home.getServerSideProps(context)
   assert.deepEqual(receivedQuery, {
+    search: '',
+    category: undefined,
+    condition: undefined,
+    minPrice: undefined,
+    maxPrice: undefined,
     status: 'available',
     sort: 'newest',
     page: 1,
@@ -73,14 +82,27 @@ async function main() {
   const html = renderToStaticMarkup(
     React.createElement(home.default, empty.props)
   )
-  assert.match(html, /No items available yet/)
-  assert.match(html, /action="\/listings"/)
-  assert.match(html, /name="search"/)
-  const { listingCategories } = load('lib/listing-metadata.ts')
-  for (const category of listingCategories)
-    assert(
-      html.includes('/listings?category=' + encodeURIComponent(category.label))
-    )
+  assert.match(html, /No listings match/)
+  assert(!html.includes('Marketplace categories'))
+  await home.getServerSideProps({
+    ...context,
+    query: {
+      category: 'Electronics',
+      condition: 'good',
+      minPrice: '20',
+      maxPrice: '100',
+      status: 'sold',
+      search: 'monitor',
+      sort: 'price-low',
+    },
+  })
+  assert.equal(receivedQuery.category, 'electronics')
+  assert.equal(receivedQuery.condition, 'good')
+  assert.equal(receivedQuery.minPrice, 2000)
+  assert.equal(receivedQuery.maxPrice, 10000)
+  assert.equal(receivedQuery.status, 'sold')
+  assert.equal(receivedQuery.search, 'monitor')
+  assert.equal(receivedQuery.sort, 'price-low')
   result = [{ title: 'Test desk' }]
   const populated = await home.getServerSideProps(context)
   assert.match(
@@ -95,9 +117,9 @@ async function main() {
   )
   assert.match(errorHtml, /role="alert"/)
   assert(!errorHtml.includes('Private backend detail'))
-  assert(!errorHtml.includes('No items available yet'))
+  assert(!errorHtml.includes('No listings match'))
   console.log(
-    'PASS: homepage available/newest query, no-store, category/search links, populated/empty/error states (data boundary mocked).'
+    'PASS: homepage available/newest query, no-store, shared filter/search query, populated/empty/error states (data boundary mocked).'
   )
 }
 main().catch((error) => {

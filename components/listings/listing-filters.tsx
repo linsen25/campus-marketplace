@@ -11,9 +11,9 @@ import {
   listingSorts,
 } from '@/lib/listing-metadata'
 import { Input } from '@ui/input/input'
-import { Link } from '@ui/link/link'
 
 import styles from './listing-filters.module.css'
+import { MarketplaceSearch } from './marketplace-search'
 
 export type ListingFiltersProps = { values: ListingFilterValues }
 
@@ -39,10 +39,14 @@ export function ListingFilters({ values }: ListingFiltersProps) {
     setBusy(true)
     setError('')
     try {
-      const completed = await router.push(listingFiltersUrl(next), undefined, {
+      dialog.current?.close()
+      const url = listingFiltersUrl(next).replace(
+        '/listings',
+        router.pathname === '/' ? '/' : '/listings'
+      )
+      await router.push(url, undefined, {
         scroll: false,
       })
-      if (completed) dialog.current?.close()
     } catch {
       setError('Unable to update listings. Please try again.')
     } finally {
@@ -84,100 +88,80 @@ export function ListingFilters({ values }: ListingFiltersProps) {
   ].filter((chip) => chip.label)
   return (
     <div className="flex flex-col gap-3" aria-busy={busy}>
-      <div className="flex flex-col gap-3 tablet:flex-row tablet:items-end">
-        <form
-          role="search"
-          className="flex flex-1 items-end gap-2"
-          onSubmit={(event) => {
-            event.preventDefault()
-            const data = new FormData(event.currentTarget)
-            navigate({
-              ...values,
-              search: String(data.get('search') || '').trim(),
-            })
-          }}
-        >
-          <label className={`${fieldClass} flex-1`}>
-            <span className="small-bold">Search</span>
-            <Input
-              key={values.search}
-              name="search"
-              type="search"
-              defaultValue={values.search}
-              placeholder="Search listings"
-              className={controlClass}
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={busy}
-            className="btn btn-primary btn-small"
-          >
-            Search
-          </button>
-        </form>
-        <div className="flex items-end gap-3">
-          <label className={`${fieldClass} flex-1`}>
-            <span id="listing-sort-label" className="small-bold">
-              Sort
-            </span>
-            <select
-              aria-labelledby="listing-sort-label"
-              name="sort"
-              value={values.sort}
-              disabled={busy}
-              className={controlClass}
-              onChange={(event) =>
-                navigate({ ...values, sort: event.target.value })
-              }
-            >
-              {listingSorts.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="button"
-            className="btn btn-primary btn-small"
-            aria-haspopup="dialog"
-            aria-expanded={open}
-            aria-controls="listing-filter-dialog"
-            onClick={() => {
-              setDraft(values)
-              setError('')
-              dialog.current?.showModal()
-              setOpen(true)
-            }}
-          >
-            Filter
-          </button>
-        </div>
-      </div>
-      {chips.length > 0 && (
+      <MarketplaceSearch
+        query={values.search}
+        onSearch={(search) => navigate({ ...values, search })}
+      />
+      <div className="flex items-center justify-between gap-3">
         <div
-          className="flex flex-wrap items-center gap-2"
+          className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
           aria-label="Active filters"
         >
           {chips.map((chip) => (
-            <Link
+            <button
+              type="button"
               key={chip.key}
-              href={listingFiltersUrl({
-                ...values,
-                [chip.key]: chip.key === 'status' ? 'available' : '',
-              })}
+              disabled={busy}
               className="rounded-full border border-neutral-light px-3 py-2 text-sm"
               aria-label={`Remove ${chip.label} filter`}
+              onClick={() =>
+                navigate({
+                  ...values,
+                  [chip.key]: chip.key === 'status' ? 'available' : '',
+                })
+              }
             >
               {chip.label} <span aria-hidden="true">&times;</span>
-            </Link>
+            </button>
           ))}
-          <Link href="/listings" className="text-sm underline">
-            Clear filters
-          </Link>
+          {chips.length > 0 && (
+            <button
+              type="button"
+              disabled={busy}
+              className="text-sm underline"
+              onClick={() => navigate(parseListingFilters({}).values)}
+            >
+              Clear all
+            </button>
+          )}
         </div>
-      )}
+        <button
+          type="button"
+          className="btn btn-primary btn-small shrink-0"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-controls="listing-filter-dialog"
+          onClick={() => {
+            setDraft(values)
+            setError('')
+            dialog.current?.showModal()
+            setOpen(true)
+          }}
+        >
+          Filter
+        </button>
+      </div>
+      <label className="flex items-center gap-3 self-end">
+        <span id="listing-sort-label" className="small-bold">
+          Sort
+        </span>
+        <select
+          aria-labelledby="listing-sort-label"
+          name="sort"
+          value={values.sort}
+          disabled={busy}
+          className={controlClass}
+          onChange={(event) =>
+            navigate({ ...values, sort: event.target.value })
+          }
+        >
+          {listingSorts.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </label>
       {busy && <p role="status">Updating listings...</p>}
       {error && !open && <p role="alert">{error}</p>}
       <dialog
