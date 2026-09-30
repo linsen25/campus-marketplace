@@ -111,3 +111,39 @@ assert(!('condition' in listing))
 console.log(
   'PASS: Western email matching, safe return paths, cents/price display, file limits/signatures, database-to-domain mapping and image publication order.'
 )
+
+const { parseListingFilters, listingFiltersUrl } = load(
+  'lib/listing-filters.ts'
+)
+for (const category of ['Electronics', 'electronics', 'ELECTRONICS']) {
+  const parsed = parseListingFilters({ category })
+  assert.equal(parsed.error, null)
+  assert.equal(parsed.query.category, 'electronics')
+}
+const filtered = parseListingFilters({
+  category: 'Home & Kitchen',
+  condition: 'good',
+  minPrice: '12.50',
+  maxPrice: '30',
+  status: 'sold',
+  search: 'desk',
+  sort: 'price-high',
+})
+assert.equal(filtered.error, null)
+assert.equal(filtered.query.minPrice, 1250)
+assert.equal(filtered.query.maxPrice, 3000)
+assert.equal(filtered.query.status, 'sold')
+const roundtrip = parseListingFilters(
+  Object.fromEntries(
+    new URL('http://local' + listingFiltersUrl(filtered.values)).searchParams
+  )
+)
+assert.deepEqual(roundtrip.query, filtered.query)
+assert.equal(parseListingFilters({ status: 'all' }).query.status, undefined)
+assert.equal(parseListingFilters({}).query.status, 'available')
+assert(parseListingFilters({ status: 'hidden' }).error)
+assert(parseListingFilters({ minPrice: '30', maxPrice: '12' }).error)
+assert.equal(listingFiltersUrl(parseListingFilters({}).values), '/listings')
+console.log(
+  'PASS: category aliases, status, price conversion, query roundtrip, defaults and invalid filters.'
+)

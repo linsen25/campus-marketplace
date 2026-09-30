@@ -117,7 +117,7 @@ Includes:
 Use **"Western email verified"**, not "Verified Western student". Email ownership
 does not prove current student status.
 
-**Phase 5 has not started.**
+**Phase 5 Marketplace takeover is implemented. See the Phase 5 section for validation and remaining manual checks.**
 
 ## Supabase Cloud Setup and Live Verification
 
@@ -138,8 +138,7 @@ on 2026-09-30, using the local Next.js app against the real Supabase project:
 
 This supersedes the earlier pending-cloud-verification and local-configuration
 snapshots. Keep real configuration in ignored `.env.local`; never commit real
-credentials. No service-role key is required. The pre-existing modification to
-`.env.sample` was not changed by this finalization pass; review it before committing.
+credentials. No service-role key is required. Environment files were not changed in Phase 5.
 
 ## Phase 4 Finalization
 
@@ -215,20 +214,30 @@ session tests mock the Auth transport. Neither replaces live cloud verification.
 Test commands and coverage are documented in [supabase-setup.md](supabase-setup.md)
 and [phase4-report.md](phase4-report.md).
 
-### Old retail application
+### Remaining legacy retail code
 
-The original implementation intentionally remains:
+The old storefront is no longer the primary experience. The root route and global
+navigation/footer now present Campus Marketplace; active navigation has no fashion,
+store finder, shopping bag, or catalog links.
 
-- `/`
-- `/catalog`
-- `/product/[objectID]`
-- Original fashion data and Product components
-- Algolia implementation
-- Spencer & Williams branding
-- WOMEN / MEN / ACCESSORIES navigation
-- Old homepage and global header/footer
+Retained after import inspection:
 
-This is intentional until Phase 5 is explicitly authorized.
+- `/catalog` and `/product/[objectID]`: directly addressable legacy routes, absent
+  from marketplace navigation. They still import retail search/Product code.
+- Original header/footer modules and `ProductsShowcase`: no active imports after
+  the takeover; candidates for a separate, reviewed removal pass.
+- Product components and Algolia/InstantSearch infrastructure: still consumed by
+  legacy routes. `ListingCard` also uses `ProductImage`, so do not delete the entire
+  Product directory. Shared UI, Container, and motion providers remain needed.
+- `AppLayout` still initializes Algolia and insights; packages, environment
+  variables, CLI, search configuration, demo kit routes, and assets are retained.
+- Original PWA icon artwork remains pending controlled visual work; app/manifest
+  text and social metadata now use Campus Marketplace. Old template social URLs
+  and promotional images were removed from the global document metadata.
+
+No retail source files were deleted in Phase 5. The old root homepage implementation
+was replaced. Decide separately whether to redirect/retire legacy routes and remove
+unused retail modules, rather than deleting shared dependencies indiscriminately.
 
 ### Development code retained
 
@@ -238,19 +247,78 @@ memory adapter they have **no runtime or test imports**; they are not currently
 needed by tests and are not seeded into Supabase or mixed into Algolia. Keeping
 sample domain data does not retain development persistence or a fake auth identity.
 
-## Phase 5 Plan — Not Started
+## Phase 5 Marketplace Takeover - Completed
 
-Planned milestone: **Marketplace takeover**. Make the student marketplace the real
-application shell:
+Implemented on 2026-09-30:
 
-- Make `/` the marketplace home
-- Remove old fashion branding from active UI and replace old navigation
-- Make the marketplace the primary experience while preserving Supabase functionality
-- Decide which old retail/Algolia code can safely be removed
-- Keep visual redesign controlled and incremental
+- `/` is the public marketplace homepage, with brand, search, all eight canonical
+  category shortcuts, latest available listings, and Sell an item actions.
+- The homepage calls `getListings({ status: 'available', sort: 'newest', page: 1, pageSize: 10 })` with the SSR request context and renders the existing ListingGrid.
+  Empty and service-error states are explicit; no retail fallback or fixture seeding.
+- Search and category links use the existing `/listings` query/filter model.
+- A shared responsive header/footer replaces the retail promotion, logo, menus,
+  and retail footer on all routes. It uses visible wrapping links, without hover
+  menus, and states that the marketplace is independent of Western University.
+- The existing MarketplaceActions/session endpoint is reused once in the global
+  header and refreshed on navigation. Logged-out visitors see Browse, Sell, Sign In;
+  signed-in visitors also see My Listings and Sign Out. Sell keeps the protected
+  route's existing `next=/listings/new` flow. Sign-out returns to the new home.
+- Existing listing/auth routes retain their behavior with updated page titles and
+  duplicate page-local navigation removed. No database/auth/Storage/CRUD changes.
+- Root HTML and root Next page-data use NetworkOnly PWA routing. Automatic start-URL
+  caching is disabled so it cannot override this rule. Other PWA caching remains.
 
-Do not implement Phase 5 without explicit instruction. No Phase 5 work was performed
-in this finalization pass.
+Validation:
+
+- TypeScript and scoped ESLint passed.
+- Existing domain, mocked-session, and PostgreSQL/PGlite security tests passed.
+- New `node tests/marketplace-home.cjs` passed: available/newest query, no-store,
+  category/search links, and populated/empty/error rendering with a mocked data boundary.
+- Production build with `--no-lint` passed; standard-build legacy CRLF lint limitation
+  remains. No broad legacy formatting cleanup was performed.
+- Production HTTP smoke checks passed against the local configured app: anonymous
+  homepage, eight category links, no retail shell, no-store response, filtered browse,
+  anonymous session, sign-in page, and Sell/My Listings authentication redirects.
+- No browser was available for visual mobile/tablet/desktop checks or a signed-in
+  click-through. Repeat that manual UI check before release; prior Phase 4 live
+  verification remains the evidence for cloud OTP, writes, images, and ownership.
+
+Next recommended step: manual responsive and signed-in navigation acceptance, then
+an explicitly scoped legacy-route/dependency cleanup and incremental design pass.
+No full visual redesign or additional product modules were implemented.
+
+## Browse UX Refinement - Completed
+
+The listing grid remains the main browse content. Search and sorting stay visible;
+a Filter button opens a native modal bottom sheet on mobile and a compact right
+sidebar on desktop (1024px+). Native dialog behavior provides focus containment,
+Escape dismissal, and focus restoration; background scrolling is locked while open.
+
+- Homepage categories now link to label-based URLs such as
+  `/listings?category=Electronics`, without opening the filter panel.
+- The existing filter parser accepts category labels case-insensitively as well as
+  old canonical category IDs. Domain queries still use canonical ListingCategory values.
+- Category, Condition, minimum/maximum CAD price, and Status are in the panel.
+  Available is the default; Sold and All statuses use the existing ListingQuery.
+- Apply validates through the shared parser and updates the same listing route via
+  Next.js navigation. No separate category/filter pages or backend changes.
+- Search, sort, and chips preserve other active filters in shareable query URLs.
+  Refresh and browser Back restore the selected view. Chips can remove individual
+  filters; Clear filters returns to default browse. Reset filters resets panel
+  drafts, keeping search/sort, and takes effect when Apply is clicked.
+- Invalid ranges display an inline error in the panel. Results accurately label
+  Available/Sold/All views. Closed panels do not occupy layout space.
+
+Validation: TypeScript and scoped ESLint passed; existing domain/home/session tests
+passed, including added category aliases, status, CAD bounds, invalid ranges, and
+URL serialization roundtrip cases. Production build with `--no-lint` passed.
+Headless local Edge checks at 390px and 1280px passed for category landing, panel
+geometry, Apply, URL persistence/reload/Back, search, sorting, chip removal,
+validation, Reset/Clear, Escape/focus restoration, and no horizontal overflow.
+Screenshots were inspected for mobile browse and the bottom sheet. The configured
+cloud project returned no listings during this check, so browser results covered
+the empty state; query conversion and populated rendering have separate automated
+coverage. No listings or cloud settings were mutated during validation.
 
 ## Git
 
@@ -258,13 +326,10 @@ in this finalization pass.
 - Primary/current branch: `main`
 - `origin`: `https://github.com/linsen25/campus-marketplace.git`
 - `upstream`: `https://github.com/nkada/pwa.git` (original PWA template repository)
-- Current local foundation checkpoint: `129af34` — `Build campus marketplace foundation`
+- Current local checkpoint before Phase 5: `d2bf059` - `Finalize Supabase marketplace backend`
 
-The foundation checkpoint contains Phases 1–4 code. Remote URLs, branch, and local
-HEAD were inspected for this document; remote synchronization was not checked.
-At the start of this documentation task, `git status --short` showed an existing
-modification to `.env.sample`. Preserve unrelated working-tree changes and inspect
-the current status again before making changes or committing.
+Git was clean at the start of Phase 5. Preserve unrelated working-tree changes
+and inspect the current status before making changes or committing.
 
 ## Product Decisions
 
@@ -305,6 +370,6 @@ Before making substantial changes:
 
 Last updated: 2026-09-30
 
-Current phase: Phase 4 complete
+Current phase: Phase 5 Marketplace takeover - completed
 
-Next milestone: Phase 5 Marketplace takeover
+Next milestone: Manual navigation/responsive acceptance, then scoped legacy cleanup/design

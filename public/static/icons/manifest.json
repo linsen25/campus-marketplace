@@ -1,7 +1,7 @@
 {
-  "name": "Spencer and Williams",
-  "short_name": "Spencer&Williams",
-  "description": "Shop the latest fashion online",
+  "name": "Campus Marketplace",
+  "short_name": "Campus Market",
+  "description": "Buy and sell second-hand items in the Western community.",
   "theme_color": "#5468ff",
   "background_color": "#ffffff",
   "display": "standalone",

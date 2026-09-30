@@ -48,7 +48,7 @@ export default function SignInPage() {
   return (
     <>
       <Head>
-        <title>Sign In | Student marketplace</title>
+        <title>Sign In | Campus Marketplace</title>
       </Head>
       <main className="py-8 laptop:py-12">
         <Container>

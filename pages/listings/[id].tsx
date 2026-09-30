@@ -34,7 +34,7 @@ export default function ListingPage({ listing, error }: ListingPageProps) {
   return (
     <>
       <Head>
-        <title>{listing.title} | Student marketplace</title>
+        <title>{listing.title} | Campus Marketplace</title>
       </Head>
       <main className="py-8 laptop:py-12">
         <Container>

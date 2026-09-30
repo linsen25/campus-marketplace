@@ -13,6 +13,25 @@ export type ListingFilterValues = {
   minPrice: string
   maxPrice: string
   sort: string
+  status: string
+}
+
+export function listingFiltersUrl(values: ListingFilterValues): string {
+  const params = new URLSearchParams()
+  Object.entries(values).forEach(([key, value]) => {
+    if (
+      !value ||
+      (key === 'sort' && value === 'newest') ||
+      (key === 'status' && value === 'available')
+    )
+      return
+    const category =
+      key === 'category'
+        ? listingCategories.find((item) => item.value === value)
+        : undefined
+    params.set(key, category?.label || value)
+  })
+  return `/listings${params.toString() ? `?${params.toString()}` : ''}`
 }
 
 // URL/form prices are CAD dollars; the domain boundary always receives cents.
@@ -35,10 +54,14 @@ export function parseListingFilters(
     minPrice: read('minPrice'),
     maxPrice: read('maxPrice'),
     sort: read('sort') || 'newest',
+    status: read('status') || 'available',
   }
   const category = listingCategories.find(
-    (item) => item.value === values.category
+    (item) =>
+      item.value === values.category.toLowerCase() ||
+      item.label.toLowerCase() === values.category.toLowerCase()
   )
+  if (category) values.category = category.value
   const condition = listingConditions.find(
     (item) => item.value === values.condition
   )
@@ -48,16 +71,20 @@ export function parseListingFilters(
     category: category?.value,
     condition: condition?.value,
     sort: sort?.value || 'newest',
-    status: 'available',
+    status: values.status === 'sold' ? 'sold' : 'available',
   }
+  if (values.status === 'all') query.status = undefined
 
   try {
     if (
       (values.category && !category) ||
       (values.condition && !condition) ||
-      !sort
+      !sort ||
+      !['available', 'sold', 'all'].includes(values.status)
     ) {
-      throw new Error('Choose a valid category, condition, and sort option.')
+      throw new Error(
+        'Choose a valid category, condition, status, and sort option.'
+      )
     }
     query.minPrice = parsePrice(values.minPrice)
     query.maxPrice = parsePrice(values.maxPrice)

@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 
 import { Container } from '@/components/container/container'
 import { ListingCard } from '@/components/listings/listing-card'
-import { MarketplaceActions } from '@/components/listings/marketplace-actions'
 import {
   deleteListing,
   getMyListings,
@@ -62,7 +61,7 @@ export default function MyListingsPage({
   return (
     <>
       <Head>
-        <title>My Listings | Student marketplace</title>
+        <title>My Listings | Campus Marketplace</title>
       </Head>
       <main className="py-8 laptop:py-12">
         <Container>
@@ -70,7 +69,6 @@ export default function MyListingsPage({
             <Link href="/listings" className="underline">
               Back to listings
             </Link>
-            <MarketplaceActions />
             <h1 className="text-2xl font-bold">My Listings</h1>
             <div>
               <Link href="/listings/new" className="btn btn-primary btn-small">

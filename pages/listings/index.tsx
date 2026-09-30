@@ -4,9 +4,9 @@ import Head from 'next/head'
 import { Container } from '@/components/container/container'
 import { ListingFilters } from '@/components/listings/listing-filters'
 import { ListingGrid } from '@/components/listings/listing-grid'
-import { MarketplaceActions } from '@/components/listings/marketplace-actions'
 import type { ListingFilterValues } from '@/lib/listing-filters'
 import { parseListingFilters } from '@/lib/listing-filters'
+import { listingCategories } from '@/lib/listing-metadata'
 import { ListingApiError } from '@/lib/listing-validation'
 import { getListings } from '@/lib/listings-api'
 import type { Listing } from '@/types/listing'
@@ -25,23 +25,26 @@ export default function ListingsPage({
   return (
     <>
       <Head>
-        <title>Student marketplace | Spencer and Williams</title>
+        <title>Browse | Campus Marketplace</title>
       </Head>
       <main className="py-8 laptop:py-12">
         <Container>
           <div className="flex flex-col gap-6">
             <header className="flex flex-col gap-2">
-              <h1 className="text-2xl font-bold">Student marketplace</h1>
-              <p>Find available items for pickup near campus.</p>
-              <MarketplaceActions />
+              <h1 className="text-2xl font-bold">
+                {listingCategories.find(
+                  (item) => item.value === values.category
+                )?.label || 'Browse listings'}
+              </h1>
             </header>
-            <ListingFilters key={JSON.stringify(values)} values={values} />
+            <ListingFilters values={values} />
             {error ? (
               <p role="alert">{error}</p>
             ) : (
               <>
                 <p role="status">
-                  {listings.length} available{' '}
+                  {listings.length}{' '}
+                  {values.status === 'all' ? '' : values.status}{' '}
                   {listings.length === 1 ? 'listing' : 'listings'}
                 </p>
                 {listings.length > 0 ? (

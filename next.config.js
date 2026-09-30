@@ -33,14 +33,18 @@ module.exports = withNextPlugins([withBundleAnalyzer, withPWA], {
   },
   pwa: {
     dest: 'public',
+    // The live marketplace homepage must use the NetworkOnly rule below.
+    cacheStartUrl: false,
+    dynamicStartUrl: false,
     runtimeCaching: [
       {
         urlPattern: ({ url }) =>
           url.origin === self.location.origin &&
-          (/^\/(api\/(auth|listings|listing-images)(\/|$)|auth(\/|$)|profile\/listings(\/|$)|listings(\/|$))/.test(
-            url.pathname
-          ) ||
-            /^\/_next\/data\/[^/]+\/(listings(?:\/|\.json)|profile\/listings\.json|auth\/)/.test(
+          (url.pathname === '/' ||
+            /^\/(api\/(auth|listings|listing-images)(\/|$)|auth(\/|$)|profile\/listings(\/|$)|listings(\/|$))/.test(
+              url.pathname
+            ) ||
+            /^\/_next\/data\/[^/]+\/(index\.json|listings(?:\/|\.json)|profile\/listings\.json|auth\/)/.test(
               url.pathname
             )),
         handler: 'NetworkOnly',

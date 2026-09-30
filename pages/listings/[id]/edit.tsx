@@ -3,7 +3,6 @@ import Head from 'next/head'
 
 import { Container } from '@/components/container/container'
 import { ListingForm } from '@/components/listings/listing-form'
-import { MarketplaceActions } from '@/components/listings/marketplace-actions'
 import { getListing, getMyListings } from '@/lib/listings-api'
 import { getMarketplaceSession } from '@/lib/server/marketplace-auth'
 import type { Listing } from '@/types/listing'
@@ -15,7 +14,7 @@ export default function EditListingPage({ listing }: EditListingPageProps) {
   return (
     <>
       <Head>
-        <title>Edit {listing.title} | Student marketplace</title>
+        <title>Edit {listing.title} | Campus Marketplace</title>
       </Head>
       <main className="py-8 laptop:py-12">
         <Container>
@@ -23,7 +22,6 @@ export default function EditListingPage({ listing }: EditListingPageProps) {
             <Link href="/profile/listings" className="underline">
               Back to My Listings
             </Link>
-            <MarketplaceActions />
             <h1 className="text-2xl font-bold">Edit listing</h1>
             <ListingForm
               key={listing.id + listing.updatedAt}

@@ -3,7 +3,6 @@ import Head from 'next/head'
 
 import { Container } from '@/components/container/container'
 import { ListingForm } from '@/components/listings/listing-form'
-import { MarketplaceActions } from '@/components/listings/marketplace-actions'
 import { getMarketplaceSession } from '@/lib/server/marketplace-auth'
 import { Link } from '@ui/link/link'
 
@@ -11,7 +10,7 @@ export default function NewListingPage() {
   return (
     <>
       <Head>
-        <title>Post listing | Student marketplace</title>
+        <title>Post listing | Campus Marketplace</title>
       </Head>
       <main className="py-8 laptop:py-12">
         <Container>
@@ -19,7 +18,6 @@ export default function NewListingPage() {
             <Link href="/listings" className="underline">
               Back to listings
             </Link>
-            <MarketplaceActions />
             <h1 className="text-2xl font-bold">Sell an item</h1>
             <ListingForm />
           </div>

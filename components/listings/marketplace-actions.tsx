@@ -1,3 +1,4 @@
+import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 
 import { marketplaceRequest } from '@/lib/listings-api'
@@ -6,6 +7,7 @@ import { Button } from '@ui/button/button'
 import { Link } from '@ui/link/link'
 
 export function MarketplaceActions() {
+  const router = useRouter()
   const [seller, setSeller] = useState<SellerSummary | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -24,16 +26,21 @@ export function MarketplaceActions() {
     return () => {
       active = false
     }
-  }, [])
+  }, [router.asPath])
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-4">
+        <Link href="/listings" className="underline">
+          Browse
+        </Link>
         <Link href="/listings/new" className="btn btn-primary btn-small">
           Sell an item
         </Link>
-        <Link href="/profile/listings" className="underline">
-          My Listings
-        </Link>
+        {seller && (
+          <Link href="/profile/listings" className="underline">
+            My Listings
+          </Link>
+        )}
         {seller ? (
           <Button
             disabled={busy}
@@ -42,7 +49,7 @@ export function MarketplaceActions() {
               setBusy(true)
               try {
                 await marketplaceRequest('/api/auth/sign-out', 'POST')
-                window.location.assign('/listings')
+                window.location.assign('/')
               } catch (cause) {
                 setError(
                   cause instanceof Error ? cause.message : 'Sign out failed.'

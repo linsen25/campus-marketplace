@@ -12,15 +12,18 @@ export default class MyDocument extends Document {
       <Html lang="en">
         <Head>
           {/* Common meta */}
-          <meta name="description" content="Shop the latest fashion online" />
-          <meta name="application-name" content="Spencer and Williams" />
+          <meta
+            name="description"
+            content="Buy and sell second-hand items in the Western community."
+          />
+          <meta name="application-name" content="Campus Marketplace" />
           <meta
             name="apple-mobile-web-app-status-bar-style"
             content="default"
           />
           <meta
             name="apple-mobile-web-app-title"
-            content="Spencer and Williams"
+            content="Campus Marketplace"
           />
           <meta name="format-detection" content="telephone=no" />
           <meta name="mobile-web-app-capable" content="yes" />
@@ -59,37 +62,19 @@ export default class MyDocument extends Document {
 
           {/* OG meta */}
           <meta property="og:type" content="website" />
-          <meta property="og:title" content="Spencer and Williams" />
+          <meta property="og:title" content="Campus Marketplace" />
           <meta
             property="og:description"
-            content="Shop the latest fashion online"
+            content="Buy and sell second-hand items in the Western community."
           />
-          <meta property="og:site_name" content="Spencer and Williams" />
-          <meta
-            property="og:url"
-            content="https://algolia-pwa-ecom-ui-template.netlify.app"
-          />
-          <meta
-            property="og:image"
-            content="https://algolia-pwa-ecom-ui-template.netlify.app/static/images/socials/og.png"
-          />
-          <meta property="og:image:width" content="1200" />
-          <meta property="og:image:height" content="630" />
+          <meta property="og:site_name" content="Campus Marketplace" />
 
           {/* Twitter meta */}
           <meta name="twitter:card" content="summary_large_image" />
-          <meta
-            name="twitter:url"
-            content="https://algolia-pwa-ecom-ui-template.netlify.app"
-          />
-          <meta name="twitter:title" content="Spencer and Williams" />
+          <meta name="twitter:title" content="Campus Marketplace" />
           <meta
             name="twitter:description"
-            content="Shop the latest fashion online"
-          />
-          <meta
-            name="twitter:image"
-            content="https://algolia-pwa-ecom-ui-template.netlify.app/static/images/socials/twitter.png"
+            content="Buy and sell second-hand items in the Western community."
           />
 
           {/* Fonts */}

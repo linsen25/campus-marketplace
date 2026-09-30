@@ -1,6 +1,5 @@
 import { AnimatePresence } from 'framer-motion'
 import type { AppProps } from 'next/app'
-import dynamic from 'next/dynamic'
 import Head from 'next/head'
 import Script from 'next/script'
 import { useMemo } from 'react'
@@ -10,9 +9,10 @@ import { useMemo } from 'react'
 import { Dev } from '@dev/dev'
 /// #endif
 
-import { Banner } from '@/components/banner/banner'
-import type { FooterProps } from '@/components/footer/footer'
-import type { HeaderProps } from '@/components/header/header'
+import {
+  MarketplaceHeader,
+  MarketplaceFooter,
+} from '@/components/listings/marketplace-shell'
 import { Loader } from '@/components/loader/loader'
 import { Overlay } from '@/components/overlay/overlay'
 import { AppLayout } from '@/layouts/app-layout'
@@ -20,18 +20,6 @@ import { gaTrackingId, isDev, isProd } from '@/utils/env'
 import { scrollToTop } from '@/utils/scrollToTop'
 
 import '@/styles/_index.css'
-
-export const Header = dynamic<HeaderProps>(() =>
-  import(/* webpackChunkName: 'common' */ '@/components/header/header').then(
-    (mod) => mod.Header
-  )
-)
-
-export const Footer = dynamic<FooterProps>(() =>
-  import(/* webpackChunkName: 'common' */ '@/components/footer/footer').then(
-    (mod) => mod.Footer
-  )
-)
 
 export default function App({ Component, pageProps, router }: AppProps) {
   const isCatalogPage = useMemo(
@@ -42,7 +30,7 @@ export default function App({ Component, pageProps, router }: AppProps) {
   return (
     <AppLayout>
       <Head>
-        <title>Spencer and Williams</title>
+        <title>Campus Marketplace</title>
         <meta
           name="viewport"
           content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"
@@ -68,21 +56,18 @@ export default function App({ Component, pageProps, router }: AppProps) {
         </>
       )}
 
-      <Banner size="xs-large" className="z-header" fullWidth={true}>
-        20% Off! Code: SPRING21 - Terms apply*
-      </Banner>
-      <Header />
+      <MarketplaceHeader />
 
       <AnimatePresence exitBeforeEnter={true} onExitComplete={scrollToTop}>
         <Component {...pageProps} key={router.route} />
       </AnimatePresence>
 
-      <Footer />
+      <MarketplaceFooter />
 
       <Loader layout={isCatalogPage ? 'bar' : 'overlay'} />
       <Overlay />
 
-      {isDev && <Dev />}
+      {isDev && isCatalogPage && <Dev />}
     </AppLayout>
   )
 }
