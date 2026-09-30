@@ -20,6 +20,7 @@ export type ListingFiltersProps = { values: ListingFilterValues }
 export function ListingFilters({ values }: ListingFiltersProps) {
   const router = useRouter()
   const dialog = useRef<HTMLDialogElement>(null)
+  const exitPromise = useRef<Promise<void> | null>(null)
   const [draft, setDraft] = useState(values)
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -35,11 +36,39 @@ export function ListingFilters({ values }: ListingFiltersProps) {
       document.body.style.overflow = previous
     }
   }, [open])
+  function closeDrawer(): Promise<void> {
+    const panel = dialog.current
+    if (!panel?.open) return Promise.resolve()
+    if (exitPromise.current) return exitPromise.current
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      panel.close()
+      return Promise.resolve()
+    }
+    panel.dataset.closing = 'true'
+    exitPromise.current = new Promise((resolve) => {
+      const finish = () => {
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define -- Runs after the timer and handler are initialized.
+        window.clearTimeout(timeout)
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define -- Runs after the handler is initialized.
+        panel.removeEventListener('animationend', onEnd)
+        panel.close()
+        delete panel.dataset.closing
+        exitPromise.current = null
+        resolve()
+      }
+      const onEnd = (event: AnimationEvent) => {
+        if (event.target === panel && !event.pseudoElement) finish()
+      }
+      const timeout = window.setTimeout(finish, 350)
+      panel.addEventListener('animationend', onEnd)
+    })
+    return exitPromise.current
+  }
   async function navigate(next: ListingFilterValues) {
     setBusy(true)
     setError('')
     try {
-      dialog.current?.close()
+      await closeDrawer()
       const url = listingFiltersUrl(next).replace(
         '/listings',
         router.pathname === '/' ? '/' : '/listings'
@@ -92,7 +121,7 @@ export function ListingFilters({ values }: ListingFiltersProps) {
         query={values.search}
         onSearch={(search) => navigate({ ...values, search })}
       />
-      <div className="flex items-center justify-between gap-3">
+      <div className={styles.toolbar}>
         <div
           className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
           aria-label="Active filters"
@@ -125,51 +154,69 @@ export function ListingFilters({ values }: ListingFiltersProps) {
             </button>
           )}
         </div>
-        <button
-          type="button"
-          className="btn btn-primary btn-small shrink-0"
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          aria-controls="listing-filter-dialog"
-          onClick={() => {
-            setDraft(values)
-            setError('')
-            dialog.current?.showModal()
-            setOpen(true)
-          }}
-        >
-          Filter
-        </button>
+        <div className={styles.controls}>
+          <label className={styles.sort}>
+            <span id="listing-sort-label" className="small-bold">
+              Sort
+            </span>
+            <select
+              aria-labelledby="listing-sort-label"
+              name="sort"
+              value={values.sort}
+              disabled={busy}
+              className={controlClass}
+              onChange={(event) =>
+                navigate({ ...values, sort: event.target.value })
+              }
+            >
+              {listingSorts.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="btn btn-primary btn-small shrink-0"
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            aria-controls="listing-filter-dialog"
+            onClick={() => {
+              setDraft(values)
+              setError('')
+              dialog.current?.showModal()
+              setOpen(true)
+            }}
+          >
+            Filter
+          </button>
+        </div>
       </div>
-      <label className="flex items-center gap-3 self-end">
-        <span id="listing-sort-label" className="small-bold">
-          Sort
-        </span>
-        <select
-          aria-labelledby="listing-sort-label"
-          name="sort"
-          value={values.sort}
-          disabled={busy}
-          className={controlClass}
-          onChange={(event) =>
-            navigate({ ...values, sort: event.target.value })
-          }
-        >
-          {listingSorts.map((item) => (
-            <option key={item.value} value={item.value}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-      </label>
       {busy && <p role="status">Updating listings...</p>}
       {error && !open && <p role="alert">{error}</p>}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Native modal backdrop hit testing; Escape and close button provide keyboard access. */}
       <dialog
         ref={dialog}
         id="listing-filter-dialog"
         className={styles.panel}
         aria-labelledby="listing-filter-title"
         onClose={() => setOpen(false)}
+        onCancel={(event) => {
+          event.preventDefault()
+          closeDrawer()
+        }}
+        onClick={(event) => {
+          if (event.target !== event.currentTarget) return
+          const bounds = event.currentTarget.getBoundingClientRect()
+          if (
+            event.clientX < bounds.left ||
+            event.clientX > bounds.right ||
+            event.clientY < bounds.top ||
+            event.clientY > bounds.bottom
+          )
+            closeDrawer()
+        }}
       >
         <form
           className="flex flex-col gap-4"
@@ -182,9 +229,10 @@ export function ListingFilters({ values }: ListingFiltersProps) {
             <button
               type="button"
               className="underline"
-              onClick={() => dialog.current?.close()}
+              aria-label="Close filters"
+              onClick={() => closeDrawer()}
             >
-              Close
+              &times;
             </button>
           </div>
           {error && <p role="alert">{error}</p>}

@@ -1,73 +1,86 @@
 import type { GetServerSideProps } from 'next'
 import Head from 'next/head'
+import { useRouter } from 'next/router'
 
 import { Container } from '@/components/container/container'
 import { ListingFilters } from '@/components/listings/listing-filters'
 import { ListingGrid } from '@/components/listings/listing-grid'
 import type { ListingFilterValues } from '@/lib/listing-filters'
 import { parseListingFilters } from '@/lib/listing-filters'
+import { ListingApiError } from '@/lib/listing-validation'
 import { getListings } from '@/lib/listings-api'
 import type { Listing } from '@/types/listing'
 import { Link } from '@ui/link/link'
 
-type HomeProps = {
+type ListingsPageProps = {
   listings: Listing[]
-  error: string | null
   values: ListingFilterValues
+  error: string | null
+  page: number
+  hasNextPage: boolean
 }
 
-export default function Home({ listings, error, values }: HomeProps) {
+export default function ListingsPage({
+  listings,
+  values,
+  error,
+  page,
+  hasNextPage,
+}: ListingsPageProps) {
+  const router = useRouter()
+  const pageUrl = (nextPage: number) => ({
+    pathname: router.pathname,
+    query: { ...router.query, page: String(nextPage) },
+  })
   return (
     <>
       <Head>
-        <title>Campus Marketplace</title>
+        <title>Browse | Campus Marketplace</title>
       </Head>
-      <main className="py-8 laptop:py-12">
+      <main className="py-4 laptop:py-12">
         <Container>
-          <div className="flex flex-col gap-8">
-            <header className="flex flex-col gap-3">
-              <h1 className="text-2xl font-bold">Campus Marketplace</h1>
-              <p>Buy and sell second-hand items in the Western community.</p>
-            </header>
+          <div className="flex flex-col gap-6">
+            <h1 className="text-2xl font-bold laptop:sr-only">
+              Campus Marketplace
+            </h1>
             <ListingFilters values={values} />
-            <section
-              aria-labelledby="latest-listings"
-              className="flex flex-col gap-4"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 id="latest-listings" className="text-xl font-bold">
-                  {values.status === 'available' &&
-                  !values.search &&
-                  !values.category
-                    ? 'Latest available listings'
-                    : 'Listings'}
-                </h2>
-                <Link href="/listings" className="underline">
-                  Browse all listings
-                </Link>
-              </div>
-              {error && <p role="alert">{error}</p>}
-              {!error && listings.length > 0 && (
-                <ListingGrid listings={listings} />
-              )}
-              {!error && listings.length === 0 && (
-                <p>
-                  No listings match this view. Try another search or clear the
-                  filters.
+            {error ? (
+              <p role="alert">{error}</p>
+            ) : (
+              <>
+                <p role="status">
+                  {listings.length}{' '}
+                  {values.status === 'all' ? '' : values.status}{' '}
+                  {listings.length === 1 ? 'listing' : 'listings'}
                 </p>
-              )}
-            </section>
-            <section
-              className="flex flex-col items-start gap-3"
-              aria-label="Sell an item"
-            >
-              <h2 className="text-xl font-bold">
-                Have something you no longer need?
-              </h2>
-              <Link href="/listings/new" className="btn btn-primary btn-small">
-                Sell an item
-              </Link>
-            </section>
+                {listings.length > 0 ? (
+                  <ListingGrid listings={listings} />
+                ) : (
+                  <p>
+                    No listings match your filters. Try another search or clear
+                    the filters.
+                  </p>
+                )}
+                {(page > 1 || hasNextPage) && (
+                  <nav
+                    aria-label="Listing pages"
+                    className="flex items-center justify-between gap-4"
+                  >
+                    {page > 1 && (
+                      <Link href={pageUrl(page - 1)} className="underline">
+                        Previous
+                      </Link>
+                    )}
+                    <span>Page {page}</span>
+                    {hasNextPage && (
+                      <Link href={pageUrl(page + 1)} className="underline">
+                        Next
+                      </Link>
+                    )}
+                  </nav>
+                )}
+              </>
+            )}
           </div>
         </Container>
       </main>
@@ -75,26 +88,41 @@ export default function Home({ listings, error, values }: HomeProps) {
   )
 }
 
-export const getServerSideProps: GetServerSideProps<HomeProps> = async ({
-  req,
-  res,
-  query: params,
-}) => {
+export const getServerSideProps: GetServerSideProps<
+  ListingsPageProps
+> = async ({ query: params, req, res }) => {
   res.setHeader('Cache-Control', 'private, no-store, max-age=0')
   const { values, query, error } = parseListingFilters(params || {})
+  const requestedPage = Number(params?.page || 1)
+  const page =
+    Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
+  const pageSize = 20
   try {
     const listings = error
       ? []
-      : await getListings({ ...query, page: 1, pageSize: 10 }, { req, res })
-    return { props: { listings, error, values } }
-  } catch {
-    // eslint-disable-next-line no-param-reassign -- Return a retryable marketplace error.
+      : await getListings({ ...query, page, pageSize }, { req, res })
+    return {
+      props: {
+        listings,
+        values,
+        error,
+        page,
+        hasNextPage: listings.length === pageSize,
+      },
+    }
+  } catch (cause) {
+    // eslint-disable-next-line no-param-reassign -- Set the HTTP status for the SSR error page.
     res.statusCode = 503
     return {
       props: {
         listings: [],
         values,
-        error: 'Marketplace unavailable. Please try again shortly.',
+        page,
+        hasNextPage: false,
+        error:
+          cause instanceof ListingApiError
+            ? cause.message
+            : 'Marketplace unavailable. Please try again.',
       },
     }
   }

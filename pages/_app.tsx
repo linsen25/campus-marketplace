@@ -9,8 +9,11 @@ import { useMemo } from 'react'
 import { Dev } from '@dev/dev'
 /// #endif
 
+import { AccountLayout } from '@/components/listings/account-layout'
 import {
   MarketplaceHeader,
+  MarketplaceBottomNavigation,
+  marketplaceContentClass,
   MarketplaceFooter,
 } from '@/components/listings/marketplace-shell'
 import { Loader } from '@/components/loader/loader'
@@ -56,19 +59,30 @@ export default function App({ Component, pageProps, router }: AppProps) {
         </>
       )}
 
-      <MarketplaceHeader />
+      <div className={marketplaceContentClass}>
+        <MarketplaceHeader />
 
-      <AnimatePresence exitBeforeEnter={true} onExitComplete={scrollToTop}>
-        <Component {...pageProps} key={router.route} />
-      </AnimatePresence>
+        {router.pathname.startsWith('/account') ||
+        router.pathname === '/profile/listings' ? (
+          <AccountLayout>
+            <Component {...pageProps} />
+          </AccountLayout>
+        ) : (
+          <AnimatePresence exitBeforeEnter={true} onExitComplete={scrollToTop}>
+            <Component {...pageProps} key={router.route} />
+          </AnimatePresence>
+        )}
 
-      <MarketplaceFooter />
+        <MarketplaceFooter />
+      </div>
+      <MarketplaceBottomNavigation />
 
       <Loader
         layout={
           isCatalogPage ||
           router.pathname === '/' ||
-          router.pathname === '/listings'
+          router.pathname === '/listings' ||
+          router.pathname.startsWith('/account')
             ? 'bar'
             : 'overlay'
         }

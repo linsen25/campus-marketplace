@@ -2,11 +2,11 @@ import type { GetServerSideProps } from 'next'
 import Head from 'next/head'
 
 import { Container } from '@/components/container/container'
+import { BackButton } from '@/components/listings/back-button'
 import { ListingForm } from '@/components/listings/listing-form'
 import { getListing, getMyListings } from '@/lib/listings-api'
 import { getMarketplaceSession } from '@/lib/server/marketplace-auth'
 import type { Listing } from '@/types/listing'
-import { Link } from '@ui/link/link'
 
 type EditListingPageProps = { listing: Listing }
 
@@ -19,9 +19,7 @@ export default function EditListingPage({ listing }: EditListingPageProps) {
       <main className="py-8 laptop:py-12">
         <Container>
           <div className="flex flex-col gap-6">
-            <Link href="/profile/listings" className="underline">
-              Back to My Listings
-            </Link>
+            <BackButton href="/profile/listings" />
             <h1 className="text-2xl font-bold">Edit listing</h1>
             <ListingForm
               key={listing.id + listing.updatedAt}

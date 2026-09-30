@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react'
 import { useCallback, useRef, useState } from 'react'
 
+import { ListingPicker } from '@/components/listings/listing-picker'
 import { listingImageRules, validateListingImage } from '@/lib/listing-images'
 import { listingCategories, listingConditions } from '@/lib/listing-metadata'
 import { listingLimits, validateListingInput } from '@/lib/listing-validation'
@@ -195,37 +196,21 @@ export function ListingForm({ listing }: ListingFormProps) {
             Enter CAD dollars. Use 0 for FREE.
           </span>
         </label>
-        <label className={fieldClass}>
-          <span className="small-bold">Category *</span>
-          <select
-            name="category"
-            required={true}
-            defaultValue={listing?.category || ''}
-            className={controlClass}
-          >
-            <option value="">Choose a category</option>
-            {listingCategories.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={fieldClass}>
-          <span className="small-bold">Condition</span>
-          <select
-            name="condition"
-            defaultValue={listing?.condition || ''}
-            className={controlClass}
-          >
-            <option value="">Not specified</option>
-            {listingConditions.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <ListingPicker
+          name="category"
+          label="Category"
+          options={listingCategories}
+          placeholder="Choose a category"
+          defaultValue={listing?.category || ''}
+          required={true}
+        />
+        <ListingPicker
+          name="condition"
+          label="Condition"
+          options={listingConditions}
+          placeholder="Not specified"
+          defaultValue={listing?.condition || ''}
+        />
         <label className={fieldClass}>
           <span className="small-bold">Pickup area *</span>
           <Input

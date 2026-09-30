@@ -4,10 +4,10 @@ import type { FormEvent } from 'react'
 import { useCallback, useState } from 'react'
 
 import { Container } from '@/components/container/container'
+import { BackButton } from '@/components/listings/back-button'
 import { marketplaceRequest } from '@/lib/listings-api'
 import { isWesternEmail, safeMarketplaceNext } from '@/lib/marketplace-auth'
 import { Input } from '@ui/input/input'
-import { Link } from '@ui/link/link'
 
 export default function SignInPage() {
   const router = useRouter()
@@ -53,9 +53,7 @@ export default function SignInPage() {
       <main className="py-8 laptop:py-12">
         <Container>
           <div className="flex flex-col gap-6">
-            <Link href="/listings" className="underline">
-              Back to listings
-            </Link>
+            <BackButton href="/listings" />
             <h1 className="text-2xl font-bold">Sign In</h1>
             <p>
               Use your @uwo.ca email to receive a sign-in code. Email

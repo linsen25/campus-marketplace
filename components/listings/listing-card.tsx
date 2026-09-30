@@ -1,9 +1,11 @@
 import classNames from 'classnames'
+import Image from 'next/image'
 
-import { ProductImage } from '@/components/product/product-image'
 import type { Listing } from '@/types/listing'
 import { formatListingPrice } from '@/utils/format-listing-price'
 import { Link } from '@ui/link/link'
+
+import styles from './listing-card.module.css'
 
 export type ListingCardProps = {
   listing: Listing
@@ -24,11 +26,19 @@ export function ListingCard({ listing }: ListingCardProps) {
         className="flex gap-2 flex-col focus-visible:outline focus-visible:outline-2"
         aria-label={`View ${listing.title}`}
       >
-        <div className="relative">
+        <div
+          className={`${styles.photo} relative overflow-hidden bg-neutral-lightest`}
+        >
           {photo ? (
-            <ProductImage src={photo} alt={listing.title} />
+            <Image
+              src={photo}
+              alt={listing.title}
+              layout="fill"
+              objectFit="cover"
+              sizes="(max-width: 767px) 50vw, (max-width: 1439px) 33vw, 20vw"
+            />
           ) : (
-            <div className="bg-neutral-lightest aspect-[20/27] flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-neutral-dark text-xs">
                 No photo available
               </span>
@@ -37,10 +47,12 @@ export function ListingCard({ listing }: ListingCardProps) {
         </div>
         <div className="flex flex-col gap-1">
           <header className="flex flex-col gap-1">
-            <h2 className="text-brand-black small-bold tracking-normal">
+            <h2
+              className={`${styles.title} text-brand-black small-bold tracking-normal`}
+            >
               {listing.title}
             </h2>
-            <p className="text-neutral-darkest tag-bold tracking-normal">
+            <p className="text-neutral-darkest text-xs leading-tight tracking-normal break-words">
               {listing.pickupArea}
             </p>
           </header>

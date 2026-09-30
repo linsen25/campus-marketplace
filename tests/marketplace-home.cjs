@@ -12,6 +12,7 @@ const element =
   ({ children, ...props }) =>
     React.createElement(tag, props, children)
 const mocks = {
+  'next/router': { useRouter: () => ({ pathname: '/', query: {} }) },
   '@/components/listings/listing-filters': {
     ListingFilters: () =>
       React.createElement('div', { 'data-testid': 'browse-controls' }),
@@ -76,7 +77,7 @@ async function main() {
     status: 'available',
     sort: 'newest',
     page: 1,
-    pageSize: 10,
+    pageSize: 20,
   })
   assert.match(headers['Cache-Control'], /no-store/)
   const html = renderToStaticMarkup(
@@ -84,6 +85,9 @@ async function main() {
   )
   assert.match(html, /No listings match/)
   assert(!html.includes('Marketplace categories'))
+  assert(!html.includes('Browse all listings'))
+  assert(!html.includes('Have something you no longer need?'))
+  assert(!html.includes('Sell an item'))
   await home.getServerSideProps({
     ...context,
     query: {
@@ -109,6 +113,15 @@ async function main() {
     renderToStaticMarkup(React.createElement(home.default, populated.props)),
     /Test desk/
   )
+  result = Array.from({ length: 20 }, (_, i) => ({ title: `Listing ${i}` }))
+  const full = await home.getServerSideProps(context)
+  assert.equal(full.props.hasNextPage, true)
+  await home.getServerSideProps({
+    ...context,
+    query: { page: '2', category: 'Electronics' },
+  })
+  assert.equal(receivedQuery.page, 2)
+  assert.equal(receivedQuery.category, 'electronics')
   fail = true
   const unavailable = await home.getServerSideProps(context)
   assert.equal(context.res.statusCode, 503)

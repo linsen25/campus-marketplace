@@ -2,13 +2,13 @@ import type { GetServerSideProps } from 'next'
 import Head from 'next/head'
 
 import { Container } from '@/components/container/container'
+import { BackButton } from '@/components/listings/back-button'
 import { ProductImage } from '@/components/product/product-image'
 import { listingCategories, listingConditions } from '@/lib/listing-metadata'
 import { getListing } from '@/lib/listings-api'
 import type { Listing } from '@/types/listing'
 import { formatListingPrice } from '@/utils/format-listing-price'
 import { Button } from '@ui/button/button'
-import { Link } from '@ui/link/link'
 
 type ListingPageProps = {
   listing: Listing | null
@@ -39,9 +39,7 @@ export default function ListingPage({ listing, error }: ListingPageProps) {
       <main className="py-8 laptop:py-12">
         <Container>
           <div className="flex flex-col gap-6">
-            <Link href="/listings" className="underline">
-              Back to listings
-            </Link>
+            <BackButton href="/listings" />
             <article className="grid min-w-0 grid-cols-1 items-start gap-6 tablet:grid-cols-2">
               <div
                 className="grid min-w-0 grid-cols-1 gap-2"

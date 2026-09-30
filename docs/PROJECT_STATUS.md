@@ -340,6 +340,183 @@ cloud project returned no listings during this check, so browser results covered
 the empty state; query conversion and populated rendering have separate automated
 coverage. No listings or cloud settings were mutated during validation.
 
+## App Shell / My Account - Completed
+
+Current navigation supersedes the earlier global Sell/My Listings/Sign Out links.
+Below 1024px, exactly two fixed bottom tabs link to Market (/) and My Account
+(/account). Icons/labels, aria-current, a visible active border/background, and
+64px minimum tab height provide clear keyboard/touch access. The bar includes
+safe-area padding; the content wrapper reserves 72px plus the same safe-area inset.
+At desktop widths the bottom bar is hidden and the top header provides Market and
+an accessible account icon. The mobile header contains only the marketplace brand.
+
+/account is public. The existing MarketplaceActions session request and sign-out
+implementation now live exclusively on this page; no second auth store was added.
+Logged-out users see Sign In; logged-in users see their display name and Western
+email verified. Both can find Sell (/listings/new) and My Listings
+(/profile/listings), retaining existing protected-route next redirects.
+Selling, Buying, and Account sections organize the links. Sign Out lives here.
+
+Reserved, data-free Coming soon routes:
+
+- /account/favorites
+- /account/messages
+- /account/profile
+- /account/settings
+
+Only these four names are accepted; unknown account sections return 404. Sign-in
+return-path validation now permits the account landing page and these exact paths.
+Account HTML and Next page-data are excluded from PWA runtime caching; session
+requests continue to use the existing no-store/auth flow. No schema, RLS, Storage,
+CRUD, or identity validation changes were made.
+
+Future account functionality (documentation only): Payments > Payment methods /
+Payout account. No bank/card controls or payments implementation are shown.
+Intended messaging flow: Market listing -> Message seller -> conversation ->
+My Account > Messages. The messages route is only a placeholder; no chat backend
+or favorites persistence was added.
+
+Filter close animation: one shared exit handler is used by X, Apply, backdrop and
+Escape. The modal stays open/mounted until slide-out completes, while the backdrop
+fades out; body scroll lock and focus containment last through the animation.
+Repeated close requests share the same pending exit. Reduced motion closes without
+animation. Filter content, search, chips, sorting, results and query logic remain
+unchanged. No broad visual redesign was performed.
+
+Validation: TypeScript, scoped ESLint, domain/home/session/SQL-security tests passed,
+including new account return-path allowlist/rejection cases. Headless Edge at 390px
+and 1536px passed two-tab visibility/active states, desktop navigation, account and
+all placeholders, logged-out Sell/My Listings redirects, four animated close paths,
+reduced motion, and no overflow. Signed-in display/sign-out were checked with mocked
+session endpoints, not a real mailbox. Existing animated search/filter regression
+checks passed at both widths. Production account routes returned 200 and unknown sections returned 404. Browser
+mock-session checks block service workers so Playwright can intercept the auth
+requests; generated PWA account exclusions were inspected separately.
+Mobile screenshot inspected; actual device safe-area
+insets and real signed-in cloud writes were not re-tested. Production build with
+--no-lint passed; existing standard-build legacy lint limitation remains.
+
+## Responsive Layout / Account Navigation - Completed
+
+This pass supersedes the original account link-list presentation, while retaining
+the accepted search/filter behavior and backend architecture.
+
+- The bottom navigation retains exactly Market and My Account. One persistent
+  indicator spans half the bar and translates between tab centers; a centered 40px
+  line slides with a 260ms transform transition. It is not keyed/remounted per tab.
+  Icon/label active styling, equal tab widths, aria-current and safe-area padding
+  remain. Reduced motion disables the indicator transition.
+- Account destinations are full-width rows with 48px minimum touch height and right
+  chevrons. Sell is a full-width primary action. The existing session request and
+  sign-out logic are reused by one MarketplaceActions instance.
+- AccountLayout persists across /account, its four reserved subroutes and
+  /profile/listings. Below 1024px, subpages slide from the right over the parent;
+  AnimatePresence keeps outgoing content mounted while it slides back to the right.
+  The underlying account navigation is inert while covered. Parent navigation uses
+  browser Back when entered from the account landing page; direct visits have a
+  safe link to /account. Reduced motion makes transitions immediate.
+- At 1024px and above the same account navigation forms a persistent 260px sidebar,
+  with routed content on its right. Desktop has no full-page slide. Refresh, direct
+  section URLs, and browser history retain real Next.js routes. No account feature
+  implementation was duplicated; placeholders remain Coming soon.
+- Listing form Category/Condition use a modal mobile picker below 1024px and native
+  compact selects on desktop. Options stay inside an 85dvh scrollable sheet, show
+  selection and close on selection; Escape/Close cancel. Arrow/Home/End plus Enter
+  and native dialog focus behavior support keyboard use. The underlying select
+  retains the original form field names, canonical values, and required validation.
+  This does not alter the Filter drawer's controls.
+- Market grids stay two columns on mobile. Cards now use explicit square aspect
+  ratios and Next Image cover cropping, two-line clamped titles and compact metadata.
+  My Listings changes from one to two mobile columns and shares the card component;
+  its existing edit/sold/delete handlers are unchanged. More columns remain at
+  tablet/desktop widths. Shared ProductImage is unchanged for detail views.
+- The descriptive footer is hidden below 1024px. Bottom-navigation clearance remains
+  72px plus safe-area inset. Container now centers content within max-w-6xl, keeping
+  desktop search/filter/sort/grid relationships within a bounded area. Colors,
+  branding, search, chips, Filter drawer and backend behavior were not redesigned.
+
+Validation: TypeScript, scoped ESLint, marketplace domain/home/session and SQL/RLS
+security tests passed. Edge checks at 390px, 1280px and 1536px verified full-width
+account rows, persistent indicator/sidebar DOM identity, forward/back transitions,
+direct section URLs/history, picker dimensions/values and no horizontal overflow.
+Additional browser-only mocked page data verified populated two-column Market and
+My Listings grids, square cover images, compact title/card measurements, and required
+category validation plus arrow/Enter selection. These mocks did not write to Supabase.
+Existing search/filter/chips/URL/escape regression checks passed at 390px/1536px.
+Screenshots were reviewed. Production build with --no-lint passed; existing standard
+build lint limitations remain. Real device safe-area behavior and real cloud writes
+were not re-tested. No messaging, favorites, payment or bank/payout functionality
+was implemented.
+
+## Market / Mobile Structure Cleanup - Completed
+
+This pass supersedes the previous separate homepage teaser and browse page, and
+corrects mobile account containment without changing backend behavior.
+
+- Canonical Market route is `/`. `/listings` is a compatibility alias re-exporting
+  the same page and SSR handler. Detail/create/edit routes and incoming links remain
+  intact. Both browse URLs retain query parameters, reload and browser history.
+- The mobile application brand header is hidden below 1024px with no reserved space.
+  Desktop retains its header. Browse/account main content starts with 16px mobile
+  padding; fixed bottom navigation and safe-area clearance remain unchanged.
+- Removed the homepage introduction, Browse all listings, latest-only heading and
+  bottom Have something you no longer need / Sell CTA. The browse hierarchy is now
+  search, chips, Sort/Filter, result count and the existing grid. Sell remains in
+  Account and existing listing-management routes.
+- Both routes use the existing filter parser and getListings boundary. Default
+  status is available; explicit Sold/All controls retain their existing behavior.
+  The homepage-only 10-item limit is removed. Previous/Next use the existing API's
+  20-item page query, making later results reachable with bookmarkable page URLs
+  that preserve filters. Search/filter/sort changes start at page one. A full final
+  page can offer Next to an empty page because the API has no total-count response;
+  Previous remains available. No repository/API/schema changes were made.
+- Sort and Filter share one flex group on mobile/desktop; chips wrap above as needed.
+  Filter drawer styling/animations and animated search remain unchanged.
+- On mobile, My Account's title belongs to account home. While a subroute is active,
+  the parent sidebar is hidden and removed from layout flow; destination content
+  occupies the main area from the top, without a parent title/menu above it.
+  On Back, account home returns while AnimatePresence retains the outgoing page's
+  rightward slide. Real routes/history, reduced motion, fixed bottom tabs and the
+  desktop persistent sidebar/right pane are preserved. Account/session/CRUD logic
+  is unchanged.
+
+Validation: TypeScript, scoped ESLint, marketplace domain/home/session and SQL/RLS
+security tests passed. Home tests cover removed CTAs, available query defaults and
+pagination/filter forwarding. Edge checks at 390px, 1280px and 1536px verified header
+visibility, all five account destinations, hidden parent content, Back/direct/reload
+navigation, desktop panes, same-row Sort/Filter and no horizontal overflow. Measured
+transforms verified forward/back slides and a reduced-motion browser load. Existing
+search/filter regression passed Apply, chips, sort, Clear, refresh, Back/Forward,
+compatibility URLs, Escape and animated X/backdrop close. Populated grid/My Listings
+and picker regression checks passed. Pagination links were tested with mocked page
+data. Screenshots were reviewed. Browser-only account/data mocks made no cloud writes;
+real-device safe-area behavior was not re-tested. Production build with --no-lint
+passed; existing standard-build legacy lint limitations remain. No additional product
+features or backend functionality were implemented.
+
+## Account Default / Mobile Title / Back Controls
+
+- Desktop header account navigation now opens `/profile/listings`. Direct `/account`
+  visits at 1024px and above replace the route with My Listings, retaining the
+  persistent desktop sidebar. The existing protected-route login flow still applies.
+  Mobile `/account` continues to show the account landing menu.
+- Mobile Market (`/` and its `/listings` alias) again displays the Campus Marketplace
+  page heading. Account screens do not display that brand heading; the shared mobile
+  application header remains hidden. Desktop keeps its existing brand header.
+- Added a reusable 44px icon-only BackButton with an accessible Back label and visible
+  keyboard focus. Replaced textual return links on account subpages, My Listings,
+  listing detail/create/edit and sign-in. Existing destinations remain intact;
+  account children retain browser Back when entered from their parent and the safe
+  parent fallback for direct visits. Desktop account panes keep the back control hidden.
+- No backend, authentication, Storage, listing CRUD, card or filter behavior changed.
+
+Validation: TypeScript, scoped ESLint and marketplace home/domain/session tests passed.
+Edge checks at 390px/1280px verified the mobile-only Market title, mobile account home,
+desktop header entry and direct-account default to My Listings, icon-only Back button,
+account return transition, sign-in return destination and no horizontal overflow.
+Signed-in display/My Listings used browser mocks; no cloud writes were performed.
+Production build with --no-lint passed.
+
 ## Git
 
 - Primary repository: `linsen25/campus-marketplace`
@@ -390,6 +567,6 @@ Before making substantial changes:
 
 Last updated: 2026-09-30
 
-Current phase: Legacy cleanup - safe removal pass completed
+Current phase: Account default / mobile title / back controls completed
 
-Next milestone: Explicit decision on retained Algolia runtime/CLI and asset cleanup; no redesign started
+Next milestone: Real-device safe-area and authenticated account acceptance; future features require explicit scope

@@ -147,3 +147,22 @@ assert.equal(listingFiltersUrl(parseListingFilters({}).values), '/listings')
 console.log(
   'PASS: category aliases, status, price conversion, query roundtrip, defaults and invalid filters.'
 )
+
+for (const route of [
+  '/account',
+  '/account/favorites',
+  '/account/messages',
+  '/account/profile',
+  '/account/settings',
+])
+  assert.equal(safeMarketplaceNext(route), route)
+for (const route of [
+  '/account/unknown',
+  '/account/../api/auth',
+  '//account',
+  '/account?next=https://evil.test',
+])
+  assert.equal(safeMarketplaceNext(route), '/profile/listings')
+console.log(
+  'PASS: account return paths allowed; unknown and unsafe paths rejected.'
+)

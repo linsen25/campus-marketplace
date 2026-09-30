@@ -2,7 +2,7 @@ import type { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import { useEffect, useRef, useState } from 'react'
 
-import { Container } from '@/components/container/container'
+import { AccountBackLink } from '@/components/listings/account-layout'
 import { ListingCard } from '@/components/listings/listing-card'
 import {
   deleteListing,
@@ -63,100 +63,96 @@ export default function MyListingsPage({
       <Head>
         <title>My Listings | Campus Marketplace</title>
       </Head>
-      <main className="py-8 laptop:py-12">
-        <Container>
-          <div className="flex flex-col gap-6">
-            <Link href="/listings" className="underline">
-              Back to listings
+      <section aria-label="My Listings">
+        <div className="flex flex-col gap-6">
+          <AccountBackLink />
+          <h1 className="text-2xl font-bold">My Listings</h1>
+          <div>
+            <Link href="/listings/new" className="btn btn-primary btn-small">
+              Sell an item
             </Link>
-            <h1 className="text-2xl font-bold">My Listings</h1>
-            <div>
-              <Link href="/listings/new" className="btn btn-primary btn-small">
-                Sell an item
-              </Link>
-            </div>
-            {error && <p role="alert">{error}</p>}
-            <p role="status">{message}</p>
-            {listings.length === 0 ? (
-              <p>You have no listings yet. Post an item to get started.</p>
-            ) : (
-              <ul
-                className="grid grid-cols-1 gap-6 tablet:grid-cols-3 laptop:grid-cols-5"
-                aria-label="My listings"
-                aria-busy={busy}
-              >
-                {listings.map((listing) => (
-                  <li key={listing.id} className="flex min-w-0 flex-col gap-2">
-                    <ListingCard listing={listing} />
-                    {listing.status === 'sold' && (
-                      <p className="small-bold">SOLD</p>
+          </div>
+          {error && <p role="alert">{error}</p>}
+          <p role="status">{message}</p>
+          {listings.length === 0 ? (
+            <p>You have no listings yet. Post an item to get started.</p>
+          ) : (
+            <ul
+              className="grid grid-cols-2 gap-3 tablet:grid-cols-3 laptop:grid-cols-5"
+              aria-label="My listings"
+              aria-busy={busy}
+            >
+              {listings.map((listing) => (
+                <li key={listing.id} className="flex min-w-0 flex-col gap-2">
+                  <ListingCard listing={listing} />
+                  {listing.status === 'sold' && (
+                    <p className="small-bold">SOLD</p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {!busy && (
+                      <Link
+                        href={`/listings/${encodeURIComponent(
+                          listing.id
+                        )}/edit`}
+                        className="underline"
+                        aria-label={`Edit ${listing.title}`}
+                      >
+                        Edit
+                      </Link>
                     )}
-                    <div className="flex flex-wrap items-center gap-2">
-                      {!busy && (
-                        <Link
-                          href={`/listings/${encodeURIComponent(
-                            listing.id
-                          )}/edit`}
-                          className="underline"
-                          aria-label={`Edit ${listing.title}`}
-                        >
-                          Edit
-                        </Link>
-                      )}
-                      {listing.status === 'available' && (
-                        <Button
-                          type="secondary"
-                          disabled={busy}
-                          aria-label={`Mark ${listing.title} as sold`}
-                          onClick={() => manage(listing, 'sold')}
-                        >
-                          Mark as Sold
-                        </Button>
-                      )}
+                    {listing.status === 'available' && (
                       <Button
                         type="secondary"
                         disabled={busy}
-                        aria-label={`Delete ${listing.title}`}
-                        onClick={() => setConfirmDelete(listing.id)}
+                        aria-label={`Mark ${listing.title} as sold`}
+                        onClick={() => manage(listing, 'sold')}
                       >
-                        Delete
+                        Mark as Sold
                       </Button>
-                    </div>
-                    {confirmDelete === listing.id && (
-                      <div
-                        role="group"
-                        aria-label={`Confirm deletion of ${listing.title}`}
-                        className="flex flex-col gap-2"
-                      >
-                        <p>
-                          Delete “{listing.title}”? This cannot be undone during
-                          this session.
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            type="primary"
-                            disabled={busy}
-                            onClick={() => manage(listing, 'delete')}
-                          >
-                            Confirm delete
-                          </Button>
-                          <Button
-                            type="secondary"
-                            disabled={busy}
-                            onClick={() => setConfirmDelete(null)}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
                     )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </Container>
-      </main>
+                    <Button
+                      type="secondary"
+                      disabled={busy}
+                      aria-label={`Delete ${listing.title}`}
+                      onClick={() => setConfirmDelete(listing.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                  {confirmDelete === listing.id && (
+                    <div
+                      role="group"
+                      aria-label={`Confirm deletion of ${listing.title}`}
+                      className="flex flex-col gap-2"
+                    >
+                      <p>
+                        Delete “{listing.title}”? This cannot be undone during
+                        this session.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="primary"
+                          disabled={busy}
+                          onClick={() => manage(listing, 'delete')}
+                        >
+                          Confirm delete
+                        </Button>
+                        <Button
+                          type="secondary"
+                          disabled={busy}
+                          onClick={() => setConfirmDelete(null)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
     </>
   )
 }

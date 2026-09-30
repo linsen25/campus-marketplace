@@ -19,6 +19,37 @@
 }
 .panel::backdrop {
   background: rgb(0 0 0 / 35%);
+  animation: fade-in 240ms ease-out;
+}
+.panel[data-closing='true'] {
+  animation: slide-out 240ms ease-in forwards;
+}
+.panel[data-closing='true']::backdrop {
+  animation: fade-out 240ms ease-in forwards;
+}
+@keyframes slide-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 @keyframes slide-in {
   from {
@@ -29,7 +60,35 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .panel[open] {
+  .panel[open],
+  .panel::backdrop,
+  .panel[data-closing='true']::backdrop {
     animation: none;
   }
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-left: auto;
+  max-width: 100%;
+}
+.sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.sort select {
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
 }
