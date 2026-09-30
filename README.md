@@ -1,5 +1,7 @@
 # PWA Ecom UI Template
 
+Current development status: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
+
 This is a React 18/Next.js based template for an ecommerce application, focused on delivering a rich search and discovery experience.
 The design is based on the [Algolia ecommerce UI design kit](https://www.algolia.com/doc/guides/solutions/ecommerce/ui-kits/) and the implementation focuses on performance and customization.
 

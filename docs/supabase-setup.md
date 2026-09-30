@@ -4,6 +4,15 @@ The marketplace now uses Supabase PostgreSQL, email authentication, and Storage.
 The retail homepage, catalog, Product routes, and Algolia remain separate and unchanged.
 No service-role key is needed. Do not add one to this application's environment.
 
+Status (2026-09-30): the owner reports local live verification against cloud
+Supabase passed, including OTP, CRUD, images, restart persistence, and ownership.
+Development email delivery uses Gmail SMTP. These instructions remain the setup
+and regression checklist; see [Project Status](PROJECT_STATUS.md) for current progress.
+
+**TODO BEFORE PUBLIC LAUNCH:** Replace Gmail SMTP with a transactional email provider
+using an owned domain, such as Resend, Postmark, SES, or Brevo. Verify deliverability
+to @uwo.ca accounts before launch. Keep this TODO until configured and tested.
+
 ## 1. Create a project
 
 1. Create a project at https://supabase.com/dashboard. Choose a region and save the
@@ -55,10 +64,12 @@ sold listings, while the browse page explicitly filters for available listings.
 3. The migration also installs an Auth-table email guard. It blocks non-`@uwo.ca`
    signup and confirmed email changes to other domains even if a caller bypasses
    this app. RLS checks the current confirmed Auth email, not editable user metadata.
-4. Configure custom SMTP under Authentication → Email/SMTP to deliver real emails
-   to Western users. Supabase's default development email service may restrict
-   recipients to project-team addresses; it is not a reliable public signup setup.
-5. Under Email Templates, update **Magic Link** and **Confirm signup** to include
+4. Configure custom SMTP under Authentication → Email/SMTP **before live auth
+   verification**. The project owner reports that new Supabase Free projects cannot
+   customize Auth email templates with default SMTP. This earlier blocker was
+   resolved using Gmail SMTP for development; the UI expects an Email OTP code.
+5. Under Email Templates, update **Magic link or OTP** (also called **Magic Link**)
+   and **Confirm signup** to include `{{ .Token }}` and display
    an email code rather than requiring a redirect link:
 
    ```html
@@ -67,10 +78,12 @@ sold listings, while the browse page explicitly filters for available listings.
    <p>If you did not request it, ignore this message.</p>
    ```
 
-6. Keep Auth rate limits enabled. Set a suitable short OTP expiration, such as
+6. Test delivery to a real `@uwo.ca` mailbox and confirm the email includes the OTP
+   code before proceeding with live authentication verification.
+7. Keep Auth rate limits enabled. Set a suitable short OTP expiration, such as
    10 minutes, and use the default six-digit token configuration. The UI accepts
    6–10 digits. Use Supabase's cooldown before requesting another email.
-7. Under URL Configuration, set Site URL to `http://localhost:3000` locally and
+8. Under URL Configuration, set Site URL to `http://localhost:3000` locally and
    your exact HTTPS application origin in production. This code-entry flow has
    no callback route and needs no wildcard redirect allowlist. Remove unused
    redirect URLs; do not allow arbitrary origins.
@@ -125,8 +138,8 @@ navigation to discard client-side page caches.
 
 PostgreSQL and Storage persist independently of the Next.js server. Restarting
 Next.js or using multiple instances does not reset listings. Existing Phase 1
-fixtures are not imported or assigned to invented auth users. The old memory adapter,
-seller, and notice remain **retired, unreferenced files**, pending hosted acceptance;
+fixtures are not imported or assigned to invented auth users. The unused memory adapter,
+seller, notice, and obsolete persistence documentation were removed after live verification;
 there is no automatic fallback to them when configuration or Supabase is unavailable.
 
 ## 6. Verification

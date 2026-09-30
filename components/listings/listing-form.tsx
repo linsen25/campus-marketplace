@@ -17,6 +17,26 @@ import { Link } from '@ui/link/link'
 
 export type ListingFormProps = { listing?: Listing }
 
+function validateSelectedPhoto(file: File) {
+  try {
+    validateListingImage(file)
+  } catch (cause) {
+    if (!listingImageRules.mimeTypes.includes(file.type))
+      throw new Error(`${file.name} is not supported. Use JPEG, PNG, or WebP.`)
+    if (file.size > listingImageRules.maxBytes)
+      throw new Error(
+        `${file.name} is ${(file.size / (1024 * 1024)).toFixed(
+          2
+        )} MB. Maximum size is 3 MB.`
+      )
+    throw new Error(
+      `${file.name}: ${
+        cause instanceof Error ? cause.message : 'Invalid image.'
+      }`
+    )
+  }
+}
+
 export function ListingForm({ listing }: ListingFormProps) {
   const savedListing = useRef(listing)
   const [photos, setPhotos] = useState(listing?.photoUrls || [])
@@ -25,6 +45,7 @@ export function ListingForm({ listing }: ListingFormProps) {
   const submitting = useRef(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [photoError, setPhotoError] = useState<string | null>(null)
   const fieldClass = 'flex min-w-0 flex-col gap-2'
   const controlClass =
     'input focus-visible:ring-2 focus-visible:ring-brand-black'
@@ -42,6 +63,7 @@ export function ListingForm({ listing }: ListingFormProps) {
       const data = new FormData(event.currentTarget)
       const read = (name: string) => String(data.get(name) || '')
       setError(null)
+      setPhotoError(null)
       let textSaved = false
       try {
         const input = validateListingInput({
@@ -54,12 +76,19 @@ export function ListingForm({ listing }: ListingFormProps) {
           pickupArea: read('pickupArea'),
           photoUrls: [],
         })
-        if (
-          photos.length - removedUrls.length + files.length >
-          listingImageRules.maxFiles
-        )
-          throw new Error('Use at most six images per listing.')
-        files.forEach(validateListingImage)
+        try {
+          if (
+            photos.length - removedUrls.length + files.length >
+            listingImageRules.maxFiles
+          )
+            throw new Error('Use at most six images per listing.')
+          files.forEach(validateSelectedPhoto)
+        } catch (cause) {
+          setPhotoError(
+            cause instanceof Error ? cause.message : 'Invalid images.'
+          )
+          return
+        }
         submitting.current = true
         setBusy(true)
         const editable = {
@@ -91,7 +120,8 @@ export function ListingForm({ listing }: ListingFormProps) {
         }
         window.location.assign('/profile/listings')
       } catch (cause) {
-        setError(
+        const setSaveError = textSaved ? setPhotoError : setError
+        setSaveError(
           cause instanceof Error
             ? `${
                 textSaved
@@ -215,20 +245,26 @@ export function ListingForm({ listing }: ListingFormProps) {
               type="file"
               accept="image/jpeg,image/png,image/webp"
               multiple={true}
-              aria-describedby="listing-photos-help"
+              aria-invalid={Boolean(photoError)}
+              aria-describedby={`listing-photos-help listing-photos-selection${
+                photoError ? ' listing-photos-error' : ''
+              }`}
               onChange={(event) => {
                 const selected = Array.from(event.target.files || [])
                 try {
-                  if (selected.length + photos.length - removedUrls.length > 6)
+                  if (
+                    selected.length + photos.length - removedUrls.length >
+                    listingImageRules.maxFiles
+                  )
                     throw new Error('Use at most six images per listing.')
-                  selected.forEach(validateListingImage)
+                  selected.forEach(validateSelectedPhoto)
                   setFiles(selected)
-                  setError(null)
+                  setPhotoError(null)
                 } catch (cause) {
                   setFiles([])
                   const fileInput = event.currentTarget
                   fileInput.value = ''
-                  setError(
+                  setPhotoError(
                     cause instanceof Error ? cause.message : 'Invalid images.'
                   )
                 }
@@ -236,8 +272,29 @@ export function ListingForm({ listing }: ListingFormProps) {
             />
           </label>
           <p id="listing-photos-help" className="text-neutral-dark text-sm">
-            Up to six JPEG, PNG, or WebP images, at most 3 MB each.
+            JPEG, PNG, or WebP · max {listingImageRules.maxFiles} images · 3 MB
+            each
+            <br />
+            The limit includes existing photos kept on the listing.
           </p>
+          {photoError && (
+            <p id="listing-photos-error" role="alert">
+              {photoError}
+            </p>
+          )}
+          <div id="listing-photos-selection" aria-live="polite">
+            {files.length > 0 && (
+              <>
+                <p>
+                  {files.length} {files.length === 1 ? 'file' : 'files'}{' '}
+                  selected for upload:
+                </p>
+                <p className="break-words">
+                  {files.map((file) => file.name).join(', ')}
+                </p>
+              </>
+            )}
+          </div>
           {photos.map((url, index) => (
             <label key={url} className="flex items-center gap-2">
               <input
@@ -262,9 +319,6 @@ export function ListingForm({ listing }: ListingFormProps) {
               </a>
             </label>
           ))}
-          {files.length > 0 && (
-            <p>{files.map((file) => file.name).join(', ')}</p>
-          )}
         </div>
       </fieldset>
       <div className="flex flex-wrap items-center gap-4">

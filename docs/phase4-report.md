@@ -1,7 +1,11 @@
 # Phase 4 implementation and validation report
 
-Repository implementation and local validation are complete. Hosted acceptance is
-pending the user's Supabase project, migration, SMTP configuration, and test accounts.
+Repository implementation and local validation are complete. On 2026-09-30 the
+owner reported successful live verification locally against cloud Supabase: real
+Western OTP/login, user/profile creation, CRUD, images, My Listings, restart
+persistence, expected stored data, and ownership/security behavior. Development
+SMTP uses Gmail. See [Project Status](PROJECT_STATUS.md) for the authoritative status
+and production SMTP TODO. Validation sections below also retain historical evidence.
 No Phase 5 work was performed. The retail homepage, catalog, Product routes, Algolia,
 and global visual identity were preserved.
 
@@ -43,8 +47,8 @@ and global visual identity were preserved.
 - `pages/listings/new.tsx`, `pages/listings/[id]/edit.tsx`, `pages/profile/listings.tsx`
   — authenticated SSR access and removal of development notices.
 - `lib/server/development-listings-repository.ts`, `lib/server/development-seller.ts`,
-  `components/listings/development-notice.tsx` — marked retired, no active imports.
-- `docs/marketplace-development-persistence.md` — retired-adapter notice.
+  `components/listings/development-notice.tsx` — removed during finalization after import checks.
+- `docs/marketplace-development-persistence.md` — removed obsolete adapter documentation.
 
 ## 3. Dependencies added
 
@@ -113,10 +117,11 @@ were added to the same boundary.
 
 ## 11. Temporary code retirement
 
-The active API no longer imports the memory repository or development seller, and
-active screens no longer render the notice. Files are clearly retired but retained
-until hosted acceptance passes, as requested. There is no memory fallback. Fixtures
-remain isolated and are not seeded into invented real user accounts.
+The unused memory repository, development seller, notice, and obsolete persistence
+documentation were removed after the owner confirmed live acceptance. Import checks
+found no active consumers. There is no memory fallback. Fixtures remain isolated
+as sample domain data for future tests/previews; no current runtime or test imports
+remain, and they are not seeded into invented real user accounts.
 
 ## 12. Environment variables
 
@@ -158,9 +163,11 @@ legacy files were not broadly reformatted.
 `npm run build -- --no-lint` — **passed**, including PWA compilation and all routes.
 Only the PWA rule needed for new authenticated marketplace data was added.
 
-## 17. Not verified without project access
+## 17. Historical verification limits (superseded by owner live verification)
 
-No Supabase credentials or configured test mailboxes were available. Actual email
+At the initial implementation pass, no Supabase credentials or configured test
+mailboxes were available. The following describes that historical state, not the
+current acceptance status. Actual email
 delivery, live hosted Auth sessions, hosted PostgREST CRUD/404s, Storage upload and
 cleanup, deployed RLS configuration, and persistence across a real server restart
 remain on the manual acceptance checklist. Local SQL tests use stand-ins for the
