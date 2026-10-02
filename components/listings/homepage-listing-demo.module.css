@@ -1,0 +1,124 @@
+.section {
+  width: min(1200px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 80px 0 96px;
+  color: #fafafa;
+  background: transparent;
+}
+.heading {
+  margin-bottom: 48px;
+  max-width: 850px;
+}
+.heading h2 {
+  font-size: clamp(26px, 3vw, 36px);
+  font-weight: 650;
+  line-height: 1.2;
+}
+.heading p {
+  margin-top: 18px;
+  color: #c8becf;
+  font-size: 17px;
+  line-height: 1.6;
+}
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
+  gap: clamp(32px, 5vw, 72px);
+  align-items: center;
+}
+.videoColumn {
+  min-width: 0;
+}
+.videoSlot {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #554361;
+  background: rgb(28 19 38 / 0.8);
+  display: grid;
+  place-items: center;
+  color: #d9cce3;
+  font-size: 20px;
+}
+.videoSlot iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.note {
+  color: #bbacc6;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 14px;
+}
+.details {
+  font-size: 16px;
+  line-height: 1.6;
+}
+.details h4 {
+  font-size: 16px;
+  line-height: 1.4;
+  letter-spacing: normal;
+  font-weight: 700;
+  margin-top: 24px;
+  margin-bottom: 4px;
+}
+.details .note {
+  margin-top: 0;
+}
+.details p[role='status'] {
+  margin-top: 16px;
+}
+.verified {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #bbacc6;
+  font-size: 13px;
+}
+.verifiedMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #166534;
+  color: #fff;
+}
+.metadata {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 16px;
+  margin-top: 24px;
+}
+.metadata dt {
+  color: #bbacc6;
+  font-size: 13px;
+}
+.description {
+  white-space: pre-line;
+}
+@media (max-width: 767px) {
+  .section {
+    width: calc(100% - 40px);
+    padding: 24px 0 56px;
+  }
+  .heading {
+    margin-bottom: 32px;
+  }
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section [data-demo-enter] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

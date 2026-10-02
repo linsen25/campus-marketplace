@@ -1,0 +1,240 @@
+.trigger {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 420px;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #fafafa;
+  text-align: left;
+  border-radius: 16px;
+}
+.media {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #2d2435;
+}
+.price {
+  font-size: 30px;
+  font-weight: 750;
+  line-height: 1.1;
+}
+.overlay {
+  composes: frame from '../animata/button/action-button-sizing.module.css';
+  isolation: isolate;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.backdrop {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: rgb(8 5 14 / 0.78);
+  backdrop-filter: blur(4px);
+}
+.dialog {
+  composes: frame from '../animata/button/action-button-sizing.module.css';
+  position: relative;
+  z-index: 1;
+  /* Fit the two-column 4:5 media above the existing padding/action row. */
+  width: min(100%, 1040px, calc((100dvh - 224px) * 1.6 + 90px));
+  min-width: min(100%, 640px);
+  max-height: calc(100dvh - 48px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #544161;
+  border-radius: 20px;
+  background: #1b1523;
+  color: #fafafa;
+  padding: 52px 28px 24px;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.4);
+  outline: none;
+  overflow: hidden;
+}
+.scrollArea {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 32px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #f5f5f5 transparent;
+  overscroll-behavior: contain;
+}
+.scrollArea::-webkit-scrollbar {
+  width: 8px;
+}
+.scrollArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollArea::-webkit-scrollbar-thumb {
+  background: #f5f5f5;
+  border-radius: 999px;
+}
+.scrollAreaTransitioning {
+  scrollbar-color: transparent transparent;
+}
+.scrollAreaTransitioning::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+.dialog .media {
+  aspect-ratio: 4 / 5;
+  align-self: start;
+}
+.info {
+  min-width: 0;
+  padding: 12px 8px;
+}
+.title {
+  letter-spacing: -0.015em;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 12px 0 28px;
+}
+.topAction {
+  position: absolute;
+  right: 16px;
+  top: 8px;
+  z-index: 1;
+}
+.actions {
+  composes: contract from '../animata/button/action-button-sizing.module.css';
+  display: flex;
+  justify-content: space-between;
+  gap: var(--action-gap);
+  padding-top: 24px;
+  flex-shrink: 0;
+}
+.actions > button {
+  display: inline-flex;
+  align-items: center;
+  width: var(--action-width);
+  height: var(--action-height);
+  flex-shrink: 0;
+  padding: var(--action-inset);
+  border-width: var(--action-inset);
+  border-style: solid;
+  border-radius: var(--action-radius);
+}
+.actions :global(.shining-button__body),
+.raisedButtonDangerSurface {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: var(--action-surface-padding);
+  border-radius: var(--action-surface-radius);
+}
+.raisedButtonDanger {
+  composes: button from '../animata/button/action-button-sizing.module.css';
+  align-self: center;
+  border-color: transparent;
+  background: transparent;
+  color: #fff5f5;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 150ms ease-in-out;
+}
+.raisedButtonDangerSurface {
+  background: #762e3c;
+  box-shadow: rgb(35 10 20 / 0.4) 0 2px 4px, rgb(35 10 20 / 0.3) 0 7px 13px -3px,
+    #481823 0 -3px 0 inset;
+  transition: box-shadow 150ms ease-in-out;
+}
+.raisedButtonDanger:hover {
+  transform: translateY(-2px);
+}
+.raisedButtonDanger:hover .raisedButtonDangerSurface {
+  box-shadow: rgb(35 10 20 / 0.4) 0 4px 8px, rgb(35 10 20 / 0.3) 0 7px 13px -3px,
+    #481823 0 -3px 0 inset;
+}
+.raisedButtonDanger:focus-visible {
+  outline: 2px solid #efb0ba;
+  outline-offset: 3px;
+}
+.raisedButtonDanger:focus-visible .raisedButtonDangerSurface {
+  box-shadow: #c06b7b 0 0 0 1.5px inset, rgb(35 10 20 / 0.4) 0 2px 4px,
+    rgb(35 10 20 / 0.3) 0 7px 13px -3px, #481823 0 -3px 0 inset;
+}
+.raisedButtonDanger:active {
+  transform: translateY(2px);
+}
+.raisedButtonDanger:active .raisedButtonDangerSurface {
+  box-shadow: #481823 0 3px 7px inset;
+}
+.trigger:focus-visible {
+  outline: 2px solid #e4c7ff;
+  outline-offset: 4px;
+}
+.backdrop {
+  touch-action: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .raisedButtonDanger {
+    transition: none;
+  }
+  .raisedButtonDangerSurface {
+    transition: none;
+  }
+}
+@media (max-width: 767px) {
+  .overlay {
+    padding: max(var(--action-overlay-inset), env(safe-area-inset-top)) var(--action-overlay-inset)
+      max(var(--action-overlay-inset), env(safe-area-inset-bottom));
+  }
+  .dialog {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    max-height: 100%;
+    padding: 48px var(--action-dialog-padding) 16px;
+    border-width: var(--action-dialog-border);
+    border-radius: 16px;
+  }
+  .scrollArea {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0;
+  }
+  .dialog .media {
+    aspect-ratio: 4 / 3;
+    grid-column: 1 / -1;
+  }
+  .info {
+    padding: 24px 0 8px;
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .info > .price {
+    /* Reserve the heart's space in the price row without narrowing details. */
+    padding-right: 56px;
+  }
+  .topAction {
+    position: static;
+    display: flex;
+    justify-content: flex-end;
+    grid-column: 2;
+    grid-row: 2;
+    align-self: start;
+    margin-top: 20px;
+  }
+  .actions {
+    padding-top: 16px;
+    margin-top: auto;
+  }
+}

@@ -1,0 +1,93 @@
+.root {
+  position: relative;
+  overflow: clip;
+  padding: 40px 0 16vh;
+}
+.plane {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  transform-origin: top;
+  will-change: transform;
+}
+.row {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  will-change: transform;
+}
+.card {
+  position: relative;
+  display: block;
+  width: 288px;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #26183a;
+  border: 1px solid #655476;
+}
+.card:focus-visible {
+  outline: 2px solid white;
+  outline-offset: -3px;
+}
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 500ms ease-out;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .card:hover .image {
+    transform: scale(1.05);
+  }
+}
+@media (max-width: 767px) {
+  .card {
+    width: 168px;
+  }
+  .row,
+  .plane {
+    gap: 12px;
+  }
+  .root {
+    padding-bottom: 12vh;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plane,
+  .row {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .row {
+    flex-wrap: wrap;
+  }
+}
+
+.copy {
+  position: relative;
+  z-index: 1;
+  max-width: 896px;
+  margin: 0 auto;
+  padding: 14vh 24px 10vh;
+}
+.item {
+  flex-shrink: 0;
+}
+.caption {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 40px 16px 12px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / 0.7),
+    rgb(0 0 0 / 0.3),
+    transparent
+  );
+}
+.card {
+  box-shadow: 0 10px 15px rgb(0 0 0 / 0.05);
+}

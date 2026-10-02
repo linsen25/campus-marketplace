@@ -1,1 +1,15 @@
 screens.js
+
+# User-supplied React Bits JSX is kept verbatim; validated separately as JavaScript.
+components/ui/GradientWaves.jsx
+components/ui/DepthText.jsx
+components/ui/TextType.jsx
+components/ui/DriftWall.jsx
+
+components/ui/Lanyard.jsx
+
+components/ui/GooeyNav.jsx
+
+components/ui/MaskedHeading.jsx
+
+components/ui/TearTicket.jsx

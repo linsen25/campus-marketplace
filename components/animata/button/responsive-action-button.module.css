@@ -1,0 +1,31 @@
+.desktopAppearance {
+  composes: button from './action-button-sizing.module.css';
+}
+
+@media (max-width: 1023px) {
+  .desktopAppearance :global(.shining-button__body) {
+    width: 100%;
+    height: 100%;
+    padding: var(--action-surface-padding);
+    border-radius: var(--action-surface-radius);
+    gap: 16px;
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  .desktopAppearance :global(.shining-button__arrow) {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+@media (max-width: 767px) {
+  .desktopAppearance :global(.shining-button__body) {
+    gap: 6px;
+  }
+
+  .desktopAppearance :global(.shining-button__arrow) {
+    width: 16px;
+    height: 16px;
+  }
+}

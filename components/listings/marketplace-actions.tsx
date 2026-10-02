@@ -1,46 +1,22 @@
 import { useRouter } from 'next/router'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { marketplaceRequest } from '@/lib/listings-api'
-import type { SellerSummary } from '@/types/listing'
 import { Button } from '@ui/button/button'
 import { Link } from '@ui/link/link'
 
 import styles from './account-layout.module.css'
+import { useMarketplaceSession } from './marketplace-session'
 
 export function MarketplaceActions() {
   const router = useRouter()
-  const [seller, setSeller] = useState<SellerSummary | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { seller, loading, error: sessionError } = useMarketplaceSession()
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  useEffect(() => {
-    let active = true
-    marketplaceRequest<{ seller: SellerSummary | null }>(
-      '/api/auth/session',
-      'GET'
-    )
-      .then((data) => {
-        if (active) {
-          setSeller(data.seller)
-          setLoading(false)
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setSeller(null)
-          setLoading(false)
-          setError('Unable to load your account. Please refresh to try again.')
-        }
-      })
-    return () => {
-      active = false
-    }
-  }, [router.asPath])
   if (loading) return <p role="status">Loading account...</p>
   return (
     <div className="flex flex-col gap-6">
-      {error && <p role="alert">{error}</p>}
+      {(error || sessionError) && <p role="alert">{error || sessionError}</p>}
       {seller ? (
         <div>
           <p className="font-bold">{seller.displayName}</p>

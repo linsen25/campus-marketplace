@@ -1,0 +1,178 @@
+.footer {
+  position: relative;
+  background: transparent;
+  color: #f5f5f5;
+  padding: 48px 20px calc(48px + env(safe-area-inset-bottom, 0px));
+}
+.content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  gap: 20px;
+}
+.brand {
+  font-weight: 700;
+}
+.controls {
+  min-width: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 6px;
+  gap: 8px 24px;
+}
+.control {
+  min-height: 44px;
+  flex-shrink: 0;
+  padding: 0 2px;
+  color: #d4c9e3;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+}
+.control[aria-pressed='true'] {
+  color: #fff;
+  border-bottom-color: #d5b3ff;
+}
+.control:focus-visible {
+  outline: 2px solid #d5b3ff;
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+.panel {
+  min-width: 0;
+  max-width: 920px;
+  overflow: hidden;
+
+  line-height: 1.65;
+  color: #e4ddec;
+}
+
+.trustHeading {
+  font-size: clamp(24px, 2.5vw, 30px);
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+.futureNote {
+  color: #b9a9c5;
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 760px;
+  margin-top: 16px;
+}
+
+.intro {
+  max-width: 760px;
+  margin-top: 16px;
+}
+
+.trustList {
+  list-style: none;
+  padding: 0;
+  margin: 28px 0 0;
+}
+.trustList li {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 24px;
+  padding: 24px 0;
+  border-bottom: 1px solid rgb(219 199 237 / 0.16);
+}
+.trustList li:first-child {
+  padding-top: 0;
+}
+.number {
+  color: #a999b4;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  padding-top: 4px;
+}
+.trustList h3 {
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: normal;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+.trustList p {
+  color: #cfc3d8;
+  max-width: 740px;
+}
+.contact {
+  max-width: 920px;
+  padding-top: 28px;
+  border-top: 1px solid rgb(219 199 237 / 16%);
+}
+
+.contact h2 {
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.contact > p {
+  max-width: 680px;
+  margin-top: 12px;
+  color: #cfc3d8;
+  line-height: 1.65;
+}
+
+.contactLinks {
+  margin-top: 20px;
+}
+
+.contactLinks > div {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  min-height: 44px;
+}
+
+.contactLinks dt {
+  color: #a999b4;
+  font-size: 14px;
+}
+
+.contactLinks dd {
+  overflow-wrap: anywhere;
+}
+
+.contactLinks a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #e4ddec;
+}
+
+.contactLinks a:hover {
+  color: #d5b3ff;
+}
+
+.contactLinks a:focus-visible {
+  outline: 2px solid #d5b3ff;
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.projectNote {
+  max-width: 920px;
+  padding-top: 24px;
+  border-top: 1px solid rgb(219 199 237 / 16%);
+  color: #a999b4;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.projectNote p + p {
+  margin-top: 8px;
+}
+@media (max-width: 767px) {
+  .controls {
+    gap: 20px;
+  }
+  .trustList li {
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 14px;
+  }
+}

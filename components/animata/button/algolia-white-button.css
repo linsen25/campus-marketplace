@@ -1,0 +1,50 @@
+.algolia-white-btn {
+  display: inline-flex;
+  height: 48px;
+  cursor: pointer;
+  touch-action: manipulation;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  white-space: nowrap;
+  border-radius: 4px;
+  border: 0;
+  background: #fcfcfd;
+  padding: 0 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  line-height: 1;
+  color: #1e293b;
+  text-decoration: none;
+  transition: transform 150ms ease-in-out;
+  box-shadow: rgba(45, 35, 66, 0.4) 0 2px 4px,
+    rgba(45, 35, 66, 0.3) 0 7px 13px -3px, #d6d6e7 0 -3px 0 inset;
+}
+.algolia-white-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: rgba(45, 35, 66, 0.4) 0 4px 8px,
+    rgba(45, 35, 66, 0.3) 0 7px 13px -3px, #d6d6e7 0 -3px 0 inset;
+}
+.algolia-white-btn:focus {
+  box-shadow: #d6d6e7 0 0 0 1.5px inset, rgba(45, 35, 66, 0.4) 0 2px 4px,
+    rgba(45, 35, 66, 0.3) 0 7px 13px -3px, #d6d6e7 0 -3px 0 inset;
+}
+.algolia-white-btn:active {
+  transform: translateY(2px);
+  box-shadow: #d6d6e7 0 3px 7px inset;
+}
+.algolia-white-btn:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 4px;
+}
+@media (max-width: 767px) {
+  .algolia-white-btn {
+    height: 40px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .algolia-white-btn {
+    transition: none;
+  }
+}

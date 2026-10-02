@@ -1,8 +1,12 @@
+import { useAtomValue } from 'jotai/utils'
 import { useRouter } from 'next/router'
+import type { ReactNode } from 'react'
 
 import { Container } from '@/components/container/container'
+import { loaderFinishedAtom } from '@/components/loader/loader'
 import { Link } from '@ui/link/link'
 
+import { useMarketplaceSession } from './marketplace-session'
 import styles from './marketplace-shell.module.css'
 
 function NavigationIcon({ account = false }: { account?: boolean }) {
@@ -44,7 +48,7 @@ export function MarketplaceHeader() {
             Campus Marketplace
           </Link>
           <div className={styles.desktopLinks}>
-            <Link href="/" className="underline">
+            <Link href="/listings" className="underline">
               Market
             </Link>
             <Link
@@ -63,10 +67,13 @@ export function MarketplaceHeader() {
 
 export function MarketplaceBottomNavigation() {
   const { pathname } = useRouter()
+  const { seller, loading } = useMarketplaceSession()
+  const loaderFinished = useAtomValue(loaderFinishedAtom)
   const account =
     pathname.startsWith('/account') ||
     pathname.startsWith('/profile') ||
     pathname === '/auth/sign-in'
+  if (loading || !seller || !loaderFinished) return null
   return (
     <nav aria-label="Primary navigation" className={styles.bottomTabs}>
       <span
@@ -75,7 +82,7 @@ export function MarketplaceBottomNavigation() {
         style={{ transform: `translateX(${account ? 100 : 0}%)` }}
       />
       <Link
-        href="/"
+        href="/listings"
         aria-current={!account ? 'page' : undefined}
         className={styles.tab}
       >
@@ -94,7 +101,9 @@ export function MarketplaceBottomNavigation() {
   )
 }
 
-export const marketplaceContentClass = styles.content
+export function MarketplaceContent({ children }: { children: ReactNode }) {
+  return <div className={styles.content}>{children}</div>
+}
 
 export function MarketplaceFooter() {
   return (

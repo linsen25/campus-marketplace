@@ -10,10 +10,10 @@ import { Dev } from '@dev/dev'
 /// #endif
 
 import { AccountLayout } from '@/components/listings/account-layout'
+import { MarketplaceSessionProvider } from '@/components/listings/marketplace-session'
 import {
   MarketplaceHeader,
-  MarketplaceBottomNavigation,
-  marketplaceContentClass,
+  MarketplaceContent,
   MarketplaceFooter,
 } from '@/components/listings/marketplace-shell'
 import { Loader } from '@/components/loader/loader'
@@ -23,8 +23,15 @@ import { gaTrackingId, isDev, isProd } from '@/utils/env'
 import { scrollToTop } from '@/utils/scrollToTop'
 
 import '@/styles/_index.css'
+import '@/components/ui/GradientWaves.css'
+import '@/components/ui/MaskedHeading.css'
+import '@/components/ui/TextType.css'
+import '@/components/ui/Lanyard.css'
+import '@/components/ui/TearTicket.css'
+import '@/components/animata/button/shining-button.css'
+import '@/components/animata/button/algolia-white-button.css'
 
-export default function App({ Component, pageProps, router }: AppProps) {
+function MarketplaceApp({ Component, pageProps, router }: AppProps) {
   const isCatalogPage = useMemo(
     () => router?.pathname === '/catalog/[[...slugs]]',
     [router?.pathname]
@@ -59,8 +66,8 @@ export default function App({ Component, pageProps, router }: AppProps) {
         </>
       )}
 
-      <div className={marketplaceContentClass}>
-        <MarketplaceHeader />
+      <MarketplaceContent>
+        {router.pathname !== '/' && <MarketplaceHeader />}
 
         {router.pathname.startsWith('/account') ||
         router.pathname === '/profile/listings' ? (
@@ -73,9 +80,8 @@ export default function App({ Component, pageProps, router }: AppProps) {
           </AnimatePresence>
         )}
 
-        <MarketplaceFooter />
-      </div>
-      <MarketplaceBottomNavigation />
+        {router.pathname !== '/' && <MarketplaceFooter />}
+      </MarketplaceContent>
 
       <Loader
         layout={
@@ -91,5 +97,13 @@ export default function App({ Component, pageProps, router }: AppProps) {
 
       {isDev && isCatalogPage && <Dev />}
     </AppLayout>
+  )
+}
+
+export default function App(props: AppProps) {
+  return (
+    <MarketplaceSessionProvider>
+      <MarketplaceApp {...props} />
+    </MarketplaceSessionProvider>
   )
 }

@@ -12,7 +12,14 @@ const element =
   ({ children, ...props }) =>
     React.createElement(tag, props, children)
 const mocks = {
-  'next/router': { useRouter: () => ({ pathname: '/', query: {} }) },
+  '@/components/listings/homepage-scene': {
+    HomepageScene: ({ listings }) =>
+      React.createElement('div', {
+        'data-testid': 'landing-scene',
+        'data-listing-count': listings.length,
+      }),
+  },
+  'next/router': { useRouter: () => ({ pathname: '/listings', query: {} }) },
   '@/components/listings/listing-filters': {
     ListingFilters: () =>
       React.createElement('div', { 'data-testid': 'browse-controls' }),
@@ -57,7 +64,15 @@ function load(file) {
   return module.exports
 }
 async function main() {
-  const home = load('pages/index.tsx')
+  const home = load('pages/listings/index.tsx')
+  mocks['./listings/index'] = home
+  const landing = load('pages/index.tsx')
+  const landingHtml = renderToStaticMarkup(
+    React.createElement(landing.default, { listings: [], error: null })
+  )
+  assert.match(landingHtml, /landing-scene/)
+  assert(!landingHtml.includes('browse-controls'))
+  assert(!landingHtml.includes('No listings match'))
   const headers = {}
   const context = {
     req: {},
@@ -67,6 +82,24 @@ async function main() {
       },
     },
   }
+  assert.deepEqual(
+    await landing.getServerSideProps(context),
+    await home.getServerSideProps(context)
+  )
+  const previousMode = process.env.NODE_ENV
+  process.env.NODE_ENV = 'development'
+  const demo = await landing.getServerSideProps(context)
+  assert.equal(demo.props.demoProducts.length, 21)
+  assert(
+    demo.props.demoProducts.every(
+      (item) => item.image.startsWith('/static/') && !item.href
+    )
+  )
+  process.env.NODE_ENV = 'production'
+  const production = await landing.getServerSideProps(context)
+  assert(!('demoProducts' in production.props))
+  if (previousMode === undefined) delete process.env.NODE_ENV
+  else process.env.NODE_ENV = previousMode
   const empty = await home.getServerSideProps(context)
   assert.deepEqual(receivedQuery, {
     search: '',
@@ -132,7 +165,7 @@ async function main() {
   assert(!errorHtml.includes('Private backend detail'))
   assert(!errorHtml.includes('No listings match'))
   console.log(
-    'PASS: homepage available/newest query, no-store, shared filter/search query, populated/empty/error states (data boundary mocked).'
+    'PASS: landing/browse separation, shared SSR, available/newest query, no-store, shared filter/search query, populated/empty/error states (data boundary mocked).'
   )
 }
 main().catch((error) => {

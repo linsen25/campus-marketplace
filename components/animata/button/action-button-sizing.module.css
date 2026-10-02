@@ -1,0 +1,45 @@
+/* Geometry taken from the existing expanded listing and its Close action. */
+.frame {
+  --action-overlay-inset: 8px;
+  --action-dialog-border: 1px;
+  --action-dialog-padding: 16px;
+}
+
+.contract {
+  composes: frame;
+}
+
+.contract.contract {
+  --action-width: 200px;
+  --action-height: 64px;
+  --action-inset: 4px;
+  --action-gap: 16px;
+  --action-radius: 12px;
+  --action-surface-radius: 8px;
+  --action-surface-padding: 0 12px;
+  --action-font-size: 14px;
+  --action-font-weight: 600;
+  --action-line-height: 20px;
+}
+
+@media (max-width: 1023px) {
+  .button.button {
+    width: var(--action-width);
+    height: var(--action-height);
+    padding: var(--action-inset);
+    border-width: var(--action-inset);
+    border-radius: var(--action-radius);
+    font-size: var(--action-font-size);
+    font-weight: var(--action-font-weight);
+    line-height: var(--action-line-height);
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .contract.contract {
+    --action-width: calc((100% - var(--action-gap)) / 2);
+    --action-height: 48px;
+    --action-inset: 2px;
+  }
+}

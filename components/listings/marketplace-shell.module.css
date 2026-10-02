@@ -29,7 +29,7 @@
   background: var(--color-neutral-lightest);
 }
 .content {
-  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 0;
 }
 @media (min-width: 1024px) {
   .bottomTabs {
@@ -37,9 +37,6 @@
   }
   .desktopLinks {
     display: flex;
-  }
-  .content {
-    padding-bottom: 0;
   }
 }
 
