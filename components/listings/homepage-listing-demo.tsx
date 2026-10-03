@@ -3,6 +3,7 @@ import { motion } from 'motion/react'
 import { useState } from 'react'
 
 import ShiningButton from '@/components/animata/button/shining-button'
+import { useAuthModal } from '@/components/auth/auth-modal'
 import PulseHeart from '@/components/react-bits/pulse-heart'
 import { ExpandableCard } from '@/components/velora/expandable-card'
 import { homepageListingDemo as example } from '@/lib/fixtures/homepage-listing-demo'
@@ -27,8 +28,8 @@ export function WesternEmailVerification({ verified }: { verified: boolean }) {
 
 export function HomepageListingDemo() {
   const reduced = useHomeReducedMotion()
+  const { openAuth } = useAuthModal()
   const [favorite, setFavorite] = useState(false)
-  const [contactNotice, setContactNotice] = useState(false)
   const category = listingCategories.find(
     (item) => item.value === example.category
   )?.label
@@ -92,7 +93,9 @@ export function HomepageListingDemo() {
               <ShiningButton
                 variant="green"
                 desktopAppearance={true}
-                onClick={() => setContactNotice(true)}
+                onClick={() =>
+                  openAuth({ mode: 'signin', intent: 'contact-seller' })
+                }
               >
                 Contact seller
               </ShiningButton>
@@ -112,11 +115,6 @@ export function HomepageListingDemo() {
               </dl>
               <h4>Description</h4>
               <p className={styles.description}>{example.description}</p>
-              {contactNotice && (
-                <p className={styles.note} role="status">
-                  Contacting sellers is not available yet.
-                </p>
-              )}
             </div>
           </ExpandableCard>
         </motion.div>

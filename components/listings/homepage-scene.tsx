@@ -1,9 +1,9 @@
 import { useTransform, useViewportScroll } from 'framer-motion'
 import { motion } from 'motion/react'
 import dynamic from 'next/dynamic'
-import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState } from 'react'
 
+import { useAuthModal } from '@/components/auth/auth-modal'
 import { HeroParallax } from '@/components/ui/hero-parallax'
 import type { HeroParallaxProduct } from '@/components/ui/hero-parallax'
 import type { Listing } from '@/types/listing'
@@ -61,7 +61,15 @@ export function HomepageScene({
         )
       : []
   }, [listings, demoProducts])
-  const router = useRouter()
+  const { openAuth } = useAuthModal()
+  const join = () => openAuth({ mode: 'signup', intent: 'join' })
+  const [ticketReset, setTicketReset] = useState(0)
+  const joinTicket = () =>
+    openAuth({
+      mode: 'signup',
+      intent: 'join',
+      onDismiss: () => setTicketReset((value) => value + 1),
+    })
   const [ticket, setTicket] = useState<boolean | null>(null)
   useEffect(() => {
     // Includes landscape iPad Pro without replacing Lanyard on desktop laptops.
@@ -165,7 +173,9 @@ export function HomepageScene({
                   tilt={!reduced}
                   ariaLabel="Tear ticket to log in"
                   stub={<span className={styles.ticketStub}>Tear me off</span>}
-                  onTear={() => router.push('/auth/sign-in')}
+                  resetToken={ticketReset}
+                  onTear={joinTicket}
+                  onActivate={joinTicket}
                 >
                   <div className={styles.ticketCopy}>
                     <span>Campus Marketplace</span>
@@ -188,6 +198,7 @@ export function HomepageScene({
                   reducedMotion={reduced !== false}
                   frontImage="/lanyard/invitation.svg"
                   backImage="/lanyard/invitation.svg"
+                  onJoin={join}
                 />
               </div>
             ))

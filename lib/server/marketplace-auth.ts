@@ -16,7 +16,7 @@ export async function requireMarketplaceUser(client: MarketplaceClient) {
   } = await client.auth.getUser()
   if (error || !user)
     throw new ListingApiError(
-      'Sign in with your Western email to continue.',
+      'Log in with your Western email to continue.',
       401
     )
   if (!isWesternEmail(user.email) || !user.email_confirmed_at) {

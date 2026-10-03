@@ -21,6 +21,7 @@ const TextType = ({
   textColors = [],
   variableSpeed,
   onSentenceComplete,
+  onTypingComplete,
   startOnVisible = false,
   reverseMode = false,
   ...props
@@ -32,8 +33,20 @@ const TextType = ({
   const [isVisible, setIsVisible] = useState(!startOnVisible);
   const cursorRef = useRef(null);
   const containerRef = useRef(null);
+  const typingCompleted = useRef(false);
 
   const textArray = useMemo(() => (Array.isArray(text) ? text : [text]), [text]);
+
+  useEffect(() => {
+    const currentText = textArray[currentTextIndex];
+    const processedText = reverseMode ? currentText.split('').reverse().join('') : currentText;
+    if (isDeleting || currentCharIndex < processedText.length) {
+      typingCompleted.current = false;
+    } else if (isVisible && displayedText === processedText && !typingCompleted.current) {
+      typingCompleted.current = true;
+      onTypingComplete?.(currentText, currentTextIndex);
+    }
+  }, [currentCharIndex, currentTextIndex, displayedText, isDeleting, isVisible, onTypingComplete, reverseMode, textArray]);
 
   const getRandomSpeed = useCallback(() => {
     if (!variableSpeed) return typingSpeed;

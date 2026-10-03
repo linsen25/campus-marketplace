@@ -1,6 +1,7 @@
 import type { GetServerSideProps } from 'next'
 import Head from 'next/head'
 
+import { useAuthModal } from '@/components/auth/auth-modal'
 import { Container } from '@/components/container/container'
 import { BackButton } from '@/components/listings/back-button'
 import { ProductImage } from '@/components/product/product-image'
@@ -16,6 +17,7 @@ type ListingPageProps = {
 }
 
 export default function ListingPage({ listing, error }: ListingPageProps) {
+  const { openAuth } = useAuthModal()
   if (!listing)
     return (
       <main className="py-8">
@@ -89,19 +91,21 @@ export default function ListingPage({ listing, error }: ListingPageProps) {
                   <Button
                     type="primary"
                     size="large"
-                    disabled={true}
-                    aria-describedby="contact-unavailable"
+                    disabled={listing.status === 'sold'}
+                    aria-describedby={
+                      listing.status === 'sold' ? 'listing-sold' : undefined
+                    }
+                    onClick={() =>
+                      openAuth({ mode: 'signin', intent: 'contact-seller' })
+                    }
                   >
                     Contact Seller
                   </Button>
-                  <p
-                    id="contact-unavailable"
-                    className="text-neutral-dark text-sm"
-                  >
-                    {listing.status === 'sold'
-                      ? 'This listing has been sold.'
-                      : 'Contacting sellers is not available yet.'}
-                  </p>
+                  {listing.status === 'sold' && (
+                    <p id="listing-sold" className="text-neutral-dark text-sm">
+                      This listing has been sold.
+                    </p>
+                  )}
                 </div>
               </div>
             </article>

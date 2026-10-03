@@ -1,0 +1,38 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  border: 0;
+  overflow: hidden;
+  background: transparent;
+  color: #f5f2f8;
+}
+.overlay::backdrop {
+  background: transparent;
+}
+.panel {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: calc(50% + 1px);
+  background: #1e1727;
+}
+.top { top: 0; }
+.bottom { bottom: 0; }
+.message {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  font-size: clamp(24px, 4vw, 40px);
+  font-weight: 600;
+}
+.reduced {
+  background: #1e1727;
+}

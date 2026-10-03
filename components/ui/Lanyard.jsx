@@ -35,12 +35,22 @@ export default function Lanyard({
   reducedMotion = false,
   frontImage = null,
   backImage = null,
+  onJoin,
   imageFit = 'cover',
   lanyardImage = null,
   lanyardWidth = 1
 }) {
   const wrapperRef = useRef(null);
   const dragging = useRef(false);
+  const joinTimer = useRef(null);
+  const scheduleJoin = () => {
+    if (!onJoin || joinTimer.current !== null) return;
+    joinTimer.current = setTimeout(() => {
+      joinTimer.current = null;
+      onJoin();
+    }, 200);
+  };
+  useEffect(() => () => clearTimeout(joinTimer.current), []);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
 
   useEffect(() => {
@@ -57,7 +67,16 @@ export default function Lanyard({
   }, []);
 
   return (
-    <div className="lanyard-wrapper" ref={wrapperRef}>
+    <div className="lanyard-wrapper" ref={wrapperRef}
+      role={onJoin ? 'button' : undefined}
+      tabIndex={onJoin ? 0 : undefined}
+      aria-label={onJoin ? 'Join Campus Marketplace' : undefined}
+      onKeyDown={event => {
+        if (onJoin && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          if (!event.repeat) scheduleJoin();
+        }
+      }}>
       <Canvas
         camera={{ position: position, fov: fov }}
         events={state => ({ ...events(state), compute: (event, state) => {
@@ -79,6 +98,7 @@ export default function Lanyard({
             wrapperRef={wrapperRef}
             frontImage={frontImage}
             backImage={backImage}
+            onJoin={onJoin ? scheduleJoin : undefined}
             imageFit={imageFit}
             lanyardImage={lanyardImage}
             lanyardWidth={lanyardWidth}
@@ -119,6 +139,7 @@ export default function Lanyard({
   );
 }
 function Band({
+  onJoin,
   reducedMotion = false,
   dragging,
   wrapperRef,
@@ -306,7 +327,15 @@ function Band({
             position={[0, -1.2, -0.05]}
             onPointerOver={() => hover(true)}
             onPointerOut={() => hover(false)}
-            onPointerUp={e => { e.stopPropagation(); finishDrag(); }}
+            onPointerUp={e => {
+              e.stopPropagation();
+              const joined = dragging.current;
+              finishDrag();
+              if (joined && onJoin) {
+                wrapperRef.current?.focus({ preventScroll: true });
+                onJoin();
+              }
+            }}
             onPointerDown={e => {
               e.stopPropagation();
               e.target.setPointerCapture(e.pointerId);

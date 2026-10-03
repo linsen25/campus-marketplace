@@ -1,6 +1,7 @@
 import { useRouter } from 'next/router'
 import { useState } from 'react'
 
+import { useAuthModal } from '@/components/auth/auth-modal'
 import { marketplaceRequest } from '@/lib/listings-api'
 import { Button } from '@ui/button/button'
 import { Link } from '@ui/link/link'
@@ -10,6 +11,7 @@ import { useMarketplaceSession } from './marketplace-session'
 
 export function MarketplaceActions() {
   const router = useRouter()
+  const { openAuth } = useAuthModal()
   const { seller, loading, error: sessionError } = useMarketplaceSession()
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -25,17 +27,27 @@ export function MarketplaceActions() {
       ) : (
         <div className="flex flex-col gap-3">
           <p>
-            Sign in with your Western email to manage your account and listings.
+            Log in with your Western email to manage your account and listings.
           </p>
-          <Link
-            href="/auth/sign-in?next=/account"
+          <button
+            type="button"
             className="btn btn-primary btn-small"
+            onClick={() => openAuth({ next: '/account' })}
           >
-            Sign In
-          </Link>
+            Log in
+          </button>
         </div>
       )}
-      <Link href="/listings/new" className="btn btn-primary btn-small w-full">
+      <Link
+        href="/listings/new"
+        className="btn btn-primary btn-small w-full"
+        onClick={(event) => {
+          if (!seller) {
+            event.preventDefault()
+            openAuth({ next: '/listings/new' })
+          }
+        }}
+      >
         Sell an item
       </Link>
       <section
@@ -51,6 +63,12 @@ export function MarketplaceActions() {
             router.asPath === '/profile/listings' ? 'page' : undefined
           }
           className={styles.row}
+          onClick={(event) => {
+            if (!seller) {
+              event.preventDefault()
+              openAuth({ next: '/profile/listings' })
+            }
+          }}
         >
           <span>My Listings</span>
           <span aria-hidden="true">&rsaquo;</span>

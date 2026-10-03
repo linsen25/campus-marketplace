@@ -1,6 +1,13 @@
 import { useRouter } from 'next/router'
 import type { ReactNode } from 'react'
-import { createContext, useContext, useEffect, useState } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+} from 'react'
 
 import { marketplaceRequest } from '@/lib/listings-api'
 import type { SellerSummary } from '@/types/listing'
@@ -9,12 +16,14 @@ type MarketplaceSession = {
   seller: SellerSummary | null
   loading: boolean
   error: string
+  refresh: () => Promise<SellerSummary | null>
 }
 
 const initialSession: MarketplaceSession = {
   seller: null,
   loading: true,
   error: '',
+  refresh: () => Promise.resolve(null),
 }
 const SessionContext = createContext(initialSession)
 
@@ -27,16 +36,38 @@ export function MarketplaceSessionProvider({
 }) {
   const { asPath } = useRouter()
   const [state, setState] = useState({ ...initialSession, path: asPath })
+  const requestVersion = useRef(0)
+  const refresh = useCallback(async () => {
+    const version = ++requestVersion.current
+    const data = await marketplaceRequest<{ seller: SellerSummary | null }>(
+      '/api/auth/session',
+      'GET'
+    )
+    if (!data.seller)
+      throw new Error(
+        'Unable to load your signed-in account. Please try signing in again.'
+      )
+    if (version === requestVersion.current)
+      setState({
+        ...initialSession,
+        seller: data.seller,
+        loading: false,
+        path: asPath,
+      })
+    return data.seller
+  }, [asPath])
   useEffect(() => {
     let active = true
+    const version = ++requestVersion.current
     setState({ ...initialSession, path: asPath })
     marketplaceRequest<{ seller: SellerSummary | null }>(
       '/api/auth/session',
       'GET'
     )
       .then((data) => {
-        if (active)
+        if (active && version === requestVersion.current)
           setState({
+            ...initialSession,
             seller: data.seller,
             loading: false,
             error: '',
@@ -44,8 +75,9 @@ export function MarketplaceSessionProvider({
           })
       })
       .catch(() => {
-        if (active)
+        if (active && version === requestVersion.current)
           setState({
+            ...initialSession,
             seller: null,
             loading: false,
             error: 'Unable to load your account. Please refresh to try again.',
@@ -58,7 +90,7 @@ export function MarketplaceSessionProvider({
   }, [asPath])
   const session = state.path === asPath ? state : initialSession
   return (
-    <SessionContext.Provider value={session}>
+    <SessionContext.Provider value={{ ...session, refresh }}>
       {children}
     </SessionContext.Provider>
   )

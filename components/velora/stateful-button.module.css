@@ -1,0 +1,96 @@
+.button {
+  --surface: #775497;
+  position: relative;
+  display: inline-grid;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+}
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.button[aria-busy] {
+  cursor: progress;
+}
+.button[data-state='error'] {
+  --surface: #7c3343;
+}
+.surface {
+  position: absolute;
+  inset: 0;
+  margin: 0 auto;
+  border-radius: inherit;
+  background: var(--surface);
+  transition: width 300ms ease-out, background-color 300ms ease-out;
+}
+.button:hover .surface {
+  opacity: 0.9;
+}
+.button:focus-visible .surface {
+  outline: 2px solid #c7a0e9;
+  outline-offset: 3px;
+}
+.layer {
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 200ms, scale 200ms, visibility 200ms;
+}
+.hidden {
+  visibility: hidden;
+  scale: 0.75;
+  opacity: 0;
+}
+.inactive {
+  scale: 0.75;
+  opacity: 0;
+}
+.icon,
+.spinner {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.spinner {
+  animation: spin 1s linear infinite;
+}
+.check {
+  transition: stroke-dashoffset 300ms 100ms;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .layer,
+  .surface,
+  .check {
+    transition: none;
+  }
+  .spinner {
+    animation: none;
+  }
+  .surface {
+    width: 100% !important;
+  }
+}

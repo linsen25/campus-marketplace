@@ -83,6 +83,8 @@ export default function TearTicket({
   torn,
   defaultTorn = false,
   onTear,
+  onActivate,
+  resetToken = 0,
   width = 460,
   height = 250,
   stubSize = 150,
@@ -123,6 +125,7 @@ export default function TearTicket({
   const bodyRef = useRef(null);
   const stubRef = useRef(null);
   const fibres = useRef([]);
+  const lastReset = useRef(resetToken);
   const vertical = orientation === 'vertical';
   const geo = useMemo(
     () => buildGeometry(width, height, stubSize, radius, holes, holeSize, notch, roughness, vertical),
@@ -381,6 +384,19 @@ export default function TearTicket({
   };
 
   useEffect(() => {
+    if (lastReset.current === resetToken) return;
+    lastReset.current = resetToken;
+    if (!controlled) setInner(false);
+    setInstant(false);
+    setGrabbing(false);
+    tiltX.set(0);
+    tiltY.set(0);
+    reset();
+    // A completed tear hid its trigger before the dialog restored focus.
+    stubRef.current?.focus({ preventScroll: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetToken]);
+  useEffect(() => {
     if (used) {
       const s = sim.current;
       if (s.phase === 'idle' && stubRef.current) stubRef.current.style.visibility = 'hidden';
@@ -582,6 +598,10 @@ export default function TearTicket({
             aria-label={ariaLabel}
             aria-hidden={used || undefined}
             aria-disabled={disabled || undefined}
+            onClick={() => {
+              const s = sim.current;
+              if (!disabled && !used && Math.hypot(s.point.x - s.start.x, s.point.y - s.start.y) <= 6) onActivate?.();
+            }}
             onPointerDown={onStubDown}
             onPointerMove={onStubMove}
             onPointerUp={onStubUp}

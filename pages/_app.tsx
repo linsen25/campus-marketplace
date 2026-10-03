@@ -9,6 +9,7 @@ import { useMemo } from 'react'
 import { Dev } from '@dev/dev'
 /// #endif
 
+import { AuthModalProvider } from '@/components/auth/auth-modal'
 import { AccountLayout } from '@/components/listings/account-layout'
 import { MarketplaceSessionProvider } from '@/components/listings/marketplace-session'
 import {
@@ -103,7 +104,9 @@ function MarketplaceApp({ Component, pageProps, router }: AppProps) {
 export default function App(props: AppProps) {
   return (
     <MarketplaceSessionProvider>
-      <MarketplaceApp {...props} />
+      <AuthModalProvider>
+        <MarketplaceApp {...props} />
+      </AuthModalProvider>
     </MarketplaceSessionProvider>
   )
 }

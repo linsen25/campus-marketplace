@@ -154,7 +154,18 @@ manual verification above predates this finalization pass.
 
 ## Auth and Email Delivery
 
-Current login: **@uwo.ca email → OTP → session**. Public browsing does not require
+The 2026-10-03 auth continuation adds supplied Shift Tabs/Hold/Stateful controls
+and username validation/persistence on the existing profiles architecture.
+The username migration is prepared and locally tested; live SQL application and
+the original Send code HTTP 400 diagnosis remain pending. See [Auth modal](AUTH_MODAL.md).
+
+Current Welcome login: **@uwo.ca email + password → session**, using one shared
+modal adapted from the supplied Velora source. Signup and password recovery use
+real Supabase email codes. See [Auth modal](AUTH_MODAL.md) for implementation,
+required Confirm signup/Reset Password token templates, password settings and
+live acceptance still needed. Earlier owner-verified OTP results below apply to
+the previous login flow, not the new password/modal flow.
+Public browsing does not require
 login. Writes require authentication and database-enforced ownership. Use
 **Western email verified**; email ownership does not prove current student status.
 
@@ -1351,3 +1362,9 @@ Last updated: 2026-10-02
 Current phase: Trust panel and expandable listing polish complete; Fold Text awaiting owner source
 
 Next milestone: Physical-device visual acceptance and live authenticated My Listings recheck
+
+Username/Auth focused polish: the pending username migration now includes reserved
+names, rolling 168-hour rename cooldown, private 30-day release history/holds and
+legacy immediate first-change behavior. Auth uses a 1000ms ?Hold to create account?
+control, centered Log in, desktop yellow-backed Shift Tabs and a shared-action-sized
+solid mobile selector. No live SQL or Send code/email investigation in this pass.

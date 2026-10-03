@@ -2,6 +2,7 @@ import dynamic from 'next/dynamic'
 import type { ReactNode } from 'react'
 
 import ShiningButton from '@/components/animata/button/shining-button'
+import { useAuthModal } from '@/components/auth/auth-modal'
 import { Link } from '@ui/link/link'
 
 import { useHomeReducedMotion } from './use-home-reduced-motion'
@@ -28,6 +29,7 @@ export function WelcomeHero({
   ticket?: boolean
 }) {
   const reduced = useHomeReducedMotion()
+  const { openAuth } = useAuthModal()
   return (
     <section className={styles.hero} aria-labelledby="welcome-title">
       <nav className={styles.navigation} aria-label="Welcome navigation">
@@ -35,7 +37,11 @@ export function WelcomeHero({
           Campus Marketplace
         </Link>
         <div className={styles.actions}>
-          <ShiningButton variant="green" desktopAppearance={true} />
+          <ShiningButton
+            variant="green"
+            desktopAppearance={true}
+            onClick={() => openAuth({ mode: 'signin', intent: 'login' })}
+          />
         </div>
       </nav>
       <div className={styles.composition}>

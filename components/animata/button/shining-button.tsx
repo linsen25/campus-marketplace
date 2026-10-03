@@ -2,13 +2,14 @@ import cn from 'classnames'
 import { ArrowRight } from 'lucide-react'
 import type { MouseEventHandler, ReactNode } from 'react'
 
+import { useAuthModal } from '@/components/auth/auth-modal'
 import { Link } from '@ui/link/link'
 
 import styles from './responsive-action-button.module.css'
 
 export default function ShiningButton({
   children = 'Log in',
-  href = '/auth/sign-in',
+  href,
   onClick,
   variant = 'purple',
   disabled = false,
@@ -21,6 +22,7 @@ export default function ShiningButton({
   disabled?: boolean
   desktopAppearance?: boolean
 }) {
+  const { openAuth } = useAuthModal()
   const className = cn(
     'shining-button',
     desktopAppearance && styles.desktopAppearance,
@@ -39,19 +41,22 @@ export default function ShiningButton({
       <span className="shining-button__highlight" aria-hidden="true" />
     </span>
   )
-  const shiningAction = onClick ? (
-    <button
-      type="button"
-      className={className}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {content}
-    </button>
-  ) : (
-    <Link href={href} className={className}>
-      {content}
-    </Link>
-  )
+  const shiningAction =
+    onClick || !href ? (
+      <button
+        type="button"
+        className={className}
+        disabled={disabled}
+        onClick={
+          onClick || (() => openAuth({ mode: 'signin', intent: 'login' }))
+        }
+      >
+        {content}
+      </button>
+    ) : (
+      <Link href={href} className={className}>
+        {content}
+      </Link>
+    )
   return shiningAction
 }

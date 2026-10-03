@@ -1,0 +1,150 @@
+.nav {
+  overflow: visible;
+}
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.label {
+  user-select: none;
+  padding: 0 4px;
+  text-align: center;
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 500;
+}
+.tab {
+  border-radius: 8px;
+}
+.focus {
+  outline: none;
+}
+.focus:focus-visible {
+  z-index: 10;
+  outline: 2px solid #c7a0e9;
+  outline-offset: 3px;
+}
+.transition {
+  transition: background-color 200ms, border-color 200ms;
+}
+.press:active {
+  transform: scale(0.97);
+}
+.selected {
+  background: #49335c;
+  border-bottom: 2px solid #c7a0e9;
+}
+.unselected {
+  background: transparent;
+}
+.unselected:hover {
+  background: #49335c;
+}
+@media (min-width: 1024px) {
+  .tab.selected {
+    background: #c4a35c;
+    border-bottom-color: #c4a35c;
+  }
+  .unselected:hover {
+    background: #c4a35c;
+  }
+}
+.face {
+  display: flex;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid;
+  border-radius: 6px;
+  background: #241c2e;
+  padding: 0 16px;
+}
+.faceMotion {
+  transition: transform 200ms ease-out;
+}
+.faceSelected {
+  transform: rotate(0);
+  border-color: #c7a0e9;
+  color: #d6bee7;
+}
+.faceUnselected {
+  transform-origin: top right;
+  border-color: #594961;
+  color: #f5f2f8;
+}
+.faceUnselected:hover {
+  transform: rotate(6deg);
+}
+@media (min-width: 640px) {
+  .list {
+    gap: 16px;
+  }
+}
+/* Same two-layer structure and geometry tokens as ExpandableCard Close.
+   One mounted tab set preserves state and keyboard behavior across resizing. */
+@media (max-width: 1023px) {
+  .list {
+    flex-wrap: nowrap;
+    gap: var(--action-gap);
+  }
+  .tab.tab {
+    display: inline-flex;
+    align-items: center;
+    width: min(var(--action-width), calc((100% - var(--action-gap)) / 2));
+    height: var(--action-height);
+    padding: var(--action-inset);
+    border: var(--action-inset) solid transparent;
+    border-radius: var(--action-radius);
+    background: transparent;
+    flex-shrink: 0;
+  }
+  .face {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: var(--action-surface-radius);
+    padding: var(--action-surface-padding);
+    box-shadow: rgb(12 9 18 / 0.4) 0 2px 4px,
+      rgb(12 9 18 / 0.3) 0 7px 13px -3px, #19121f 0 -3px 0 inset;
+  }
+  .label {
+    font-family: inherit;
+    font-size: var(--action-font-size);
+    font-weight: var(--action-font-weight);
+    line-height: var(--action-line-height);
+    padding: 0;
+  }
+  .faceSelected {
+    background: #49335c;
+    color: #f5f2f8;
+  }
+  .faceUnselected {
+    background: #292130;
+    color: #c3b7cd;
+  }
+  .faceUnselected:hover {
+    transform: none;
+  }
+  .unselected:hover {
+    background: transparent;
+  }
+  .press:active {
+    transform: translateY(2px);
+  }
+  .press:active .face {
+    box-shadow: #19121f 0 3px 7px inset;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .transition,
+  .faceMotion {
+    transition: none;
+  }
+  .press:active,
+  .faceUnselected:hover {
+    transform: none;
+  }
+}

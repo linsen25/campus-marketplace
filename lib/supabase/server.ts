@@ -10,7 +10,10 @@ import { ListingApiError } from '@/lib/listing-validation'
 
 export type MarketplaceContext = { req: IncomingMessage; res: ServerResponse }
 
-export function createMarketplaceClient({ req, res }: MarketplaceContext) {
+export function createMarketplaceClient(
+  { req, res }: MarketplaceContext,
+  requestFetch?: typeof fetch
+) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!url || !key)
@@ -26,6 +29,7 @@ export function createMarketplaceClient({ req, res }: MarketplaceContext) {
   )
   res.setHeader('Cache-Control', 'private, no-store, max-age=0')
   return createServerClient(url, key, {
+    ...(requestFetch ? { global: { fetch: requestFetch } } : {}),
     cookieOptions: {
       httpOnly: true,
       sameSite: 'lax',
