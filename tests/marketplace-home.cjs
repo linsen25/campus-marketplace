@@ -12,6 +12,11 @@ const element =
   ({ children, ...props }) =>
     React.createElement(tag, props, children)
 const mocks = {
+  '@/components/listings/market-layout': {
+    MarketLayout: ({ values }) => React.createElement('div', {
+      'data-testid': 'market-layout-preview', 'data-search': values.search,
+    }),
+  },
   '@/components/listings/homepage-scene': {
     HomepageScene: ({ listings }) =>
       React.createElement('div', {
@@ -64,6 +69,17 @@ function load(file) {
   return module.exports
 }
 async function main() {
+  const { marketTaxonomy, marketLocations, marketConditions } = load('lib/market-taxonomy.ts')
+  const { marketPreviewListings } = load('lib/fixtures/market-layout.ts')
+  assert.equal(marketPreviewListings.length, 30)
+  assert.equal(new Set(marketPreviewListings.map((listing) => listing.id)).size, 30)
+  for (const listing of marketPreviewListings) {
+    assert(marketTaxonomy[listing.category].includes(listing.subcategory))
+    assert(marketLocations.includes(listing.location))
+    assert(marketConditions.includes(listing.condition))
+    assert(Number.isSafeInteger(listing.price) && listing.price >= 0)
+    assert(listing.images.every((image) => fs.existsSync('public' + image)))
+  }
   const home = load('pages/listings/index.tsx')
   mocks['./listings/index'] = home
   const landing = load('pages/index.tsx')
@@ -116,7 +132,7 @@ async function main() {
   const html = renderToStaticMarkup(
     React.createElement(home.default, empty.props)
   )
-  assert.match(html, /No listings match/)
+  assert.match(html, /market-layout-preview/)
   assert(!html.includes('Marketplace categories'))
   assert(!html.includes('Browse all listings'))
   assert(!html.includes('Have something you no longer need?'))
@@ -144,7 +160,7 @@ async function main() {
   const populated = await home.getServerSideProps(context)
   assert.match(
     renderToStaticMarkup(React.createElement(home.default, populated.props)),
-    /Test desk/
+    /market-layout-preview/
   )
   result = Array.from({ length: 20 }, (_, i) => ({ title: `Listing ${i}` }))
   const full = await home.getServerSideProps(context)
@@ -161,11 +177,11 @@ async function main() {
   const errorHtml = renderToStaticMarkup(
     React.createElement(home.default, unavailable.props)
   )
-  assert.match(errorHtml, /role="alert"/)
+  assert.match(errorHtml, /market-layout-preview/)
   assert(!errorHtml.includes('Private backend detail'))
   assert(!errorHtml.includes('No listings match'))
   console.log(
-    'PASS: landing/browse separation, shared SSR, available/newest query, no-store, shared filter/search query, populated/empty/error states (data boundary mocked).'
+    'PASS: V1 fixture taxonomy/prices/images, landing/browse separation, unchanged SSR/search query, no-store, preview renderer with populated/empty/error backend states (data boundary mocked).'
   )
 }
 main().catch((error) => {

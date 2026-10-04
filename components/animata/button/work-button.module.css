@@ -1,0 +1,95 @@
+.button {
+  position: relative;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #3b0764;
+  padding: 16px 56px;
+  font-size: 18px;
+  transition: background-color 150ms;
+}
+
+.sweep {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 192px;
+  width: 100%;
+  transform-origin: bottom;
+  transform: translateY(100%);
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 15%);
+  transition: transform 300ms ease-out;
+}
+
+.profile .sweep {
+  background: #166534;
+}
+
+.button:not(:disabled):hover .sweep,
+.button:not(:disabled):focus-visible .sweep {
+  transform: translateY(56px);
+}
+
+.label {
+  position: relative;
+  font-weight: 600;
+  color: #e9d5ff;
+}
+
+.button:disabled {
+  cursor: default;
+  opacity: 100%;
+}
+
+.button:focus-visible {
+  outline: 2px solid #e9d5ff;
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sweep {
+    transition: none;
+  }
+}
+
+.profile {
+  display: grid;
+  place-items: center;
+  width: var(--market-control-height, 60px);
+  height: var(--market-control-height, 60px);
+  padding: 0;
+  background: #fff;
+}
+
+.profile .label {
+  color: #18181b;
+  transition: color 300ms ease-out;
+}
+
+.profile:hover .label,
+.profile:focus-visible .label {
+  color: #fff;
+}
+
+.pagination {
+  min-width: 44px;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid #79678a;
+  background: transparent;
+  font-size: 13px;
+}
+
+.pagination[aria-current="page"] {
+  background: #f5f5f5;
+  border-color: transparent;
+}
+
+.pagination[aria-current="page"] .label {
+  color: #18181b;
+}
+
+.pagination:disabled {
+  opacity: 35%;
+}

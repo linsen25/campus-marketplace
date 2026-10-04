@@ -1,0 +1,110 @@
+.form {
+  display: grid;
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  color: #d9cbe5;
+  font-size: 13px;
+}
+
+.places {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+  color: #d9cbe5;
+}
+
+.places legend {
+  margin-bottom: 8px;
+}
+
+.places > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.places label {
+  position: relative;
+}
+
+.places input {
+  position: absolute;
+  opacity: 0%;
+}
+
+.places span {
+  display: block;
+  padding: 10px 8px;
+  border: 1px solid #78688a;
+  border-radius: 10px;
+  background: #2a2134;
+  text-align: center;
+  cursor: pointer;
+}
+
+.actions {
+  composes: contract from "../animata/button/action-button-sizing.module.css";
+  display: flex;
+  justify-content: space-between;
+  gap: var(--action-gap);
+}
+
+.actions > button {
+  display: inline-flex;
+  width: var(--action-width);
+  height: var(--action-height);
+  padding: var(--action-inset);
+  border: var(--action-inset) solid transparent;
+  border-radius: var(--action-radius);
+  font-size: var(--action-font-size);
+  font-weight: var(--action-font-weight);
+  line-height: var(--action-line-height);
+}
+
+.cancel {
+  composes: button from "../animata/button/action-button-sizing.module.css";
+  background: transparent;
+  color: #f5f5f5;
+}
+
+.actions .cancel span,
+.actions :global(.shining-button__body) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: var(--action-surface-padding);
+  border-radius: var(--action-surface-radius);
+  font: inherit;
+}
+
+.actions .cancel span {
+  background: #44394f;
+  box-shadow: rgb(20 12 28 / 30%) 0 2px 4px, #2a2134 0 -3px 0 inset;
+}
+
+.cancel:focus-visible {
+  outline: 2px solid #d5b4f6;
+  outline-offset: 2px;
+}
+
+.actions :global(.shining-button__arrow) {
+  display: none;
+}
+
+.places input:checked + span {
+  background: #443451;
+  border-color: #d5b4f6;
+  color: #fff;
+}
+
+.places input:focus-visible + span {
+  outline: 2px solid #d5b4f6;
+  outline-offset: 2px;
+}

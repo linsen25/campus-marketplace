@@ -1,0 +1,147 @@
+.control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--market-control-height, 60px);
+  padding: 0 16px;
+  border: 1px solid #554761;
+  border-radius: 999px;
+  background: #fff;
+  color: #18181b;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  width: min(320px, var(--panel-width));
+  padding: 12px;
+  background: #201a29;
+  border: 1px solid rgb(213 180 246 / 48%);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.sortPanel {
+  width: min(224px, var(--panel-width));
+}
+
+.scroll {
+  max-height: max(0px, calc(var(--panel-height) - env(safe-area-inset-bottom, 0px)));
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 6px;
+}
+
+.group + .group {
+  margin-top: 12px;
+}
+
+.heading {
+  color: #bbaac8;
+  font-size: 11px;
+  padding: 0 8px 6px;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.sortPanel .options {
+  grid-template-columns: 1fr;
+}
+
+.option {
+  display: flex;
+  width: 100%;
+  gap: 6px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border-radius: 12px;
+  color: #f5f5f5;
+  font-size: 12px;
+  text-align: left;
+}
+
+.option:hover {
+  background: #30263c;
+}
+
+.check {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 1px solid #79678a;
+  border-radius: 50%;
+}
+
+.option[aria-pressed="true"] .check {
+  background: #eee7f5;
+  color: #211329;
+  border-color: transparent;
+}
+
+.control button:focus-visible {
+  outline: 2px solid #d5b4f6;
+  outline-offset: 2px;
+}
+
+@media (max-width: 1023px) {
+  .trigger {
+    width: var(--market-control-height, 48px);
+    height: var(--market-control-height, 48px);
+    padding: 0;
+  }
+
+  .selection {
+    display: none;
+  }
+}
+
+.active {
+  z-index: 70;
+}
+
+.scrolling {
+  scrollbar-color: #f5f5f5 transparent;
+}
+
+.scrolling::-webkit-scrollbar-thumb {
+  background: #f5f5f5;
+}
+
+@media (min-width: 768px) {
+  .panel:not(.sortPanel) {
+    width: min(468px, var(--panel-width));
+  }
+}

@@ -1368,3 +1368,100 @@ names, rolling 168-hour rename cooldown, private 30-day release history/holds an
 legacy immediate first-change behavior. Auth uses a 1000ms ?Hold to create account?
 control, centered Log in, desktop yellow-backed Shift Tabs and a shared-action-sized
 solid mobile selector. No live SQL or Send code/email investigation in this pass.
+
+## Market Page V1 - Layout Pass 1 (2026-10-03)
+
+`/listings` now renders the explicitly labeled frontend Market preview. The existing
+SSR/search request boundary is retained; the visible preview uses 30 illustrative
+fixtures, not Supabase listing results. No migrations or live data changes.
+
+- `lib/market-taxonomy.ts` defines the eight V1 categories/subcategories, three
+  locations and condition/sort labels. These are frontend constants; the existing
+  deployed database enums and posting forms have not been migrated to this taxonomy.
+- `lib/fixtures/market-layout.ts` holds stable sample identities, cent prices,
+  timestamps, usernames and local images. The existing reading-chair image is a
+  generic layout placeholder for every item; this is not product photography.
+- Market reuses Welcome's ExpandableCard, ListingMedia, details CSS, local preview
+  heart and ShiningButton. Collapsed cards contain only image and price; zero is
+  `Free`. The accepted card implementation and its animations are unchanged.
+- Supplied UseLayouts Filter Interaction is adapted in `components/filter-interaction.tsx`:
+  shared wrapper morph, moving companion, staggered options and delayed close.
+  Category/location and newest/price sorting are local preview state only.
+- Supplied UseLayouts Infinite Grid is adapted in `components/infinite-grid.tsx`.
+  Original source uses a two-axis absolute 3x3 tile matrix, pointer capture,
+  wheel deltas, inertial translation/skew and wrapping. Market preserves its
+  item/customContent rendering boundary but replaces free-canvas movement with
+  native vertical scrolling and sentinel-triggered repeated batches. There is no
+  horizontal transform, pointer drag interception or fake scrollbar.
+- Existing MarketplaceSearch and its URL submission behavior remain. Existing
+  GradientWaves is reused with the Welcome lower-page height (-12) and matching
+  shader settings; its fixed backdrop starts below the measured desktop header.
+- Supplied React Bits JellyRadio logic is retained in `components/ui/JellyRadio.jsx`,
+  with CSS Module class adaptation. A controlled route value selects Home (`/`)
+  or Market (`/listings`). Its single light glass container floats above the safe
+  area below the existing 1024px navigation breakpoint. Desktop navigation is retained.
+- Grid columns: 390=2, 768=3, 834=3, 1280=4, 1536=5. Feed padding reserves room
+  above the mobile floating navigation.
+
+Next pass: connect the preview to real listing data, deliberately map the V1
+frontend taxonomy to backend enums, and replace repeat batches with bounded real
+pagination/virtualization. This pass adds none of those production features.
+
+Validation: headless Chrome at 390/768/834/1280/1536 passed the expected 2/3/3/4/5
+columns, collapsed image/price-only structure, Free display, vertical wheel browsing,
+repeated batches, no horizontal overflow/drift, local category/location/sort changes,
+accepted overlay buttons/Escape dismissal, desktop header visibility and route-derived
+mobile Home/Market selection. Native touch swipe checks passed at all three app widths.
+Desktop/mobile screenshots were reviewed. TypeScript, scoped ESLint, supplied JSX hook
+lint, CSS checks (retaining Safari prefixes and existing CSS Module naming convention),
+fixture/home/domain/session regressions and production build with --no-lint passed.
+No live auth/signup, account mutations, SQL, image uploads or external image API calls.
+Physical-device acceptance and browser-specific visual polish remain for a later pass.
+
+## Market Page V1 - Layout Refinement (2026-10-03)
+
+This section supersedes the earlier Layout Pass 1 header, search, control,
+browsing and Home-route descriptions above. The fixture dataset and accepted
+expanded-card implementation are unchanged.
+
+- The public desktop header was mounted by `_app.tsx` on every non-Welcome route.
+  Market now excludes that header and owns a dark brand row. It reuses Welcome's
+  navigation/brand CSS, sizing contract and measured row alignment. Desktop keeps
+  Market/My Account links; the lowered GradientWaves environment begins at the top.
+- `components/discover-button.tsx` adapts the supplied Discover Button (e9c4dce1)
+  into CSS Modules. The original spring, search expansion/clipping/blur, close
+  overlay and shared selected-pill motion remain. The toolbar stays horizontal
+  across app/desktop widths. Popular/Favorites are local presentation state only;
+  search input is local presentation, with query submission deferred. The old
+  rectangular MarketplaceSearch is no longer mounted in Market. Preview copy is gone.
+- Filter and Sort are single buttons: desktop icon + label, app icon only. Both
+  use trigger-local right-aligned panels at `top: calc(100% + 8px); right: 0`.
+  Available width is measured before opening and on resize, reserving 20px at the
+  viewport edge. Filter caps at 320px, Sort at 224px. Category/location choices
+  use compact grouped grids, with the supplied option stagger and delayed close.
+- The rounded bordered outer shell clips its contents; a separate inner viewport
+  uses overflow-y:auto, thin stable gutter and a subtle #cbbbd7 transparent-track
+  scrollbar. Twelve-pixel shell padding keeps it clear of the rounded corners.
+- Desktop >=1024 renders 15 fixture listings per page with Previous/Next controls.
+  InfiniteGrid is actually unmounted there. App <1024 retains native vertical
+  repeated batches and the existing sentinel observer; no canvas X transforms.
+- JellyRadio remains a fixed light-glass app-only control. Market is selected.
+  No authenticated App Home route exists: `/` is public Welcome and `/account`
+  is an account/My Listings flow. Home is a disabled prepared placeholder, never
+  a link to Welcome. Public Welcome no longer mounts this app navigation.
+- Next pass: real query submission, defined authenticated App Home, real listing
+  data/pagination, favorite persistence/ranking, subcategory interaction and final
+  imagery. No auth, SQL, Send code, expanded-card or backend changes were made here.
+
+Validation: headless Chrome checks passed at 390/768/834/1280/1536 with the
+2/3/3/4/5 column grid, single-row Discover controls, local selected-pill/search
+expansion, app-only Jelly navigation, native vertical wheel/touch append, no X
+movement, desktop 15-item pagination and reused listing overlay. Both panels
+were checked below/right-aligned to their triggers and within viewport bounds.
+A 390px short-viewport case confirmed genuine inner overflow, working scrolling,
+stable gutter and scrollbar bounds inset from the shell's rounded corners.
+Welcome's reference brand coordinates/typography were inspected; desktop and
+mobile screenshots were reviewed. TypeScript, scoped ESLint, CSS checks,
+fixture/home/domain/session regressions and `npm run build -- --no-lint` passed.
+No live auth/account mutations or SQL were run. Physical-device and Firefox
+visual acceptance remain outside these Chrome checks.

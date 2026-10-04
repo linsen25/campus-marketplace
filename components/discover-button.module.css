@@ -1,0 +1,236 @@
+.root {
+  position: relative;
+
+  --discover-height: var(--market-control-height, 60px);
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: min(380px, 100%);
+  color: #262626;
+}
+
+.anchor {
+  width: 100%;
+  height: var(--market-control-height, 60px);
+}
+
+.focusLayer {
+  position: fixed;
+  z-index: 70;
+}
+
+.suggestions {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 100%;
+  padding: 6px;
+  border: 1px solid rgb(213 180 246 / 48%);
+  border-radius: 18px;
+  background: #201a29;
+  color: #f5f5f5;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #f5f5f5 transparent;
+}
+
+.suggestions::-webkit-scrollbar {
+  width: 6px;
+}
+
+.suggestions::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.suggestions::-webkit-scrollbar-thumb {
+  background: #f5f5f5;
+  border-radius: 6px;
+}
+
+.suggestions button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-align: left;
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.suggestions button:hover,
+.suggestions button:focus-visible,
+.suggestions button[aria-selected="true"] {
+  background: #443451;
+}
+
+.expandedRoot {
+  width: 100%;
+}
+
+.search,
+.tabShell {
+  display: flex;
+  align-items: center;
+  height: var(--discover-height);
+  background: #fff;
+  border-radius: 48px;
+  overflow: hidden;
+  position: relative;
+}
+
+.search {
+  padding: 8px calc((var(--discover-height) - 24px) / 2);
+  flex-shrink: 0;
+}
+
+.expanded {
+  flex: 1;
+  min-width: 0;
+}
+
+.searchButton {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.inputWrap {
+  overflow: hidden;
+  display: flex;
+  min-width: 0;
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 18px;
+}
+
+.tabShell {
+  min-width: 0;
+  flex: 1;
+}
+
+.collapsedTabs {
+  flex: 0 0 var(--discover-height);
+}
+
+.clip {
+  overflow: hidden;
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  white-space: nowrap;
+  min-width: 100%;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 48px;
+  position: relative;
+  font: 600 14px monospace;
+  text-transform: uppercase;
+}
+
+.tab span:not(.bubble),
+.icon {
+  position: relative;
+  z-index: 1;
+}
+
+.bubble {
+  position: absolute;
+  inset: 0;
+  border-radius: 48px;
+}
+
+.popular,
+.favorites {
+  color: #cf4545;
+}
+
+.bubble.popular,
+.bubble.favorites {
+  background: #fef2f2;
+}
+
+.tab[aria-pressed="true"] .icon {
+  fill: currentcolor;
+}
+
+.close {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.root button:focus-visible {
+  outline: 2px solid #7945b4;
+  outline-offset: -2px;
+}
+
+@media (max-width: 1023px) {
+  .root {
+    --discover-height: var(--market-control-height, 48px);
+
+    gap: 6px;
+    width: min(400px, 100%);
+  }
+
+  .tabs {
+    gap: 2px;
+    padding: 4px;
+  }
+
+  .tab {
+    gap: 4px;
+    padding: 10px 5px;
+    font-size: 12px;
+  }
+
+  .icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .input {
+    font-size: 16px;
+  }
+}
+
+.expanded .inputWrap {
+  flex: 1;
+}
+
+@media (max-width: 1023px) {
+  .expandedRoot {
+    width: 100%;
+  }
+
+  .tab {
+    padding-inline: 4px;
+  }
+}

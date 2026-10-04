@@ -1,0 +1,22 @@
+.position {
+  --fluid-tabs-active-layer: 2;
+  --fluid-tabs-active-background: #fff;
+  --fluid-tabs-active-foreground: #18181b;
+  --fluid-tabs-inactive-background: #101013;
+  --fluid-tabs-inactive-foreground: #fff;
+
+  position: fixed;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  width: 230px;
+  max-width: calc(100vw - 32px);
+  height: 56px;
+}
+
+@media (min-width: 1024px) {
+  .position {
+    display: none;
+  }
+}

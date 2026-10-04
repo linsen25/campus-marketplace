@@ -11,6 +11,7 @@ import { Dev } from '@dev/dev'
 
 import { AuthModalProvider } from '@/components/auth/auth-modal'
 import { AccountLayout } from '@/components/listings/account-layout'
+import { MarketMobileNavigation } from '@/components/listings/market-mobile-nav'
 import { MarketplaceSessionProvider } from '@/components/listings/marketplace-session'
 import {
   MarketplaceHeader,
@@ -68,7 +69,9 @@ function MarketplaceApp({ Component, pageProps, router }: AppProps) {
       )}
 
       <MarketplaceContent>
-        {router.pathname !== '/' && <MarketplaceHeader />}
+        {router.pathname !== '/' && router.pathname !== '/listings' && (
+          <MarketplaceHeader />
+        )}
 
         {router.pathname.startsWith('/account') ||
         router.pathname === '/profile/listings' ? (
@@ -95,6 +98,7 @@ function MarketplaceApp({ Component, pageProps, router }: AppProps) {
         }
       />
       <Overlay />
+      <MarketMobileNavigation />
 
       {isDev && isCatalogPage && <Dev />}
     </AppLayout>

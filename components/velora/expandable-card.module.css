@@ -194,14 +194,18 @@
 }
 @media (max-width: 767px) {
   .overlay {
-    padding: max(var(--action-overlay-inset), env(safe-area-inset-top)) var(--action-overlay-inset)
-      max(var(--action-overlay-inset), env(safe-area-inset-bottom));
+    --mobile-dialog-top-inset: calc(var(--action-overlay-inset) + env(safe-area-inset-top, 0px));
+    --mobile-dialog-bottom-inset: calc(var(--action-overlay-inset) + env(safe-area-inset-bottom, 0px));
+    --mobile-dialog-max-height: calc(100dvh - var(--mobile-dialog-top-inset) - var(--mobile-dialog-bottom-inset));
+
+    height: 100dvh;
+    padding: var(--mobile-dialog-top-inset) var(--action-overlay-inset) var(--mobile-dialog-bottom-inset);
   }
   .dialog {
     width: 100%;
     min-width: 0;
-    height: 100%;
-    max-height: 100%;
+    height: auto;
+    max-height: var(--mobile-dialog-max-height);
     padding: 48px var(--action-dialog-padding) 16px;
     border-width: var(--action-dialog-border);
     border-radius: 16px;
@@ -209,6 +213,8 @@
   .scrollArea {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    grid-auto-rows: max-content;
+    align-content: start;
     gap: 0;
   }
   .dialog .media {
