@@ -26,6 +26,7 @@ import { AuthSuccessReveal } from '@/components/auth/auth-success-reveal'
 import { useMarketplaceSession } from '@/components/listings/marketplace-session'
 import { AuthSignupCard } from '@/components/velora/auth-signup-card'
 import styles from '@/components/velora/auth-signup-card.module.css'
+import { waitForMarketReady } from '@/hooks/use-market-ready'
 
 type AuthMode = 'signin' | 'signup'
 type AuthRequest = {
@@ -187,6 +188,10 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
   const [success, setSuccess] = useState<{
     request: AuthIntent
     username: string | undefined
+    usernameReady: boolean
+    preparation: Promise<void>
+    startedAt: number
+    attempt: number
     complete: () => void
   } | null>(null)
   const pendingIntent = useRef<AuthIntent | null>(null)
@@ -195,6 +200,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
     if (success) return
     sessionId.current += 1
     setNavigationError('')
+    router.prefetch('/listings').catch(() => {})
     // An explicit auth entry opens in place; a session snapshot must not turn
     // it into an early redirect or execute an unauthenticated continuation.
     const next: AuthIntent = {
@@ -217,23 +223,77 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
     request: AuthIntent,
     mode: 'recovery' | 'signin' | 'signup'
   ) {
-    const seller = await refresh()
     // A request completing after dismissal must not resurrect an old intent.
     const next = pendingIntent.current
     if (next !== request) return
     if (next.intent === 'contact-seller' || mode === 'recovery') {
+      await refresh()
+      if (pendingIntent.current !== request) return
       pendingIntent.current = null
       setIntent(null)
       if (next.intent !== 'contact-seller') await router.push(next.next)
       return
     }
     await new Promise<void>((resolve) => {
+      setNavigationError('')
+      setIntent(null)
+      pendingIntent.current = null
+      const startedAt = performance.now()
+      const preparation = prepareMarket()
       setSuccess({
         request: next,
-        username: seller?.displayName,
+        username: undefined,
+        usernameReady: false,
+        preparation,
+        startedAt,
+        attempt: 0,
         complete: resolve,
       })
+      // Identity resolution overlaps route preparation; neither keeps the form.
+      refresh().then(
+        (seller) => {
+          setSuccess((current) =>
+            current?.request === next
+              ? {
+                  ...current,
+                  username: seller?.displayName,
+                  usernameReady: true,
+                }
+              : current
+          )
+        },
+        () => {
+          setSuccess((current) =>
+            current?.request === next
+              ? { ...current, usernameReady: true }
+              : current
+          )
+        }
+      )
     })
+  }
+  function prepareMarket(): Promise<void> {
+    const controller = new AbortController()
+    let timer: ReturnType<typeof setTimeout>
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        controller.abort()
+        reject(new Error('Market preparation timed out.'))
+      }, 30000)
+    })
+    const destination = (async () => {
+      const navigated = await router.push('/listings')
+      if (!navigated || window.location.pathname !== '/listings')
+        throw new Error('Navigation cancelled.')
+      await waitForMarketReady(controller.signal)
+    })()
+    const preparation = Promise.race([destination, timeout]).finally(() => {
+      clearTimeout(timer)
+      controller.abort()
+    })
+    // Attach immediately, before the transition's effect subscribes.
+    preparation.catch(() => {})
+    return preparation
   }
   const onAuthenticated = async (mode: 'recovery' | 'signin' | 'signup') => {
     if (intent) await authenticated(intent, mode)
@@ -241,66 +301,40 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{ openAuth }}>
       {children}
-      <AnimatePresence
-        onExitComplete={() => {
-          const reset = afterDismiss.current
-          afterDismiss.current = undefined
-          reset?.()
-        }}
-      >
-        {intent && (
-          <AuthDialog
-            key={`auth-modal-${sessionId.current}`}
-            initialMode={intent.mode}
-            navigationError={navigationError}
-            onClose={close}
-            onAuthenticated={onAuthenticated}
-          />
-        )}
-      </AnimatePresence>
+      {!success && (
+        <AnimatePresence
+          onExitComplete={() => {
+            const reset = afterDismiss.current
+            afterDismiss.current = undefined
+            reset?.()
+          }}
+        >
+          {intent && (
+            <AuthDialog
+              key={`auth-modal-${sessionId.current}`}
+              initialMode={intent.mode}
+              navigationError={navigationError}
+              onClose={close}
+              onAuthenticated={onAuthenticated}
+            />
+          )}
+        </AnimatePresence>
+      )}
       {success && (
         <AuthSuccessReveal
+          key={success.attempt}
           username={success.username}
-          onCovered={async () => {
-            pendingIntent.current = null
-            setIntent(null)
-            let navigationTimeout: ReturnType<typeof setTimeout> | undefined
-            try {
-              const navigated = await Promise.race([
-                router.push('/listings'),
-                new Promise<never>((_, reject) => {
-                  navigationTimeout = setTimeout(
-                    () => reject(new Error('Navigation timed out.')),
-                    10000
-                  )
-                }),
-              ])
-              if (!navigated) throw new Error('Navigation was cancelled.')
-              // Let the destination commit and paint behind the opaque cover.
-              await new Promise<void>((resolve, reject) => {
-                const deadline = performance.now() + 5000
-                const check = () => {
-                  if (document.querySelector('#listing-sort-label')) {
-                    requestAnimationFrame(() =>
-                      requestAnimationFrame(() => resolve())
-                    )
-                  } else if (performance.now() > deadline) {
-                    reject(new Error('Listings did not render.'))
-                  } else requestAnimationFrame(check)
-                }
-                requestAnimationFrame(check)
-              })
-            } catch {
-              sessionId.current += 1
-              setNavigationError(
-                'You are signed in, but Listings could not open. Please try again.'
-              )
-              pendingIntent.current = success.request
-              setIntent(success.request)
-            } finally {
-              clearTimeout(navigationTimeout)
-            }
-          }}
+          usernameReady={success.usernameReady}
+          preparation={success.preparation}
+          startedAt={success.startedAt}
+          onRetry={() =>
+            setSuccess({
+              ...success,
+              preparation: prepareMarket(),
+              startedAt: performance.now(),
+              attempt: success.attempt + 1,
+            })
+          }
           onComplete={() => {
             success.complete()
             setSuccess(null)

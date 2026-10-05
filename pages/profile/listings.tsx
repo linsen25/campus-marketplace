@@ -2,7 +2,7 @@ import type { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import { useEffect, useRef, useState } from 'react'
 
-import { AccountBackLink } from '@/components/listings/account-layout'
+import { BackButton } from '@/components/listings/back-button'
 import { ListingCard } from '@/components/listings/listing-card'
 import {
   deleteListing,
@@ -65,7 +65,7 @@ export default function MyListingsPage({
       </Head>
       <section aria-label="My Listings">
         <div className="flex flex-col gap-6">
-          <AccountBackLink />
+          <BackButton href="/home" />
           <h1 className="text-2xl font-bold">My Listings</h1>
           <div>
             <Link href="/listings/new" className="btn btn-primary btn-small">

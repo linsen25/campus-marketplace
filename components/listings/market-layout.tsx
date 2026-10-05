@@ -16,6 +16,7 @@ import InfiniteGrid from '@/components/infinite-grid'
 import gridStyles from '@/components/infinite-grid.module.css'
 import PulseHeart from '@/components/react-bits/pulse-heart'
 import { ExpandableCard } from '@/components/velora/expandable-card'
+import { useMarketReady } from '@/hooks/use-market-ready'
 import { useMarketScroll } from '@/hooks/use-market-scroll'
 import type { MarketPreviewListing } from '@/lib/fixtures/market-layout'
 import { marketPreviewListings } from '@/lib/fixtures/market-layout'
@@ -111,20 +112,44 @@ function MarketCard({
 
 export function MarketLayout({ values }: { values: ListingFilterValues }) {
   const [isApp, setIsApp] = useState(false)
+  useEffect(() => {
+    // The page uses document scrolling; panel onScroll handlers cannot reach it.
+    // Match their transparent/near-white thumb and resettable 600ms idle hide.
+    const root = document.documentElement
+    const desktop = window.matchMedia('(min-width: 1024px)')
+    let idle: ReturnType<typeof setTimeout>
+    let lastY = window.scrollY
+    const hide = () => root.classList.remove(styles.viewportScrolling)
+    const scroll = () => {
+      if (!desktop.matches || window.scrollY === lastY) return
+      lastY = window.scrollY
+      root.classList.add(styles.viewportScrolling)
+      clearTimeout(idle)
+      idle = setTimeout(hide, 600)
+    }
+    const update = () => {
+      clearTimeout(idle)
+      hide()
+      lastY = window.scrollY
+      root.classList.toggle(styles.desktopViewport, desktop.matches)
+    }
+    update()
+    window.addEventListener('scroll', scroll, { passive: true })
+    desktop.addEventListener('change', update)
+    return () => {
+      clearTimeout(idle)
+      window.removeEventListener('scroll', scroll)
+      desktop.removeEventListener('change', update)
+      root.classList.remove(styles.desktopViewport, styles.viewportScrolling)
+    }
+  }, [])
   const [pageNumber, setPageNumber] = useState(1)
   const toolbar = useRef<HTMLElement>(null)
+  const marketRoot = useRef<HTMLElement>(null)
+  useMarketReady(marketRoot)
   const browsingTop = useRef<HTMLDivElement>(null)
   const pageScroll = useRef<ReturnType<typeof setTimeout>>()
   const { animateTo, cancel: cancelScroll } = useMarketScroll()
-  const [showReturnTop, setShowReturnTop] = useState(false)
-  useEffect(() => {
-    const update = () => {
-      setShowReturnTop(window.scrollY > 300)
-    }
-    update()
-    window.addEventListener('scroll', update, { passive: true })
-    return () => window.removeEventListener('scroll', update)
-  }, [])
   const [headerHeight, setHeaderHeight] = useState(0)
   const [headerWidth, setHeaderWidth] = useState(0)
   const [cardActive, setCardActive] = useState(false)
@@ -341,14 +366,8 @@ export function MarketLayout({ values }: { values: ListingFilterValues }) {
         >
           Next
         </WorkButton>
-      </nav>
-    </>
-  )
-  return (
-    <main className={styles.page}>
-      {!isApp && showReturnTop && (
-        <button
-          type="button"
+        <WorkButton
+          appearance="pagination"
           aria-label="Return to top"
           className={styles.returnTop}
           onClick={() => {
@@ -356,9 +375,13 @@ export function MarketLayout({ values }: { values: ListingFilterValues }) {
             scrollToBrowsingTop()
           }}
         >
-          <ArrowUp size={22} />
-        </button>
-      )}
+          <ArrowUp size={18} aria-hidden="true" />
+        </WorkButton>
+      </nav>
+    </>
+  )
+  return (
+    <main ref={marketRoot} className={styles.page}>
       {activePanel &&
         createPortal(
           <motion.button
@@ -513,7 +536,7 @@ export function MarketLayout({ values }: { values: ListingFilterValues }) {
             </FilterInteraction>
           </div>
           <nav className={styles.desktopNav} aria-label="Market navigation">
-            <WorkProfile href="/profile/listings">
+            <WorkProfile href="/home">
               <UserRound size={24} />
             </WorkProfile>
           </nav>

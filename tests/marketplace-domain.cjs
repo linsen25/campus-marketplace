@@ -42,7 +42,7 @@ for (const value of [
   '/listings\\evil',
   '/api/listings',
 ])
-  assert.equal(safeMarketplaceNext(value), '/profile/listings')
+  assert.equal(safeMarketplaceNext(value), '/home')
 const { parseListingPrice } = load('utils/parse-listing-price.ts')
 const { formatListingPrice } = load('utils/format-listing-price.ts')
 for (const [input, cents, formatted] of [
@@ -149,20 +149,27 @@ console.log(
 )
 
 for (const route of [
+  '/home',
+  '/listings',
+  '/listings/new',
+  '/listings/example-id/edit',
+  '/profile/listings',
+])
+  assert.equal(safeMarketplaceNext(route), route)
+for (const route of [
   '/account',
   '/account/favorites',
   '/account/messages',
   '/account/profile',
   '/account/settings',
-])
-  assert.equal(safeMarketplaceNext(route), route)
-for (const route of [
   '/account/unknown',
   '/account/../api/auth',
   '//account',
   '/account?next=https://evil.test',
+  '/home/unknown',
+  '/home?next=https://evil.test',
 ])
-  assert.equal(safeMarketplaceNext(route), '/profile/listings')
+  assert.equal(safeMarketplaceNext(route), '/home')
 console.log(
-  'PASS: account return paths allowed; unknown and unsafe paths rejected.'
+  'PASS: Home and listing return paths allowed; retired personal, unknown and unsafe paths fall back to Home.'
 )

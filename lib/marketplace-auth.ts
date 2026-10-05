@@ -4,9 +4,9 @@ export function isWesternEmail(email: unknown): email is string {
 
 export function safeMarketplaceNext(value: unknown): string {
   return typeof value === 'string' &&
-    /^\/(listings(\/[a-zA-Z0-9-]+(\/edit)?)?|profile\/listings|account(\/(favorites|messages|profile|settings))?)$/.test(
+    /^\/(listings(\/[a-zA-Z0-9-]+(\/edit)?)?|profile\/listings|home)$/.test(
       value
     )
     ? value
-    : '/profile/listings'
+    : '/home'
 }

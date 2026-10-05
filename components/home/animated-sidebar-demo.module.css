@@ -1,0 +1,238 @@
+.page {
+  position: relative;
+  isolation: isolate;
+  height: 100dvh;
+  min-height: 0;
+  padding: 0;
+  background: #0d0c10;
+  color: #f5f3f7;
+}
+
+.frame {
+  display: none;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid #ffffff12;
+  border-radius: 12px;
+  background: transparent;
+}
+
+.mark {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(to bottom right, #a77bcc, #8b5cab, #654282);
+}
+
+.mark svg {
+  display: none;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 24px;
+  overflow: auto;
+  background: #211c2be0;
+}
+
+.main h2 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 28px;
+}
+
+.submenu {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0%;
+  visibility: hidden;
+  transition:
+    grid-template-rows 200ms ease-out,
+    opacity 200ms ease-out,
+    visibility 200ms;
+}
+
+.navigation:hover .submenu[data-open],
+.navigation:has(:focus-visible) .submenu[data-open],
+.navigation[data-expanded] .submenu[data-open] {
+  grid-template-rows: 1fr;
+  opacity: 100%;
+  visibility: visible;
+}
+
+.submenuInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.child {
+  display: block;
+  width: 100%;
+  height: 34px;
+  padding: 0 10px 0 42px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #b0a9b8;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 200ms, color 200ms;
+}
+
+.child:hover {
+  background: #ffffff08;
+  color: #fff;
+}
+
+.child:focus-visible {
+  outline: 2px solid #bba1d5;
+  outline-offset: -2px;
+}
+
+.child[aria-current="page"] {
+  background: #a77bcc12;
+  color: #f5edf9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .submenu,
+  .child {
+    transition: none;
+  }
+}
+
+.ambient {
+  position: fixed;
+  inset: -10vh -10vw;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.mobileShell {
+  display: block;
+}
+
+.mobileHeader.mobileHeader {
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mobileBrand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.mobileAmbient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: #0b0b0b;
+}
+
+.mobileMain {
+  padding: 32px 24px 80px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+@media (min-width: 1024px) {
+  .frame {
+    display: block;
+    border-color: #c2a2e638;
+  }
+
+  .mobileShell {
+    display: none;
+  }
+
+  .page {
+    padding-block: 48px;
+    background: #160d23;
+    padding-inline:
+      max(
+        var(--desktop-app-inset),
+        calc(
+          (100vw - var(--desktop-app-content-width)) / 2 +
+          var(--desktop-app-inset)
+        )
+      );
+  }
+
+  .navigation {
+    background: #131017;
+    border-right-color: #c2a2e63d;
+    padding-inline: 1.5px;
+  }
+
+  .child {
+    padding-left: 65px;
+  }
+
+  .navigation > div:first-child {
+    height: 76px;
+    padding-inline: 0;
+  }
+
+  .navigation > div:first-child > span:first-child {
+    width: var(--desktop-app-control-height);
+    height: var(--desktop-app-control-height);
+  }
+
+  .navigation a[href^="#"] {
+    height: var(--desktop-app-control-height);
+    padding-inline: 19px;
+  }
+
+  .mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--desktop-app-control-height);
+    height: var(--desktop-app-control-height);
+    border-radius: 50%;
+    background: #fff;
+    color: #18181b;
+  }
+
+  .mark svg {
+    display: block;
+    width: var(--desktop-app-icon-size);
+    height: var(--desktop-app-icon-size);
+  }
+
+  .mark:hover {
+    background: #eee;
+  }
+
+  .mark:focus-visible {
+    outline: 2px solid #bba1d5;
+    outline-offset: -2px;
+  }
+
+  .navigation a[href^="#"] > span:first-child,
+  .navigation a[href^="#"] svg {
+    width: var(--desktop-app-icon-size);
+    height: var(--desktop-app-icon-size);
+  }
+}
+
+.mobileMain h2 {
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.mark:active,
+.mark[data-route-pending] {
+  filter: brightness(0.88);
+  background: #ddd;
+}

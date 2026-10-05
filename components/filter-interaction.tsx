@@ -77,10 +77,11 @@ export default function FilterInteraction({
   const reduced = useReducedMotion()
   const optionControls = useAnimationControls()
   useEffect(() => {
+    if (label === 'Sort') return
     // An interrupted entrance must freeze too: only the panel opacity exits.
     if (isClosing) optionControls.stop()
     else if (isOpen) optionControls.start({ opacity: 1, y: 0 })
-  }, [isClosing, isOpen, optionControls])
+  }, [isClosing, isOpen, optionControls, label])
   const close = () => {
     onOpenChange(false)
     normalTrigger.current?.focus()
@@ -232,7 +233,8 @@ export default function FilterInteraction({
                     opacity: isClosing ? 0 : 1,
                   }}
                   transition={{
-                    duration: isClosing ? 0.18 : 0.2,
+                    ...(label === 'Sort' ? { type: 'tween' as const } : {}),
+                    duration: label === 'Sort' || isClosing ? 0.18 : 0.2,
                     ease: 'easeOut',
                   }}
                   exit={{ opacity: 0 }}
@@ -296,15 +298,25 @@ export default function FilterInteraction({
                           type="button"
                           className={styles.option}
                           aria-pressed={option.value === value}
-                          initial={{ opacity: 0, y: reduced ? 0 : 40 }}
-                          animate={optionControls}
-                          transition={{
-                            type: 'spring',
-                            bounce: 0.1,
-                            duration: reduced ? 0 : 0.25,
-                            delay: reduced ? 0 : (index + 8) * 0.025,
-                            ease: [0.215, 0.61, 0.355, 1],
-                          }}
+                          initial={
+                            label === 'Sort'
+                              ? false
+                              : { opacity: 0, y: reduced ? 0 : 40 }
+                          }
+                          animate={
+                            label === 'Sort' ? undefined : optionControls
+                          }
+                          transition={
+                            label === 'Sort'
+                              ? { type: 'tween', duration: 0 }
+                              : {
+                                  type: 'spring',
+                                  bounce: 0.1,
+                                  duration: reduced ? 0 : 0.25,
+                                  delay: reduced ? 0 : (index + 8) * 0.025,
+                                  ease: [0.215, 0.61, 0.355, 1],
+                                }
+                          }
                           onClick={() => {
                             onChange?.(option.value)
                             closeTimer.current = setTimeout(close, 150)

@@ -1,5 +1,13 @@
 # Campus Marketplace — Project Status
 
+## Canonical navigation (2026-10-04)
+
+The current product routes are public Welcome at /, Market at /listings, and Home at /home.
+The retired personal pages, menu, shell, and placeholders have been removed. Home renders
+the supplied Velora demo; its product navigation remains deferred. Earlier shell/nav
+reports below are historical and superseded by this decision. Mobile Fluid Tabs now
+navigate and select from the actual pathname; the desktop personal control opens /home.
+
 ## Purpose
 
 A mobile-first student marketplace initially intended for the Western University
@@ -287,7 +295,7 @@ Implemented on 2026-09-30:
 - A shared responsive header/footer replaces the retail promotion, logo, menus,
   and retail footer on all routes. It uses visible wrapping links, without hover
   menus, and states that the marketplace is independent of Western University.
-- The existing MarketplaceActions/session endpoint is reused once in the global
+- The former personal actions component/session endpoint is reused once in the global
   header and refreshed on navigation. Logged-out visitors see Browse, Sell, Sign In;
   signed-in visitors also see My Listings and Sign Out. Sell keeps the protected
   route's existing `next=/listings/new` flow. Sign-out returns to the new home.
@@ -351,29 +359,24 @@ cloud project returned no listings during this check, so browser results covered
 the empty state; query conversion and populated rendering have separate automated
 coverage. No listings or cloud settings were mutated during validation.
 
-## App Shell / My Account - Completed
+## App Shell / Retired Personal Menu - Historical
 
 Current navigation supersedes the earlier global Sell/My Listings/Sign Out links.
-Below 1024px, exactly two fixed bottom tabs link to Market (/) and My Account
-(/account). Icons/labels, aria-current, a visible active border/background, and
+Below 1024px, exactly two fixed bottom tabs link to Market (/) and the retired personal menu
+(the retired personal route). Icons/labels, aria-current, a visible active border/background, and
 64px minimum tab height provide clear keyboard/touch access. The bar includes
 safe-area padding; the content wrapper reserves 72px plus the same safe-area inset.
 At desktop widths the bottom bar is hidden and the top header provides Market and
 an accessible account icon. The mobile header contains only the marketplace brand.
 
-/account is public. The existing MarketplaceActions session request and sign-out
+The former personal page was public. Its session request and sign-out
 implementation now live exclusively on this page; no second auth store was added.
 Logged-out users see Sign In; logged-in users see their display name and Western
 email verified. Both can find Sell (/listings/new) and My Listings
 (/profile/listings), retaining existing protected-route next redirects.
 Selling, Buying, and Account sections organize the links. Sign Out lives here.
 
-Reserved, data-free Coming soon routes:
-
-- /account/favorites
-- /account/messages
-- /account/profile
-- /account/settings
+Former data-free Coming soon routes covered Favorites, Messages, Profile and Settings.
 
 Only these four names are accepted; unknown account sections return 404. Sign-in
 return-path validation now permits the account landing page and these exact paths.
@@ -384,7 +387,7 @@ CRUD, or identity validation changes were made.
 Future account functionality (documentation only): Payments > Payment methods /
 Payout account. No bank/card controls or payments implementation are shown.
 Intended messaging flow: Market listing -> Message seller -> conversation ->
-My Account > Messages. The messages route is only a placeholder; no chat backend
+the retired personal menu > Messages. The messages route is only a placeholder; no chat backend
 or favorites persistence was added.
 
 Filter close animation: one shared exit handler is used by X, Apply, backdrop and
@@ -412,20 +415,20 @@ insets and real signed-in cloud writes were not re-tested. Production build with
 This pass supersedes the original account link-list presentation, while retaining
 the accepted search/filter behavior and backend architecture.
 
-- The bottom navigation retains exactly Market and My Account. One persistent
+- The bottom navigation retains exactly Market and the retired personal menu. One persistent
   indicator spans half the bar and translates between tab centers; a centered 40px
   line slides with a 260ms transform transition. It is not keyed/remounted per tab.
   Icon/label active styling, equal tab widths, aria-current and safe-area padding
   remain. Reduced motion disables the indicator transition.
 - Account destinations are full-width rows with 48px minimum touch height and right
   chevrons. Sell is a full-width primary action. The existing session request and
-  sign-out logic are reused by one MarketplaceActions instance.
-- AccountLayout persists across /account, its four reserved subroutes and
+  sign-out logic are reused by one former personal actions component instance.
+- the retired personal shell persists across the retired personal route, its four reserved subroutes and
   /profile/listings. Below 1024px, subpages slide from the right over the parent;
   AnimatePresence keeps outgoing content mounted while it slides back to the right.
   The underlying account navigation is inert while covered. Parent navigation uses
   browser Back when entered from the account landing page; direct visits have a
-  safe link to /account. Reduced motion makes transitions immediate.
+  safe link to the retired personal route. Reduced motion makes transitions immediate.
 - At 1024px and above the same account navigation forms a persistent 260px sidebar,
   with routed content on its right. Desktop has no full-page slide. Refresh, direct
   section URLs, and browser history retain real Next.js routes. No account feature
@@ -468,7 +471,7 @@ corrects mobile account containment without changing backend behavior.
   the same page and SSR handler. Detail/create/edit routes and incoming links remain
   intact. Both browse URLs retain query parameters, reload and browser history.
 - The mobile application brand header is hidden below 1024px with no reserved space.
-  Desktop retains its header. Browse/account main content starts with 16px mobile
+  Desktop retains its header. Browse and former personal main content starts with 16px mobile
   padding; fixed bottom navigation and safe-area clearance remain unchanged.
 - Removed the homepage introduction, Browse all listings, latest-only heading and
   bottom Have something you no longer need / Sell CTA. The browse hierarchy is now
@@ -483,7 +486,7 @@ corrects mobile account containment without changing backend behavior.
   Previous remains available. No repository/API/schema changes were made.
 - Sort and Filter share one flex group on mobile/desktop; chips wrap above as needed.
   Filter drawer styling/animations and animated search remain unchanged.
-- On mobile, My Account's title belongs to account home. While a subroute is active,
+- On mobile, the retired personal menu's title belongs to account home. While a subroute is active,
   the parent sidebar is hidden and removed from layout flow; destination content
   occupies the main area from the top, without a parent title/menu above it.
   On Back, account home returns while AnimatePresence retains the outgoing page's
@@ -507,10 +510,10 @@ features or backend functionality were implemented.
 
 ## Account Default / Mobile Title / Back Controls
 
-- Desktop header account navigation now opens `/profile/listings`. Direct `/account`
+- Desktop header account navigation now opens `/profile/listings`. Direct `the retired personal route`
   visits at 1024px and above replace the route with My Listings, retaining the
   persistent desktop sidebar. The existing protected-route login flow still applies.
-  Mobile `/account` continues to show the account landing menu.
+  Mobile `the retired personal route` continues to show the account landing menu.
 - Mobile Market (`/` and its `/listings` alias) again displays the Campus Marketplace
   page heading. Account screens do not display that brand heading; the shared mobile
   application header remains hidden. Desktop keeps its existing brand header.
@@ -549,7 +552,7 @@ Production build with --no-lint passed.
   existing fixed mobile tabs remain intact. Supplied offscreen/page visibility pause
   and unmount cleanup remain intact.
 - Hero navigation reuses the existing no-store session endpoint and auth route:
-  guests see Log in, members see My Account (existing mobile menu / desktop default
+  guests see Log in, members see the retired personal menu (existing mobile menu / desktop default
   My Listings). During session loading no guest link flashes. Sell/My Listings/Sign
   Out are not exposed in the hero. No authentication/backend architecture changed.
 - Marketplace search/filter/sort/chips/grid/pagination/query logic and cards below
@@ -579,7 +582,7 @@ OTP were not re-tested. Production build with --no-lint passed.
 - Desktop Hero now has left-aligned white headline/light-gray supporting copy and a
   right-hand image spiral, with reserved dimensions to avoid loading layout shift.
   The brand is white with no permanent border/box/shadow; keyboard focus remains visible.
-  The top-right Log in / My Account link is styled as a high-contrast button. Existing
+  The top-right Log in / the retired personal menu link is styled as a high-contrast button. Existing
   session/auth behavior remains unchanged.
 - GradientWaves props/shader/cleanup remain unchanged. The previously corrected neutral
   #0b0b0b backdrop remains; no overlay or canvas filter was added.
@@ -629,7 +632,7 @@ only the existing GradientWaves height uniform changes with scroll.
   and keyboard Enter/Space remain from the supplied implementation. Desktop retains
   a 55/45 composition; mobile stacks the ticket beneath copy with the component's
   responsive fit. Ticket space and headline/subtitle dimensions are reserved to avoid
-  loading shifts. Navigation remains plain white brand plus Log in / My Account.
+  loading shifts. Navigation remains plain white brand plus Log in / the retired personal menu.
 - Installed gsap (required by supplied TextType). TearTicket reuses existing Framer
   Motion 6 instead of adding a second Motion package: import m as motion from
   framer-motion for the app's LazyMotion boundary. One motion template containing
@@ -739,7 +742,7 @@ use API requests; no service-role key or server secret is used by this repositor
 No speculative architecture rewrite was made to address the unreplicated error.
 
 Part B completed the independent Welcome navigation change: brand at left,
-About and Log in at right, no session-dependent My Account. About's final
+About and Log in at right, no session-dependent personal menu. About's final
 scroll behavior is intentionally deferred. Other account navigation is unchanged.
 Files touched this pass: `components/listings/welcome-hero.tsx`, its CSS module,
 and this status document. Hero effects, Drift Wall, shared fixed Gradient Waves,
@@ -1427,7 +1430,7 @@ expanded-card implementation are unchanged.
 - The public desktop header was mounted by `_app.tsx` on every non-Welcome route.
   Market now excludes that header and owns a dark brand row. It reuses Welcome's
   navigation/brand CSS, sizing contract and measured row alignment. Desktop keeps
-  Market/My Account links; the lowered GradientWaves environment begins at the top.
+  Market/the retired personal menu links; the lowered GradientWaves environment begins at the top.
 - `components/discover-button.tsx` adapts the supplied Discover Button (e9c4dce1)
   into CSS Modules. The original spring, search expansion/clipping/blur, close
   overlay and shared selected-pill motion remain. The toolbar stays horizontal
@@ -1446,7 +1449,7 @@ expanded-card implementation are unchanged.
   InfiniteGrid is actually unmounted there. App <1024 retains native vertical
   repeated batches and the existing sentinel observer; no canvas X transforms.
 - JellyRadio remains a fixed light-glass app-only control. Market is selected.
-  No authenticated App Home route exists: `/` is public Welcome and `/account`
+  No authenticated App Home route exists: `/` is public Welcome and `the retired personal route`
   is an account/My Listings flow. Home is a disabled prepared placeholder, never
   a link to Welcome. Public Welcome no longer mounts this app navigation.
 - Next pass: real query submission, defined authenticated App Home, real listing

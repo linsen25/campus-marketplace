@@ -210,6 +210,11 @@ const GradientWaves = ({
     const mesh = new Mesh(gl, { geometry, program });
     ctxMap.set(container, { renderer, program, mesh });
 
+    // WebGL clears its drawing buffer after compositing. Refresh the same frame
+    // synchronously before a route snapshot reads it, without retaining buffers.
+    const snapshotFrame = () => renderer.render({ scene: mesh });
+    canvas.addEventListener('page-slide-snapshot', snapshotFrame);
+
     const setSize = () => {
       const rect = container.getBoundingClientRect();
       const w = Math.max(1, Math.floor(rect.width));
@@ -219,6 +224,7 @@ const GradientWaves = ({
       res[0] = gl.drawingBufferWidth;
       res[1] = gl.drawingBufferHeight;
       renderer.render({ scene: mesh });
+      canvas.dataset.rendered = 'true';
     };
 
     const ro = new ResizeObserver(setSize);
@@ -289,6 +295,7 @@ const GradientWaves = ({
       ro.disconnect();
       io.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
+      canvas.removeEventListener('page-slide-snapshot', snapshotFrame);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerleave', onPointerLeave);
       ctxMap.delete(container);

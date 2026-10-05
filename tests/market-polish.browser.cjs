@@ -1,4 +1,4 @@
-/* global window, document, getComputedStyle, requestAnimationFrame, performance */
+/* global window, document, getComputedStyle, requestAnimationFrame, performance, cardFrames, scrollCalls, scrollY, scrollSamples, scrollStarted, previousScroll */
 const assert=require('node:assert/strict')
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright-core')
 ;(async()=>{
@@ -52,7 +52,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright-core')
     await page.locator('[data-market-focus-backdrop]').waitFor({state:'detached'})
    }
    if(width>=1024){
-    const profile=page.getByRole('link',{name:'My Account'})
+    const profile=page.getByRole('link',{name:'Home'})
     assert.equal((await profile.boundingBox()).width,60)
     assert.equal(await profile.evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 255, 255)')
     await profile.hover();await page.waitForTimeout(350)

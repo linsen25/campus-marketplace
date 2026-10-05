@@ -12,9 +12,11 @@
   background: transparent;
   color: #f5f2f8;
 }
+
 .overlay::backdrop {
   background: transparent;
 }
+
 .panel {
   position: absolute;
   left: 0;
@@ -22,8 +24,15 @@
   height: calc(50% + 1px);
   background: #1e1727;
 }
-.top { top: 0; }
-.bottom { bottom: 0; }
+
+.top {
+  top: 0;
+}
+
+.bottom {
+  bottom: 0;
+}
+
 .message {
   position: absolute;
   inset: 0;
@@ -33,6 +42,119 @@
   font-size: clamp(24px, 4vw, 40px);
   font-weight: 600;
 }
+
 .reduced {
   background: #1e1727;
+}
+
+.content {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.stack {
+  max-width: 100%;
+}
+
+.hero {
+  margin: 0;
+  font-size: clamp(24px, 4vw, 40px);
+  font-weight: 600;
+  text-align: center;
+}
+
+.thoughtLine {
+  width: max-content;
+  max-width: 100%;
+  margin: 24px auto 0;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 24px;
+}
+
+.thoughtHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #e8e3ed;
+}
+
+.elapsed {
+  margin-left: 4px;
+  opacity: 55%;
+  font-variant-numeric: tabular-nums;
+}
+
+.thoughtSteps {
+  margin: 10px 0 0;
+  padding: 0 0 0 22px;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  color: #e8e3ed;
+  transition: color 200ms ease-out;
+}
+
+.step[data-state="complete"] {
+  color: #a69dab;
+}
+
+.statusMark {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+.pulse {
+  display: inline-grid;
+  place-items: center;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentcolor;
+  animation: thought-breathe 1600ms cubic-bezier(0.77, 0, 0.175, 1) infinite;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes thought-breathe {
+  0%,
+  100% {
+    opacity: 55%;
+  }
+
+  50% {
+    opacity: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step {
+    transform: none;
+    transition: none;
+  }
+
+  .pulse {
+    display: inline-grid;
+    place-items: center;
+    animation: none;
+  }
 }

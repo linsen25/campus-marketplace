@@ -1,0 +1,139 @@
+.container {
+  position: relative;
+  width: 124px;
+  height: 48px;
+  z-index: 40;
+  flex-shrink: 0;
+}
+
+.surface {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 220px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #ffffff20;
+  background: #19161e;
+  box-shadow: 0 8px 24px #0005;
+  transform-origin: top right;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 48px;
+  padding: 0;
+  border: 1px solid #554761;
+  border-radius: 999px;
+  background: #fff;
+  color: #18181b;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.content {
+  padding: 8px;
+}
+
+.list,
+.children {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #b0a9ba;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.item[aria-current] {
+  color: #f4eff9;
+}
+
+.indicator {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: #ffffff0b;
+}
+
+.bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  margin: auto 0;
+  width: 3px;
+  height: 20px;
+  border-radius: 3px;
+  background: #eee6f5;
+}
+
+.icon,
+.label {
+  position: relative;
+  z-index: 1;
+}
+
+.icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.children {
+  padding: 2px 0 6px 30px;
+}
+
+.children button {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #aaa2b5;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.children button[aria-current] {
+  color: #f4eff9;
+  background: #a77bcc14;
+}
+
+.container button:focus-visible {
+  outline: 2px solid #bba1d5;
+  outline-offset: -2px;
+}
+
+.trigger svg {
+  transition: transform 180ms ease-out;
+}
+
+.trigger[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}

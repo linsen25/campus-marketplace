@@ -1,0 +1,12 @@
+.track,
+.surface {
+  min-width: 0;
+}
+
+.source {
+  position: absolute;
+  inset: 0;
+  z-index: 100000;
+  overflow: hidden;
+  pointer-events: auto;
+}

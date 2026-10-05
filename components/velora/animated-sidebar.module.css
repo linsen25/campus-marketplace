@@ -1,0 +1,269 @@
+.shell {
+  container-name: sidebar;
+  container-type: inline-size;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.layout {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: #131017;
+  color: #f5f3f7;
+}
+
+.topbar {
+  display: flex;
+  height: 56px;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 0 12px;
+  border-bottom: 1px solid #ffffff12;
+  background: #131017;
+}
+
+.rail {
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+  width: 64px;
+  transition: width 300ms ease-out;
+}
+
+.rail[data-expanded] {
+  width: 240px;
+}
+
+.railNav {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 20;
+  width: 64px;
+  overflow: hidden;
+  border-right: 1px solid #ffffff12;
+  transition: width 300ms ease-out, box-shadow 300ms ease-out;
+}
+
+.railNav:hover,
+.railNav:has(:focus-visible),
+.railNav[data-expanded] {
+  width: 240px;
+}
+
+.railNav:hover,
+.railNav:has(:focus-visible) {
+  box-shadow: 12px 0 24px #00000030;
+}
+
+.railNav[data-expanded] {
+  box-shadow: none;
+}
+
+.head {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 48px;
+  padding: 0 4px;
+}
+
+.logo {
+  display: grid;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+}
+
+.brand {
+  flex: 1;
+  font-weight: 600;
+}
+
+.reveal {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0%;
+  transition: opacity 200ms;
+}
+
+.group:hover .reveal,
+.group:has(:focus-visible) .reveal,
+.group[data-expanded] .reveal {
+  opacity: 100%;
+}
+
+.links {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 -4px;
+  padding: 8px 4px;
+  overflow: hidden auto;
+}
+
+.link,
+.pin {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #b0a9b8;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 200ms, color 200ms;
+}
+
+.control {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #b0a9b8;
+  cursor: pointer;
+  transition: background-color 200ms, color 200ms;
+}
+
+.link:hover,
+.pin:hover,
+.control:hover {
+  background: #ffffff08;
+  color: #fff;
+}
+
+.link:focus-visible,
+.pin:focus-visible,
+.control:focus-visible {
+  outline: 2px solid #bba1d5;
+  outline-offset: -2px;
+}
+
+.link[aria-current="page"] {
+  background: #a77bcc1a;
+  color: #f5edf9;
+  font-weight: 500;
+}
+
+.icon,
+.pinIcon {
+  display: grid;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+}
+
+.icon svg,
+.svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.pinIcon {
+  transition: transform 300ms;
+}
+
+.pinIcon[data-pinned] {
+  transform: rotate(180deg);
+}
+
+.drawer {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: 288px;
+  max-width: 85vw;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  translate: -100% 0;
+  border: 0;
+  border-right: 1px solid #ffffff12;
+  background: #131017;
+  color: #f5f3f7;
+  transition: translate 300ms ease-out, display 300ms allow-discrete, overlay 300ms allow-discrete;
+}
+
+.drawerNav {
+  width: 100%;
+  height: 100%;
+}
+
+.drawer::backdrop {
+  background: #0c0a1099;
+  opacity: 0%;
+  backdrop-filter: blur(4px);
+  transition: opacity 300ms, display 300ms allow-discrete, overlay 300ms allow-discrete;
+}
+
+.drawer[open] {
+  translate: 0;
+}
+
+.drawer[open]::backdrop {
+  opacity: 100%;
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown -- Native dialog entry transition. */
+@starting-style {
+  .drawer[open] {
+    translate: -100% 0;
+  }
+
+  .drawer[open]::backdrop {
+    opacity: 0%;
+  }
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown -- Supplied container-responsive architecture. */
+@container sidebar (min-width: 42rem) {
+  .layout {
+    flex-direction: row;
+  }
+
+  .rail {
+    display: block;
+  }
+
+  .topbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail,
+  .railNav,
+  .reveal,
+  .pinIcon,
+  .link,
+  .pin,
+  .control,
+  .drawer,
+  .drawer::backdrop {
+    transition: none;
+  }
+}

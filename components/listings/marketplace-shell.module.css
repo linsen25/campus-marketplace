@@ -3,78 +3,31 @@
   align-items: center;
   gap: 1.5rem;
 }
-.bottomTabs {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 30;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  background: white;
-  border-top: 1px solid var(--color-neutral-light);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-.tab {
-  min-height: 64px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  border-top: 3px solid transparent;
-}
-.tab[aria-current='page'] {
-  font-weight: 700;
-  background: var(--color-neutral-lightest);
-}
+
 .content {
   padding-bottom: 0;
 }
+
 @media (min-width: 1024px) {
-  .bottomTabs {
-    display: none;
-  }
   .desktopLinks {
     display: flex;
   }
 }
 
-.indicator {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 50%;
-  height: 3px;
-  transition: transform 260ms ease;
-  pointer-events: none;
-}
-.indicator::after {
-  content: '';
-  display: block;
-  width: 40px;
-  height: 3px;
-  margin: 0 auto;
-  background: currentColor;
-  border-radius: 2px;
-}
 .desktopFooter {
   display: none;
 }
+
 @media (min-width: 1024px) {
   .desktopFooter {
     display: block;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .indicator {
-    transition: none;
   }
 }
 
 .desktopHeader {
   display: none;
 }
+
 @media (min-width: 1024px) {
   .desktopHeader {
     display: block;

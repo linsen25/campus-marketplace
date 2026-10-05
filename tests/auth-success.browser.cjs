@@ -1,4 +1,4 @@
-/* global document, window, MutationObserver, performance */
+/* global location, document, window, MutationObserver, performance, getComputedStyle, requestAnimationFrame */
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
 const assert = require('node:assert/strict')
 const base = process.env.BASE_URL || 'http://localhost:3100'
@@ -9,8 +9,8 @@ const base = process.env.BASE_URL || 'http://localhost:3100'
     args: ['--enable-unsafe-swiftshader'],
   })
   try {
-    for (const width of [390, 768, 834, 1280, 1536]) {
-      for (const reduced of [false, true]) {
+    for (const width of [390, 768, 834, 1280, 1536].filter(w => !process.env.WIDTH || w === Number(process.env.WIDTH))) {
+      for (const reduced of [false, true].filter(r => !process.env.MOTION || r === (process.env.MOTION === 'reduced'))) {
         console.log(`Checking ${width} ${reduced ? 'reduced' : 'motion'}`)
         const page = await browser.newPage({
           viewport: { width, height: 900 },
@@ -18,6 +18,7 @@ const base = process.env.BASE_URL || 'http://localhost:3100'
           serviceWorkers: 'block',
         })
         let signedIn = false
+        await page.route(/https:\/\/fonts\.(googleapis|gstatic)\.com\//, route => route.abort())
         let delay = 50
         let failSend = false
         let submits = 0
@@ -65,6 +66,11 @@ const base = process.env.BASE_URL || 'http://localhost:3100'
           await auth.getByRole('button', { name: 'Close authentication' }).click()
           await auth.waitFor({ state: 'detached' })
         }
+        const hold = auth.getByRole('button', { name: /Hold to create account/ })
+        if (process.env.LOADER_ONLY) {
+          await open()
+          await signup()
+        } else {
         await open()
         assert.equal(await auth.locator('#login-email').getAttribute('autocomplete'), 'username')
         assert.equal(await auth.locator('#login-password').getAttribute('autocomplete'), 'current-password')
@@ -72,7 +78,6 @@ const base = process.env.BASE_URL || 'http://localhost:3100'
         assert.equal(await auth.locator('#signup-email').getAttribute('autocomplete'), 'section-signup email')
         assert.equal(await auth.locator('#signup-password').getAttribute('autocomplete'), 'new-password')
         assert.equal(await auth.locator('form').getAttribute('name'), 'signup-form')
-        const hold = auth.getByRole('button', { name: /Hold to create account/ })
         assert(await hold.isDisabled())
         await fields()
         assert(await hold.isDisabled())
@@ -121,6 +126,7 @@ const base = process.env.BASE_URL || 'http://localhost:3100'
           await page.getByRole('button', { name: 'Log in', exact: true }).click()
           await signup()
         }
+        }
         // Both success modes use the same top-layer overlay across actual Next navigation.
         for (const mode of ['signup', 'signin']) {
           const observeSuccess = () => page.evaluate(() => {
@@ -131,8 +137,8 @@ const base = process.env.BASE_URL || 'http://localhost:3100'
               if (element) {
                 const message = element.querySelector('[role="status"]')
                 window.successFrames.push({ phase: element.dataset.authSuccess,
-                  text: message?.textContent || '', opacity: message ? Number(getComputedStyle(message).opacity) : 0,
-                  time: performance.now(), destination: Boolean(document.querySelector('#listing-sort-label')) })
+                  text: message?.textContent || '', opacity: message ? Number(getComputedStyle(element.querySelector('[data-success-content]')).opacity) : 0,
+                  steps: Array.from(element.querySelectorAll('[data-loading-step]')).map(e => e.dataset.state), time: performance.now(), destination: Boolean(document.querySelector('#listing-sort-label')) })
                 requestAnimationFrame(sample)
               } else if (!window.successFrames.length) requestAnimationFrame(sample)
             }
@@ -172,7 +178,10 @@ const base = process.env.BASE_URL || 'http://localhost:3100'
             assert(panels[0].top <= 1 && panels[1].bottom >= 899)
             assert(panels[0].bottom >= panels[1].top, 'No seam')
           }
-          await page.waitForURL('**/listings')
+          try { await page.waitForFunction(() => location.pathname === '/listings') } catch (error) {
+            console.log('FAILED STATE', await page.evaluate(() => ({ path: location.pathname, phase: document.querySelector('[data-auth-success]')?.dataset.authSuccess, readiness: document.querySelector('[data-market-preparation]')?.dataset.marketPreparation, frames: window.successFrames.slice(-3), body: document.body.innerText })))
+            throw error
+          }
           await overlay.waitFor({ state: 'detached' })
           const frames = await page.evaluate(() => window.successFrames)
           assert(frames.filter((x) => x.phase === 'cover').every((x) => x.text === ''))
@@ -180,6 +189,8 @@ const base = process.env.BASE_URL || 'http://localhost:3100'
           const fading = frames.find((x) => x.phase === 'fading')
           const reveal = frames.find((x) => x.phase === 'reveal')
           assert(fading && reveal && fading.text === 'Welcome back, Tester')
+          assert.deepEqual(fading.steps, ['complete', 'complete', 'complete', 'complete'])
+          assert(frames.every(f => f.steps.filter(s => s === 'active').length <= 1))
           assert(reveal.opacity < 0.01 && reveal.destination, 'Reveal requires faded text AND ready destination')
           assert(reveal.time - fading.time >= 180, 'Text fade must finish before opening')
           if (!reduced) assert(frames.some((x) => x.phase === 'covered' && x.text.length > 0 && x.text.length < 'Welcome back, Tester'.length))
@@ -195,10 +206,10 @@ const base = process.env.BASE_URL || 'http://localhost:3100'
         await auth.locator('[name$="-email"]').fill('tester@uwo.ca')
         await auth.locator('[name$="-password"]').fill('Abcdefg1!')
         await auth.getByRole('button', { name: 'Log in', exact: true }).click()
-        await page.getByText('You are signed in, but Listings could not open. Please try again.').waitFor()
-        await page.locator('[data-auth-success]').waitFor({ state: 'detached' })
-        assert(await auth.isVisible(), 'Navigation failure restores an accessible modal')
-        console.log(`PASS ${width} ${reduced ? 'reduced' : 'motion'}: reset, readiness, 50/250/800ms+error loading, signup/login covered navigation and reveal`)
+        await page.getByText('You are signed in, but Market could not open.').waitFor()
+        assert.equal(await auth.count(), 0, 'Navigation failure never asks for credentials again')
+        assert(await page.getByRole('button', { name: 'Try opening Market again' }).isVisible())
+        console.log(`PASS ${width} ${reduced ? 'reduced' : 'motion'}: ${process.env.LOADER_ONLY ? 'loader only' : 'full auth'}, signup/login readiness, fade, reveal and failure`)
         await page.close()
       }
     }

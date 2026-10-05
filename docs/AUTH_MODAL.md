@@ -9,7 +9,7 @@ and agreement row are preserved. Social/demo branding, name field and page-level
 decorative backgrounds were removed.
 
 `components/auth/auth-modal.tsx` provides one shared card. Welcome Log in,
-unauthenticated demo Contact seller, account Sign In, Sell an item and My Listings
+unauthenticated demo Contact seller and protected listing-management entries
 use it. Existing protected
 route redirects to `/auth/sign-in?next=...` open the same card through a compatibility
 entry. Welcome opens above the existing page. Native `dialog.showModal()` supplies

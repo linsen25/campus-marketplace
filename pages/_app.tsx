@@ -10,7 +10,6 @@ import { Dev } from '@dev/dev'
 /// #endif
 
 import { AuthModalProvider } from '@/components/auth/auth-modal'
-import { AccountLayout } from '@/components/listings/account-layout'
 import { MarketMobileNavigation } from '@/components/listings/market-mobile-nav'
 import { MarketplaceSessionProvider } from '@/components/listings/marketplace-session'
 import {
@@ -19,12 +18,14 @@ import {
   MarketplaceFooter,
 } from '@/components/listings/marketplace-shell'
 import { Loader } from '@/components/loader/loader'
+import { DesktopRouteTransitionProvider } from '@/components/navigation/desktop-route-transition'
 import { Overlay } from '@/components/overlay/overlay'
 import { AppLayout } from '@/layouts/app-layout'
 import { gaTrackingId, isDev, isProd } from '@/utils/env'
 import { scrollToTop } from '@/utils/scrollToTop'
 
 import '@/styles/_index.css'
+import '@/styles/desktop-app-tokens.css'
 import '@/components/ui/GradientWaves.css'
 import '@/components/ui/MaskedHeading.css'
 import '@/components/ui/TextType.css'
@@ -69,22 +70,17 @@ function MarketplaceApp({ Component, pageProps, router }: AppProps) {
       )}
 
       <MarketplaceContent>
-        {router.pathname !== '/' && router.pathname !== '/listings' && (
-          <MarketplaceHeader />
-        )}
+        {router.pathname !== '/' &&
+          router.pathname !== '/listings' &&
+          router.pathname !== '/home' && <MarketplaceHeader />}
 
-        {router.pathname.startsWith('/account') ||
-        router.pathname === '/profile/listings' ? (
-          <AccountLayout>
-            <Component {...pageProps} />
-          </AccountLayout>
-        ) : (
-          <AnimatePresence exitBeforeEnter={true} onExitComplete={scrollToTop}>
-            <Component {...pageProps} key={router.route} />
-          </AnimatePresence>
-        )}
+        <AnimatePresence exitBeforeEnter={true} onExitComplete={scrollToTop}>
+          <Component {...pageProps} key={router.route} />
+        </AnimatePresence>
 
-        {router.pathname !== '/' && <MarketplaceFooter />}
+        {router.pathname !== '/' && router.pathname !== '/home' && (
+          <MarketplaceFooter />
+        )}
       </MarketplaceContent>
 
       <Loader
@@ -92,7 +88,7 @@ function MarketplaceApp({ Component, pageProps, router }: AppProps) {
           isCatalogPage ||
           router.pathname === '/' ||
           router.pathname === '/listings' ||
-          router.pathname.startsWith('/account')
+          router.pathname === '/home'
             ? 'bar'
             : 'overlay'
         }
@@ -109,7 +105,9 @@ export default function App(props: AppProps) {
   return (
     <MarketplaceSessionProvider>
       <AuthModalProvider>
-        <MarketplaceApp {...props} />
+        <DesktopRouteTransitionProvider>
+          <MarketplaceApp {...props} />
+        </DesktopRouteTransitionProvider>
       </AuthModalProvider>
     </MarketplaceSessionProvider>
   )

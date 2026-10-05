@@ -1,4 +1,4 @@
-/* global window, document, requestAnimationFrame, performance, getComputedStyle */
+/* global window, document, requestAnimationFrame, performance, getComputedStyle, marketCalls:writable, originalScroll, marketFrames, marketStarted */
 const assert = require('node:assert/strict')
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
 ;(async () => {
@@ -20,8 +20,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
         assert.equal((await header.boundingBox()).height,106)
         assert.equal(await header.locator(':scope > div').first().evaluate(e=>getComputedStyle(e).paddingBottom),'12px')
       } else {
-        const profile=page.getByRole('link',{name:'My Account'})
-        assert.equal(await profile.getAttribute('href'),'/profile/listings')
+        const profile=page.getByRole('link',{name:'Home'})
+        assert.equal(await profile.getAttribute('href'),'/home')
         assert.equal((await profile.boundingBox()).width,60)
         assert.equal((await profile.boundingBox()).height,60)
         assert.equal(await profile.evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(22, 101, 52)')

@@ -1,4 +1,4 @@
-/* global document, window, getComputedStyle, requestAnimationFrame */
+/* global document, window, getComputedStyle, requestAnimationFrame, performance */
 const assert = require('node:assert/strict')
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
 ;(async () => {
@@ -82,10 +82,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
       assert(sb.x < fb.x)
       assert.equal(Math.round(search.x), width < 1024 ? 20 : Math.round((await brand.boundingBox()).x + (await brand.boundingBox()).width + 20))
       if (width >= 1024) {
-        const profile = page.getByRole('link', { name: 'My Account' })
+        const profile = page.getByRole('link', { name: 'Home' })
         const pb = await profile.boundingBox(), bb = await brand.boundingBox()
         for (const b of [search, sb, fb, pb]) assert(Math.abs(b.y + b.height / 2 - bb.y - bb.height / 2) < 1)
-        assert.equal(await profile.getAttribute('href'), '/profile/listings')
+        assert.equal(await profile.getAttribute('href'), '/home')
         assert.equal(pb.height, search.height); assert.equal(pb.width, pb.height)
         assert.equal(await profile.evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(255, 255, 255)')
         const sweep = profile.locator(':scope > span').first(), idle = await sweep.evaluate(el => getComputedStyle(el).transform)

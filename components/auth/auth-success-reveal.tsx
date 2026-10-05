@@ -7,13 +7,20 @@ import TextType from '@/components/ui/TextType'
 import { validUsername } from '@/lib/auth-username'
 
 import styles from './auth-success-reveal.module.css'
+import { SuccessThoughtLine } from './success-thought-line'
 
 export function AuthSuccessReveal({
-  onCovered,
+  preparation,
+  startedAt,
+  usernameReady,
+  onRetry,
   onComplete,
   username,
 }: {
-  onCovered: () => Promise<void>
+  startedAt: number
+  preparation: Promise<void>
+  usernameReady: boolean
+  onRetry: () => void
   onComplete: () => void
   username?: string
 }) {
@@ -23,31 +30,58 @@ export function AuthSuccessReveal({
   const [phase, setPhase] = useState('cover')
   const [destinationReady, setDestinationReady] = useState(false)
   const [textFaded, setTextFaded] = useState(false)
+  const [textReady, setTextReady] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const [readyAt, setReadyAt] = useState<number | null>(null)
+  const [statusReady, setStatusReady] = useState(false)
   const message = validUsername(username)
     ? `Welcome back, ${username}`
     : 'Welcome back'
   useEffect(() => {
-    if (destinationReady && textFaded) setPhase('reveal')
-  }, [destinationReady, textFaded])
+    if (destinationReady && textReady && statusReady && !failed)
+      setPhase('fading')
+  }, [destinationReady, textReady, statusReady, failed])
+  useEffect(() => {
+    if (destinationReady && textFaded && !failed) setPhase('reveal')
+  }, [destinationReady, textFaded, failed])
+  useEffect(() => {
+    let active = true
+    preparation.then(
+      () => {
+        if (active) {
+          setReadyAt(performance.now())
+          setDestinationReady(true)
+        }
+      },
+      () => {
+        if (active) {
+          setFailed(true)
+          setPhase('error')
+        }
+      }
+    )
+    return () => {
+      active = false
+    }
+  }, [preparation])
   useEffect(() => {
     if (phase !== 'hold' && !(reduced && phase === 'covered')) return undefined
-    const timer = setTimeout(() => setPhase('fading'), 150)
+    if (!usernameReady) return undefined
+    const timer = setTimeout(() => {
+      setTextReady(true)
+      setPhase('waiting')
+    }, 150)
     return () => clearTimeout(timer)
-  }, [phase, reduced])
+  }, [phase, reduced, usernameReady])
   useLayoutEffect(() => {
     const element = dialog.current
     element?.showModal()
     return () => element?.close()
   }, [])
-  async function covered() {
+  function covered() {
     if (started.current) return
     started.current = true
     setPhase('covered')
-    try {
-      await onCovered()
-    } finally {
-      setDestinationReady(true)
-    }
   }
   function completed() {
     if (phase === 'cover') covered()
@@ -87,34 +121,56 @@ export function AuthSuccessReveal({
           />
         </>
       )}
-      {phase !== 'cover' && (
-        <motion.p
-          className={styles.message}
-          role="status"
-          aria-label={message}
-          initial={{ opacity: 1 }}
-          animate={{
-            opacity: phase === 'fading' || phase === 'reveal' ? 0 : 1,
-          }}
-          transition={{ duration: 0.2 }}
-          onAnimationComplete={() => {
-            if (phase === 'fading') setTextFaded(true)
-          }}
-        >
-          {reduced ? (
-            message
-          ) : (
-            <TextType
-              text={message}
-              as="span"
-              typingSpeed={50}
-              loop={false}
-              showCursor={false}
-              aria-hidden="true"
-              onTypingComplete={() => setPhase('hold')}
-            />
-          )}
-        </motion.p>
+      {failed ? (
+        <div className={styles.message}>
+          <div>
+            <p role="alert">You are signed in, but Market could not open.</p>
+            <button type="button" onClick={onRetry}>
+              Try opening Market again
+            </button>
+          </div>
+        </div>
+      ) : (
+        phase !== 'cover' &&
+        usernameReady && (
+          <motion.div
+            className={styles.content}
+            data-success-content="true"
+            initial={{ opacity: 1 }}
+            animate={{
+              opacity: phase === 'fading' || phase === 'reveal' ? 0 : 1,
+            }}
+            transition={{ duration: 0.2 }}
+            onAnimationComplete={() => {
+              if (phase === 'fading') setTextFaded(true)
+            }}
+          >
+            <div className={styles.stack}>
+              <p className={styles.hero} role="status" aria-label={message}>
+                {reduced ? (
+                  message
+                ) : (
+                  <TextType
+                    text={message}
+                    as="span"
+                    typingSpeed={50}
+                    loop={false}
+                    showCursor={false}
+                    aria-hidden="true"
+                    onTypingComplete={() => setPhase('hold')}
+                  />
+                )}
+              </p>
+              <SuccessThoughtLine
+                destinationReady={destinationReady}
+                startedAt={startedAt}
+                readyAt={readyAt}
+                reduced={Boolean(reduced)}
+                onComplete={() => setStatusReady(true)}
+              />
+            </div>
+          </motion.div>
+        )
       )}
     </motion.dialog>,
     document.body

@@ -52,7 +52,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  max-width: 1536px;
+  max-width: var(--desktop-app-content-width, 1536px);
   margin: 0 auto;
   padding: 0 20px 14px;
 }
@@ -71,7 +71,7 @@
 
 .content {
   width: 100%;
-  max-width: 1536px;
+  max-width: var(--desktop-app-content-width, 1536px);
   margin: 0 auto;
   padding: 22px 20px 0;
 }
@@ -90,7 +90,7 @@
 
 .pagination {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
   gap: 12px;
@@ -107,40 +107,50 @@
 }
 
 .returnTop {
-  position: fixed;
-  right: 28px;
-  bottom: 28px;
-  z-index: 30;
-  display: grid;
-  place-items: center;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: #fff;
-  color: #18181b;
-  transition: background-color 150ms;
-}
-
-.returnTop:hover,
-.returnTop:focus-visible {
-  background: #e9d5ff;
-}
-
-.returnTop:focus-visible {
-  outline: 2px solid #c7a0e9;
-  outline-offset: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  padding: 0;
 }
 
 @media (min-width: 1024px) {
-  .toolbar {
-    --market-control-height: 60px;
+  /* Keep the native gutter/width: only the thumb color changes, never overflow. */
+  .desktopViewport {
+    background-color: #0b0b0b;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 200ms ease-out;
+  }
 
-    padding: 20px 48px;
+  .desktopViewport::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .desktopViewport::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 6px;
+    transition: background-color 200ms ease-out;
+  }
+
+  .desktopViewport.viewportScrolling {
+    scrollbar-color: #f5f5f5 transparent;
+    transition-duration: 140ms;
+  }
+
+  .desktopViewport.viewportScrolling::-webkit-scrollbar-thumb {
+    background: #f5f5f5;
+    transition-duration: 140ms;
+  }
+
+  .toolbar {
+    --market-control-height: var(--desktop-app-control-height, 60px);
+
+    padding: 20px var(--desktop-app-inset, 48px);
     gap: 20px;
   }
 
   .content {
-    padding: 28px 48px 0;
+    padding: 28px var(--desktop-app-inset, 48px) 0;
   }
 
   .page {

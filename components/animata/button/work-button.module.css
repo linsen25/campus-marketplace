@@ -93,3 +93,9 @@
 .pagination:disabled {
   opacity: 35%;
 }
+
+.profile:active,
+.profile[data-route-pending] {
+  filter: brightness(0.88);
+  background: #ddd;
+}
