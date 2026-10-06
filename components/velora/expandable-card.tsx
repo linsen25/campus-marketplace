@@ -25,6 +25,36 @@ interface ExpandableCardProps {
   overlayStyle?: CSSProperties
   onOverlayActiveChange?: (active: boolean) => void
   openOnMount?: boolean
+  interactiveMedia?: boolean
+}
+
+/** The actual expanded shell in a builder: no portal, mutations, or shared IDs. */
+export function ExpandedCardPreview({
+  title,
+  expandedTitle,
+  children,
+  media,
+  className,
+}: Pick<
+  ExpandableCardProps,
+  'children' | 'className' | 'expandedTitle' | 'media' | 'title'
+>) {
+  return (
+    <section
+      className={cn(styles.dialog, className)}
+      aria-label="Listing preview"
+      data-listing-preview="true"
+    >
+      <div className={styles.scrollArea}>
+        <div className={styles.media}>{media}</div>
+        <div className={styles.info}>
+          <p className={styles.price}>{title}</p>
+          <h3 className={styles.title}>{expandedTitle}</h3>
+          {children}
+        </div>
+      </div>
+    </section>
+  )
 }
 
 function ExpandableCardScrollArea({
@@ -123,6 +153,7 @@ export function ExpandableCard({
   overlayStyle,
   onOverlayActiveChange,
   openOnMount = false,
+  interactiveMedia = false,
 }: ExpandableCardProps) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(false)
@@ -130,7 +161,7 @@ export function ExpandableCard({
   const [settled, setSettled] = useState(false)
   const id = useId()
   const reducedMotion = useReducedMotion()
-  const triggerRef = useRef<HTMLButtonElement>(null)
+  const triggerRef = useRef<HTMLElement | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const requested = useRef(false)
   const [phase, setPhase] = useState<'idle' | 'open' | 'opening' | 'returning'>(
@@ -294,11 +325,18 @@ export function ExpandableCard({
   const spring = reducedMotion
     ? { duration: 0 }
     : { type: 'spring' as const, stiffness: 320, damping: 32 }
+  // Multi-photo media has native buttons. Avoid nesting those inside a button;
+  // the source geometry and every shared-media animation remain unchanged.
+  const Trigger = interactiveMedia ? 'div' : 'button'
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
+      <Trigger
+        ref={(node: HTMLButtonElement | HTMLDivElement | null) => {
+          triggerRef.current = node
+        }}
+        {...(interactiveMedia
+          ? { role: 'button', tabIndex: 0 }
+          : { type: 'button' as const })}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? `dialog-${id}` : undefined}
@@ -307,6 +345,16 @@ export function ExpandableCard({
         data-source-hidden={!sourceVisible ? 'true' : undefined}
         style={{ visibility: !sourceVisible ? 'hidden' : undefined }}
         className={cn(styles.trigger, className)}
+        onKeyDown={(event) => {
+          if (
+            interactiveMedia &&
+            event.target === event.currentTarget &&
+            (event.key === 'Enter' || event.key === ' ')
+          ) {
+            event.preventDefault()
+            event.currentTarget.click()
+          }
+        }}
         onClick={() => {
           setPhase('opening')
           setSourceVisible(false)
@@ -343,7 +391,7 @@ export function ExpandableCard({
         >
           {title}
         </SourcePrice>
-      </button>
+      </Trigger>
       {mounted &&
         createPortal(
           <>

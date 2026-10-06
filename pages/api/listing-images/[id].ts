@@ -6,12 +6,12 @@ import {
   validateListingImage,
 } from '@/lib/listing-images'
 import { ListingApiError } from '@/lib/listing-validation'
-import { getListing } from '@/lib/listings-api'
 import {
   requireMarketplaceUser,
   requireSameOriginWrite,
 } from '@/lib/server/marketplace-auth'
 import {
+  createSupabaseListingsRepository,
   databaseError,
   listingBucket,
 } from '@/lib/server/supabase-listings-repository'
@@ -52,9 +52,13 @@ async function readImage(req: NextApiRequest): Promise<Buffer> {
   return image
 }
 
-async function reserveImage(client: MarketplaceClient, id: string) {
-  // Unique (listing_id,slot) makes concurrent uploads obey the six-image cap.
-  for (let slot = 1; slot <= 6; slot += 1) {
+async function reserveImage(
+  client: MarketplaceClient,
+  id: string,
+  count: number
+) {
+  // Unique (listing_id,slot) keeps concurrent uploads inside the creation manifest.
+  for (let slot = 1; slot <= count; slot += 1) {
     const { data, error } = await client
       .from('listing_images')
       .insert({ listing_id: id, slot })
@@ -63,7 +67,7 @@ async function reserveImage(client: MarketplaceClient, id: string) {
     if (!error) return data
     if (error.code !== '23505') databaseError(error)
   }
-  throw new ListingApiError('A listing can have at most six images.')
+  throw new ListingApiError('All expected image slots are occupied.')
 }
 
 export default async function handler(
@@ -80,7 +84,10 @@ export default async function handler(
     const client = createMarketplaceClient({ req, res })
     const user = await requireMarketplaceUser(client)
     const id = String(req.query.id)
-    const listing = await getListing(id, { req, res })
+    const repository = createSupabaseListingsRepository({ req, res })
+    const listing = await repository.getCreationListing(id)
+    if (listing.publishedAt || listing.status !== 'available')
+      throw new ListingApiError('Published listing images are immutable.')
     if (!listing) throw new ListingApiError('Listing not found.', 404)
     if (listing.seller.id !== user.id)
       throw new ListingApiError(
@@ -99,22 +106,14 @@ export default async function handler(
             .publicUrl === req.query.url
       )
       if (!image) throw new ListingApiError('Image not found.', 404)
-      const { error: storageError } = await client.storage
-        .from(listingBucket)
-        .remove([image.path])
-      if (storageError)
-        throw new ListingApiError(
-          'Unable to remove the image. Please retry.',
-          503
-        )
-      const { error: rowError } = await client
-        .from('listing_images')
-        .delete()
-        .eq('id', image.id)
-      databaseError(rowError)
+      await removeImageReservation(client, image)
     } else {
       const bytes = await readImage(req)
-      const image = await reserveImage(client, id)
+      const image = await reserveImage(
+        client,
+        id,
+        listing.expectedImageCount ?? 0
+      )
       if (!image)
         throw new ListingApiError('Unable to reserve an image slot.', 503)
       try {
@@ -133,12 +132,16 @@ export default async function handler(
           .eq('id', image.id)
         databaseError(rowError)
       } catch (error) {
-        await client.storage.from(listingBucket).remove([image.path])
-        await client.from('listing_images').delete().eq('id', image.id)
+        // If metadata deletion is rejected, do not attempt object deletion.
+        try {
+          await removeImageReservation(client, image)
+        } catch {
+          /* Best-effort orphan cleanup; retain the upload error. */
+        }
         throw error
       }
     }
-    return res.status(200).json(await getListing(id, { req, res }))
+    return res.status(200).json(await repository.getCreationListing(id))
   } catch (error) {
     return res
       .status(error instanceof ListingApiError ? error.status : 500)
@@ -151,3 +154,26 @@ export default async function handler(
   }
 }
 export const config = { api: { bodyParser: false } }
+
+export async function removeImageReservation(
+  client: MarketplaceClient,
+  image: { id: string; path: string }
+): Promise<void> {
+  const { data, error } = await client
+    .from('listing_images')
+    .delete()
+    .eq('id', image.id)
+    .select('id')
+    .maybeSingle()
+  databaseError(error)
+  if (!data)
+    throw new ListingApiError('Image reservation was not removed.', 409)
+  const { error: storageError } = await client.storage
+    .from(listingBucket)
+    .remove([image.path])
+  if (storageError)
+    throw new ListingApiError(
+      'Image metadata removed; orphan object cleanup requires retry.',
+      503
+    )
+}

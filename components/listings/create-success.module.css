@@ -1,0 +1,68 @@
+/* stylelint-disable property-no-unknown -- CSS Modules composition. */
+.createAction {
+  composes: slot from "../ui/stateful-action.module.css";
+}
+
+.createButton {
+  composes: button from "../ui/stateful-action.module.css";
+}
+
+.createButton.createButton {
+  --surface: #166534;
+}
+
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 100010;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: #08050deb;
+}
+
+.canvas {
+  position: fixed;
+  pointer-events: none;
+}
+
+.dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 24px;
+  overflow-y: auto;
+  border: 1px solid #8d68aa;
+  border-radius: 18px;
+  background: #221a2c;
+  color: #f5f3f7;
+}
+
+.dialog::backdrop {
+  background: transparent;
+}
+
+.dialog h3 {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.dialog p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.dialog.dialog > div > span {
+  --action-font-size: 12px;
+  --action-surface-padding: 0 4px;
+}
+
+@media (max-width: 767px) {
+  .dialog {
+    padding: 20px;
+  }
+}

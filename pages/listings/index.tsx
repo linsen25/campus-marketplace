@@ -16,13 +16,21 @@ type ListingsPageProps = {
   hasNextPage: boolean
 }
 
-export default function ListingsPage({ values }: ListingsPageProps) {
+export default function ListingsPage({
+  values,
+  listings,
+  error,
+}: ListingsPageProps) {
   return (
     <>
       <Head>
         <title>Market | Campus Marketplace</title>
       </Head>
-      <MarketLayout values={values} />
+      <MarketLayout
+        values={values}
+        initialListings={listings}
+        initialError={error}
+      />
     </>
   )
 }

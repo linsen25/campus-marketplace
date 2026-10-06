@@ -1,0 +1,21 @@
+.header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: var(--home-section-gap, 24px);
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 28px;
+}
+
+/* One header/body boundary, including content inside the existing tab fade. */
+.header[data-home-section-header] + *,
+.header[data-home-section-header] + [data-local-tab-content] > :first-child {
+  margin-top: 0;
+}

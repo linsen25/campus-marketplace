@@ -10,6 +10,7 @@ type PickerProps = {
   placeholder: string
   defaultValue?: string
   required?: boolean
+  onChange?: (value: string) => void
 }
 
 export function ListingPicker({
@@ -19,6 +20,7 @@ export function ListingPicker({
   placeholder,
   defaultValue = '',
   required = false,
+  onChange,
 }: PickerProps) {
   const id = useId()
   const dialog = useRef<HTMLDialogElement>(null)
@@ -40,6 +42,7 @@ export function ListingPicker({
         className={`${styles.native} input`}
         onChange={(event) => {
           setValue(event.target.value)
+          onChange?.(event.target.value)
           setError(false)
         }}
         onInvalid={(event) => {
@@ -124,6 +127,7 @@ export function ListingPicker({
               className={styles.option}
               onClick={() => {
                 setValue(option.value)
+                onChange?.(option.value)
                 setError(required && !option.value)
                 dialog.current?.close()
               }}

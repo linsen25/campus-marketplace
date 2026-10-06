@@ -1,0 +1,12 @@
+/* stylelint-disable property-no-unknown -- CSS Modules composition. */
+.slot {
+  composes: slot from "../ui/stateful-action.module.css";
+}
+
+.button {
+  composes: button from "../ui/stateful-action.module.css";
+}
+
+.button.button {
+  --surface: #772d40;
+}

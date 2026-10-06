@@ -1,0 +1,19 @@
+.reveal {
+  animation: content-reveal 160ms ease-out both;
+}
+
+@keyframes content-reveal {
+  from {
+    opacity: 0%;
+  }
+
+  to {
+    opacity: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+}

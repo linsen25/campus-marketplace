@@ -1,0 +1,95 @@
+/* stylelint-disable property-no-unknown, selector-pseudo-class-no-unknown -- CSS Modules. */
+.action {
+  composes: actions from "../velora/expandable-card.module.css";
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding-top: 0;
+}
+
+.action :global(.shining-button) {
+  width: 100%;
+  min-width: 0;
+  height: 48px;
+  margin: 0;
+  padding: 2px;
+  border-width: 2px;
+  font-size: 13px;
+}
+
+.action :global(.shining-button__body) {
+  width: 100%;
+  height: 40px;
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.action :global(.shining-button__arrow) {
+  width: 18px;
+  height: 18px;
+}
+
+.pending :global(.shining-button__arrow) {
+  animation: action-pulse 600ms ease-in-out infinite alternate;
+}
+
+.pending :global(.shining-button__highlight) {
+  transform: translateX(0);
+}
+
+@keyframes action-pulse {
+  from {
+    opacity: 45%;
+  }
+
+  to {
+    opacity: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pending :global(.shining-button__arrow) {
+    animation: none;
+  }
+}
+
+/* The actual expanded-card footer contract, without label-sized flex growth. */
+.footer.footer {
+  width: var(--action-width);
+  flex: 0 0 auto;
+}
+
+.footer.footer :global(.shining-button) {
+  height: var(--action-height);
+  padding: var(--action-inset);
+  border-width: var(--action-inset);
+  border-radius: var(--action-radius);
+  font-size: var(--action-font-size);
+  font-weight: var(--action-font-weight);
+  line-height: var(--action-line-height);
+}
+
+.footer.footer :global(.shining-button__body) {
+  height: 100%;
+  padding: var(--action-surface-padding);
+  border-radius: var(--action-surface-radius);
+  gap: 16px;
+  font: inherit;
+}
+
+.footer.footer :global(.shining-button__arrow) {
+  width: 24px;
+  height: 24px;
+}
+
+@media (max-width: 767px) {
+  .footer.footer :global(.shining-button__body) {
+    gap: 6px;
+  }
+
+  .footer.footer :global(.shining-button__arrow) {
+    width: 16px;
+    height: 16px;
+  }
+}

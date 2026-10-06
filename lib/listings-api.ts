@@ -143,3 +143,39 @@ export function removeListingImage(id: string, url: string): Promise<Listing> {
     'DELETE'
   )
 }
+
+export async function finalizeListing(
+  id: string,
+  context?: MarketplaceContext
+): Promise<Listing> {
+  if (typeof window === 'undefined')
+    return (await repository(context)).finalizeListing(id)
+  return marketplaceRequest(
+    `/api/listings/${encodeURIComponent(id)}/finalize`,
+    'POST'
+  )
+}
+export async function abandonListing(
+  id: string,
+  context?: MarketplaceContext
+): Promise<void> {
+  if (typeof window === 'undefined')
+    return (await repository(context)).abandonListing(id)
+  return marketplaceRequest(
+    `/api/listings/${encodeURIComponent(id)}/abandon`,
+    'POST'
+  )
+}
+
+/** Owner-only reconciliation, including unpublished creation state. */
+export async function getCreationListing(
+  id: string,
+  context?: MarketplaceContext
+): Promise<Listing> {
+  if (typeof window === 'undefined')
+    return (await repository(context)).getCreationListing(id)
+  return marketplaceRequest(
+    `/api/listings/${encodeURIComponent(id)}/creation`,
+    'GET'
+  )
+}

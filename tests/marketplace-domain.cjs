@@ -85,7 +85,8 @@ const listing = mapListing(
     description: 'Used',
     price_cents: 1250,
     currency: 'CAD',
-    category: 'furniture',
+    category: 'Home & Dorm',
+    subcategory: 'Furniture',
     condition: null,
     pickup_area: 'Campus',
     status: 'available',
@@ -115,13 +116,14 @@ console.log(
 const { parseListingFilters, listingFiltersUrl } = load(
   'lib/listing-filters.ts'
 )
-for (const category of ['Electronics', 'electronics', 'ELECTRONICS']) {
+for (const category of ['Electronics']) {
   const parsed = parseListingFilters({ category })
   assert.equal(parsed.error, null)
-  assert.equal(parsed.query.category, 'electronics')
+  assert.equal(parsed.query.category, 'Electronics')
 }
 const filtered = parseListingFilters({
-  category: 'Home & Kitchen',
+  category: 'Home & Dorm',
+  subcategory: 'Furniture',
   condition: 'good',
   minPrice: '12.50',
   maxPrice: '30',
@@ -145,7 +147,7 @@ assert(parseListingFilters({ status: 'hidden' }).error)
 assert(parseListingFilters({ minPrice: '30', maxPrice: '12' }).error)
 assert.equal(listingFiltersUrl(parseListingFilters({}).values), '/listings')
 console.log(
-  'PASS: category aliases, status, price conversion, query roundtrip, defaults and invalid filters.'
+  'PASS: canonical categories, status, price conversion, query roundtrip, defaults and invalid filters.'
 )
 
 for (const route of [

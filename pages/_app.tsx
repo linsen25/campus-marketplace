@@ -10,6 +10,7 @@ import { Dev } from '@dev/dev'
 /// #endif
 
 import { AuthModalProvider } from '@/components/auth/auth-modal'
+import { ProfileLogoutProvider } from '@/components/home/profile-logout'
 import { MarketMobileNavigation } from '@/components/listings/market-mobile-nav'
 import { MarketplaceSessionProvider } from '@/components/listings/marketplace-session'
 import {
@@ -106,7 +107,9 @@ export default function App(props: AppProps) {
     <MarketplaceSessionProvider>
       <AuthModalProvider>
         <DesktopRouteTransitionProvider>
-          <MarketplaceApp {...props} />
+          <ProfileLogoutProvider>
+            <MarketplaceApp {...props} />
+          </ProfileLogoutProvider>
         </DesktopRouteTransitionProvider>
       </AuthModalProvider>
     </MarketplaceSessionProvider>

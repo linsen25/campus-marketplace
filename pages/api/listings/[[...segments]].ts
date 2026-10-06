@@ -3,8 +3,11 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { ListingApiError } from '@/lib/listing-validation'
 import {
   createListing,
+  finalizeListing,
+  abandonListing,
   deleteListing,
   getListing,
+  getCreationListing,
   getListings,
   getMyListings,
   markListingSold,
@@ -13,11 +16,13 @@ import {
 import { requireSameOriginWrite } from '@/lib/server/marketplace-auth'
 import type { ListingQuery } from '@/types/listing'
 
-function queryFromRequest(req: NextApiRequest): ListingQuery {
+export function queryFromRequest(req: NextApiRequest): ListingQuery {
   const query: Record<string, number | string> = {}
   for (const key of [
     'search',
+    'pickupArea',
     'category',
+    'subcategory',
     'condition',
     'status',
     'sort',
@@ -44,18 +49,29 @@ function queryFromRequest(req: NextApiRequest): ListingQuery {
   return query as ListingQuery
 }
 
+const listingActions = {
+  creation: getCreationListing,
+  finalize: finalizeListing,
+  abandon: abandonListing,
+  sold: markListingSold,
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   res.setHeader('Cache-Control', 'no-store')
-  const segments = req.query.segments || []
-  const parts = Array.isArray(segments) ? segments : [segments]
+  const parts = requestSegments(req)
   const [id, action] = parts
   let allowed: string[] = []
   if (parts.length === 0) allowed = ['GET', 'POST']
   else if (parts.length === 1) allowed = ['GET', 'PATCH', 'DELETE']
-  else if (parts.length === 2 && action === 'sold') allowed = ['POST']
+  else if (
+    parts.length === 2 &&
+    ['sold', 'finalize', 'abandon'].includes(action)
+  )
+    allowed = ['POST']
+  if (parts.length === 2 && action === 'creation') allowed = ['GET']
   if (!allowed.length) return res.status(404).json({ error: 'Not found.' })
   if (!req.method || !allowed.includes(req.method)) {
     res.setHeader('Allow', allowed.join(', '))
@@ -75,8 +91,11 @@ export default async function handler(
             : await getListings(queryFromRequest(req), context)
         )
     }
-    if (action === 'sold')
-      return res.status(200).json(await markListingSold(id, context))
+    if (action) {
+      const actionHandler =
+        listingActions[action as keyof typeof listingActions]
+      return res.status(200).json((await actionHandler(id, context)) ?? null)
+    }
     if (req.method === 'PATCH')
       return res.status(200).json(await updateListing(id, req.body, context))
     if (req.method === 'DELETE') {
@@ -94,3 +113,8 @@ export default async function handler(
 }
 
 export const config = { api: { bodyParser: { sizeLimit: '32kb' } } }
+
+function requestSegments(req: NextApiRequest) {
+  const segments = req.query.segments || []
+  return Array.isArray(segments) ? segments : [segments]
+}

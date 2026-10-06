@@ -75,7 +75,9 @@ export default function ListingPage({ listing, error }: ListingPageProps) {
                 </header>
                 <dl className="grid grid-cols-2 gap-2">
                   <dt className="small-bold">Category</dt>
-                  <dd>{category}</dd>
+                  <dd>
+                    {category} / {listing.subcategory}
+                  </dd>
                   <dt className="small-bold">Condition</dt>
                   <dd>{condition || 'Not specified'}</dd>
                   <dt className="small-bold">Pickup area</dt>

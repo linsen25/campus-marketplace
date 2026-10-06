@@ -1,4 +1,9 @@
-import { listingCategories, listingConditions } from '@/lib/listing-metadata'
+import { listingConditions } from '@/lib/listing-metadata'
+import {
+  isMarketCategory,
+  isMarketPair,
+  isMarketSubcategory,
+} from '@/lib/market-taxonomy'
 import type { CreateListingInput } from '@/types/listing'
 
 export const listingLimits = {
@@ -56,10 +61,7 @@ export function validateListingInput(input: unknown): CreateListingInput {
   }
   if (data.currency !== 'CAD')
     throw new ListingApiError('Currency must be CAD.')
-  const category = listingCategories.find(
-    (item) => item.value === data.category
-  )?.value
-  if (!category) throw new ListingApiError('Choose a marketplace category.')
+  const { category, subcategory } = requireListingTaxonomy(data)
   const condition = listingConditions.find(
     (item) => item.value === data.condition
   )?.value
@@ -80,14 +82,53 @@ export function validateListingInput(input: unknown): CreateListingInput {
     return photo
   })
 
+  const expectedImageCount = requireExpectedImageCount(data.expectedImageCount)
+
   return {
+    expectedImageCount,
     title,
     description,
     price: data.price,
     currency: 'CAD',
     category,
+    subcategory,
     ...(condition ? { condition } : {}),
     pickupArea,
     photoUrls: Array.from(new Set(photoUrls)),
   }
+}
+
+export function validateListingPatch(input: unknown): Record<string, unknown> {
+  const patch = listingInputRecord(input)
+  const allowed = ['title', 'description', 'price', 'condition', 'pickupArea']
+  if (Object.keys(patch).some((key) => !allowed.includes(key)))
+    throw new ListingApiError(
+      'Only title, price, description, condition, and pickup area may be changed; category and subcategory are locked. Use image actions for photos.'
+    )
+  return patch
+}
+
+function requireListingTaxonomy(data: Record<string, unknown>) {
+  const { category, subcategory } = data
+  if (!isMarketCategory(category))
+    throw new ListingApiError('Choose a marketplace category.')
+  if (!isMarketSubcategory(subcategory))
+    throw new ListingApiError('Choose a marketplace subcategory.')
+  if (!isMarketPair(category, subcategory))
+    throw new ListingApiError(
+      'Selected subcategory does not belong to this category.'
+    )
+  return { category, subcategory }
+}
+
+function requireExpectedImageCount(value: unknown): number {
+  const expectedImageCount = value
+  if (
+    typeof expectedImageCount !== 'number' ||
+    !Number.isInteger(expectedImageCount) ||
+    expectedImageCount < 1 ||
+    expectedImageCount > listingLimits.photos
+  )
+    throw new ListingApiError('Expected image count must be between 1 and 6.')
+  return expectedImageCount
 }

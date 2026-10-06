@@ -41,7 +41,7 @@ const base = process.env.BASE_URL || 'http://localhost:3100'
         })
         await page.route('**/_next/data/**/listings.json*', (route) => {
           return route.fulfill({ json: { pageProps: {
-            listings: [], values: { status: 'active', sort: 'newest', search: '', category: '', condition: '' },
+            listings: [], values: { status: 'available', sort: 'newest', search: '', category: '', condition: '' },
             page: 1, hasNextPage: false, error: null,
           }, __N_SSP: true } })
         })

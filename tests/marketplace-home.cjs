@@ -13,9 +13,11 @@ const element =
     React.createElement(tag, props, children)
 const mocks = {
   '@/components/listings/market-layout': {
-    MarketLayout: ({ values }) => React.createElement('div', {
-      'data-testid': 'market-layout-preview', 'data-search': values.search,
-    }),
+    MarketLayout: ({ values }) =>
+      React.createElement('div', {
+        'data-testid': 'market-layout-preview',
+        'data-search': values.search,
+      }),
   },
   '@/components/listings/homepage-scene': {
     HomepageScene: ({ listings }) =>
@@ -69,10 +71,15 @@ function load(file) {
   return module.exports
 }
 async function main() {
-  const { marketTaxonomy, marketLocations, marketConditions } = load('lib/market-taxonomy.ts')
+  const { marketTaxonomy, marketLocations, marketConditions } = load(
+    'lib/market-taxonomy.ts'
+  )
   const { marketPreviewListings } = load('lib/fixtures/market-layout.ts')
   assert.equal(marketPreviewListings.length, 30)
-  assert.equal(new Set(marketPreviewListings.map((listing) => listing.id)).size, 30)
+  assert.equal(
+    new Set(marketPreviewListings.map((listing) => listing.id)).size,
+    30
+  )
   for (const listing of marketPreviewListings) {
     assert(marketTaxonomy[listing.category].includes(listing.subcategory))
     assert(marketLocations.includes(listing.location))
@@ -120,6 +127,7 @@ async function main() {
   assert.deepEqual(receivedQuery, {
     search: '',
     category: undefined,
+    subcategory: undefined,
     condition: undefined,
     minPrice: undefined,
     maxPrice: undefined,
@@ -149,7 +157,7 @@ async function main() {
       sort: 'price-low',
     },
   })
-  assert.equal(receivedQuery.category, 'electronics')
+  assert.equal(receivedQuery.category, 'Electronics')
   assert.equal(receivedQuery.condition, 'good')
   assert.equal(receivedQuery.minPrice, 2000)
   assert.equal(receivedQuery.maxPrice, 10000)
@@ -170,7 +178,7 @@ async function main() {
     query: { page: '2', category: 'Electronics' },
   })
   assert.equal(receivedQuery.page, 2)
-  assert.equal(receivedQuery.category, 'electronics')
+  assert.equal(receivedQuery.category, 'Electronics')
   fail = true
   const unavailable = await home.getServerSideProps(context)
   assert.equal(context.res.statusCode, 503)

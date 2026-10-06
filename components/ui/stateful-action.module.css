@@ -1,0 +1,43 @@
+.slot {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* The accepted footer slot owns geometry; StatefulButton owns its contents. */
+.button.button {
+  box-sizing: border-box;
+  align-self: center;
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: var(--action-height);
+  margin: 0;
+  padding: var(--action-inset);
+  border: var(--action-inset) solid transparent;
+  border-radius: var(--action-radius);
+  background: transparent;
+  font-size: var(--action-font-size);
+  font-weight: var(--action-font-weight);
+  line-height: var(--action-line-height);
+}
+
+/* Match the card footer's content-box surface, inside both border and padding. */
+.button.button > span:first-child {
+  inset: var(--action-inset);
+  max-width: calc(100% - 2 * var(--action-inset));
+  border-radius: var(--action-surface-radius);
+}
+
+.button.button[aria-busy] > span:first-child {
+  width: calc(var(--action-height) - 4 * var(--action-inset)) !important;
+  border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button.button[aria-busy] > span:first-child {
+    width: 100% !important;
+    border-radius: var(--action-surface-radius);
+  }
+}

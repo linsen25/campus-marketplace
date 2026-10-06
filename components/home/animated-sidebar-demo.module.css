@@ -1,8 +1,16 @@
 .page {
+  --home-section-gap: clamp(12px, 2vw, 24px);
+  --home-section-top-inset: var(--home-section-gap);
+  --home-content-state-top-inset: 32px;
+  --home-section-bottom-inset: calc(80px + env(safe-area-inset-bottom, 0px));
+
+  /* Accepted empty workspace anchors are independent of header/body spacing. */
+  --home-empty-title-row: 48px;
+
   position: relative;
   isolation: isolate;
-  height: 100dvh;
-  min-height: 0;
+  height: auto;
+  min-height: 100dvh;
   padding: 0;
   background: #0d0c10;
   color: #f5f3f7;
@@ -33,12 +41,40 @@
 }
 
 .main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   flex: 1;
   min-width: 0;
   min-height: 0;
-  padding: 24px;
+  padding: var(--home-section-top-inset) 24px var(--home-section-bottom-inset);
   overflow: auto;
   background: #211c2be0;
+  scrollbar-gutter: stable;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 200ms ease-out;
+}
+
+/* Same actual-scroll/600ms idle and native color fade as Market. The gutter
+   remains reserved; hover never changes the thumb. Only Home main is scoped. */
+.main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.main::-webkit-scrollbar-thumb {
+  border-radius: 6px;
+  background-color: transparent;
+  transition: background-color 200ms ease-out;
+}
+
+.main[data-scrolling] {
+  scrollbar-color: #f5f5f5 transparent;
+  transition-duration: 140ms;
+}
+
+.main[data-scrolling]::-webkit-scrollbar-thumb {
+  background-color: #f5f5f5;
+  transition-duration: 140ms;
 }
 
 .main h2 {
@@ -116,7 +152,9 @@
 }
 
 .mobileShell {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
 }
 
 .mobileHeader.mobileHeader {
@@ -140,7 +178,11 @@
 }
 
 .mobileMain {
-  padding: 32px 24px 80px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: var(--home-section-top-inset) 24px var(--home-section-bottom-inset);
   font-size: 18px;
   font-weight: 600;
 }
@@ -156,6 +198,13 @@
   }
 
   .page {
+    --home-section-top-inset: 24px;
+    --home-content-state-top-inset: 24px;
+    --home-section-bottom-inset: 24px;
+    --home-empty-title-row: var(--desktop-app-control-height, 60px);
+
+    height: 100dvh;
+    min-height: 0;
     padding-block: 48px;
     background: #160d23;
     padding-inline:
@@ -197,11 +246,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: var(--desktop-app-control-height);
-    height: var(--desktop-app-control-height);
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     background: #fff;
     color: #18181b;
+    border: 0;
+    padding: 0;
+    flex-shrink: 0;
+    cursor: pointer;
   }
 
   .mark svg {
@@ -235,4 +288,36 @@
 .mark[data-route-pending] {
   filter: brightness(0.88);
   background: #ddd;
+}
+
+/* Preserve the previously accepted empty text anchor without reserving fake
+   header height or adding compensation to the actual content toolbar. */
+.main [data-content-state-region],
+.mobileMain [data-content-state-region] {
+  --home-empty-origin:
+    calc(
+      var(--home-content-state-top-inset) + var(--home-empty-title-row) + 24px
+    );
+
+  position: static;
+}
+
+.main section[aria-label="My Listings"] [data-content-state-region],
+.mobileMain section[aria-label="My Listings"] [data-content-state-region] {
+  --home-empty-origin:
+    calc(
+      var(--home-content-state-top-inset) + var(--home-empty-title-row) + 24px +
+      51px + 20px
+    );
+}
+
+.main [data-content-state-anchor],
+.mobileMain [data-content-state-anchor] {
+  inset-inline: 24px;
+  top:
+    calc(
+      var(--home-empty-origin) +
+      (100% - var(--home-section-bottom-inset) - var(--home-empty-origin)) *
+      0.275
+    );
 }

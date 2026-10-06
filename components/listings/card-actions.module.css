@@ -1,0 +1,25 @@
+.single.single {
+  width: var(--action-width);
+  max-width: 100%;
+  padding-top: 0;
+  flex-shrink: 0;
+}
+
+.single.single > button {
+  width: 100%;
+  font-size: var(--action-font-size);
+  font-weight: var(--action-font-weight);
+  line-height: var(--action-line-height);
+}
+
+.single > button:disabled {
+  opacity: 45%;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (max-width: 767px) {
+  .single.single {
+    width: calc((100% - var(--action-gap)) / 2);
+  }
+}

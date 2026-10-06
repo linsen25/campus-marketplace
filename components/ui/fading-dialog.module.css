@@ -1,0 +1,42 @@
+.fade[open],
+.fade::backdrop {
+  animation: enter 160ms ease-out both;
+}
+
+.fade[data-exiting],
+.fade[data-exiting]::backdrop {
+  animation: exit 180ms ease-in both;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0%;
+  }
+
+  to {
+    opacity: 100%;
+  }
+}
+
+@keyframes exit {
+  from {
+    opacity: 100%;
+  }
+
+  to {
+    opacity: 0%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade[open],
+  .fade::backdrop,
+  .fade[data-exiting],
+  .fade[data-exiting]::backdrop {
+    animation: none;
+  }
+}
+
+.fade[data-exiting] {
+  pointer-events: none;
+}

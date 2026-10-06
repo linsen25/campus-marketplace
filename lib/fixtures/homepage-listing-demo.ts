@@ -2,7 +2,13 @@ import type { Listing } from '@/types/listing'
 
 type HomepageListingShowcase = Pick<
   Listing,
-  'category' | 'condition' | 'description' | 'photoUrls' | 'price' | 'title'
+  | 'category'
+  | 'condition'
+  | 'description'
+  | 'photoUrls'
+  | 'price'
+  | 'subcategory'
+  | 'title'
 > & {
   seller: Pick<Listing['seller'], 'displayName'> & {
     westernEmailVerified: boolean
@@ -15,7 +21,8 @@ export const homepageListingDemo: HomepageListingShowcase = {
   title: 'Woven accent chair',
   price: 4500,
   photoUrls: ['/demo/reading-chair.jpg'],
-  category: 'furniture',
+  category: 'Home & Dorm',
+  subcategory: 'Furniture',
   condition: 'good',
   seller: { displayName: 'Alex', westernEmailVerified: true },
   description:

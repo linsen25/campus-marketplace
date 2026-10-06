@@ -10,3 +10,26 @@
   overflow: hidden;
   pointer-events: auto;
 }
+
+@media (min-width: 1024px) {
+  /* Reserve the same native gutter at rest on both routes; it never moves a page. */
+  .documentViewport {
+    scrollbar-gutter: stable;
+    background: #0b0b0b;
+  }
+
+  .documentViewport::-webkit-scrollbar-track {
+    background: #0b0b0b;
+  }
+
+  .sliding,
+  .sliding .source,
+  .sliding .surface {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    gap: 0;
+    background: #0b0b0b;
+  }
+}

@@ -86,7 +86,7 @@ function painted(signal: AbortSignal) {
 
 // A visual snapshot keeps the source stable without mounting another live page,
 // issuing duplicate requests, or retaining interactive duplicate controls.
-function snapshot(page: HTMLElement, host: HTMLElement) {
+function snapshot(page: HTMLElement, host: HTMLElement, viewportWidth: number) {
   const copy = page.cloneNode(true) as HTMLElement
   const originals = [
     page,
@@ -129,7 +129,7 @@ function snapshot(page: HTMLElement, host: HTMLElement) {
   copy.style.position = 'absolute'
   copy.style.top = `${-window.scrollY}px`
   copy.style.left = '0'
-  copy.style.width = `${innerWidth}px`
+  copy.style.width = `${viewportWidth}px`
   host.replaceChildren(copy)
 }
 
@@ -139,6 +139,23 @@ export function DesktopRouteTransitionProvider({
   children: ReactNode
 }) {
   const router = useRouter()
+  const appRoute =
+    router.pathname === '/home' || router.pathname === '/listings'
+  useEffect(() => {
+    const root = document.documentElement
+    const desktop = matchMedia('(min-width: 1024px)')
+    const update = () =>
+      root.classList.toggle(
+        styles.documentViewport,
+        appRoute && desktop.matches
+      )
+    update()
+    desktop.addEventListener('change', update)
+    return () => {
+      root.classList.remove(styles.documentViewport)
+      desktop.removeEventListener('change', update)
+    }
+  }, [appRoute])
   const routerRef = useRef(router)
   routerRef.current = router
   const [navigation, setNavigation] = useState<Navigation | null>(null)
@@ -223,10 +240,12 @@ export function DesktopRouteTransitionProvider({
       // Start the request before the synchronous snapshot; React cannot replace
       // the source DOM until this task yields.
       const route = routerRef.current.push(navigation.destination)
-      snapshot(page, source)
+      const viewportWidth = page.getBoundingClientRect().width
+      snapshot(page, source, viewportWidth)
       performance.mark('page-slide:snapshot')
       source.setAttribute('inert', '')
       page.setAttribute('inert', '')
+      track.style.width = `${viewportWidth}px`
       track.style.position = 'fixed'
       track.style.inset = '0'
       track.style.height = '100dvh'
@@ -235,7 +254,7 @@ export function DesktopRouteTransitionProvider({
       page.style.visibility = 'hidden'
       page.style.position = 'absolute'
       page.style.inset = '0'
-      page.style.left = `${direction * 100}%`
+      page.style.left = `${direction * viewportWidth}px`
       page.style.right = 'auto'
       page.style.width = '100%'
       page.style.height = '100dvh'
@@ -335,7 +354,11 @@ export function DesktopRouteTransitionProvider({
       <PendingDestinationContext.Provider
         value={navigation?.destination ?? null}
       >
-        <div ref={trackView} className={styles.track} data-route-track="true">
+        <div
+          ref={trackView}
+          className={`${styles.track} ${navigation ? styles.sliding : ''}`}
+          data-route-track="true"
+        >
           {navigation && (
             <div
               ref={sourceView}

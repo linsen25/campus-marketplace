@@ -8,11 +8,14 @@ export type ListingRow = {
   price_cents: number
   currency: 'CAD'
   category: Listing['category']
+  subcategory: Listing['subcategory']
   condition: Listing['condition'] | null
   pickup_area: string
   status: Listing['status']
   created_at: string
   updated_at: string
+  published_at: string | null
+  expected_image_count: number
   profiles: { id: string; display_name: string }
   listing_images: Array<{ path: string; slot: number; ready: boolean }>
 }
@@ -28,6 +31,7 @@ export function mapListing(
     price: row.price_cents,
     currency: row.currency,
     category: row.category,
+    subcategory: row.subcategory,
     ...(row.condition ? { condition: row.condition } : {}),
     pickupArea: row.pickup_area,
     status: row.status,
@@ -38,5 +42,7 @@ export function mapListing(
     seller: { id: row.profiles.id, displayName: row.profiles.display_name },
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    publishedAt: row.published_at,
+    expectedImageCount: row.expected_image_count,
   }
 }

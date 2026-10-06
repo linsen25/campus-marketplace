@@ -54,6 +54,37 @@ The application never uses a service-role client; authenticated database calls
 carry the user's session and remain subject to RLS. Public read policies include
 sold listings, while the browse page explicitly filters for available listings.
 
+### Pending canonical taxonomy cutover (not applied live)
+
+After the base marketplace and `202610030001_marketplace_usernames.sql` migrations,
+review `supabase/migrations/202610040001_marketplace_taxonomy.sql`. It requires an
+empty listings table, takes an exclusive lock, and aborts without classifying or
+deleting any rows if listings appeared before application. Resolve such rows
+explicitly before designing a separate migration; do not bypass the guard.
+
+The reviewed migration uses NOT NULL text category/subcategory fields and one
+CHECK containing the exact 45 pairs from `lib/market-taxonomy.ts`. Legacy category
+IDs are rejected. Category/subcategory are immutable after creation, including
+privileged updates. Status remains `available`/`sold`, and zero CAD cents means
+free. Category/subcategory also participate in generated listing search text.
+
+For later manual application: in the intended project's Supabase SQL Editor,
+paste and run the **entire new taxonomy migration file once**, after confirming
+both preceding migrations were applied. Do not rerun earlier migrations.
+Coordinate this with the canonical application deployment; the new code requires
+the new schema and is not compatible with legacy listing rows. This pass prepared
+and tested the migration locally only; it did not change the deployed project.
+
+Local regression tests (use the already installed external PGlite module; no app
+dependency is required):
+
+```powershell
+node tests/marketplace-taxonomy.cjs
+$env:PGLITE_MODULE = "$env:TEMP/pwa-phase4-db-tests/node_modules/@electric-sql/pglite"
+node tests/marketplace-taxonomy-db.cjs
+node tests/marketplace-security.cjs
+```
+
 ## 3. Configure email authentication
 
 1. In Authentication → Sign In / Providers, enable Email, email confirmation, and

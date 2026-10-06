@@ -24,7 +24,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
       })
       // Keep navigation deterministic without a live catalog/database request.
       await page.route('**/_next/data/**/listings.json*', (route) => route.fulfill({ json: {
-        pageProps: { listings: [], values: { status: 'active', sort: 'newest', search: '', category: '', condition: '' },
+        pageProps: { listings: [], values: { status: 'available', sort: 'newest', search: '', category: '', condition: '' },
           page: 1, hasNextPage: false, error: null }, __N_SSP: true,
       } }))
       const homeOnlyNodes = page.locator('[data-slot="home-sidebar-demo"], [data-slot="sidebar"], [data-home-background]')

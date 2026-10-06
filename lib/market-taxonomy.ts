@@ -1,4 +1,4 @@
-// Frontend V1 taxonomy; intentionally separate from the deployed database enum.
+// Canonical persisted marketplace taxonomy. Keep the SQL pair constraint in sync.
 export const marketTaxonomy = {
   Electronics: [
     'Computers & Tablets',
@@ -69,3 +69,47 @@ export const marketSorts = [
   { value: 'price-asc', label: 'Price: Low to High' },
   { value: 'price-desc', label: 'Price: High to Low' },
 ] as const
+
+export type MarketSubcategory = typeof marketTaxonomy[MarketCategory][number]
+
+export function isMarketCategory(value: unknown): value is MarketCategory {
+  return (
+    typeof value === 'string' &&
+    Object.prototype.hasOwnProperty.call(marketTaxonomy, value)
+  )
+}
+
+export function isMarketSubcategory(
+  value: unknown
+): value is MarketSubcategory {
+  return (
+    typeof value === 'string' &&
+    Object.values(marketTaxonomy).some((children) =>
+      (children as readonly string[]).includes(value)
+    )
+  )
+}
+
+export function isMarketPair(category: unknown, subcategory: unknown): boolean {
+  return (
+    isMarketCategory(category) &&
+    typeof subcategory === 'string' &&
+    (marketTaxonomy[category] as readonly string[]).includes(subcategory)
+  )
+}
+
+export function marketSubcategoryOptions(category: unknown) {
+  return isMarketCategory(category)
+    ? marketTaxonomy[category].map((value) => ({ value, label: value }))
+    : []
+}
+
+/** A child filter always requires its canonical parent; neither is also valid. */
+export function isMarketFilterPair(
+  category: unknown,
+  subcategory: unknown
+): boolean {
+  if (category === undefined) return subcategory === undefined
+  if (!isMarketCategory(category)) return false
+  return subcategory === undefined || isMarketPair(category, subcategory)
+}

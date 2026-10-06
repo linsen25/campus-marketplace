@@ -14,18 +14,23 @@ export default function ShiningButton({
   variant = 'purple',
   disabled = false,
   desktopAppearance = false,
+  loading = false,
 }: {
   children?: ReactNode
   href?: string
   onClick?: MouseEventHandler<HTMLButtonElement>
-  variant?: 'green' | 'purple'
+  variant?: 'blue' | 'dark-blue' | 'green' | 'purple' | 'red'
   disabled?: boolean
+  loading?: boolean
   desktopAppearance?: boolean
 }) {
   const { openAuth } = useAuthModal()
   const className = cn(
     'shining-button',
     desktopAppearance && styles.desktopAppearance,
+    variant === 'red' && styles.red,
+    variant === 'blue' && styles.blue,
+    variant === 'dark-blue' && styles.darkBlue,
     {
       'shining-button--green': variant === 'green',
     }
@@ -47,6 +52,8 @@ export default function ShiningButton({
         type="button"
         className={className}
         disabled={disabled}
+        aria-busy={loading || undefined}
+        aria-disabled={disabled || loading || undefined}
         onClick={
           onClick || (() => openAuth({ mode: 'signin', intent: 'login' }))
         }

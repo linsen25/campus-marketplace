@@ -1,0 +1,12 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Preserve the existing body layout while its opacity changes. */
+.panel > :not([data-workspace-empty]) {
+  flex-shrink: 0;
+}

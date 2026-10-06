@@ -1,19 +1,17 @@
 import { ArrowUp, UserRound } from 'lucide-react'
-import { motion } from 'motion/react'
 import dynamic from 'next/dynamic'
 import type { CSSProperties } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import ShiningButton from '@/components/animata/button/shining-button'
-import WorkButton, {
-  WorkProfile,
-} from '@/components/animata/button/work-button'
+import WorkButton from '@/components/animata/button/work-button'
 import { useAuthModal } from '@/components/auth/auth-modal'
 import DiscoverButton from '@/components/discover-button'
 import FilterInteraction from '@/components/filter-interaction'
 import InfiniteGrid from '@/components/infinite-grid'
 import gridStyles from '@/components/infinite-grid.module.css'
+import { useDesktopRouteTransition } from '@/components/navigation/desktop-route-transition'
 import PulseHeart from '@/components/react-bits/pulse-heart'
 import { ExpandableCard } from '@/components/velora/expandable-card'
 import { useMarketReady } from '@/hooks/use-market-ready'
@@ -21,6 +19,7 @@ import { useMarketScroll } from '@/hooks/use-market-scroll'
 import type { MarketPreviewListing } from '@/lib/fixtures/market-layout'
 import { marketPreviewListings } from '@/lib/fixtures/market-layout'
 import type { ListingFilterValues } from '@/lib/listing-filters'
+import { getListings } from '@/lib/listings-api'
 import {
   normalizeSearchQuery,
   searchListings,
@@ -28,14 +27,20 @@ import {
 } from '@/lib/market-search'
 import type { SearchSuggestion } from '@/lib/market-search'
 import { marketSorts } from '@/lib/market-taxonomy'
+import type { Listing } from '@/types/listing'
 import { formatListingPrice } from '@/utils/format-listing-price'
+import { Link } from '@ui/link/link'
 
 import detailStyles from './homepage-listing-demo.module.css'
 import { ListingMedia } from './listing-media'
+import { MarketBrandMark } from './market-brand-mark'
+import { MarketControlGroup, MarketFocusBackdrop } from './market-control-group'
 import MarketFilter from './market-filter'
 import type { MarketFilterValues } from './market-filter'
 import styles from './market-layout.module.css'
+import { PublishedListingCard } from './published-listing-card'
 import welcomeStyles from './welcome-hero.module.css'
+import { WorkspaceEmpty } from './workspace-empty'
 
 const GradientWaves = dynamic(
   () =>
@@ -110,7 +115,76 @@ function MarketCard({
   )
 }
 
-export function MarketLayout({ values }: { values: ListingFilterValues }) {
+export function MarketLayout({
+  values,
+  initialListings,
+  initialError,
+}: {
+  values: ListingFilterValues
+  initialListings?: Listing[]
+  initialError?: string | null
+}) {
+  const navigateHome = useDesktopRouteTransition()
+  const [realListings, setRealListings] = useState(initialListings)
+  const [listingError, setListingError] = useState(initialError || '')
+  const [reload, setReload] = useState(0)
+  useEffect(() => {
+    if (!initialListings) return undefined
+    let active = true
+    let version = 0
+    const refresh = async () => {
+      const request = ++version
+      try {
+        const rows: Listing[] = []
+        let page = 1
+        let next: Listing[]
+        do {
+          next = await getListings({ page, pageSize: 100, status: 'available' })
+          rows.push(...next)
+          page += 1
+          if (!active || request !== version) return
+        } while (next.length === 100)
+        if (active && request === version) {
+          setRealListings(
+            rows.filter(
+              (item) => item.publishedAt && item.status === 'available'
+            )
+          )
+          setListingError('')
+        }
+      } catch (reason) {
+        if (active && request === version)
+          setListingError(
+            reason instanceof Error
+              ? reason.message
+              : 'Marketplace unavailable. Please try again.'
+          )
+      }
+    }
+    refresh()
+    window.addEventListener('focus', refresh)
+    window.addEventListener('marketplace-listings-changed', refresh)
+    return () => {
+      active = false
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('marketplace-listings-changed', refresh)
+    }
+  }, [initialListings, reload])
+  const source = useMemo(
+    () =>
+      realListings
+        ? realListings.map((listing) => ({
+            ...listing,
+            images: listing.photoUrls,
+            location: listing.pickupArea as MarketPreviewListing['location'],
+            condition:
+              listing.condition as unknown as MarketPreviewListing['condition'],
+            status: 'available' as const,
+            sellerUsername: listing.seller.displayName,
+          }))
+        : marketPreviewListings,
+    [realListings]
+  )
   const [isApp, setIsApp] = useState(false)
   useEffect(() => {
     // The page uses document scrolling; panel onScroll handlers cannot reach it.
@@ -170,8 +244,8 @@ export function MarketLayout({ values }: { values: ListingFilterValues }) {
   )
   const [searchDismissSignal, setSearchDismissSignal] = useState(0)
   const suggestions = useMemo(
-    () => searchSuggestions(marketPreviewListings, draftQuery),
-    [draftQuery]
+    () => searchSuggestions(source, draftQuery),
+    [source, draftQuery]
   )
   const cancelPageScroll = useCallback(() => {
     clearTimeout(pageScroll.current)
@@ -277,7 +351,7 @@ export function MarketLayout({ values }: { values: ListingFilterValues }) {
   ])
   const items = useMemo(
     () =>
-      searchListings(marketPreviewListings, appliedQuery)
+      searchListings(source, appliedQuery)
         .filter(
           (listing) =>
             (!category || listing.category === category) &&
@@ -293,9 +367,20 @@ export function MarketLayout({ values }: { values: ListingFilterValues }) {
         .map((listing) => ({
           id: listing.id,
           title: listing.title,
-          customContent: (
+          customContent: realListings ? (
+            <PublishedListingCard
+              listing={realListings.find((item) => item.id === listing.id)!}
+              overlayClassName={styles.listingOverlay}
+              overlayStyle={
+                {
+                  '--market-header-height': `${headerHeight}px`,
+                } as CSSProperties
+              }
+              onOverlayActiveChange={cardPresence}
+            />
+          ) : (
             <MarketCard
-              listing={listing}
+              listing={listing as MarketPreviewListing}
               headerHeight={headerHeight}
               onOverlayActiveChange={cardPresence}
             />
@@ -309,12 +394,15 @@ export function MarketLayout({ values }: { values: ListingFilterValues }) {
       appliedQuery,
       headerHeight,
       cardPresence,
+      source,
+      realListings,
     ]
   )
   const browsing = isApp ? (
     <InfiniteGrid
       key={`${category}-${applied.subcategory}-${location}-${sort}-${appliedQuery}`}
       items={items}
+      repeat={!realListings}
     />
   ) : (
     <>
@@ -381,38 +469,24 @@ export function MarketLayout({ values }: { values: ListingFilterValues }) {
     </>
   )
   return (
-    <main ref={marketRoot} className={styles.page}>
+    <main
+      ref={marketRoot}
+      className={`${styles.page} ${!items.length ? styles.emptyPage : ''}`}
+    >
       {activePanel &&
         createPortal(
-          <motion.button
-            type="button"
-            className={styles.focusBackdrop}
-            data-market-focus-backdrop="true"
-            aria-label={
+          <MarketFocusBackdrop
+            closing={closing}
+            label={
               activePanel === 'search'
                 ? 'Dismiss search suggestions'
                 : 'Close filter or sort'
             }
-            initial={{
-              opacity: 0,
-              backdropFilter: 'blur(0px)',
-              backgroundColor: 'rgba(15,10,22,0)',
+            onClose={closePanel}
+            onClosed={() => {
+              setActivePanel(null)
+              setClosing(false)
             }}
-            animate={{
-              opacity: closing ? 0 : 1,
-              backdropFilter: closing ? 'blur(0px)' : 'blur(4px)',
-              backgroundColor: closing
-                ? 'rgba(15,10,22,0)'
-                : 'rgba(15,10,22,0.18)',
-            }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            onAnimationComplete={() => {
-              if (closing) {
-                setActivePanel(null)
-                setClosing(false)
-              }
-            }}
-            onClick={closePanel}
           />,
           document.body
         )}
@@ -455,14 +529,12 @@ export function MarketLayout({ values }: { values: ListingFilterValues }) {
         }`}
       >
         <div className={styles.mobileBrand}>
-          <span aria-hidden="true" className={styles.brandAccent}>
-            ✦
-          </span>
+          <MarketBrandMark />
           <span>Campus Marketplace</span>
         </div>
         <div className={styles.toolbar}>
           <h1 className={`${welcomeStyles.brand} ${styles.brandHeading}`}>
-            Campus Marketplace
+            <MarketBrandMark /> Campus Marketplace
           </h1>
           <div className={styles.discoverSpace}>
             <DiscoverButton
@@ -507,7 +579,7 @@ export function MarketLayout({ values }: { values: ListingFilterValues }) {
               }}
             />
           </div>
-          <div className={styles.controls}>
+          <MarketControlGroup>
             <div id="listing-sort-label">
               <FilterInteraction
                 label="Sort"
@@ -534,23 +606,46 @@ export function MarketLayout({ values }: { values: ListingFilterValues }) {
                 }}
               />
             </FilterInteraction>
-          </div>
+          </MarketControlGroup>
           <nav className={styles.desktopNav} aria-label="Market navigation">
-            <WorkProfile href="/home">
+            <Link
+              href="/home"
+              prefetch={false}
+              aria-label="Home"
+              className={styles.homeControl}
+              onClick={(event) => navigateHome(event, '/home')}
+            >
               <UserRound size={24} />
-            </WorkProfile>
+            </Link>
           </nav>
         </div>
       </header>
       <div ref={browsingTop} className={styles.content}>
+        {listingError && (
+          <p role="alert">
+            {listingError}{' '}
+            <button
+              type="button"
+              onClick={() => setReload((current) => current + 1)}
+            >
+              Retry
+            </button>
+          </p>
+        )}
         {items.length ? (
           browsing
         ) : (
-          <p role="status">
-            {appliedQuery
-              ? `No listings found for "${appliedQuery}"`
-              : 'No listings match your filters. Try another search or clear the filters.'}
-          </p>
+          <WorkspaceEmpty>
+            {appliedQuery ? (
+              `No listings found for "${appliedQuery}"`
+            ) : (
+              <span>
+                No listings match your filters.
+                <br />
+                Try another search or clear the filters.
+              </span>
+            )}
+          </WorkspaceEmpty>
         )}
       </div>
     </main>

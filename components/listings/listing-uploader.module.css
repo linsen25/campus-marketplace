@@ -1,0 +1,37 @@
+.action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  padding: 32px 24px;
+}
+
+.choose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 24px;
+  font-weight: 600;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.controls.controls > span {
+  width: auto;
+}
+
+.controls.controls > span > button {
+  width: auto;
+}
+
+.preview {
+  width: calc((100% - var(--action-gap)) / 2);
+}

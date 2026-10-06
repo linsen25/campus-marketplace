@@ -1,22 +1,10 @@
-import type {
-  ListingCategory,
-  ListingCondition,
-  ListingSort,
-} from '@/types/listing'
+import { marketCategories } from '@/lib/market-taxonomy'
+import type { ListingCondition, ListingSort } from '@/types/listing'
 
-export const listingCategories: Array<{
-  value: ListingCategory
-  label: string
-}> = [
-  { value: 'furniture', label: 'Furniture' },
-  { value: 'electronics', label: 'Electronics' },
-  { value: 'books', label: 'Books' },
-  { value: 'clothing', label: 'Clothing' },
-  { value: 'home-kitchen', label: 'Home & Kitchen' },
-  { value: 'free', label: 'Free' },
-  { value: 'sports-hobbies', label: 'Sports & Hobbies' },
-  { value: 'other', label: 'Other' },
-]
+export const listingCategories = marketCategories.map((value) => ({
+  value,
+  label: value,
+}))
 
 export const listingConditions: Array<{
   value: ListingCondition

@@ -1,0 +1,40 @@
+/* stylelint-disable property-no-unknown -- CSS Modules composition. */
+.row {
+  composes: actions from "../velora/expandable-card.module.css";
+
+  --action-slot-width: var(--action-width);
+
+  align-items: center;
+}
+
+.row.row > span {
+  --action-gap: inherit;
+  --action-width: min(var(--action-slot-width), calc((100% - var(--action-gap)) / 2));
+
+  flex: 0 0 auto;
+  width: var(--action-width);
+  min-width: 0;
+}
+
+.row.three > span {
+  --action-width: min(var(--action-slot-width), calc((100% - 2 * var(--action-gap)) / 3));
+}
+
+@media (max-width: 1023px) {
+  .row.mobileThree > span {
+    --action-width: min(var(--action-slot-width), calc((100% - 2 * var(--action-gap)) / 3));
+  }
+}
+
+@media (max-width: 767px) {
+  .row.three,
+  .row.mobileThree {
+    --action-gap: 8px;
+  }
+
+  .row.three > span,
+  .row.mobileThree > span {
+    --action-font-size: 12px;
+    --action-surface-padding: 0 4px;
+  }
+}

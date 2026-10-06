@@ -1,0 +1,383 @@
+.analytics {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  min-width: 0;
+  font-weight: 400;
+}
+
+.panel {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #b995dc29;
+  border-radius: 16px;
+  background: #221a2cec;
+  font-size: 13px;
+  font-weight: 400;
+  color: #f5f3f7;
+}
+
+/* Interior dashboard spacing is separate from the shared section boundary. */
+.overview + .analytics {
+  margin-top: 20px;
+}
+
+.verified {
+  padding: 5px 10px;
+  border: 1px solid #68b88955;
+  border-radius: 999px;
+  background: #235a3938;
+  color: #9bd6b1;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.desktopChange {
+  /* stylelint-disable-next-line property-no-unknown -- Reuse Welcome's actual expanded action layout. */
+  composes: actions from "../velora/expandable-card.module.css";
+  display: none;
+  padding-top: 0;
+  flex-shrink: 0;
+
+  /* Restore the Welcome dialog's base type context inside this smaller panel. */
+  font-size: var(--action-font-size);
+  line-height: 1.5;
+}
+
+.mobileChange {
+  display: contents;
+}
+
+@media (min-width: 1024px) {
+  .mobileChange {
+    display: none;
+  }
+
+  .desktopChange {
+    display: flex;
+  }
+}
+
+.categoryChart.categoryChart {
+  height: 360px;
+}
+
+.valid {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #b0d7b5;
+}
+
+.contentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.notice button {
+  display: block;
+  margin-top: 8px;
+  border: 0;
+  background: transparent;
+  color: #d1b4f6;
+  cursor: pointer;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.panelHeader h3 {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.demo,
+.readOnly {
+  color: #c1adcf;
+  font-size: 11px;
+}
+
+.demo {
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: #b88cfa15;
+}
+
+.caption {
+  margin-top: 8px;
+  color: #bdb0c8;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  margin-block: 16px;
+}
+
+.segment {
+  display: flex;
+  padding: 3px;
+  border: 1px solid #ffffff14;
+  border-radius: 9px;
+  background: #130f19;
+}
+
+.segment button,
+.listingChoices button,
+.chartFooter button {
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 9px;
+  background: transparent;
+  color: #c5b8d1;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.segment button[aria-pressed="true"],
+.listingChoices button[aria-pressed="true"] {
+  background: #664780;
+  color: #fff;
+}
+
+.chartFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+  margin-top: 10px;
+  color: #b5a5c3;
+  font-size: 11px;
+}
+
+.chartFooter button {
+  color: #d1b4f6;
+}
+
+.listingChoices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.listingChoices button {
+  background: #ffffff08;
+}
+
+.segment button:focus-visible,
+.listingChoices button:focus-visible,
+.chartFooter button:focus-visible {
+  outline: 2px solid #b88cfa;
+  outline-offset: 2px;
+}
+
+.accountRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 76px;
+}
+
+.accountRow + .accountRow {
+  border-top: 1px solid #ffffff0d;
+}
+
+.accountRow > div {
+  min-width: 0;
+}
+
+.accountRow p {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.fieldLabel {
+  color: #b5a5c3;
+  font-size: 12px;
+}
+
+.dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  margin: auto;
+  padding: 24px;
+  overflow-y: auto;
+  border: 1px solid #8d68aa;
+  border-radius: 18px;
+  background: #221a2c;
+  color: #f5f3f7;
+}
+
+.dialog::backdrop {
+  background: #08050dcc;
+}
+
+.dialog h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+  font-size: 13px;
+}
+
+.field input {
+  min-width: 0;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #766183;
+  border-radius: 8px;
+  background: #160f1d;
+  color: #fff;
+}
+
+.field input:focus-visible {
+  outline: 2px solid #b88cfa;
+  outline-offset: 2px;
+}
+
+.rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 12px;
+  color: #b5a5c3;
+  font-size: 12px;
+}
+
+.rules li[data-met] {
+  color: #b0d7b5;
+}
+
+.rules li::before {
+  content: "○ ";
+}
+
+.rules li[data-met]::before {
+  content: "✓ ";
+}
+
+.notice {
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #b88cfa0d;
+  color: #cabcda;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.error {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #f0a7b5;
+}
+
+@media (min-width: 1024px) {
+  .analytics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 479px) {
+  .panel {
+    padding: 16px;
+  }
+}
+
+.overview .accountRow > span {
+  flex: 0 1 220px;
+}
+
+@media (max-width: 479px) {
+  .overview .accountRow {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .overview .accountRow > span {
+    flex: 1 1 100%;
+  }
+}
+
+.logout {
+  /* stylelint-disable-next-line property-no-unknown -- Reuse the accepted Back to Market control. */
+  composes: mark from "./animated-sidebar-demo.module.css";
+}
+
+@media (max-width: 1023px) {
+  .logout.logout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 60px;
+    height: 60px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #fff;
+    color: #18181b;
+    cursor: pointer;
+  }
+
+  .logout.logout svg {
+    display: block;
+    width: 24px;
+    height: 24px;
+  }
+
+  .logout.logout:hover {
+    background: #eee;
+  }
+
+  .logout.logout:focus-visible {
+    outline: 2px solid #bba1d5;
+    outline-offset: -2px;
+  }
+}
+
+.settings .accountRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  align-items: center;
+  gap: 16px;
+  min-height: 88px;
+}
+
+.settings .accountRow > span {
+  --action-width: 200px;
+
+  width: 200px;
+}
+
+@media (max-width: 359px) {
+  .settings .accountRow {
+    grid-template-columns: minmax(0, 1fr);
+    padding-block: 16px;
+  }
+
+  .settings .accountRow > span {
+    --action-width: min(200px, 100%);
+
+    width: var(--action-width);
+  }
+}

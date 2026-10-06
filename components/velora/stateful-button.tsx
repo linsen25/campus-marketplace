@@ -14,6 +14,7 @@ interface StatefulButtonProps
   /** Milliseconds the success or error state stays before returning to idle. */
   resetAfter?: number
   minLoadingMs?: number
+  onStateChange?: (state: ButtonState) => void
   /** Shown beside the check and announced when the promise resolves. */
   successText?: string
   /** Shown beside the cross and announced when the promise rejects. */
@@ -35,6 +36,7 @@ export function StatefulButton({
   onClick,
   resetAfter = 2000,
   minLoadingMs = 0,
+  onStateChange,
   successText = 'Done',
   errorText = 'Failed',
   className,
@@ -48,6 +50,10 @@ export function StatefulButton({
   const pending = useRef(false)
   const mounted = useRef(true)
   const busy = state === 'loading'
+
+  useEffect(() => {
+    onStateChange?.(state)
+  }, [state, onStateChange])
 
   useEffect(() => {
     mounted.current = true

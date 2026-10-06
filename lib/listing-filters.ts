@@ -3,12 +3,14 @@ import {
   listingConditions,
   listingSorts,
 } from '@/lib/listing-metadata'
+import { isMarketFilterPair, isMarketSubcategory } from '@/lib/market-taxonomy'
 import type { ListingQuery } from '@/types/listing'
 import { parseListingPrice } from '@/utils/parse-listing-price'
 
 export type ListingFilterValues = {
   search: string
   category: string
+  subcategory: string
   condition: string
   minPrice: string
   maxPrice: string
@@ -50,6 +52,7 @@ export function parseListingFilters(
   const values: ListingFilterValues = {
     search: read('search'),
     category: read('category'),
+    subcategory: read('subcategory'),
     condition: read('condition'),
     minPrice: read('minPrice'),
     maxPrice: read('maxPrice'),
@@ -57,9 +60,7 @@ export function parseListingFilters(
     status: read('status') || 'available',
   }
   const category = listingCategories.find(
-    (item) =>
-      item.value === values.category.toLowerCase() ||
-      item.label.toLowerCase() === values.category.toLowerCase()
+    (item) => item.value === values.category
   )
   if (category) values.category = category.value
   const condition = listingConditions.find(
@@ -69,6 +70,9 @@ export function parseListingFilters(
   const query: ListingQuery = {
     search: values.search,
     category: category?.value,
+    subcategory: isMarketSubcategory(values.subcategory)
+      ? values.subcategory
+      : undefined,
     condition: condition?.value,
     sort: sort?.value || 'newest',
     status: values.status === 'sold' ? 'sold' : 'available',
@@ -77,7 +81,10 @@ export function parseListingFilters(
 
   try {
     if (
-      (values.category && !category) ||
+      !isMarketFilterPair(
+        values.category || undefined,
+        values.subcategory || undefined
+      ) ||
       (values.condition && !condition) ||
       !sort ||
       !['available', 'sold', 'all'].includes(values.status)

@@ -26,6 +26,12 @@ async function main() {
         'utf8'
       )
     )
+    await db.exec(
+      fs.readFileSync(
+        'supabase/migrations/202610040001_marketplace_taxonomy.sql',
+        'utf8'
+      )
+    )
     const owner = '11111111-1111-4111-8111-111111111111'
     const other = '22222222-2222-4222-8222-222222222222'
     const unverified = '33333333-3333-4333-8333-333333333333'
@@ -58,7 +64,7 @@ async function main() {
         ])
         return tx.query(sql, params)
       })
-    const insert = `insert into public.listings(title,description,price_cents,category,pickup_area) values ('Desk','Study desk',1250,'furniture','On campus') returning id,seller_id`
+    const insert = `insert into public.listings(title,description,price_cents,category,subcategory,pickup_area) values ('Desk','Study desk',1250,'Home & Dorm','Furniture','On campus') returning id,seller_id`
     await assert.rejects(as(null, insert))
     await assert.rejects(as(unverified, insert))
     const listing = (await as(owner, insert)).rows[0]
@@ -106,7 +112,7 @@ async function main() {
     await assert.rejects(
       as(
         owner,
-        `insert into public.listings(seller_id,title,price_cents,category,pickup_area) values ($1,'Spoof',0,'free','Campus')`,
+        `insert into public.listings(seller_id,title,price_cents,category,subcategory,pickup_area) values ($1,'Spoof',0,'Other','Other','Campus')`,
         [other]
       )
     )

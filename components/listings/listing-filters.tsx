@@ -10,6 +10,7 @@ import {
   listingConditions,
   listingSorts,
 } from '@/lib/listing-metadata'
+import { marketSubcategoryOptions } from '@/lib/market-taxonomy'
 import { Input } from '@ui/input/input'
 
 import styles from './listing-filters.module.css'
@@ -106,6 +107,7 @@ export function ListingFilters({ values }: ListingFiltersProps) {
         listingConditions.find((item) => item.value === values.condition)
           ?.label || values.condition,
     },
+    { key: 'subcategory', label: values.subcategory },
     { key: 'minPrice', label: values.minPrice && `Min CA$${values.minPrice}` },
     { key: 'maxPrice', label: values.maxPrice && `Max CA$${values.maxPrice}` },
     {
@@ -137,6 +139,7 @@ export function ListingFilters({ values }: ListingFiltersProps) {
                 navigate({
                   ...values,
                   [chip.key]: chip.key === 'status' ? 'available' : '',
+                  ...(chip.key === 'category' ? { subcategory: '' } : {}),
                 })
               }
             >
@@ -246,11 +249,37 @@ export function ListingFilters({ values }: ListingFiltersProps) {
               value={draft.category}
               className={controlClass}
               onChange={(event) =>
-                setDraft({ ...draft, category: event.target.value })
+                setDraft({
+                  ...draft,
+                  category: event.target.value,
+                  subcategory: '',
+                })
               }
             >
               <option value="">All categories</option>
               {listingCategories.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={fieldClass}>
+            <span id="listing-subcategory-label" className="small-bold">
+              Subcategory
+            </span>
+            <select
+              aria-labelledby="listing-subcategory-label"
+              name="subcategory"
+              value={draft.subcategory}
+              disabled={!draft.category}
+              className={controlClass}
+              onChange={(event) =>
+                setDraft({ ...draft, subcategory: event.target.value })
+              }
+            >
+              <option value="">All subcategories</option>
+              {marketSubcategoryOptions(draft.category).map((item) => (
                 <option key={item.value} value={item.value}>
                   {item.label}
                 </option>
@@ -344,6 +373,7 @@ export function ListingFilters({ values }: ListingFiltersProps) {
                 setDraft({
                   ...values,
                   category: '',
+                  subcategory: '',
                   condition: '',
                   minPrice: '',
                   maxPrice: '',

@@ -1,12 +1,7 @@
-export type ListingCategory =
-  | 'books'
-  | 'clothing'
-  | 'electronics'
-  | 'free'
-  | 'furniture'
-  | 'home-kitchen'
-  | 'other'
-  | 'sports-hobbies'
+import type { MarketCategory, MarketSubcategory } from '@/lib/market-taxonomy'
+
+export type ListingCategory = MarketCategory
+export type ListingSubcategory = MarketSubcategory
 
 export type ListingCondition = 'fair' | 'good' | 'like-new' | 'new'
 
@@ -25,6 +20,7 @@ export type Listing = {
   price: number
   currency: 'CAD'
   category: ListingCategory
+  subcategory: ListingSubcategory
   condition?: ListingCondition
   pickupArea: string
   photoUrls: string[]
@@ -33,13 +29,18 @@ export type Listing = {
   /** ISO 8601 timestamps. */
   createdAt: string
   updatedAt: string
+  /** Internal creation state; real database reads always include these fields. */
+  publishedAt?: string | null
+  expectedImageCount?: number
 }
 
 export type ListingSort = 'newest' | 'price-high' | 'price-low'
 
 export type ListingQuery = {
   search?: string
+  pickupArea?: string
   category?: ListingCategory
+  subcategory?: ListingSubcategory
   condition?: ListingCondition
   /** Inclusive bounds in non-negative integer cents. */
   minPrice?: number
@@ -56,11 +57,19 @@ export type ListingQuery = {
 // IDs, status, timestamps, and seller identity will be assigned by the backend.
 export type CreateListingInput = Omit<
   Listing,
-  'createdAt' | 'id' | 'seller' | 'status' | 'updatedAt'
+  'createdAt' | 'id' | 'publishedAt' | 'seller' | 'status' | 'updatedAt'
 >
 
 export type UpdateListingInput = Partial<
-  Omit<CreateListingInput, 'condition'>
+  Omit<
+    CreateListingInput,
+    | 'category'
+    | 'condition'
+    | 'currency'
+    | 'expectedImageCount'
+    | 'photoUrls'
+    | 'subcategory'
+  >
 > & {
   /** Explicit null clears the optional condition over JSON. */
   condition?: ListingCondition | null
