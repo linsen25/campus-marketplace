@@ -2,6 +2,10 @@
 
 Current development status: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
 
+Current runtime: **Node.js 24 LTS** (latest 24.x patch), matching `.nvmrc`,
+`package.json` engines. Use `nvm install 24` / `nvm use 24`
+where nvm is available. Next.js 12.2 and React 18 remain unchanged.
+
 Homepage design and component boundaries: [docs/HOMEPAGE_DESIGN.md](docs/HOMEPAGE_DESIGN.md)
 
 Current marketplace setup: [Supabase setup](docs/supabase-setup.md). The template guide below is historical; its retail routes and widgets have been removed. See the [cleanup audit](docs/legacy-cleanup.md) for retained Algolia/CLI requirements.
@@ -9,7 +13,8 @@ Current marketplace setup: [Supabase setup](docs/supabase-setup.md). The templat
 This is a React 18/Next.js based template for an ecommerce application, focused on delivering a rich search and discovery experience.
 The design is based on the [Algolia ecommerce UI design kit](https://www.algolia.com/doc/guides/solutions/ecommerce/ui-kits/) and the implementation focuses on performance and customization.
 
-[View Preview](https://algolia-pwa-ecom-ui-template.netlify.app/)
+There is currently no hosted frontend deployment for this project. Run the app
+locally; the template description and screenshots below are historical upstream material.
 
 <details>
   <summary>Table of content</summary>
@@ -32,18 +37,18 @@ The design is based on the [Algolia ecommerce UI design kit](https://www.algolia
 ## Introduction
 
 The PWA Ecom UI Template is fully responsive.
-Check out the [latest version](https://algolia-pwa-ecom-ui-template.netlify.app/) deployed on Netlify.
+The screenshots below show the original template, not a deployed version of the current marketplace.
 
 ### Mobile
 
-[![UI Template mobile preview](https://i.ibb.co/THpSJcB/pwa-ecom-ui-template-mobile-preview.gif)](https://algolia-pwa-ecom-ui-template.netlify.app/)
+![Original UI template mobile preview](https://i.ibb.co/THpSJcB/pwa-ecom-ui-template-mobile-preview.gif)
 
 ### Desktop
 
 <details>
   <summary>Expand</summary>
 
-  [![UI Template desktop preview](https://i.ibb.co/v45SfGQ/pwa-ecom-ui-template-desktop-preview.gif)](https://algolia-pwa-ecom-ui-template.netlify.app/)
+  ![Original UI template desktop preview](https://i.ibb.co/v45SfGQ/pwa-ecom-ui-template-desktop-preview.gif)
 </details>
 
 ## Why?
@@ -108,11 +113,14 @@ These ready-to-use _custom_ widgets are distributed as separate NPM packages (on
 - 📦 [ColorRefinementList](https://github.com/algolia/react-instantsearch-widget-color-refinement-list)
 - 📦 [SizeRefinementList](https://github.com/algolia/react-instantsearch-widget-size-refinement-list)
 - 📦 [LoadMoreWithProgressBar](https://github.com/algolia/react-instantsearch-widget-loadmore-with-progressbar)
-- [ExpandablePanel](./components/%40instantsearch/widgets/expandable-panel/expandable-panel.tsx)
-- [RefinementsDropdown](./components/%40instantsearch/widgets/refinements-dropdown/refinements-dropdown.tsx)
-- [RatingSelector](./components/%40instantsearch/widgets/rating-selector/rating-selector.tsx)
-- [NoResultsHandler](./components/%40instantsearch/widgets/no-results-handler/no-results-handler.tsx)
-- [BreadcrumbWithQuery](./components/%40instantsearch/widgets/breadcrumb/breadcrumb.tsx)
+- ExpandablePanel
+- RefinementsDropdown
+- RatingSelector
+- NoResultsHandler
+- BreadcrumbWithQuery
+
+These upstream widgets were removed from the current marketplace; see the
+[legacy cleanup audit](docs/legacy-cleanup.md).
 
 ### Core widgets
 
@@ -167,7 +175,8 @@ We welcome all contributors, from casual to regular 💙. See [CONTRIBUTING](CON
 - **Documentation**. Did you find a typo in the doc? [Open an issue](https://github.com/algolia/pwa-ecom-ui-template/issues/new).
 - **Development**. If you don't know where to start, you can check the open issues that are [tagged easy](https://github.com/algolia/pwa-ecom-ui-template/issues?q=is%3Aopen+is%3Aissue+label%3A%22Difficulty%3A++++++%E2%9D%84%EF%B8%8F+easy%22), the [bugs](https://github.com/algolia/pwa-ecom-ui-template/issues?q=is%3Aissue+is%3Aopen+label%3A%22%E2%9D%A4+Bug%22) or [chores](https://github.com/algolia/pwa-ecom-ui-template/issues?q=is%3Aissue+is%3Aopen+label%3A%22%E2%9C%A8+Chore%22).
 
-See [Installation](#installation) for instructions how to install the project.
+See [Getting started](#getting-started) for the original template setup guide and
+[current Supabase setup](docs/supabase-setup.md) for this marketplace.
 
 ## License
 

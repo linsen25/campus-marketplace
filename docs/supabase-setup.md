@@ -160,7 +160,10 @@ is included in this phase. Previously downloaded images cannot be recalled.
 
 ## 5. Run locally and deploy
 
-Use Node.js **22 or newer** (the current Supabase SDK requirement; tested with 24).
+There is currently no hosted frontend deployment or selected hosting provider.
+Use Node.js **24 LTS**, latest 24.x patch, matching `.nvmrc` and package engines.
+The installed Supabase SDK requires at least Node 22;
+the repository standard is narrower so local and deployment runtimes agree.
 Run `npm install`, then `npm run dev`. Visit `/listings`, sign in with a real Western
 mailbox, and create a listing. Production must use HTTPS. Session-bearing pages,
 API calls, and their Next page-data requests are excluded from PWA runtime caches;

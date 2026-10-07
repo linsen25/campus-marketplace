@@ -21,13 +21,20 @@ export default function MenuInteraction({
   activeItem,
   selectedChild,
   onSelect,
+  compact = false,
 }: {
   items: SmoothMenuItem[]
   activeItem: string
   selectedChild?: string
   onSelect: (id: string, child?: string) => void
+  /** Icon-only global mobile navigation trigger. */
+  compact?: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false)
+  // Accordion disclosure is independent of the active navigation destination.
+  const [expandedParent, setExpandedParent] = useState<string | null>(
+    activeItem
+  )
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -86,21 +93,60 @@ export default function MenuInteraction({
       ref={containerRef}
       role="group"
       aria-label="Home section navigation"
-      className={styles.container}
+      className={`${styles.container} ${compact ? styles.compact : ''}`}
       data-smooth-dropdown="true"
     >
       <button
         ref={triggerRef}
         type="button"
         className={styles.trigger}
-        aria-label="Show more"
+        aria-label={compact ? 'Open Home navigation' : 'Show more'}
         aria-expanded={isOpen}
         aria-controls={id}
         onKeyDown={handleKeyDown}
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={() => {
+          if (!isOpen)
+            setExpandedParent(
+              items.some(
+                (item) => item.id === activeItem && item.children?.length
+              )
+                ? activeItem
+                : null
+            )
+          setIsOpen((open) => !open)
+        }}
       >
-        Show more
-        <ChevronDown size={22} aria-hidden="true" />
+        {!compact && 'Show more'}
+        {compact ? (
+          <motion.svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden="true"
+            data-mobile-menu-icon={isOpen ? 'open' : 'closed'}
+            initial={false}
+            animate={{ rotate: isOpen ? 180 : 0 }}
+            transition={{ duration: reduced ? 0 : 0.2, ease: 'easeOut' }}
+          >
+            <motion.path
+              initial={false}
+              animate={{ d: isOpen ? 'M 4 12 L 12 4' : 'M 4 6 L 20 6' }}
+              transition={{ duration: reduced ? 0 : 0.2, ease: 'easeOut' }}
+            />
+            <path d="M 4 12 L 20 12" />
+            <motion.path
+              initial={false}
+              animate={{ d: isOpen ? 'M 4 12 L 12 20' : 'M 4 18 L 20 18' }}
+              transition={{ duration: reduced ? 0 : 0.2, ease: 'easeOut' }}
+            />
+          </motion.svg>
+        ) : (
+          <ChevronDown size={22} aria-hidden="true" />
+        )}
       </button>
       <motion.div
         initial={false}
@@ -136,6 +182,8 @@ export default function MenuInteraction({
             <ul className={styles.list}>
               {items.map((item, index) => {
                 const isActive = activeItem === item.id
+                const hasChildren = Boolean(item.children?.length)
+                const isExpanded = expandedParent === item.id
                 const showIndicator = hoveredItem
                   ? hoveredItem === item.id
                   : isActive
@@ -156,16 +204,22 @@ export default function MenuInteraction({
                     <button
                       type="button"
                       className={styles.item}
-                      aria-expanded={item.children ? isActive : undefined}
-                      aria-current={isActive ? 'page' : undefined}
+                      aria-expanded={hasChildren ? isExpanded : undefined}
+                      aria-current={
+                        isActive && !hasChildren ? 'page' : undefined
+                      }
                       onKeyDown={handleKeyDown}
                       onMouseEnter={() => setHoveredItem(item.id)}
                       onMouseLeave={() => setHoveredItem(null)}
                       onFocus={() => setHoveredItem(item.id)}
                       onBlur={() => setHoveredItem(null)}
                       onClick={() => {
-                        onSelect(item.id)
-                        if (!item.children) {
+                        if (hasChildren) {
+                          setExpandedParent((current) =>
+                            current === item.id ? null : item.id
+                          )
+                        } else {
+                          onSelect(item.id)
                           setIsOpen(false)
                           triggerRef.current?.focus()
                         }
@@ -195,15 +249,30 @@ export default function MenuInteraction({
                       )}
                       <span className={styles.icon}>{item.icon}</span>
                       <span className={styles.label}>{item.label}</span>
+                      {hasChildren && (
+                        <motion.span
+                          className={styles.parentArrow}
+                          initial={false}
+                          animate={{ rotate: isExpanded ? 0 : -90 }}
+                          transition={{
+                            duration: reduced ? 0 : 0.18,
+                            ease: 'easeOut',
+                          }}
+                        >
+                          <ChevronDown size={16} aria-hidden="true" />
+                        </motion.span>
+                      )}
                     </button>
-                    {isActive && item.children && (
+                    {isExpanded && item.children && (
                       <ul className={styles.children}>
                         {item.children.map((child) => (
                           <li key={child.id}>
                             <button
                               type="button"
                               aria-current={
-                                selectedChild === child.id ? 'page' : undefined
+                                isActive && selectedChild === child.id
+                                  ? 'page'
+                                  : undefined
                               }
                               onKeyDown={handleKeyDown}
                               onClick={() => {

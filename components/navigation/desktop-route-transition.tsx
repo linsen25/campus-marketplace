@@ -3,6 +3,7 @@ import type { MouseEvent, ReactNode } from 'react'
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 
 import { waitForMarketReady } from '@/hooks/use-market-ready'
+import { pageSlideOptions } from '@/lib/page-slide'
 
 import styles from './desktop-route-transition.module.css'
 
@@ -209,8 +210,6 @@ export function DesktopRouteTransitionProvider({
     document.documentElement.style.overflowX = 'clip'
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
     const mobile = matchMedia('(max-width: 1023px)').matches
-    const slideDuration = mobile ? 320 : 380
-    const duration = reduced ? 60 : slideDuration
     const direction = navigation.destination === '/home' ? 1 : -1
     let active = true
     let animation: Animation | undefined
@@ -300,13 +299,7 @@ export function DesktopRouteTransitionProvider({
           },
           { transform: `translateX(${-direction * 100}%)` },
         ],
-        {
-          duration,
-          easing: mobile
-            ? 'cubic-bezier(0.22, 0.61, 0.36, 1)'
-            : 'cubic-bezier(0.42, 0, 1, 1)',
-          fill: 'forwards',
-        }
+        pageSlideOptions(mobile, reduced)
       )
       await animation.finished
       if (!active) return

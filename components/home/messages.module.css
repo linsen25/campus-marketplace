@@ -1,0 +1,72 @@
+.conversations {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+
+  /* Rail contents must not contribute an intrinsic height to the mobile shell. */
+  contain: size;
+}
+
+.mobileSurface.mobileSurface {
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mobileList,
+.mobileDetail {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.mobileList {
+  padding: 12px;
+}
+
+.mobileList > div {
+  flex: 1;
+}
+
+.mobileBack {
+  flex-shrink: 0;
+  padding: 12px;
+}
+
+.mobileViewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mobileTrack {
+  position: absolute;
+  inset: 0;
+}
+
+.mobileTrack > div {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+}
+
+.mobileTrack > .mobileDetail {
+  left: 100%;
+  right: auto;
+}
+
+.mobileTrack > [data-inactive="true"] {
+  visibility: hidden;
+}
+
+.mobileList [data-conversation-id] > span:nth-child(2) {
+  flex: 1;
+}
+
+.mobileList [data-conversation-id] {
+  padding-right: 16px;
+}

@@ -19,8 +19,8 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
-import { ContentLoadingSpinner } from '@/components/ui/content-loading-spinner'
 import { useContentReveal } from '@/components/ui/content-reveal'
+import { Skeleton } from '@/components/ui/skeleton'
 import { mockTrend } from '@/lib/fixtures/profile-analytics'
 import type {
   AnalyticsMetric,
@@ -229,60 +229,73 @@ function MarketplaceTrends({ replayToken, replayHistory }: ReplayProps) {
         <h3>Marketplace Trends</h3>
       </header>
       <p className={styles.caption}>Active listings by category</p>
-      {error ? (
-        <div className={`${styles.notice} ${reveal}`} role="alert">
-          {error}
-          <button type="button" onClick={() => setAttempt((n) => n + 1)}>
-            Retry
-          </button>
-        </div>
-      ) : !data ? (
-        <div className={styles.notice}>
-          <ContentLoadingSpinner />
-        </div>
-      ) : data.every((item) => item.count === 0) ? (
-        <p className={`${styles.notice} ${reveal}`}>No active listings yet.</p>
-      ) : (
-        <ChartContainer
-          className={`${styles.categoryChart} ${reveal}`}
-          config={{ count: { label: 'Active listings', color: '#a575de' } }}
-        >
-          <BarChart
-            key={animation.key}
-            accessibilityLayer={true}
-            data={data}
-            layout="vertical"
-            margin={{ top: 12, right: 46, left: 0, bottom: 8 }}
+      <div className={styles.categoryRegion}>
+        {error ? (
+          <div className={`${styles.notice} ${reveal}`} role="alert">
+            {error}
+            <button type="button" onClick={() => setAttempt((n) => n + 1)}>
+              Retry
+            </button>
+          </div>
+        ) : !data ? (
+          <div
+            className={styles.categorySkeleton}
+            role="status"
+            aria-label="Loading marketplace trends"
           >
-            <XAxis hide={true} type="number" />
-            <YAxis
-              dataKey="category"
-              type="category"
-              tickLine={false}
-              axisLine={false}
-              width={132}
-              tick={{ fontSize: 10 }}
-            />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-            <Bar
-              dataKey="count"
-              fill="var(--color-count)"
-              radius={[0, 5, 5, 0]}
-              barSize={22}
-              isAnimationActive={animation.active}
-              onAnimationStart={animation.handleStart}
-              onAnimationEnd={animation.handleEnd}
+            {Array.from({ length: 8 }, (_, index) => (
+              <div className={styles.categorySkeletonRow} key={index}>
+                <Skeleton />
+                <Skeleton />
+              </div>
+            ))}
+          </div>
+        ) : data.every((item) => item.count === 0) ? (
+          <p className={`${styles.notice} ${reveal}`}>
+            No active listings yet.
+          </p>
+        ) : (
+          <ChartContainer
+            className={`${styles.categoryChart} ${reveal}`}
+            config={{ count: { label: 'Active listings', color: '#a575de' } }}
+          >
+            <BarChart
+              key={animation.key}
+              accessibilityLayer={true}
+              data={data}
+              layout="vertical"
+              margin={{ top: 12, right: 46, left: 0, bottom: 8 }}
             >
-              <LabelList
-                dataKey="count"
-                position="right"
-                fill="#d6c7e4"
-                fontSize={10}
+              <XAxis hide={true} type="number" />
+              <YAxis
+                dataKey="category"
+                type="category"
+                tickLine={false}
+                axisLine={false}
+                width={132}
+                tick={{ fontSize: 10 }}
               />
-            </Bar>
-          </BarChart>
-        </ChartContainer>
-      )}
+              <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+              <Bar
+                dataKey="count"
+                fill="var(--color-count)"
+                radius={[0, 5, 5, 0]}
+                barSize={22}
+                isAnimationActive={animation.active}
+                onAnimationStart={animation.handleStart}
+                onAnimationEnd={animation.handleEnd}
+              >
+                <LabelList
+                  dataKey="count"
+                  position="right"
+                  fill="#d6c7e4"
+                  fontSize={10}
+                />
+              </Bar>
+            </BarChart>
+          </ChartContainer>
+        )}
+      </div>
       <p className={styles.caption}>
         Counts represent active listings across the marketplace.
       </p>

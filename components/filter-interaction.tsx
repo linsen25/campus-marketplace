@@ -13,6 +13,8 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+import { sortPanelFade } from '@/lib/sort-panel-fade'
+
 import styles from './filter-interaction.module.css'
 
 function panelBounds(r: DOMRect) {
@@ -38,6 +40,7 @@ function panelBounds(r: DOMRect) {
 
 export default function FilterInteraction({
   label,
+  mobileLabel,
   options = [],
   value = '',
   onChange,
@@ -47,6 +50,7 @@ export default function FilterInteraction({
   children,
 }: {
   label: string
+  mobileLabel?: string
   options?: Array<{ value: string; label: string }>
   value?: string
   onChange?: (value: string) => void
@@ -163,6 +167,7 @@ export default function FilterInteraction({
       type="button"
       className={styles.trigger}
       aria-label={label}
+      data-mobile-label={mobileLabel ? true : undefined}
       aria-expanded={isOpen && !isClosing}
       aria-controls={isOpen ? id : undefined}
       aria-hidden={placeholder && isOpen ? true : undefined}
@@ -188,6 +193,7 @@ export default function FilterInteraction({
           ? options.find((option) => option.value === value)?.label || label
           : label}
       </span>
+      {mobileLabel && <span className={styles.mobileLabel}>{mobileLabel}</span>}
     </button>
   )
   return (
@@ -232,11 +238,14 @@ export default function FilterInteraction({
                   animate={{
                     opacity: isClosing ? 0 : 1,
                   }}
-                  transition={{
-                    ...(label === 'Sort' ? { type: 'tween' as const } : {}),
-                    duration: label === 'Sort' || isClosing ? 0.18 : 0.2,
-                    ease: 'easeOut',
-                  }}
+                  transition={
+                    label === 'Sort'
+                      ? sortPanelFade
+                      : {
+                          duration: isClosing ? 0.18 : 0.2,
+                          ease: 'easeOut',
+                        }
+                  }
                   exit={{ opacity: 0 }}
                 >
                   <div

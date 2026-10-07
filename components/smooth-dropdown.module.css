@@ -137,3 +137,37 @@
 .trigger[aria-expanded="true"] svg {
   transform: rotate(180deg);
 }
+
+/* The independent top-right mobile navigation keeps its existing menu behavior. */
+.compact {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+
+.compact .trigger {
+  height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #f5f3f7;
+}
+
+.compact .surface {
+  right: 0;
+  width: min(220px, calc(100vw - 48px));
+  transform-origin: top right;
+}
+
+.compact .trigger svg,
+.compact .trigger[aria-expanded="true"] svg {
+  transform: none;
+  transition: none;
+}
+
+.parentArrow {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  margin-left: auto;
+}

@@ -73,6 +73,13 @@ async function main() {
     if (pathname.endsWith('/rpc/marketplace_confirm_username')) return json(null)
     if (pathname.endsWith('/profiles')) return json({ id: user.id, display_name: 'Test_member' })
     if (pathname.endsWith('/signup')) return json(user)
+    if (pathname.endsWith('/otp')) {
+      assert.equal(input.create_user, false, 'Legacy OTP must never create an Auth user')
+      assert(!input.data?.username, 'Compatibility login must not invent a username')
+      return input.email === user.email
+        ? json({})
+        : json({ code: 'otp_disabled', msg: 'Signups not allowed for otp' }, 400)
+    }
     if (pathname.endsWith('/resend') || pathname.endsWith('/recover'))
       return json({})
     if (pathname.endsWith('/token') || pathname.endsWith('/verify'))
@@ -177,6 +184,14 @@ async function main() {
   assert.deepEqual(restored.body.seller, { id: user.id, displayName: input.username },
     'OTP response cookies authenticate the existing success-session refresh')
   assert.equal((await request('sign-in', input)).statusCode, 200)
+  const beforeLegacy = calls.length
+  assert.equal((await request('email', { email: user.email })).statusCode, 200)
+  assert.equal((await request('verify', { email: user.email, code: input.code })).statusCode, 200)
+  assert.equal((await request('email', { email: 'unknown@uwo.ca' })).statusCode, 400)
+  const legacyCalls = calls.slice(beforeLegacy)
+  assert.equal(legacyCalls.filter(c => c.pathname.endsWith('/otp')).length, 2)
+  assert(!legacyCalls.some(c => c.pathname.endsWith('/signup')), 'Legacy login cannot reach registration')
+  assert(legacyCalls.some(c => c.pathname.endsWith('/verify') && c.input.type === 'email'))
   assert.equal((await request('recover', input)).statusCode, 200)
   const beforeRecovery = calls.length
   assert.equal((await request('reset-password', input)).statusCode, 200)
@@ -250,7 +265,7 @@ async function main() {
     403
   )
   console.log(
-    'Auth modal API: password policy, Western/consent checks, signup metadata, OTP session/profile without a second password write, unchanged recovery, cookies, redacted provider diagnostics and origin checks passed (mocked transport).'
+    'Auth modal API: password policy, Western/consent checks, signup metadata, existing-user-only legacy OTP, OTP session/profile without a second password write, unchanged recovery, cookies, redacted provider diagnostics and origin checks passed (mocked transport).'
   )
 }
 main().catch((error) => {

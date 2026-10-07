@@ -36,3 +36,7 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# Isolated Messages staging development config and visual verification artifacts
+.env.staging.local
+/tests/artifacts/

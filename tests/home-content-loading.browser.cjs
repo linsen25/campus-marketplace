@@ -142,7 +142,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
         }
       )
       await page
-        .locator('[data-content-state-region] [data-content-loading-spinner]')
+        .locator(
+          '[data-profile-account][aria-busy="true"] [data-slot="skeleton"]'
+        )
+        .first()
         .waitFor()
       assert.equal(
         await page
@@ -163,13 +166,16 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
         name: 'Marketplace Trends',
         exact: true,
       })
-      await trends.locator('[data-content-loading-spinner]').waitFor()
+      await trends.locator('[data-slot="skeleton"]').first().waitFor()
       assert.equal(await trends.getByText(/Loading category/).count(), 0)
       await release('categories')
       await reveal(trends.getByText('No active listings yet.', { exact: true }))
       await select('Settings')
       await page
-        .locator('[data-content-state-region] [data-content-loading-spinner]')
+        .locator(
+          '[data-profile-account][aria-busy="true"] [data-slot="skeleton"]'
+        )
+        .first()
         .waitFor()
       await release('account')
       await reveal(

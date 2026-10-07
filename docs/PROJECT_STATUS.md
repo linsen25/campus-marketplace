@@ -1,12 +1,173 @@
 # Campus Marketplace — Project Status
 
+## Current repository architecture (2026-10-07)
+
+There is currently **no hosted frontend deployment**. The user confirmed this
+project is not deployed on Netlify. Its inherited netlify.toml and unused Next.js
+adapter have been removed after a repository audit; no replacement hosting
+provider was selected. Development and production-mode builds run locally with
+the existing Next.js/PWA configuration. Hosted Supabase databases are separate
+from frontend deployment. See [Netlify reference audit and cleanup](NETLIFY_CLEANUP.md).
+
+### Current Messages Phase 1E-B production rollout (2026-10-07)
+
+The authorized, unchanged `202610070001_messages_text.sql` migration has now
+**successfully applied to production campus-marketplace**. Production migration
+history matches all five local versions. Both Messages tables exist; read-only
+catalog comparison with staging passed for columns, constraints, indexes, functions,
+triggers, RLS and privileges. Production database lint found no schema errors.
+The verified external logical backup remains available; no restore was performed.
+
+The production-configured frontend builds and runs **locally**, with
+`APP_ENV=production`. Messages TEXT database/backend is **PRODUCTION DEPLOYED**;
+authenticated Messages UI is **LOCALLY VERIFIED AGAINST PRODUCTION**. The user's
+existing-account smoke passed authentication, Messages, Buying, Selling and tab
+switching, with no visible API/database/RLS/environment errors. Safe local logs
+corroborate authenticated session and both empty conversation lists returning 200.
+Two-user production mutation tests remain **DEFERRED**; staging E2E already passed.
+No production test fixtures were created. There is **no hosted frontend deployment**, Realtime or
+durable IMAGE backend. No commit or push. See
+[production rollout evidence and verification limits](MESSAGES_PHASE1E_B.md).
+
+The final empty-state refinement reuses Favorites' shared `WorkspaceEmpty` text
+style/anchor and renders the conversation card only when conversations exist.
+Buying/Selling empty and populated regression checks passed at 390, 430, 1280 and
+1536 using isolated local API fixtures. Navigation, unread dots, activity ordering,
+desktop recent-three/+N/expanded list and mobile list-to-chat/back remain intact.
+IMAGE Send stays **DISABLED / GATED**. Phase 1E-B is closed within this scope.
+
+This current checkpoint supersedes historical staging-only and pending-production
+statements below.
+
+### Historical Messages Phase 1E-A2 rollout readiness (2026-10-07)
+
+Production `campus-marketplace` (`yzvchumzyonegujucyqs`) was compared object by
+object with the verified first-four-migration staging baseline, including all
+tables/generated columns, constraints/indexes, functions/triggers, RLS/policies,
+grants and listing Storage customizations. No material difference was found.
+The authorized CLI repair changed only production migration tracking metadata:
+202609290001 / 202610030001 / 202610040001 / 202610050001 are now recorded applied.
+Production dry-run proposes only 202610070001_messages_text.sql; **that migration
+remains unapplied and production Messages tables do not exist**.
+
+The local API gate now requires server-only `APP_ENV=staging|production` plus the
+matching verified Supabase project URL and a public key. Missing/unknown/mismatched
+configuration fails closed before client creation. The staging launcher explicitly
+sets APP_ENV=staging. This supersedes the staging-only gate descriptions below;
+the new gate is **not deployed**. Production recovery and hosted deployment env
+verification remain blockers. No production test data, app deployment, commit or
+push. See [baseline evidence, environment contract and backup procedure](MESSAGES_PHASE1E_A2.md).
+
+The architecture overview below describes current source. The Phase 1E-B checkpoint
+above takes precedence over historical rollout statements. History is preserved; a previous successful
+cloud check does not prove every later migration is applied remotely.
+
+- Stack: Next.js **12.2 Pages Router**, React 18, TypeScript, `pages/api` and SSR,
+  request-scoped Supabase server client, Supabase Auth/PostgreSQL/Storage,
+  database RLS, guarded RPCs and triggers. No Spring Boot, Express, Server Actions
+  or active browser-side Supabase application client.
+- Runtime: **Node.js 24 LTS**, latest 24.x patch. `.nvmrc`, package engines,
+  lockfile root metadata agree. The installed
+  Next.js package declares Node >=12.22; Supabase JS requires >=22 and SSR peers
+  with that SDK. Node 24 is the selected common runtime; Next/React were not upgraded.
+  See [Node release schedule](https://github.com/nodejs/Release).
+- Persisted implementation: Auth; profile username/display identity; Marketplace
+  listings, image metadata/uploads and Favorites. Remote deployment state must be
+  verified separately; no live database was contacted in this consistency pass.
+- Messages TEXT/conversations/read state use real APIs and persistence with an
+  explicit matching staging/production environment gate. Staging E2E passed;
+  production backend is deployed and authenticated local UI smoke passed.
+  See [production rollout](MESSAGES_PHASE1E_B.md).
+- Local/demo: profile avatar, account activity chart and pending chat-image object
+  URLs. Durable IMAGE sending is disabled; Marketplace category counts remain real.
+- Current login is email/password. Signup requires username/password plus email
+  verification; recovery uses email codes. Legacy `/api/auth/email` and `/verify`
+  have no current UI callers and remain existing-account-only compatibility login.
+  `shouldCreateUser: false` prevents username-less registration; no username is invented.
+- Storage: Marketplace uploads use Supabase's public `listing-images` bucket.
+  Profile avatars and chat images use local object URLs. Static legacy Cloudinary
+  dataset URLs are not an application upload implementation.
+- Current Messages model remains `Message = TextMessage | ImageMessage`;
+  persisted TEXT adds canonical sequence/submission ID. Local IMAGE selection and
+  gallery code are retained, with Send gated and no uploads. No active Realtime.
+- `/listings` supplies real SSR listings and refreshes them through the API.
+  `MarketLayout` retains fixtures only when instantiated without real initial data.
+  Favorites use `listing_favorites`; current taxonomy is the eight-category contract
+  in `lib/market-taxonomy.ts` and the taxonomy migration, not the old slug table below.
+- Messages TEXT and backend read state survive refresh/remount through persistence,
+  behaviorally verified on staging; production two-user testing remains deferred.
+  Unsent text/image drafts are discarded on cancel/context changes/unmount.
+  Profile avatar lives in Home state and is not uploaded or saved durably.
+- Settings password change remains unavailable. Account GET returns a null username
+  cooldown timestamp; the database still enforces rename cooldown, and rename RPC
+  returns the new timestamp. Retrieving it on account reload is not fixed in this pass.
+
+Historical Phase 1A/1C checkpoint: Messages TEXT migration was **AUTHORED, DEPLOYED TO STAGING and HOSTED
+STAGING EXECUTION VERIFIED; NOT DEPLOYED TO PRODUCTION**:
+[202610070001_messages_text.sql](../supabase/migrations/202610070001_messages_text.sql).
+The five-migration chain was applied only to CLI-confirmed `western-marketplace-staging`.
+Real authenticated-role RLS/RPC, FK/trigger, immutability/read-state and independent
+PostgreSQL-session concurrency checks passed; `db lint --linked` reported no schema
+errors. Disposable fixtures were cleaned. Production was not modified. Phase 1C
+now connects the existing Messages UI to staging TEXT APIs; real HTTP, password
+login, refresh persistence and four-size browser checks passed. No private chat
+bucket, durable IMAGE backend or Realtime was added. See [Phase 1C report](MESSAGES_PHASE1C.md).
+See [staging verification and limitations](MESSAGES_STAGING_VERIFICATION.md) and
+[approved design](MESSAGES_BACKEND_DESIGN.md). This is not production-ready Messages.
+
+Historical pre-deployment Phase 1A validation (2026-10-07): static migration contract, test ESLint, TypeScript,
+mocked Auth/session and Marketplace domain/API/taxonomy checks, documentation links
+and `git diff --check` passed. No PostgreSQL/PGlite SQL execution was performed.
+
+### Messages Phase 1D acceptance (2026-10-07)
+
+**Full staging E2E acceptance passed; production was not modified.** Seller UI
+created/published five listings with real photo uploads; Buyer Contact Seller,
+repeat/distinct conversations, independent two-user TEXT/read/reply, sorting,
+refresh/reopen/leave/logout/re-login, idempotent lost-response retry, text/IME
+boundaries, sold/deleted listing history and Outsider/session rejection passed.
+390/430/1280/1536 regression and representative error/Retry flows passed, including
+maximum legal 20-character names and long content. One frontend defect was fixed:
+attachment cancel now preserves exact history scroll while read callbacks are
+paused, without changing its existing slide or gallery. No database defect or
+migration change was needed. All disposable users/listings/messages and actual
+Storage files were cleaned through the authorized staging workflow.
+
+For five live conversations, list HTTP samples were 255/263/286 ms; pass-through
+observation counted 21 PostgREST queries plus one Auth request. No optimization
+was performed. See [Phase 1D evidence, fixes, artifacts and rollout blockers](MESSAGES_PHASE1D.md).
+No Realtime, durable IMAGE backend, production deployment, commit or push.
+
+### Runtime/auth consistency validation (2026-10-06)
+
+Node 24.13.0 local validation passed: TypeScript (`--noEmit --incremental false`),
+scoped ESLint for the Auth API and its contract test, production Next build
+(`--no-lint`), and mocked/local auth-modal-api, marketplace-session,
+marketplace-domain, marketplace-foundations-api, listings-v1, profile-account,
+marketplace-taxonomy, conversation-state, message-presentation and message-images
+checks. Auth tests cover current signup metadata/verification/recovery and retained
+legacy OTP with `create_user: false`, including unknown-account rejection. No real
+signup/mail request is needed. Runtime metadata consistency, local documentation
+links and `git diff --check` passed. Build reported the existing outdated
+Browserslist database warning; packages were not installed or upgraded.
+
+Stage A changes are runtime metadata, legacy OTP compatibility and documentation
+only. Stage B is a reviewable design document. No SQL, database tests executing SQL,
+remote Supabase calls, Messages migration/bucket/API or Realtime implementation
+were performed. These local results do not verify a hosted frontend deployment or cloud state.
+
 ## Canonical navigation (2026-10-04)
+
+**Historical navigation checkpoint.** The current architecture below supersedes
+the deferred Home product-navigation statement in this checkpoint.
 
 The current product routes are public Welcome at /, Market at /listings, and Home at /home.
 The retired personal pages, menu, shell, and placeholders have been removed. Home renders
 the supplied Velora demo; its product navigation remains deferred. Earlier shell/nav
 reports below are historical and superseded by this decision. Mobile Fluid Tabs now
 navigate and select from the actual pathname; the desktop personal control opens /home.
+
+Current Messages architecture and next-stage behavior: [Messages source of truth](#messages-architecture-and-behavior-2026-10-06).
 
 ## Purpose
 
@@ -22,7 +183,8 @@ Future possible modules, not part of the current implementation:
 Currency is CAD. Prices are stored as integer cents and displayed as `CA$30`,
 `CA$12.50`, or `FREE`.
 
-Marketplace categories:
+Historical initial Marketplace categories (superseded by the eight-category
+taxonomy in `lib/market-taxonomy.ts` and `202610040001_marketplace_taxonomy.sql`):
 
 | Label            | ListingCategory value |
 | ---------------- | --------------------- |
@@ -162,6 +324,11 @@ manual verification above predates this finalization pass.
 
 ## Auth and Email Delivery
 
+**Current behavior:** password login; username/password signup plus email code;
+code-based recovery. Legacy OTP login is existing-account-only. The dated setup
+and delivery checkpoints below are historical evidence, not current deployment
+verification or a supported OTP-only registration path.
+
 The 2026-10-03 auth continuation adds supplied Shift Tabs/Hold/Stateful controls
 and username validation/persistence on the existing profiles architecture.
 The username migration is prepared and locally tested; live SQL application and
@@ -191,7 +358,19 @@ acceptance checks.
 
 ## Supabase Database
 
-Migration: [`supabase/migrations/202609290001_marketplace.sql`](../supabase/migrations/202609290001_marketplace.sql).
+Current repository migrations, applied manually in this order:
+
+1. [Base marketplace](../supabase/migrations/202609290001_marketplace.sql): profiles,
+   listings, listing_images, Western identity gates, Storage and RLS.
+2. [Usernames](../supabase/migrations/202610030001_marketplace_usernames.sql): username
+   identity, private username_history, cooldown/release holds and guarded RPCs.
+3. [Taxonomy](../supabase/migrations/202610040001_marketplace_taxonomy.sql): canonical
+   category/subcategory constraints and immutable classification.
+4. [Publication/Favorites](../supabase/migrations/202610050001_marketplace_publication_favorites.sql):
+   publication/image manifest, finalization and listing_favorites.
+
+Later migration comments retain pending-review status. Their presence is not proof
+of remote application. The current API expects their columns/functions to exist.
 
 Important tables:
 
@@ -199,6 +378,8 @@ Important tables:
 - `listings`: seller, marketplace fields, integer CAD cents, status, timestamps
 - `listing_images`: owner/listing references, six numbered slots, object path,
   upload/publication state
+- `listing_favorites`: user/listing relationship with composite uniqueness and RLS
+- `marketplace_private.username_history`: released username holds/audit records
 
 Storage bucket: `listing-images`.
 
@@ -224,8 +405,8 @@ Phase 4 finalization validation results (2026-09-30):
   from the original repository
 
 Do not make a broad repository-wide formatting change merely to clear the build
-without deliberate review. The Supabase SDK versions currently require Node.js 22+;
-finalization validation uses Node 24.
+without deliberate review. The SDK minimum is Node.js 22; the CURRENT repository
+runtime standard is Node.js 24 LTS. The validation results above are historical.
 
 Local tests cover PostgreSQL/RLS rules, domain/price/image validation, and session
 cookie behavior. The SQL tests use stand-ins for Supabase-owned schemas, and the
@@ -375,6 +556,10 @@ Logged-out users see Sign In; logged-in users see their display name and Western
 email verified. Both can find Sell (/listings/new) and My Listings
 (/profile/listings), retaining existing protected-route next redirects.
 Selling, Buying, and Account sections organize the links. Sign Out lives here.
+
+**Historical / superseded account-shell checkpoint:** the placeholder and absent
+Favorites persistence statements below are no longer current. Home now implements
+local Messages and persisted Favorites; no Messages backend has been added.
 
 Former data-free Coming soon routes covered Favorites, Messages, Profile and Settings.
 
@@ -1374,6 +1559,10 @@ solid mobile selector. No live SQL or Send code/email investigation in this pass
 
 ## Market Page V1 - Layout Pass 1 (2026-10-03)
 
+**Historical / superseded:** fixture-only data, deferred taxonomy and backend
+integration statements below describe this checkpoint. Current Market uses real
+listing data; see Current repository architecture above.
+
 `/listings` now renders the explicitly labeled frontend Market preview. The existing
 SSR/search request boundary is retained; the visible preview uses 30 illustrative
 fixtures, not Supabase listing results. No migrations or live data changes.
@@ -1423,6 +1612,9 @@ Physical-device acceptance and browser-specific visual polish remain for a later
 
 ## Market Page V1 - Layout Refinement (2026-10-03)
 
+**Historical / superseded:** local-only Favorites/search statements below describe
+this checkpoint. Favorites now uses the database/API; current Market data is real.
+
 This section supersedes the earlier Layout Pass 1 header, search, control,
 browsing and Home-route descriptions above. The fixture dataset and accepted
 expanded-card implementation are unchanged.
@@ -1468,3 +1660,564 @@ mobile screenshots were reviewed. TypeScript, scoped ESLint, CSS checks,
 fixture/home/domain/session regressions and `npm run build -- --no-lint` passed.
 No live auth/account mutations or SQL were run. Physical-device and Firefox
 visual acceptance remain outside these Chrome checks.
+
+## Messages architecture and behavior (2026-10-06)
+
+### Phase 1D verification override (2026-10-07)
+
+[Full staging acceptance](MESSAGES_PHASE1D.md) now passes the real UI/user flows
+and four responsive widths. Attachment composition pauses history read callbacks
+without toggling its chat-active scroll lifecycle; cancel returns to the exact
+previous scroll position. The normal history remains mounted and inert/hidden
+under the existing attachment slide. No other layout/backend redesign, migration,
+Realtime or durable IMAGE implementation was added. Production remains gated.
+
+### Current Phase 1C override (2026-10-07)
+
+**This update supersedes the local/demo data and send/read/persistence descriptions
+below; the accepted layout, bubbles, gallery and animation contracts remain.**
+Messages now loads role-specific conversation DTOs and paged TEXT history through
+request-scoped authenticated Pages APIs on **western-marketplace-staging only**.
+The database supplies IDs, sequences, timestamps, activity, unread counts and read
+watermarks. Read through the highest rendered sequence; do not clear unrelated
+conversations. Contact Seller resumes after real Western login and opens the
+canonical conversation. Historical listing context uses an immutable lightweight
+snapshot with optional genuine live Listing data, including sold/deleted cases.
+Normal operation no longer uses 18+18 demo collections. Real TEXT and read state
+survive refresh; unsent drafts do not. Attachment preview/slide/gallery code remains,
+but IMAGE Send is disabled with explicit temporary/no-upload copy.
+
+See [Phase 1C API/DTO/state/env contract and verification](MESSAGES_PHASE1C.md) for
+endpoints, pagination, idempotent failure handling, files/tests and limitations.
+TypeScript/scoped ESLint and real hosted HTTP/browser checks passed at
+390/430/1280/1536, including refresh, lost-response retry, independent destinations,
+unrelated unread retention, View Listing and attachment containment. Fixture cleanup
+was verified. Production was not modified; no migration edits, Realtime, durable
+IMAGE backend, commit or push.
+
+### Historical accepted local UI implementation
+
+
+This is the Messages source of truth for future implementation work. Read this
+section before changing Messages. It supersedes older Home/Messages placeholder
+or deferred-navigation statements in this document. **Current** describes the
+repository implementation; **Planned** describes the next-stage product contract,
+not functionality already shipped. Activity sorting and unread/read UI are now
+implemented as local/demo frontend state only. Text message bubbles and independent
+demo histories and local TEXT sending by button/IME-safe keyboard are implemented too.
+
+### Domain: a conversation, not a contact
+
+A conversation represents **the other participant + one listing + its messages**.
+It is not a unique person/contact. Sarah Jenkins discussing the Comfortable reading
+chair and Sarah Jenkins discussing AirPods Pro are two conversations. Their avatars
+and names may match, but their conversation IDs, listing IDs, histories,
+last-message state and unread state must remain distinct. Key rows and selection
+by conversation ID; never deduplicate conversations by person ID or display name.
+
+Messages has independent navigation children:
+
+```text
+Messages
+  Buying  - current user is buyer; other participant is seller
+  Selling - current user is seller; other participant is buyer
+```
+
+Each destination owns its collection, ordering, selection and derived recent
+conversations. Local unread state also remains independent. Never merge or
+synchronize the two arrays. These are child destinations, not FluidTabs,
+segmented controls or modes inside a Messages card.
+
+### Current implementation and ownership
+
+| Source | Responsibility |
+| --- | --- |
+| [Home navigation](../components/home/animated-sidebar-demo.tsx) | Navigation tree; `active` parent and `selected.messages` child; responsive presentation; mobile child title. |
+| [Mobile menu](../components/smooth-dropdown.tsx) | Independent `expandedParent` disclosure state; parent/child/leaf actions and active-child styling. |
+| [Messages](../components/home/messages.tsx) | Local fixtures/history state, independent `collections` and `selectedIds`, destination-specific selection/read clearing and text append/activity updates, one shared sorted result, mobile list/detail lifecycle. |
+| [ClientCard](../components/client-card.tsx) and [styles](../components/client-card.module.css) | `Conversation` presentation type, desktop recent rail/expanded list, reusable `ConversationList` and `ClientCardBack`. |
+| [Mobile Messages styles](../components/home/messages.module.css) | Stable clipped viewport and adjacent local sliding screens. |
+| [Chat panel](../components/home/messages-chat.tsx) and [styles](../components/home/messages-chat.module.css) | Identity/time, scrollable demo message body, responsive composer and preview-open state. |
+| [Message history](../components/home/message-history.tsx), [text model](../types/message.ts) and [demo histories](../lib/demo-message-history.ts) | One desktop/mobile bubble renderer, per-conversation TEXT histories and sender groups. |
+| [Listing overlay](../components/home/messages-listing-overlay.tsx) and [preview](../components/home/messages-listing-preview.tsx) | Portal, shared focus backdrop/fade, selected-listing preview, Cancel and visual-only send action. |
+| [Slide options](../lib/page-slide.ts) and [route transition](../components/navigation/desktop-route-transition.tsx) | Shared physical-track timing for local mobile Messages and Market/Home navigation. |
+| [Activity helpers](../lib/conversation-state.ts) | Pure activity-time fallback and immutable descending sort shared by all Messages presentations. |
+| [UserAvatar](../components/ui/user-avatar.tsx) | Existing circular image/initial fallback; shared with other UI. |
+| [Arrow interaction](../components/animata/button/shining-button.css) | Shared `shining-button__arrow` hover/focus/press movement for mobile rows and action buttons. |
+
+The current `Conversation` shape is `{ id, person, listing, lastMessage, createdAt,
+lastMessageAt?, unreadCount, time? }`. Activity values are ISO timestamp strings;
+lastMessageAt may be absent/null and unreadCount is a local viewer count.
+`listing` is the canonical frontend `Listing`, not a database row. Each destination
+has 18 local demo conversations, including the same person about different listings.
+There is no Messages backend, persisted message history, realtime transport or
+persisted unread state. The chat body presents local TEXT bubbles and IMAGE messages.
+Send appends local text or a single image message containing 1–4 photos. The controlled
+draft belongs to MessagesChat and is discarded on conversation/destination changes,
+mobile Go Back or leaving Messages. There is no per-conversation draft store.
+
+**Current local ordering:** each destination has distinct ISO activity timestamps
+and mixed read/unread demo values. Messages passes one result from
+sortConversationsByRecent(collections[active]) to every presentation. Activity is
+lastMessageAt ?? createdAt, newest first; equal timestamps use conversation ID
+ascending for a deterministic tie-break. Input arrays are copied before sorting.
+Opening clears only the matching ID's unreadCount in the active source collection;
+it does not update timestamps or reorder the collection. The old click-to-front
+promotion has been removed. time remains static demo chat-header text, not a new
+relative-time label in list rows.
+
+ConversationAvatar in ClientCard wraps existing UserAvatar with one shared small
+red top-right dot and accessible unread text. The same wrapper serves desktop
+recent rail, expanded list and mobile list; the chat header still uses UserAvatar
+directly without a dot. The dot does not change the 40px avatar geometry. Only
+explicit selection clears unread; rendering or the desktop default selection does
+not automatically clear a conversation. Local ordering, selections and read changes
+survive destination switches while Messages remains mounted, but are not persisted
+across leaving Messages, reloads or remounts.
+
+### Current mobile navigation
+
+At widths below 1024px, a parent with children only expands/collapses its menu
+group. Clicking Messages never opens Buying automatically; clicking Listings
+never opens My Listings automatically. Only an explicit child click navigates.
+A leaf without children, such as the current direct Settings item, navigates
+normally. Parent clicks do not invoke navigation or change the active child.
+
+Opening the menu expands the parent containing the current active child. Collapsing
+that parent keeps the page/title unchanged. Only the actual active child receives
+`aria-current="page"`; a parent may indicate it contains the active child without
+being a separate page. Parent disclosure has a rotating arrow. The top-right menu
+button retains its three-lines-to-arrow animation. The left header is the active
+child title: Buying, Selling, Overview, My Listings, Create Listing, Favorites, etc.
+The menu's expansion state is not a second navigation source of truth.
+
+### Current desktop presentation
+
+At widths of 1024px and above, ClientCard renders a 64px compact rail beside the
+selected chat. Avatars represent conversations, so duplicate person avatars are
+valid. `recent = conversations.slice(0, 3)` derives the visible three from the
+supplied collection; there is no separately maintained recent/contact array.
+`hiddenCount = conversations.length - recent.length`; show +N only if positive.
+For 18 conversations this is +15; for three or fewer there is no counter.
+
+Clicking +N expands the conversation region to 320px and pushes the chat right.
+The chat stays mounted: the list neither overlays nor replaces it. The width
+transition uses spring stiffness 350/damping 35; expanded content has its existing
+150ms opacity transition, with reduced motion respected. The expanded list scrolls
+vertically; rows show avatar, name, listing title and last-message preview, not
+full listing details. Go Back collapses the region. Selecting a row selects that
+conversation, clears its local unread count without promotion and collapses the list. Desktop
+starts with the first conversation selected independently in each destination.
+The composer remains one row: input, purple Send, blue + attachment.
+
+### Current mobile list/detail presentation
+
+Buying and Selling each open directly into their full vertically scrollable list.
+There is no recent rail, +N or internal destination selector. List rows start
+neutral; no first row is highlighted merely because desktop has a selection.
+Opening a row stores its conversation ID, selects its person/listing/time and
+enters Chat Detail. Go Back returns to a neutral list in the same active child.
+Changing Buying/Selling through navigation returns to the new child's list rather
+than displaying the old destination's chat.
+
+Both screen containers remain mounted inside `[data-messages-viewport]`; only one
+is active/accessible. Inactive content is inert and aria-hidden, and is visually
+hidden after the slide. `[data-messages-track]` holds the adjacent list/detail
+screens. Its stable parent uses relative positioning, flex sizing and overflow
+clipping, so the screens do not widen or resize the page. Forward: list exits left
+and detail enters from the right. Backward reverses this. The physical-track Web
+Animations API uses one local viewport width, 320ms and
+`cubic-bezier(0.22, 0.61, 0.36, 1)`, shared with Market/Home through `pageSlideOptions`.
+It does not use a wait-mode AnimatePresence or a separate unrelated slide.
+Reduced motion skips positional travel using the existing reduced-motion options.
+
+Only this local track moves. The mobile header, menu button, ambient background,
+outer card dimensions and bottom Market/Home navigation stay stationary. The open
+global menu stacks above local Messages/listing surfaces.
+
+Every mobile row is one keyboard-accessible button, with avatar, name, single-line
+listing title, single-line latest message and a far-right dynamic arrow. Text uses
+min-width: 0 and ellipsis; it must not overlap the arrow. The arrow is not a nested
+button. Existing hover/press/focus feedback is temporary, not persistent selection.
+The existing UserAvatar fallback is reused; it supports the shared palette and
+initial rather than a Messages-specific fallback. Preserve the accepted fallback
+appearance; do not invent a second avatar system.
+
+Chat Detail retains ClientCard-style Go Back, participant avatar/name/time,
+View listing, chat body and two-row composer. The full-width input is first;
+StatefulButton blue #007AFF with white Plus is bottom-left, and the existing purple
+StatefulButton Send is bottom-right. Desktop composer/layout is separate.
+
+### Current listing association and overlay
+
+View Listing always receives `selected.listing`. There is no separate hardcoded
+listing selection. Switching conversations changes the associated preview, even
+when the same person is discussing another listing. The overlay is centered,
+portaled to the body, uses MarketFocusBackdrop with Sort/Filter-style blur/fade,
+and reuses ExpandedCardPreview/ListingDetails visual language from Create Listing.
+Cancel, Escape and outside dismissal use the existing close lifecycle; focus is
+managed/restored by the overlay. Hidden mobile detail clears its preview state.
+
+The active navigation child determines the action: Buying -> Send to seller;
+Selling -> Send to buyer. Both actions are currently visual-only and send nothing.
+Preserve this overlay when adding message history; do not create a separate mobile
+preview or silently turn its placeholder action into a backend operation.
+
+### Current local activity sorting and message previews
+
+All presentations consume one shared, non-mutating sorted result per destination.
+Implemented helpers in lib/conversation-state.ts are
+getConversationActivityAt(conversation) and sortConversationsByRecent(conversations).
+
+```text
+activityAt = lastMessageAt ?? conversation.createdAt
+order conversations by activityAt descending
+recent3 = sortedConversations.slice(0, 3)
+```
+
+A sent/received message updates last-message data and activity time, naturally
+moving that conversation toward the top of the desktop rail, expanded list and
+mobile list. Merely opening/reading a conversation must not bump real activity.
+Demo manual click-to-front promotion is already removed; activity sorting now
+uses conversation ID as the deterministic tie-break for equal timestamps.
+Do not mutate React state arrays with in-place sort.
+
+Current previews use actual TEXT content, IMAGE -> "Photo" for one image or
+"2 photos" / "3 photos" / "4 photos" for a batch. Future listing message ->
+"Listing shared"; generic attachment -> "Attachment". Never display raw
+IDs/JSON. List rows should eventually show compact activity time where space
+permits (2m, 1h, Yesterday, Oct 4) and unread state. Display time and ordering must
+come from the same activity data. Complex formatting is not implemented here.
+
+### Current local unread/read behavior; future persistence and realtime
+
+The local frontend model exposes viewer-specific `unreadCount: number`.
+When positive, show a small red dot absolutely positioned at the avatar's top-right
+in the desktop recent rail, desktop expanded list and mobile list. No number for
+now; no avatar resizing or displaced text. Do not place it beside the name or in
+an already-open chat header. ConversationAvatar supplies one shared wrapper/indicator pattern for all three
+presentations, retaining UserAvatar underneath.
+
+Rendering a conversation in a list does not mark it read. Explicitly opening it
+on desktop or entering mobile Chat Detail clears only that conversation's unread
+count to zero. Never clear other conversations or the other destination's state.
+Local demo clearing is implemented; eventual backend persistence must record
+read state for the current participant, not clear unread for both participants.
+
+Future incoming messages in the same visibly open conversation do not increase
+that viewer's unread count. Incoming messages in another conversation do. A stored
+selected ID in a hidden mobile screen or inactive destination is not evidence that
+the user is actively reading it. Use actual visible-open state when implementing
+this rule. The current wrapper provides accessible unread text (and the rail
+button includes unread in its label); preserve this so color is not the only cue.
+
+Example (all times on the same day):
+
+| Event | Activity order, newest first | Sarah unread count |
+| --- | --- | --- |
+| Alex/Chair 10:42; Sarah/AirPods 10:40; Mike/Monitor 10:30 | Alex, Sarah (dot), Mike | 2 |
+| Sarah sends another incoming message at 10:45 while not open | Sarah (dot), Alex, Mike | 3 |
+| Current user opens Sarah/AirPods | Sarah, Alex, Mike | 0 |
+
+Reading changes unread state, not the 10:45 activity timestamp or ordering.
+
+### Current local message bubble presentation
+
+`Message` in types/message.ts contains `id`, `conversationId`, `senderId`,
+ISO `createdAt`, and discriminates `type: "TEXT"` with `content` from `type: "IMAGE"`
+with `images: ImageAttachment[]`. The initial fixtures remain TEXT-only; local IMAGE
+sending is implemented as described below. Messages builds its `histories`
+initial lookup by conversation ID once from both fixture collections using
+createDemoMessageHistory. Each conversation gets its own 24-message array and
+unique message IDs, even for the same person on different listings. Histories
+are oldest-to-newest and end at the existing conversation activity timestamp;
+local sends append to that history and update the matching conversation preview/activity.
+
+Both desktop and mobile pass the selected history to the same MessageHistory.
+Outgoing messages compare senderId to DEMO_CURRENT_USER_ID (`demo-owner`): right
+aligned, #007AFF, white text, rounded 20px bubbles with no tail/avatar. Received
+messages align left and use the exact accepted Send surface #775497, originally
+defined by StatefulButton's --surface. The panel's --chat-send-purple now supplies
+both the unchanged Send surface and received bubbles. Every received message has
+its own 32px circular UserAvatar with optional image and the existing purple
+fallback; no chat unread dots are rendered.
+
+groupMessages in lib/message-presentation.ts creates a new group whenever the
+sender changes, retaining separate bubbles for consecutive messages. Gaps within
+a group are 4px; groups are separated by 16px with one centered timestamp before
+each group (the first message's time, formatted as en-US hour/minute in UTC for
+deterministic demo rendering). No per-bubble timestamps are shown. Bubble max
+width is 65% desktop / 82% mobile; text wraps, including long unbroken content.
+
+Only the flex chat body scrolls vertically. Header and composer stay fixed.
+A layout effect sets scrollTop to scrollHeight on conversation/history change or
+inactive-to-active detail entry, before paint. The same effect observes the new
+history array after local Send and scrolls to the appended message. There is no incoming
+message stream, persistence, backend image/listing message, reaction, typing
+indicator, read receipt or history pagination. Existing navigation, 320ms local
+slide, listing overlay, rail/+N and two-row mobile composer remain intact.
+
+Focused checks: tests/message-presentation.cjs and
+tests/messages-bubbles.browser.cjs cover distinct histories, sender grouping,
+exact colors, per-message received avatars, timestamps, wrapping, body scroll,
+fixed header/composer and bottom-on-switch at 390/430/1280/1536.
+
+### Current local TEXT sending (button and keyboard)
+
+MessagesChat owns one controlled `draft`. A layout effect clears it when
+conversationId, destination or active detail state changes; unmounting on leaving
+Messages also discards it. Unsent text is never saved per conversation.
+The same-size controlled textarea supports Enter to send and native Shift+Enter
+newline, with no composer growth/layout changes. Internal scrolling keeps the
+40px field height and the existing desktop one-row/mobile two-row arrangement.
+
+Send trims and validates before invoking the parent. Empty/whitespace-only text
+returns without creating messages, changing timestamps/order, scrolling or starting
+feedback. Send is disabled for an empty trimmed draft while idle. A valid action
+captures the content immediately, synchronously updates local state and clears the
+draft, then returns a resolved local Promise to the existing StatefulButton.
+The existing minLoadingMs prop is set to 300ms (allowing its 200ms layer transition
+to reveal the spinner), with success displayed for 800ms before
+idle. This is UI feedback, not simulated network latency. StatefulButton's pending
+ref/aria-disabled handling rejects repeated clicks while loading. The input stays
+editable; a new draft entered during feedback cannot alter the captured message.
+No global StatefulButton behavior or attachment behavior is changed.
+
+The textarea's onKeyDown in messages-chat.tsx handles only Enter without Shift.
+It returns without interception while nativeEvent.isComposing or the local
+composition ref (set by compositionstart/end) is true, allowing IME candidate
+confirmation without accidental sends. No keyCode workaround is used. Plain
+Enter prevents the default newline and invokes the existing Send button's .click()
+through the local composer ref and data-chat-send marker. This reaches exactly
+the same StatefulButton handler and `send` callback as a real button click:
+validation, captured draft, append/activity updates, feedback and scroll all share
+one path. No keyboard-specific message creation or mirrored pending guard exists.
+
+StatefulButton's synchronous pending ref protects both Enter and button click
+during loading, including same-frame mixed submissions. It releases when loading
+finishes and the success state begins; both mechanisms can send a new valid draft
+at that same boundary. The textarea stays editable during loading and success.
+Submitted draft text clears immediately; completion never clears again, so a new
+"Second" draft typed during "First" feedback survives and can be sent afterward.
+Leaving during feedback still discards the new unsent draft, while the already
+submitted message follows the existing mounted-history retention rule.
+
+Shift+Enter uses the browser's native textarea insertion and does not send.
+Validation trims edges but preserves internal newlines. Existing bubble
+white-space: pre-wrap and max widths (65% desktop / 82% mobile) render separate
+lines while wrapping long text. Conversation previews retain existing single-line
+white-space: nowrap/ellipsis; stored Message content is never flattened.
+Empty/spaces/newlines-only Enter changes no message/activity/scroll/button state.
+
+Messages owns mutable local `histories` initialized from demoHistories. Valid Send
+creates one existing-model TEXT Message with crypto.randomUUID(), selected
+conversation ID, DEMO_CURRENT_USER_ID, trimmed content and a current ISO timestamp.
+Functional state updates copy the histories lookup and append only to that ID's
+array. They map only the active Buying/Selling collection, preserving all other
+conversations, person/listing references and createdAt. The matching row gets
+lastMessage = content, lastMessageAt = message.createdAt and unreadCount = 0.
+Own sends never create unread. No manual move-to-front logic exists: the unchanged
+shared activity sort naturally updates recent 3, expanded and mobile list order.
+
+The selected chat remains mounted/open with the same selected ID. Appended messages
+use the existing outgoing bubbles and sender-group logic, with no temporary bubble
+or special local-message render path. The existing history layout effect scrolls
+after append. Sent messages survive Go Back/reopen and Buying/Selling switches while
+Messages remains mounted; leaving/unmounting Messages or a refresh restores fixtures.
+No localStorage/sessionStorage/IndexedDB persistence, request, automatic reply or
+incoming-message simulation is added.
+
+tests/messages-send.browser.cjs checks valid/invalid Send, captured text, button
+states and duplicate protection, updated activity order/preview, independent
+histories/unread, discarded drafts, retained sent history, bottom scroll and reset
+at 390/430/1280/1536. Bubble and existing unread/navigation regression tests remain.
+tests/messages-keyboard.browser.cjs additionally verifies native Enter/Shift+Enter,
+native isComposing and tracked compositionstart/end guards, multiline display and
+one-line previews, both click/Enter duplicate directions, editable/retained next
+draft during feedback, shared success availability, and fixed composer geometry
+at all four widths. IME coverage uses synthetic composition events in Chrome;
+physical-device/Pinyin keyboard acceptance is not claimed by these automated tests.
+
+### Planned backend and message lifecycle
+
+Conceptual models below are planning sketches, not migrations or final database
+contracts. UI projections may derive latest message, activity and unread data.
+
+```text
+Conversation {
+  id, listingId, buyerId, sellerId, createdAt, updatedAt
+}
+Message {
+  id, conversationId, senderId, type, content,
+  listingId nullable, createdAt, readAt nullable
+}
+```
+
+The intended business rule is one conversation per `(listingId, buyerId, sellerId)`.
+Message Seller should find and open the existing conversation for that tuple, or
+create one if absent. Different listings with the same participants remain separate.
+Backend implementation must determine final constraints, participant access rules,
+read persistence and payload shapes; none are added in this pass.
+
+Within a chat, messages are oldest-to-newest, with newest at the bottom. This differs
+from conversation-list sorting, where newest activity is at the top. Opening a chat
+scrolls to the latest message; sending appends and scrolls to the bottom. Incoming
+messages while already near the bottom should scroll appropriately. Advanced
+scroll preservation when browsing older history is deferred.
+
+Empty collections stay destination-specific: "No buying conversations yet." or
+"No selling conversations yet." Never substitute conversations from the other
+child. Current non-empty fixtures and first-item fallback do not implement a
+production empty-state contract; add safe empty-selection handling with real data.
+
+Conversation history must survive a listing becoming sold, unavailable or deleted.
+Do not remove chats solely because a listing disappears from public Marketplace.
+Future View Listing may show Sold/Unavailable/Deleted based on backend rules. Decide
+how listing references/snapshots and deletion policies preserve history before
+creating the schema; this is not implemented by the current available demo listings.
+
+Real server message sending/persisted history, server timestamp updates, persisted unread/read state,
+server ordering, realtime/WebSocket transport, Message Seller integration,
+listing-message sending and generic file attachments are all **planned**, not current features.
+The local sorting/unread pass adds no database, WebSocket, migrations or backend.
+
+Future incoming/realtime contract (not implemented): a closed conversation receives
+an append, lastMessage/lastMessageAt update and unreadCount + 1, then activity sort
+reorders it. A currently visibly open conversation receives the append/activity
+update without increasing unread; scrolling follows the eventual near-bottom policy.
+Stored selection in a hidden mobile screen is not a visibly open conversation.
+Automatic replies remain future work too. Keyboard TEXT sending is implemented
+locally as documented above; backend/realtime, persistence, backend image/listing
+messages, typing indicators and read receipts remain future work.
+
+### Current local image attachments
+
+The local Message type now distinguishes TEXT from IMAGE, with IMAGE carrying
+an images array (id/name/size/mimeType/previewUrl per image). The
+`MessageAttachments` composer reuses Create's FileDrop, AccessibleAction photo
+preview, previous/Discard/next controls and existing MIME/3 MB validator, with a
+four-photo limit. Selections append atomically; invalid batches retain the prior
+selection. It owns unsent object URLs and revokes them on discard/unmount; its
+Send callback transfers URL ownership to Messages' sent-URL set. Those URLs remain
+alive across conversation, mobile Go Back and Buying/Selling changes while that
+parent state remains mounted, then are revoked when the entire Messages state
+unmounts. Refresh resets local histories. Pending draft URLs never transfer unless
+Send succeeds locally; cancel, conversation/destination change, Go Back and leaving
+Messages unmount the draft and revoke its remaining URLs.
+
+MessagesChat owns attachment-mode state and a local mounted flag for the exit
+lifecycle. Blue + discards the unsent TEXT draft and slides a full attachment panel
+up inside a clipped Chat content viewport below the static Header. The panel fills
+that entire viewport; no history strip is squeezed above it and no history blur
+is used. Normal MessageHistory and composer remain mounted at their original
+dimensions as a persistent visible base layer (`z-index: 0`), inert and aria-hidden
+while the panel is present. They are covered by the opaque absolute attachment
+layer (`inset: 0; z-index: 1`), rather than visually hidden via visibility/opacity.
+The previous apparent reload came from visibility:hidden being removed only after
+exit, not from an actual remount. Panel movement now continuously reveals the same
+rendered bubbles and composer; no chat fade/remount is added. Cancel preserves the
+exact history scrollTop. IMAGE Send already appends and scrolls the mounted history
+before panel exit, so the new image is ready underneath. The panel uses
+translateY(100%) to translateY(0) and the reverse on
+cancel/send: 320ms, cubic-bezier(0.22, 0.61, 0.36, 1), reusing pageSlideOptions.
+Reduced motion uses the helper's short stationary transition. Exit completion
+unmounts the panel and restores normal chat. Conversation/destination changes or
+Go Back immediately dispose of the old draft and cancel its animation. Header,
+rail, expanded list and application navigation remain outside this viewport.
+Attachment content scrolls internally below its fixed back/Send action row and
+never extends past the card bottom. Discard removes the current photo, bounds the next index and
+keeps attachment mode open when empty. Zero-image Send is disabled. Valid sends use
+the existing purple StatefulButton with 300ms loading and 800ms success feedback,
+then slide the panel down and restore the normal empty text composer. One batch creates one
+IMAGE message; existing sender grouping/timestamps and shared activity sorter apply.
+Conversation preview is Photo or 2/3/4 photos, lastMessageAt uses message.createdAt,
+and own unread remains zero. Buying/Selling and per-conversation histories stay
+independent. TEXT keyboard/IME semantics are unchanged.
+
+MessageHistory is the same renderer on desktop/mobile. Single images are rounded
+photos; multiple images reuse the supplied useLayout Expandable Gallery's first-three
+overlapping cards, shared card/image layoutIds and spring (160 stiffness, 18 damping,
+mass 1), expanding into its photo grid within history. The gallery removes the demo
+page shell/text/Unsplash images and adapts directly to Message.images. It is scoped
+with a unique LayoutGroup, supports reduced motion, and closes through Go back,
+Escape or outside click without changing selection, history or composer. Scroll
+position is restored after layout/exit animations complete. Received IMAGE messages
+use the same left-aligned row/avatar logic; no fake incoming image replies exist.
+
+Backend uploads,
+storage/Cloudinary decisions, persisted IMAGE records, realtime, upload progress,
+retries, moderation and generic file attachments remain future work.
+
+Image validation/grouping checks: `tests/message-images.cjs`. Actual local browser
+checks at 390/430/1280/1536: `tests/messages-images.browser.cjs`; existing keyboard
+regression: `tests/messages-keyboard.browser.cjs`. All browser API responses are
+mocked GETs only; no hosted uploads or persistent rows are created.
+
+### Shared mobile Home header and Favorites trigger refinement
+
+The mobile shell's `.mobileHeader` in animated-sidebar-demo.module.css retains
+its existing top padding, `max(12px, env(safe-area-inset-top, 0px))`, and horizontal
+24px inset. Bottom padding is now exactly half that shared top value (normally
+12px top / 6px bottom, previously 12px / 12px). All Home mobile destinations use
+this same header, so Overview, Analytics, Buying, Selling, My Listings, Favorites,
+Create Listing and Settings inherit the reduced lower gap. A remaining 12px top
+padding on shared `.mobileMain` made the actual row-to-content gap 18px (6px header
+bottom + 12px wrapper, with 0px intervening margin/padding). That shared wrapper
+now uses 6px top padding, producing a measured 12px total gap. At both 390 and 430,
+Overview/Analytics/Buying/Selling/Favorites/My Listings have row bottom Y=56 and
+first block top Y=68. Internal card padding is unchanged (Overview/Analytics 16px),
+as are title/menu alignment, typography and desktop shell spacing.
+
+Mobile Favorites' `.favoritesToolbar` scopes the existing MarketControlGroup to
+two equal `minmax(0, 1fr)` columns across its full content width, retaining the
+existing 8px gap and 48px control height. Favorites opts into a mobile-only label
+on the existing shared trigger (the old compact mobile style hid selection text).
+Sort/Filter icons remain before those labels, centered as one unit. Other triggers
+and desktop labels retain their previous presentation. Overlay logic,
+sorting/filtering state and desktop right-aligned controls are unchanged.
+Presentation/frame checks live in `tests/home-attachment-refinement.browser.cjs`.
+
+Collapsed desktop Messages rail `.stack` top padding is now 14px (previously 4px),
+leaving its horizontal/bottom padding, 40px avatars, 6px gaps, recent three/+N and
+unread anchors unchanged. At 1280/1536, the first rail avatar center moved from
+Y=150 to Y=160, matching the unchanged Chat Header avatar at Y=160 (difference 0).
+Expanded-list positioning remains unchanged. Persistent-layer DOM identity,
+quarter/three-quarter rendered slide frames, exact mobile gaps and desktop avatar
+centers are checked in `tests/home-persistent-chat.browser.cjs`.
+
+### Validation contract for the next stage
+
+When implementing sorting/unread, verify:
+
+1. Different activity timestamps sort newest-first; no-message conversations use
+   conversation.createdAt. Sorting does not mutate input arrays.
+2. A simulated newer sent/received activity promotes only that conversation;
+   opening it alone does not change its real timestamp.
+3. Positive unread shows the top-right avatar dot in all three presentations;
+   zero unread does not. Geometry remains unchanged.
+4. Opening one conversation clears its dot only; showing rows does not clear them.
+5. Buying/Selling ordering, selection and unread remain independent.
+6. Desktop recent three, expanded list and mobile full list use the same ordered
+   collection; +N is correct for 0, 1, 3 and 18 conversations.
+7. Same-person/different-listing conversations retain separate IDs, histories,
+   latest messages, unread and View Listing association.
+8. Incoming messages in a visibly open conversation stay read; hidden/inactive
+   chats do not silently clear unread. Non-text previews use readable labels.
+9. Empty states stay separate; sold/unavailable listings retain accessible history.
+
+Preserve existing responsive acceptance at 390/430 and 1280/1536: mobile parent
+clicks only disclose, child/leaf clicks navigate, the active child's parent opens
+with the menu, Buying/Selling titles are correct, rows remain neutral and keyboard
+accessible, local forward/back slide and reduced motion work, header/bottom nav
+stay stationary, composers and View Listing remain unchanged, and desktop rail/
+expanded-list behavior stays intact.
+
+Current browser-check entry points are
+[mobile navigation hierarchy](../tests/mobile-navigation-hierarchy.browser.cjs) and
+[mobile header/desktop geometry](../tests/mobile-header.browser.cjs). They use
+mocked API GET responses. Earlier correction/refinement scripts describe historical
+UI iterations and may expect removed internal Buying/Selling controls; do not use
+them as the current product contract. Local sorting/unread checks now live in
+[conversation-state helper tests](../tests/conversation-state.cjs) and
+[Messages unread browser checks](../tests/messages-unread.browser.cjs). These verify
+demo state only; they do not establish backend persistence or realtime behavior.

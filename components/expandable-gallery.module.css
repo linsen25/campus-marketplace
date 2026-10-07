@@ -1,0 +1,80 @@
+.gallery {
+  width: min(320px, 65%);
+  min-width: 0;
+}
+
+.stack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 190px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.photo,
+.expandedPhoto {
+  overflow: hidden;
+  padding: 0;
+  border: 3px solid #2a2134;
+  border-radius: 22px;
+  background: #2a2134;
+  box-shadow: 0 12px 24px rgb(0 0 0 / 20%);
+  cursor: pointer;
+}
+
+.photo {
+  position: absolute;
+  width: 48%;
+  aspect-ratio: 1;
+}
+
+.expandedPhoto {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.image,
+.image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.image img {
+  object-fit: cover;
+}
+
+.expandedPhoto .image img {
+  object-fit: contain;
+}
+
+.back {
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: #c1adcf;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.back:focus-visible,
+.photo:focus-visible,
+.expandedPhoto:focus-visible {
+  outline: 2px solid #b88cfa;
+  outline-offset: 2px;
+}
+
+@media (max-width: 1023px) {
+  .gallery {
+    width: min(320px, 82%);
+  }
+}

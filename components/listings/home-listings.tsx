@@ -12,7 +12,7 @@ import {
 } from '@/lib/listings-api'
 import type { Listing } from '@/types/listing'
 
-import { CardAction } from './card-actions'
+import { ContentStateError } from './content-state-error'
 import { Favorites } from './favorites'
 import { ListingConfirmation } from './listing-confirmation'
 import { ListingForm } from './listing-form'
@@ -187,11 +187,16 @@ export function HomeListings({
             <ContentLoadingSpinner />
           </ContentStateRegion>
         )}
-        {error && !confirmation && (
-          <div className={reveal} role="alert">
+        {!loading && error && !confirmation && (
+          <ContentStateError
+            className={reveal}
+            onRetry={() => {
+              setLoading(true)
+              load()
+            }}
+          >
             {error}
-            <CardAction onClick={load}>Retry</CardAction>
-          </div>
+          </ContentStateError>
         )}
         {!loading && !error && !visible.length && (
           <WorkspaceEmpty className={reveal}>

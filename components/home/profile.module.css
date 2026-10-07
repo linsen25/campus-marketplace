@@ -381,3 +381,106 @@
     width: var(--action-width);
   }
 }
+
+.identitySkeleton,
+.emailSkeleton {
+  width: 140px;
+  max-width: 100%;
+  height: 20px;
+  margin-top: 4px;
+}
+
+.emailSkeleton {
+  width: 190px;
+}
+
+.overview .accountRow > .badgeSkeleton {
+  flex: 0 1 220px;
+  height: 32px;
+  border-radius: 999px;
+}
+
+.actionSkeleton {
+  flex: 0 0 auto;
+  width: var(--action-width);
+  height: var(--action-height);
+  border-radius: var(--action-radius);
+}
+
+.categoryRegion {
+  display: flow-root;
+  height: 360px;
+}
+
+.avatarUnset {
+  /* Existing destructive action red (#772d40), with a soft outline/tint. */
+  border-color: #772d408c;
+  background: #772d4017;
+  color: #fff;
+}
+
+.avatarIdentity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profileAvatar,
+.avatarPreview {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+.profileAvatar > div,
+.avatarPreview > div {
+  color: #fff;
+}
+
+.avatarPreview {
+  width: 80px;
+  height: 80px;
+}
+
+.avatarUpload {
+  margin-top: 20px;
+}
+
+.avatarSelection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.avatarSelection > span {
+  min-width: 0;
+}
+
+.categorySkeleton {
+  display: grid;
+  gap: 18px;
+  height: 360px;
+  padding: 24px 0;
+}
+
+.categorySkeletonRow {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+}
+
+.categorySkeletonRow > div {
+  height: 16px;
+}
+
+@media (max-width: 479px) {
+  .overview .accountRow > .badgeSkeleton {
+    flex: 1 1 100%;
+  }
+}

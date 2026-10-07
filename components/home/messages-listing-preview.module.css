@@ -1,0 +1,74 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 61;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  pointer-events: none;
+}
+
+.dialog {
+  width: min(840px, 100%);
+  max-height: calc(100dvh - 48px);
+}
+
+.card.card.card {
+  width: 100%;
+  min-width: 0;
+  max-height: calc(100dvh - 48px);
+  margin: 0;
+  padding: 24px;
+}
+
+.card.card > div:first-child {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: visible;
+  scrollbar-gutter: auto;
+  gap: 24px;
+}
+
+.card.card > div:first-child > div:first-child {
+  aspect-ratio: auto;
+  height: min(460px, calc(100dvh - 168px));
+}
+
+.card .actions {
+  --action-width: calc((100% - var(--action-gap)) / 2);
+  --action-height: 48px;
+  --action-inset: 2px;
+  --action-gap: 8px;
+  --action-font-size: 12px;
+  --action-surface-padding: 0 4px;
+
+  flex: 0 0 auto;
+  margin-top: 16px;
+}
+
+@media (max-width: 767px) {
+  .overlay {
+    padding: 16px;
+  }
+
+  .dialog {
+    max-height: calc(100dvh - 32px);
+  }
+
+  .card.card.card {
+    max-height: calc(100dvh - 32px);
+    padding: 16px;
+  }
+
+  .card.card > div:first-child {
+    overflow: hidden auto;
+    overscroll-behavior: contain;
+    gap: 0;
+  }
+
+  .card.card > div:first-child > div:first-child {
+    height: auto;
+    aspect-ratio: 4 / 3;
+  }
+}

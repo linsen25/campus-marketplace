@@ -8,6 +8,8 @@ import type { ReactNode, RefObject } from 'react'
 import styles from './file-drop.module.css'
 
 interface FileDropProps {
+  inputId?: string
+  inputLabel?: string
   showFiles?: boolean
   children?: ReactNode
   onFiles?: (files: File[]) => void
@@ -26,6 +28,8 @@ const formatSize = (bytes: number) => {
 }
 
 export function FileDrop({
+  inputId = 'listing-photos',
+  inputLabel = 'Photos',
   showFiles = true,
   children,
   onFiles,
@@ -84,13 +88,13 @@ export function FileDrop({
         </span>
         <input
           ref={inputRef}
-          id="listing-photos"
+          id={inputId}
           type="file"
           accept={accept}
           multiple={multiple}
           disabled={disabled}
           className={styles.input}
-          aria-label="Photos"
+          aria-label={inputLabel}
           onChange={(event) => {
             acceptFiles(event.target.files)
             const input = event.currentTarget

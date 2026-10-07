@@ -18,6 +18,16 @@
   transform: none;
 }
 
+.blue.blue {
+  --press-surface: #245b9c;
+  --press-depth: #173b67;
+  --press-shadow: rgb(10 23 40 / 40%);
+  --press-soft-shadow: rgb(10 23 40 / 30%);
+  --press-focus: #93c5fd;
+
+  color: #fff;
+}
+
 @media (max-width: 767px) {
   .single.single {
     width: calc((100% - var(--action-gap)) / 2);

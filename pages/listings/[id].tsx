@@ -1,9 +1,9 @@
 import type { GetServerSideProps } from 'next'
 import Head from 'next/head'
 
-import { useAuthModal } from '@/components/auth/auth-modal'
 import { Container } from '@/components/container/container'
 import { BackButton } from '@/components/listings/back-button'
+import { useMessageSeller } from '@/components/listings/use-message-seller'
 import { ProductImage } from '@/components/product/product-image'
 import { listingCategories, listingConditions } from '@/lib/listing-metadata'
 import { getListing } from '@/lib/listings-api'
@@ -17,7 +17,7 @@ type ListingPageProps = {
 }
 
 export default function ListingPage({ listing, error }: ListingPageProps) {
-  const { openAuth } = useAuthModal()
+  const messaging = useMessageSeller(listing?.id || '')
   if (!listing)
     return (
       <main className="py-8">
@@ -93,16 +93,15 @@ export default function ListingPage({ listing, error }: ListingPageProps) {
                   <Button
                     type="primary"
                     size="large"
-                    disabled={listing.status === 'sold'}
+                    disabled={listing.status === 'sold' || messaging.busy}
                     aria-describedby={
                       listing.status === 'sold' ? 'listing-sold' : undefined
                     }
-                    onClick={() =>
-                      openAuth({ mode: 'signin', intent: 'contact-seller' })
-                    }
+                    onClick={() => messaging.contact()}
                   >
                     Contact Seller
                   </Button>
+                  {messaging.error && <p role="alert">{messaging.error}</p>}
                   {listing.status === 'sold' && (
                     <p id="listing-sold" className="text-neutral-dark text-sm">
                       This listing has been sold.

@@ -157,16 +157,47 @@
   min-height: 100dvh;
 }
 
-.mobileHeader.mobileHeader {
-  justify-content: space-between;
-  gap: 8px;
-}
+.mobileHeader {
+  --mobile-header-top: max(12px, env(safe-area-inset-top, 0px));
 
-.mobileBrand {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 16px;
+  padding: var(--mobile-header-top) 24px calc(var(--mobile-header-top) / 2);
+}
+
+.mobileTitle {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
   white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 28px;
+}
+
+@media (max-width: 1023px) {
+  /* Let the open global menu reach above body-portaled local overlays. */
+  .mobileHeader:has([data-smooth-dropdown] > button[aria-expanded="true"]) {
+    z-index: 80;
+  }
+
+  .page:has(.mobileHeader [data-smooth-dropdown] > button[aria-expanded="true"]) {
+    isolation: auto;
+  }
+
+  /* Keep the ambient background behind content while isolation is released. */
+  .page:has(.mobileHeader button[aria-expanded="true"]) .mobileAmbient {
+    z-index: 0;
+  }
+
+  .page:has(.mobileHeader button[aria-expanded="true"]) .mobileMain {
+    z-index: 1;
+  }
 }
 
 .mobileAmbient {
@@ -182,7 +213,7 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  padding: var(--home-section-top-inset) 24px var(--home-section-bottom-inset);
+  padding: 6px 24px var(--home-section-bottom-inset);
   font-size: 18px;
   font-weight: 600;
 }

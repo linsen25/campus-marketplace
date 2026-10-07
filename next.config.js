@@ -41,7 +41,7 @@ module.exports = withNextPlugins([withBundleAnalyzer, withPWA], {
         urlPattern: ({ url }) =>
           url.origin === self.location.origin &&
           (url.pathname === '/' ||
-            /^\/(api\/(auth|listings|listing-images|profile)(\/|$)|home(\/|$)|auth(\/|$)|profile\/listings(\/|$)|listings(\/|$))/.test(
+            /^\/(api\/(auth|listings|listing-images|profile|messages)(\/|$)|home(\/|$)|auth(\/|$)|profile\/listings(\/|$)|listings(\/|$))/.test(
               url.pathname
             ) ||
             /^\/_next\/data\/[^/]+\/(home(?:\/|\.json)|index\.json|listings(?:\/|\.json)|profile\/listings\.json|auth\/)/.test(

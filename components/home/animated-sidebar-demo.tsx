@@ -25,9 +25,8 @@ import {
 } from '@/components/velora/animated-sidebar'
 import { Link } from '@ui/link/link'
 
-import marketStyles from '../listings/market-layout.module.css'
-
 import styles from './animated-sidebar-demo.module.css'
+import { Messages } from './messages'
 import { ProfileAnalytics } from './profile-analytics'
 import type { ChartReplayHistory } from './profile-chart-animation'
 import { useProfileLogout } from './profile-logout'
@@ -77,7 +76,10 @@ const groups: Array<{
     id: 'messages',
     label: 'Messages',
     icon: <MessageCircle />,
-    children: [{ id: 'inbox', label: 'Inbox', heading: 'Inbox' }],
+    children: [
+      { id: 'buying', label: 'Buying', heading: 'Messages' },
+      { id: 'selling', label: 'Selling', heading: 'Messages' },
+    ],
   },
 ]
 
@@ -91,9 +93,16 @@ const mobileGroups = groups.map((group) =>
           { id: 'payment', label: 'Payment', heading: 'Payment' },
         ],
       }
-    : group
+    : {
+        ...group,
+        children: group.children.map((child) => ({
+          ...child,
+          heading: group.id === 'messages' ? child.label : child.heading,
+        })),
+      }
 )
 
+// eslint-disable-next-line complexity -- Existing responsive Home destinations keep separate mobile and desktop rendering branches.
 export function AnimatedSidebarDemo() {
   const router = useRouter()
   const navigate = useDesktopRouteTransition()
@@ -101,6 +110,15 @@ export function AnimatedSidebarDemo() {
   const pendingDestination = usePendingDestination()
   const arrivingFromMarket = useRef(false)
   const [username, setUsername] = useState<string | null>(null)
+  const [avatarImage, setAvatarImage] = useState<string>()
+  const saveAvatar = useCallback((file: File) => {
+    setAvatarImage(URL.createObjectURL(file))
+  }, [])
+  useEffect(() => {
+    return () => {
+      if (avatarImage) URL.revokeObjectURL(avatarImage)
+    }
+  }, [avatarImage])
   const [chartReplayToken, setChartReplayToken] = useState(0)
   const chartReplayHistory = useRef<ChartReplayHistory>({
     activity: 0,
@@ -157,17 +175,24 @@ export function AnimatedSidebarDemo() {
   const [selected, setSelected] = useState<Record<Group, string>>({
     profile: 'overview',
     listings: 'my-listings',
-    messages: 'inbox',
+    messages: 'buying',
   })
   useEffect(() => {
     const section = router.query.section
+    if (section === 'messages') {
+      setActive('messages')
+      setSelected((current) => ({
+        ...current,
+        messages: router.query.destination === 'selling' ? 'selling' : 'buying',
+      }))
+    }
     if (
       ['my-listings', 'create-listing', 'favorites'].includes(String(section))
     ) {
       setActive('listings')
       setSelected((current) => ({ ...current, listings: String(section) }))
     }
-  }, [router.query.section])
+  }, [router.query.section, router.query.destination])
   // Primary entries classify child pages; explicit group selection starts at
   // its first child. Rail width/hover/pinning never calls this selection path.
   const selectSection = (id: Group | 'settings', child?: string) => {
@@ -190,7 +215,9 @@ export function AnimatedSidebarDemo() {
     if (listingGuard.current) listingGuard.current(select)
     else select()
   }
-  const group = mobileGroups.find((item) => item.id === active)
+  const group = (desktop ? groups : mobileGroups).find(
+    (item) => item.id === active
+  )
   const heading =
     group?.children.find((child) => child.id === selected[group.id])?.heading ??
     'Settings'
@@ -244,17 +271,10 @@ export function AnimatedSidebarDemo() {
         </div>
       )}
       <div className={styles.mobileShell}>
-        <header
-          className={`${marketStyles.mobileBrand} ${styles.mobileHeader}`}
-          data-home-mobile-header="true"
-        >
-          <span className={styles.mobileBrand}>
-            <span aria-hidden="true" className={marketStyles.brandAccent}>
-              {'\u2726'}
-            </span>
-            <span>Campus Marketplace</span>
-          </span>
+        <header className={styles.mobileHeader} data-home-mobile-header="true">
+          <h1 className={styles.mobileTitle}>{heading}</h1>
           <MenuInteraction
+            compact={true}
             items={[
               ...mobileGroups,
               { id: 'settings', label: 'Settings', icon: <Settings /> },
@@ -267,11 +287,15 @@ export function AnimatedSidebarDemo() {
           />
         </header>
         <main className={styles.mobileMain}>
-          <SectionHeader title={heading} />
           {!desktop && active === 'profile' && (
             <LocalTabContent tab={selected.profile}>
               {selected.profile === 'overview' && (
-                <ProfileOverview showHeading={false} onUsername={setUsername} />
+                <ProfileOverview
+                  showHeading={false}
+                  avatarImage={avatarImage}
+                  onUsername={setUsername}
+                  onAvatarSave={saveAvatar}
+                />
               )}
               {selected.profile === 'analytics' && (
                 <ProfileAnalytics
@@ -282,12 +306,17 @@ export function AnimatedSidebarDemo() {
               {selected.profile === 'payment' && <p>Coming later</p>}
             </LocalTabContent>
           )}
+          {!desktop && active === 'messages' && (
+            <Messages destination={selected.messages} mobile={true} />
+          )}
           {!desktop && active === 'settings' && (
             <ProfileOverview
               settings={true}
+              avatarImage={avatarImage}
               sessionAction={
                 <SettingsLogout onConfirm={() => logout(username)} />
               }
+              onAvatarSave={saveAvatar}
               onUsername={setUsername}
             />
           )}
@@ -374,19 +403,28 @@ export function AnimatedSidebarDemo() {
           <SectionHeader title={active === 'profile' ? 'Profile' : heading} />
           {desktop && active === 'profile' && (
             <>
-              <ProfileOverview onUsername={setUsername} />
+              <ProfileOverview
+                avatarImage={avatarImage}
+                onUsername={setUsername}
+                onAvatarSave={saveAvatar}
+              />
               <ProfileAnalytics
                 replayToken={chartReplayToken}
                 replayHistory={chartReplayHistory}
               />
             </>
           )}
+          {desktop && active === 'messages' && (
+            <Messages destination={selected.messages} />
+          )}
           {desktop && active === 'settings' && (
             <ProfileOverview
               settings={true}
+              avatarImage={avatarImage}
               sessionAction={
                 <SettingsLogout onConfirm={() => logout(username)} />
               }
+              onAvatarSave={saveAvatar}
               onUsername={setUsername}
             />
           )}

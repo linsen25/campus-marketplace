@@ -309,15 +309,11 @@ export default async function handler(
       return res.status(200).json(null)
     }
     if (action === 'email') {
-      const displayName =
-        typeof body.displayName === 'string' ? body.displayName.trim() : ''
-      if (displayName.length > 60)
-        throw new ListingApiError('Display name must be at most 60 characters.')
       const { error } = await client.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser: true,
-          data: { display_name: displayName || 'Western member' },
+          // Compatibility login only. New accounts must use username/password signup.
+          shouldCreateUser: false,
         },
       })
       if (error)

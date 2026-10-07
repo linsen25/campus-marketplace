@@ -1,0 +1,207 @@
+.wrapper {
+  --client-avatar-size: 40px;
+  --client-avatar-gap: 6px;
+  --client-rail-padding: 4px;
+  --contacts-expanded-width: 320px;
+
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  overflow: auto hidden;
+  overscroll-behavior-x: contain;
+  border: 1px solid #b995dc29;
+  border-radius: 16px;
+  background: #221a2c;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.contactsRegion {
+  position: relative;
+  flex-shrink: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--client-avatar-gap);
+  width: 64px;
+
+  /* Match the header's 40px avatar centered within its 44px action row. */
+  padding: 14px var(--client-rail-padding) var(--client-rail-padding);
+}
+
+.avatarSlot {
+  display: block;
+  width: var(--client-avatar-size);
+  height: var(--client-avatar-size);
+  flex-shrink: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+
+button.avatarSlot {
+  cursor: pointer;
+}
+
+.counter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--client-avatar-size);
+  height: var(--client-avatar-size);
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #3b2e48;
+  color: #c1adcf;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.expanded {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--contacts-expanded-width);
+  overflow: hidden;
+}
+
+.expandedInner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: var(--contacts-expanded-width);
+  height: 100%;
+  min-height: 0;
+  padding: 12px;
+}
+
+.backRow {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #c1adcf;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.back:hover {
+  color: #f5f3f7;
+}
+
+.conversations {
+  min-height: 0;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+}
+
+.conversation {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 6px;
+  background: transparent;
+  color: #f5f3f7;
+  text-align: left;
+  cursor: pointer;
+}
+
+.conversation:hover,
+.conversation[aria-pressed="true"] {
+  background: #3b2e48;
+}
+
+.rowText {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.rowText > * {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rowText strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rowText > span {
+  color: #d8c5e7;
+  font-size: 12px;
+}
+
+.rowText small {
+  color: #aa95bb;
+  font-size: 11px;
+}
+
+.counter:focus-visible,
+.back:focus-visible,
+.avatarSlot:focus-visible,
+.conversation:focus-visible {
+  outline: 2px solid #b88cfa;
+  outline-offset: -2px;
+}
+
+@media (max-width: 1023px) {
+  .wrapper {
+    --contacts-expanded-width: 280px;
+  }
+}
+
+.conversationAvatar {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.unreadDot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  border: 1px solid #221a2c;
+  border-radius: 50%;
+  background: #ef4444;
+  pointer-events: none;
+}
+
+.unreadLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

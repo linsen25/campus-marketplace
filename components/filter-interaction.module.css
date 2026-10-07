@@ -38,7 +38,11 @@
 }
 
 .scroll {
-  max-height: max(0px, calc(var(--panel-height) - env(safe-area-inset-bottom, 0px)));
+  max-height:
+    max(
+      0px,
+      calc(var(--panel-height) - env(safe-area-inset-bottom, 0px))
+    );
   overflow-y: auto;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
@@ -116,7 +120,20 @@
   outline-offset: 2px;
 }
 
+.mobileLabel {
+  display: none;
+}
+
 @media (max-width: 1023px) {
+  .trigger[data-mobile-label] {
+    width: 100%;
+    padding: 0 16px;
+  }
+
+  .mobileLabel {
+    display: inline;
+  }
+
   .trigger {
     width: var(--market-control-height, 48px);
     height: var(--market-control-height, 48px);

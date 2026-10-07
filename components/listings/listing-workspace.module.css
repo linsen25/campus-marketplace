@@ -334,3 +334,16 @@
 .favoritesToolbar {
   justify-content: flex-end;
 }
+
+@media (max-width: 1023px) {
+  .favoritesToolbar > [data-market-controls] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .favoritesToolbar > [data-market-controls] > div,
+  .favoritesToolbar > [data-market-controls] > div > button {
+    width: 100%;
+  }
+}

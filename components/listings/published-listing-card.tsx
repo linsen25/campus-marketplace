@@ -12,6 +12,7 @@ import { formatListingPrice } from '@/utils/format-listing-price'
 import detailStyles from './homepage-listing-demo.module.css'
 import { ListingMedia } from './listing-media'
 import { useMarketplaceSession } from './marketplace-session'
+import { useMessageSeller } from './use-message-seller'
 
 export function ListingDetails({ listing }: { listing: Listing }) {
   return (
@@ -62,7 +63,7 @@ export function PublishedListingCard({
   const [favorite, setFavorited] = useState(initiallyFavorited)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [contact, setContact] = useState(false)
+  const messaging = useMessageSeller(listing.id)
   const [photoIndex, setPhotoIndex] = useState(0)
   useEffect(() => {
     if (!seller || own || initiallyFavorited) return undefined
@@ -135,11 +136,8 @@ export function PublishedListingCard({
           <ShiningButton
             variant="green"
             desktopAppearance={true}
-            onClick={() => {
-              if (!seller)
-                openAuth({ mode: 'signin', intent: 'contact-seller' })
-              else setContact(true)
-            }}
+            disabled={messaging.busy}
+            onClick={() => messaging.contact()}
           >
             Contact seller
           </ShiningButton>
@@ -148,7 +146,7 @@ export function PublishedListingCard({
       onOverlayActiveChange={onOverlayActiveChange}
     >
       <ListingDetails listing={listing} />
-      {contact && <p role="status">Messaging is coming later.</p>}
+      {messaging.error && <p role="alert">{messaging.error}</p>}
       {error && <p role="alert">{error}</p>}
     </ExpandableCard>
   )

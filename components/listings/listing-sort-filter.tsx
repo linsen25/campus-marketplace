@@ -13,11 +13,13 @@ export function ListingSortFilter({
   sort,
   onSort,
   onFilter,
+  mobileLabels = false,
 }: {
   applied: MarketFilterValues
   sort: string
   onSort: (value: string) => void
   onFilter: (values: MarketFilterValues) => void
+  mobileLabels?: boolean
 }) {
   const [panel, setPanel] = useState<'filter' | 'sort' | null>(null)
   const [closing, setClosing] = useState(false)
@@ -48,6 +50,7 @@ export function ListingSortFilter({
         )}
       <FilterInteraction
         label="Sort"
+        mobileLabel={mobileLabels ? 'Sort' : undefined}
         options={[...marketSorts]}
         value={sort}
         isOpen={panel === 'sort'}
@@ -57,6 +60,7 @@ export function ListingSortFilter({
       />
       <FilterInteraction
         label="Filter"
+        mobileLabel={mobileLabels ? 'Filter' : undefined}
         isOpen={panel === 'filter'}
         isClosing={closing}
         onOpenChange={(open) => toggle('filter', open)}

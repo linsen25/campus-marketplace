@@ -191,14 +191,21 @@ const listing = (
         )
         return { buttons, group, surface, panel }
       }
-      await page.goto('http://localhost:3100/listings', {
-        waitUntil: 'domcontentloaded',
-        timeout: 120000,
-      })
+      await page.goto(
+        (process.env.HOME_TEST_URL || 'http://localhost:3100') + '/listings',
+        {
+          waitUntil: 'domcontentloaded',
+          timeout: 120000,
+        }
+      )
       const market = await inspect('market')
-      await page.goto('http://localhost:3100/home?section=my-listings', {
-        waitUntil: 'domcontentloaded',
-      })
+      await page.goto(
+        (process.env.HOME_TEST_URL || 'http://localhost:3100') +
+          '/home?section=my-listings',
+        {
+          waitUntil: 'domcontentloaded',
+        }
+      )
       const workspace = page.getByRole('region', {
         name: 'My Listings',
         exact: true,
@@ -254,8 +261,10 @@ const listing = (
         'Active expensive',
       ])
       await workspace.getByRole('tab', { name: 'Sold', exact: true }).click()
+      await page.waitForTimeout(400)
       assert.deepEqual(await titles(), ['Sold cheap', 'Sold expensive'])
       await workspace.getByRole('tab', { name: 'Active', exact: true }).click()
+      await page.waitForTimeout(400)
       await page.getByRole('button', { name: 'Filter', exact: true }).click()
       await page
         .getByRole('combobox', { name: 'Category', exact: true })
@@ -269,6 +278,7 @@ const listing = (
         .waitFor({ state: 'detached' })
       assert.deepEqual(await titles(), ['Active furniture'])
       await workspace.getByRole('tab', { name: 'Sold', exact: true }).click()
+      await page.waitForTimeout(400)
       assert.deepEqual(
         await titles(),
         [],
@@ -291,7 +301,7 @@ const listing = (
       } else {
         const menu = page.locator('[data-smooth-dropdown]')
         await menu
-          .getByRole('button', { name: 'Show more', exact: true })
+          .getByRole('button', { name: 'Open Home navigation', exact: true })
           .click()
         await menu
           .getByRole('button', { name: 'Favorites', exact: true })
@@ -303,19 +313,25 @@ const listing = (
       })
       await favorite.locator('article').first().waitFor()
       const favoriteStyles = await inspect('favorites')
-      assert.deepEqual(favoriteStyles, market)
-      const header = favorite.locator('header').first()
-      const heading = await header
+      if (width >= 1024) assert.deepEqual(favoriteStyles, market)
+      else {
+        assert.deepEqual(favoriteStyles.surface, market.surface)
+        assert.deepEqual(favoriteStyles.panel, market.panel)
+        const favoriteBoxes = await Promise.all(
+          ['Sort', 'Filter'].map((name) =>
+            favorite.getByRole('button', { name, exact: true }).boundingBox()
+          )
+        )
+        assert.equal(favoriteBoxes[0].width, favoriteBoxes[1].width)
+        assert.equal(favoriteBoxes[0].y, favoriteBoxes[1].y)
+      }
+      const heading = await page
         .getByRole('heading', { name: 'Favorites', exact: true })
         .boundingBox()
       const button = await page
         .getByRole('button', { name: 'Sort', exact: true })
         .boundingBox()
-      assert(
-        heading.x < button.x &&
-          heading.y < button.y + button.height &&
-          button.y < heading.y + heading.height
-      )
+      assert(heading.y + heading.height <= button.y)
       assert.equal(
         await favorite.locator('article').count(),
         2,

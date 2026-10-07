@@ -14,7 +14,7 @@ export function CardAction({
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode
   surfaceClassName?: string
-  variant?: 'green' | 'red'
+  variant?: 'blue' | 'green' | 'red'
 }) {
   return (
     <span className={`${cardStyles.actions} ${styles.single}`}>
@@ -25,7 +25,7 @@ export function CardAction({
           variant === 'green'
             ? 'shining-button shining-button--green'
             : cardStyles.raisedButtonDanger
-        } ${className}`}
+        } ${variant === 'blue' ? styles.blue : ''} ${className}`}
       >
         <span
           className={`${

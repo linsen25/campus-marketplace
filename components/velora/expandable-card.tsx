@@ -35,10 +35,11 @@ export function ExpandedCardPreview({
   children,
   media,
   className,
+  actions,
 }: Pick<
   ExpandableCardProps,
   'children' | 'className' | 'expandedTitle' | 'media' | 'title'
->) {
+> & { actions?: ReactNode }) {
   return (
     <section
       className={cn(styles.dialog, className)}
@@ -53,6 +54,7 @@ export function ExpandedCardPreview({
           {children}
         </div>
       </div>
+      {actions}
     </section>
   )
 }

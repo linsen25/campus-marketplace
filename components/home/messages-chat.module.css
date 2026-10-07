@@ -1,0 +1,275 @@
+/* stylelint-disable selector-pseudo-class-no-unknown -- CSS Modules global styles. */
+.panel {
+  /* Exact accepted StatefulButton Send surface; shared with received bubbles. */
+  --chat-send-purple: #775497;
+
+  display: flex;
+  flex: 1 0 276px;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  border-left: 1px solid #b995dc29;
+  color: #f5f3f7;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid #b995dc29;
+}
+
+.header h3 {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid #b995dc29;
+  border-radius: 50%;
+}
+
+.identityText {
+  min-width: 0;
+}
+
+.identityText > span {
+  font-size: 11px;
+  color: #c1adcf;
+}
+
+.listingAction {
+  flex-shrink: 0;
+}
+
+.listingAction > button {
+  height: 44px;
+  padding: 2px;
+  border-width: 2px;
+}
+
+.listingAction :global(.shining-button__body) {
+  height: 100%;
+  gap: 8px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.listingAction :global(.shining-button__arrow) {
+  width: 18px;
+  height: 18px;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+}
+
+.contentViewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.normalChat {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.normalChat[data-inactive='true'] {
+  pointer-events: none;
+}
+
+.attachmentLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: #221a2c;
+}
+
+.singlePhoto {
+  display: block;
+  width: auto;
+  max-width: 65%;
+  max-height: 280px;
+  border-radius: 20px;
+  object-fit: contain;
+}
+
+.composer {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid #b995dc29;
+}
+
+.composer textarea {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 9px 12px;
+  border: 1px solid #766183;
+  border-radius: 8px;
+  background: #160f1d;
+  color: #fff;
+  font: inherit;
+  line-height: 20px;
+  resize: none;
+}
+
+.composer textarea::placeholder {
+  color: #c1adcf;
+}
+
+.composer textarea:focus-visible {
+  outline: 2px solid #b88cfa;
+  outline-offset: 2px;
+}
+
+.send.send {
+  --surface: var(--chat-send-purple);
+
+  flex-shrink: 0;
+  min-width: 0;
+  padding: 0 12px;
+}
+
+.messageGroup + .messageGroup {
+  margin-top: 16px;
+}
+
+.groupTime {
+  display: block;
+  margin-bottom: 12px;
+  color: #c1adcf;
+  text-align: center;
+  font-size: 11px;
+}
+
+.messageRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.messageRow + .messageRow {
+  margin-top: 4px;
+}
+
+.messageRow[data-sent='true'] {
+  justify-content: flex-end;
+}
+
+.messageAvatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.bubble {
+  max-width: 65%;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 20px;
+  background: var(--chat-send-purple);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.messageRow[data-sent='true'] .bubble {
+  background: #007aff;
+}
+
+.attachment.attachment {
+  --surface: #007aff;
+
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  min-width: 0;
+  padding: 0;
+}
+
+@media (max-width: 1023px) {
+  .singlePhoto {
+    max-width: 82%;
+  }
+
+  .bubble {
+    max-width: 82%;
+  }
+
+  .panel {
+    flex: 1 1 auto;
+    border-left: 0;
+  }
+
+  .composer {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+  }
+
+  .composer textarea {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
+  }
+
+  .send {
+    grid-column: 3;
+    grid-row: 2;
+    justify-self: end;
+  }
+
+  .attachment {
+    grid-column: 1;
+    grid-row: 2;
+  }
+}
+
+.sendError {
+  color: #f2b4b4;
+  font-size: 13px;
+  padding: 0 16px;
+  margin: 4px 0;
+  max-height: 72px;
+  flex-shrink: 0;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}

@@ -6,6 +6,7 @@ import { getFavoriteListings } from '@/lib/favorites-api'
 import type { Listing } from '@/types/listing'
 
 import { CardAction } from './card-actions'
+import { ContentStateError } from './content-state-error'
 import { ListingSortFilter } from './listing-sort-filter'
 import styles from './listing-workspace.module.css'
 import type { MarketFilterValues } from './market-filter'
@@ -88,6 +89,7 @@ export function Favorites() {
     >
       <div className={`${styles.toolbar} ${styles.favoritesToolbar}`}>
         <ListingSortFilter
+          mobileLabels={true}
           applied={applied}
           sort={sort}
           onSort={(value) => {
@@ -105,11 +107,16 @@ export function Favorites() {
           <ContentLoadingSpinner />
         </ContentStateRegion>
       )}
-      {error && (
-        <div className={reveal} role="alert">
-          {error}
-          <CardAction onClick={load}>Retry</CardAction>
-        </div>
+      {!loading && error && (
+        <ContentStateError
+          className={reveal}
+          onRetry={() => {
+            setLoading(true)
+            load()
+          }}
+        >
+          Couldn&apos;t load favorites.
+        </ContentStateError>
       )}
       {!loading && !error && !items.length && (
         <WorkspaceEmpty className={reveal}>
