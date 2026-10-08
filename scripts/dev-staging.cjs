@@ -22,6 +22,7 @@ const values = Object.fromEntries(
 )
 const url = values.NEXT_PUBLIC_SUPABASE_URL
 const key = values.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const storageKey = values.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 if (url !== `https://${ref}.supabase.co`)
   throw new Error(
     'Refusing to start: expected western-marketplace-staging URL.'
@@ -33,6 +34,14 @@ if (!key.startsWith('sb_publishable_')) {
   )
   if (claims.role !== 'anon' || claims.ref !== ref)
     throw new Error('Refusing a secret or another project key.')
+}
+if (storageKey) {
+  let valid = false
+  try {
+    const claims = JSON.parse(Buffer.from(storageKey.split('.')[1] || '', 'base64url').toString())
+    valid = claims.role === 'service_role' && claims.ref === ref
+  } catch { valid = false }
+  if (!valid) throw new Error('Refusing a mismatched staging Storage credential.')
 }
 console.log(
   'Starting western-marketplace-staging. Production .env.local is unchanged.'
@@ -48,6 +57,8 @@ const child = spawn(
       APP_ENV: 'staging',
       NEXT_PUBLIC_SUPABASE_URL: url,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: key,
+      // Explicit empty value prevents Next dotenv from inheriting a production secret.
+      SUPABASE_SERVICE_ROLE_KEY: storageKey,
     },
   }
 )

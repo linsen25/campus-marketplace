@@ -1,11 +1,11 @@
 /* eslint-disable jsx-a11y/no-noninteractive-tabindex -- The history viewport must support keyboard scrolling. */
 import { useLayoutEffect, useRef } from 'react'
 
-import ExpandableGallery from '@/components/expandable-gallery'
 import { UserAvatar } from '@/components/ui/user-avatar'
 import { groupMessages } from '@/lib/message-presentation'
 import type { Message } from '@/types/message'
 
+import { MessagePhotos } from './message-photos'
 import styles from './messages-chat.module.css'
 
 const timeFormat = new Intl.DateTimeFormat('en-US', {
@@ -66,8 +66,7 @@ export function MessageHistory({
   }, [conversationId, messages, active])
 
   const highest = messages.reduce(
-    (sequence, item) =>
-      Math.max(sequence, item.type === 'TEXT' ? item.sequence || 0 : 0),
+    (sequence, item) => Math.max(sequence, item.sequence || 0),
     0
   )
   useLayoutEffect(() => {
@@ -111,17 +110,9 @@ export function MessageHistory({
                 {message.type === 'TEXT' && (
                   <p className={styles.bubble}>{message.content}</p>
                 )}
-                {message.type === 'IMAGE' &&
-                  (message.images.length === 1 ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- Local message object URL.
-                    <img
-                      className={styles.singlePhoto}
-                      src={message.images[0].previewUrl}
-                      alt={message.images[0].name}
-                    />
-                  ) : (
-                    <ExpandableGallery images={message.images} />
-                  ))}
+                {message.type === 'IMAGE' && (
+                  <MessagePhotos message={message} />
+                )}
               </div>
             )
           })}

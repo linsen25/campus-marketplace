@@ -8,33 +8,60 @@ import uploaderStyles from '@/components/listings/listing-uploader.module.css'
 import { FileDrop } from '@/components/velora/file-drop'
 import { StatefulButton } from '@/components/velora/stateful-button'
 import { messageImageLimit, validateMessageImages } from '@/lib/message-images'
-import type { ImageAttachment } from '@/types/message'
+import {
+  cancelImageSubmission,
+  finalizeImageSubmission,
+  prepareImageSubmission,
+  uploadImageSlot,
+} from '@/lib/messages-api'
+import type { ImageSubmission } from '@/lib/messages-api'
+import type { ImageAttachment, Message } from '@/types/message'
 
 import styles from './message-attachments.module.css'
 
 type PendingPhoto = { file: File; image: ImageAttachment }
 
-/** Owns unsent URLs only. OnSend synchronously transfers them to Messages. */
+/** Owns local files/URLs until a canonical durable send succeeds. */
 export function MessageAttachments({
   onCancel,
   onSend,
   onComplete,
   sendClassName,
   sendEnabled = true,
+  conversationId,
 }: {
   onCancel: () => void
-  onSend: (images: ImageAttachment[]) => void
+  onSend: (message: Message) => Promise<void>
   onComplete: () => void
   sendClassName: string
   sendEnabled?: boolean
+  conversationId: string
 }) {
   const [photos, setPhotos] = useState<PendingPhoto[]>([])
   const pending = useRef<PendingPhoto[]>([])
   const [index, setIndex] = useState(0)
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
+  const [reserved, setReserved] = useState(false)
+  const submission = useRef<ImageSubmission | null>(null)
+  const nonce = useRef<string | null>(null)
+  const controller = useRef<AbortController | null>(null)
+  const finalizedAttempt = useRef(false)
+  const mounted = useRef(true)
+  const completed = useRef(false)
+  const cancelling = useRef(false)
+  const inFlight = useRef<Promise<unknown> | null>(null)
   useEffect(
     () => () => {
+      mounted.current = false
+      controller.current?.abort()
+      const id = submission.current?.id
+      if (id && !finalizedAttempt.current) {
+        ;(inFlight.current || Promise.resolve())
+          .catch(() => undefined)
+          .then(() => cancelImageSubmission(id))
+          .catch(() => undefined)
+      }
       pending.current.forEach(({ image }) =>
         URL.revokeObjectURL(image.previewUrl)
       )
@@ -63,7 +90,7 @@ export function MessageAttachments({
     [photos]
   )
   const select = (files: File[]) => {
-    if (sending) return
+    if (sending || reserved) return
     try {
       validateMessageImages(files, pending.current.length)
       const additions = files.map((file) => ({
@@ -87,7 +114,7 @@ export function MessageAttachments({
   }
   const discard = () => {
     const removed = pending.current[index]
-    if (!removed || sending) return
+    if (!removed || sending || reserved) return
     URL.revokeObjectURL(removed.image.previewUrl)
     pending.current = pending.current.filter(
       (_, position) => position !== index
@@ -98,21 +125,86 @@ export function MessageAttachments({
   }
   const send = () => {
     if (!sendEnabled || !pending.current.length || sending) return undefined
-    onSend(pending.current.map(({ image }) => image))
-    // URLs now belong to the parent message history, not this draft's cleanup.
-    pending.current = []
     setSending(true)
-    return Promise.resolve()
+    setReserved(true)
+    setError('')
+    nonce.current ||= crypto.randomUUID()
+    const task = async () => {
+      try {
+        const files = pending.current.map((item) => item.file)
+        submission.current = await prepareImageSubmission(
+          conversationId,
+          files,
+          nonce.current as string
+        )
+        const reservation = submission.current
+        if (!mounted.current || cancelling.current) {
+          if (reservation.state === 'pending')
+            await cancelImageSubmission(reservation.id)
+          return
+        }
+        if (reservation.state === 'abandoned')
+          throw new Error(
+            'This upload was cancelled. Close it and select photos again.'
+          )
+        controller.current = new AbortController()
+        if (reservation.state === 'pending') {
+          for (let slotIndex = 0; slotIndex < files.length; slotIndex += 1) {
+            await uploadImageSlot(
+              reservation.id,
+              reservation.manifest[slotIndex].id,
+              files[slotIndex],
+              controller.current.signal
+            )
+          }
+        }
+        if (!mounted.current || cancelling.current) return
+        finalizedAttempt.current = true
+        const message = await finalizeImageSubmission(reservation.id)
+        completed.current = true
+        await onSend(message)
+        pending.current.forEach(({ image }) =>
+          URL.revokeObjectURL(image.previewUrl)
+        )
+        pending.current = []
+      } catch (reason) {
+        if (mounted.current) {
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : 'Unable to send photos. Retry the same selection.'
+          )
+          setSending(false)
+        }
+        throw reason
+      }
+    }
+    inFlight.current = task()
+    return inFlight.current
+  }
+  const cancel = async () => {
+    if (cancelling.current) return
+    cancelling.current = true
+    const id = submission.current?.id
+    try {
+      if (id) await cancelImageSubmission(id)
+      controller.current?.abort()
+      await inFlight.current?.catch(() => undefined)
+      if (submission.current?.id)
+        await cancelImageSubmission(submission.current.id)
+      onCancel()
+    } catch {
+      cancelling.current = false
+      if (mounted.current)
+        setError(
+          'Send may already have completed. Retry Send to confirm it before closing.'
+        )
+    }
   }
   return (
     <section className={styles.composer} aria-label="Add attachment">
       <div className={styles.actions}>
-        <button
-          type="button"
-          className={styles.back}
-          disabled={sending}
-          onClick={onCancel}
-        >
+        <button type="button" className={styles.back} onClick={cancel}>
           <ArrowLeft size={18} aria-hidden="true" />
           Add attachment
         </button>
@@ -123,7 +215,7 @@ export function MessageAttachments({
           resetAfter={800}
           onClick={send}
           onStateChange={(state) => {
-            if (state === 'idle' && sending) onComplete()
+            if (state === 'idle' && completed.current) onComplete()
           }}
         >
           Send
@@ -142,7 +234,7 @@ export function MessageAttachments({
           accept="image/jpeg,image/png,image/webp"
           files={photos.map(({ file }) => file)}
           showFiles={false}
-          disabled={sending}
+          disabled={sending || reserved}
           onFiles={select}
         />
         <p className={styles.hint}>
@@ -155,7 +247,7 @@ export function MessageAttachments({
               items={cards}
               activeIndex={index}
               maxVisible={messageImageLimit}
-              disabled={sending}
+              disabled={sending || reserved}
             />
           </div>
           {photos.length > 0 && (
@@ -163,18 +255,18 @@ export function MessageAttachments({
               <WorkButton
                 appearance="pagination"
                 aria-label="Previous selected photo"
-                disabled={sending || index === 0}
+                disabled={sending || reserved || index === 0}
                 onClick={() => setIndex((current) => current - 1)}
               >
                 <ArrowLeft size={18} aria-hidden="true" />
               </WorkButton>
-              <CardAction disabled={sending} onClick={discard}>
+              <CardAction disabled={sending || reserved} onClick={discard}>
                 Discard
               </CardAction>
               <WorkButton
                 appearance="pagination"
                 aria-label="Next selected photo"
-                disabled={sending || index >= photos.length - 1}
+                disabled={sending || reserved || index >= photos.length - 1}
                 onClick={() => setIndex((current) => current + 1)}
               >
                 <ArrowRight size={18} aria-hidden="true" />

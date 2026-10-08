@@ -1,63 +1,27 @@
 import { ListingApiError } from '@/lib/listing-validation'
+import { imageSendingEnabled } from '@/lib/server/chat-image-storage'
 import { requireMarketplaceUser } from '@/lib/server/marketplace-auth'
+import {
+  signMessageImages,
+  imagePresentation,
+} from '@/lib/server/message-image-service'
+import {
+  messageUuid,
+  requireMessagesEnvironment,
+} from '@/lib/server/messages-environment'
 import { mapListing } from '@/lib/supabase/listing-mapper'
 import type { ListingRow } from '@/lib/supabase/listing-mapper'
 import type { MarketplaceContext } from '@/lib/supabase/server'
 import { createMarketplaceClient } from '@/lib/supabase/server'
 import type { Conversation } from '@/types/conversation'
-import type { TextMessage } from '@/types/message'
+import type { Message, TextMessage } from '@/types/message'
 
-const messagesProjects: Record<string, string> = {
-  staging: 'pcaqxezdfxofysghssyo',
-  production: 'yzvchumzyonegujucyqs',
-}
-export function requireMessagesEnvironment() {
-  const designation = process.env.APP_ENV || ''
-  const ref = Object.prototype.hasOwnProperty.call(
-    messagesProjects,
-    designation
-  )
-    ? messagesProjects[designation]
-    : undefined
-  let valid = false
-  try {
-    const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '')
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    let publicKey = /^sb_publishable_[A-Za-z0-9_-]+$/.test(key)
-    if (!publicKey && key.split('.').length === 3) {
-      const claims = JSON.parse(
-        Buffer.from(key.split('.')[1], 'base64url').toString()
-      )
-      publicKey = claims.role === 'anon' && claims.ref === ref
-    }
-    valid = Boolean(
-      ref &&
-        url.origin === `https://${ref}.supabase.co` &&
-        url.pathname === '/' &&
-        !url.username &&
-        !url.password &&
-        !url.search &&
-        !url.hash &&
-        publicKey
-    )
-  } catch {
-    valid = false
-  }
-  if (!valid)
-    throw new ListingApiError(
-      'Messages environment configuration is unavailable.',
-      503
-    )
-}
-export function messageUuid(value: unknown): string {
-  if (
-    typeof value !== 'string' ||
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      value
-    )
-  )
-    throw new ListingApiError('A valid UUID is required.')
-  return value
+export {
+  messageUuid,
+  requireMessagesEnvironment,
+} from '@/lib/server/messages-environment'
+function imagePreview(count: number) {
+  return count === 1 ? 'Photo' : `${count} photos`
 }
 function checked(error: { code?: string } | null) {
   if (!error) return
@@ -121,8 +85,9 @@ type MessageRow = {
   id: string
   conversation_id: string
   sender_id: string
-  type: 'TEXT'
-  content: string
+  type: 'IMAGE' | 'TEXT'
+  content: string | null
+  image_count?: number
   created_at: string
   sequence: number
   client_message_id: string
@@ -133,7 +98,7 @@ function message(row: MessageRow): TextMessage {
     conversationId: row.conversation_id,
     senderId: row.sender_id,
     type: 'TEXT',
-    content: row.content,
+    content: row.content || '',
     createdAt: row.created_at,
     sequence: Number(row.sequence),
     clientMessageId: row.client_message_id,
@@ -197,7 +162,7 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
         : Promise.resolve({ data: null, error: null }),
       client
         .from('messages')
-        .select('content')
+        .select('*')
         .eq('conversation_id', source.id)
         .order('sequence', { ascending: false })
         .limit(1),
@@ -234,7 +199,11 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
           : live?.status || 'unavailable',
         ...(live ? { live } : {}),
       },
-      lastMessage: latest.data?.[0]?.content || '',
+      lastMessage:
+        latest.data?.[0]?.type === 'IMAGE'
+          ? imagePreview(latest.data[0].image_count)
+          : latest.data?.[0]?.content || '',
+      imageSendingEnabled: imageSendingEnabled(),
       createdAt: source.created_at,
       lastMessageAt: source.last_message_at,
       activityAt: source.activity_at,
@@ -243,7 +212,35 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
       unreadCount: unread.count || 0,
     }
   }
+  async function present(rows: MessageRow[]): Promise<Message[]> {
+    const images = await signMessageImages(
+      client,
+      rows.filter((item) => item.type === 'IMAGE').map((item) => item.id)
+    )
+    return rows.map((item) => {
+      if (item.type === 'TEXT') return message(item)
+      const attachments = images
+        .filter((image) => image.messageId === item.id)
+        .map(imagePresentation)
+      if (attachments.length !== item.image_count)
+        throw new ListingApiError(
+          'Unable to load complete private photos. Please retry.',
+          503
+        )
+      return {
+        id: item.id,
+        conversationId: item.conversation_id,
+        senderId: item.sender_id,
+        createdAt: item.created_at,
+        sequence: Number(item.sequence),
+        clientMessageId: item.client_message_id,
+        type: 'IMAGE',
+        images: attachments,
+      }
+    })
+  }
   return {
+    present,
     authorize: actor,
     async list(role: string, cursor?: string) {
       if (!['buying', 'selling'].includes(role))
@@ -296,7 +293,7 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
       const rows = (data || []) as MessageRow[]
       const page = rows.slice(0, 50)
       return {
-        messages: page.reverse().map(message),
+        messages: await present(page.reverse()),
         nextBefore: rows.length > 50 ? Number(page[0].sequence) : null,
       }
     },

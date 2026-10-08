@@ -6,7 +6,7 @@ import { UserAvatar } from '@/components/ui/user-avatar'
 import { StatefulButton } from '@/components/velora/stateful-button'
 import { pageSlideOptions } from '@/lib/page-slide'
 import type { ChatListing } from '@/types/conversation'
-import type { ImageAttachment, Message } from '@/types/message'
+import type { Message } from '@/types/message'
 
 import { MessageAttachments } from './message-attachments'
 import { MessageHistory } from './message-history'
@@ -24,7 +24,8 @@ export function MessagesChat({
   messages,
   currentUserId,
   onSend,
-  onSendImages,
+  onImageSent,
+  imageSendingEnabled = false,
   onRendered,
   historyStatus,
   olderControl,
@@ -39,7 +40,8 @@ export function MessagesChat({
   messages: readonly Message[]
   currentUserId: string
   onSend: (content: string, clientMessageId: string) => Promise<void>
-  onSendImages?: (images: ImageAttachment[]) => void
+  onImageSent?: (message: Message) => Promise<void>
+  imageSendingEnabled?: boolean
   onRendered?: (sequence: number) => void
   historyStatus?: React.ReactNode
   olderControl?: React.ReactNode
@@ -236,9 +238,10 @@ export function MessagesChat({
             <MessageAttachments
               key={`${destination}-${conversationId}`}
               sendClassName={styles.send}
-              sendEnabled={false}
+              conversationId={conversationId}
+              sendEnabled={imageSendingEnabled}
               onCancel={() => setAttachments(false)}
-              onSend={onSendImages || (() => undefined)}
+              onSend={onImageSent || (() => Promise.resolve())}
               onComplete={() => setAttachments(false)}
             />
           </div>

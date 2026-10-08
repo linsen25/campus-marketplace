@@ -38,6 +38,15 @@ module.exports = withNextPlugins([withBundleAnalyzer, withPWA], {
     dynamicStartUrl: false,
     runtimeCaching: [
       {
+        // Private signed media must precede extension-based default image caching.
+        urlPattern: ({ url }) =>
+          /\/storage\/v1\/object\/(?:sign|authenticated)\/chat-images\//.test(
+            url.pathname
+          ),
+        handler: 'NetworkOnly',
+        options: {},
+      },
+      {
         urlPattern: ({ url }) =>
           url.origin === self.location.origin &&
           (url.pathname === '/' ||

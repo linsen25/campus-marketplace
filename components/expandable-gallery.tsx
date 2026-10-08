@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/no-noninteractive-element-interactions -- Image error callbacks renew private media. */
 /* eslint @next/next/no-img-element: off -- Local message object URLs. */
 'use client'
 
@@ -23,8 +24,10 @@ const positions = [
 /** Supplied stacked/shared-layout gallery, adapted to local chat photos. */
 export default function ExpandableGallery({
   images,
+  onImageError,
 }: {
   images: readonly ImageAttachment[]
+  onImageError?: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const id = useId()
@@ -151,6 +154,7 @@ export default function ExpandableGallery({
                     src={image.previewUrl}
                     alt={image.name}
                     draggable={false}
+                    onError={onImageError}
                   />
                 </motion.div>
               </motion.button>

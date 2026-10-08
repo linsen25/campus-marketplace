@@ -4,6 +4,8 @@ type MessageBase = {
   conversationId: string
   senderId: string
   createdAt: string
+  sequence?: number
+  clientMessageId?: string
 }
 
 export type TextMessage = MessageBase & {
@@ -19,6 +21,7 @@ export type ImageAttachment = {
   size: number
   mimeType: string
   previewUrl: string
+  expiresAt?: string
 }
 
 export type ImageMessage = MessageBase & {

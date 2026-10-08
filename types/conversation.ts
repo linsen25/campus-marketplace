@@ -26,4 +26,5 @@ export type Conversation = {
   lastReadSequence: number
   unreadCount: number
   time?: string
+  imageSendingEnabled?: boolean
 }

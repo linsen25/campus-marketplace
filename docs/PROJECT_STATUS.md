@@ -9,7 +9,148 @@ provider was selected. Development and production-mode builds run locally with
 the existing Next.js/PWA configuration. Hosted Supabase databases are separate
 from frontend deployment. See [Netlify reference audit and cleanup](NETLIFY_CLEANUP.md).
 
-### Current Messages Phase 1E-B production rollout (2026-10-07)
+### Current Messages Phase 2E-B production migration (2026-10-07)
+
+The explicitly authorized, unchanged 202610070002 IMAGE migration **APPLIED
+SUCCESSFULLY TO PRODUCTION campus-marketplace**. All six local/remote migration
+versions match. The migration created PRIVATE chat-images with JPEG/PNG/WebP and
+3-MiB limits; no manual bucket change. Catalog/RPC/RLS/grants, database lint,
+credential-safe build and anonymous security checks pass. TEXT schema/API regression
+checks pass; no production test messages or uploads were created.
+
+Authenticated single-account local UI/API smoke on **localhost:3000 PASSED**
+using the existing production session. Normal Buying/Selling and app-context
+probes return 200 with zero conversations; bootstrap is authenticated and
+server-side cookie comparisons match the normal app requests. The real Messages
+UI shows "No conversations yet." IMAGE signing/prepare 404s are expected missing
+message/conversation responses for deliberately nonexistent IDs, not missing
+routes. No reservation, upload or production fixture was created.
+
+IMAGE frontend/API is **LOCALLY VERIFIED AGAINST PRODUCTION** within this
+single-account empty-state/negative-resource scope. Full two-account IMAGE
+mutation testing remains **DEFERRED**; staging already covered it. Temporary
+diagnostic pages/routes and local harness artifacts are removed; the user's
+port 3000 app remains running. Hosted frontend remains NOT DEPLOYED; Realtime
+remains NOT IMPLEMENTED. No commit or push. See
+[Phase 2E-B rollout evidence and smoke status](MESSAGES_IMAGE_PHASE2E_B.md).
+
+### Historical Messages Phase 2E-A production preparation (2026-10-07)
+
+Production IMAGE: **NOT DEPLOYED**. 202610070002: **PENDING PRODUCTION**.
+Fresh backup: **VERIFIED**, external timestamped directory
+20261008T011038Z-pre-images; native PostgreSQL 17.11 custom archive, password-free
+roles, TOC, hashes and manifest. Full archive decoding succeeded without restore;
+current production TEXT schema and empty table-data entries are represented.
+
+Server credential: **READY**. After the user configured the ignored local key and
+APP_ENV=production, continuation verified its production project/role without
+exposing it. The reviewed IMAGE guard now binds staging and production to their
+exact projects and rejects unknown/mismatched/missing-key configurations. Auth/RLS
+checks remain unchanged. Fresh production dry-run proposes only 002; TypeScript,
+focused lint, API/environment/static tests and the production-configured build
+pass. All 45 client scripts contain no privileged key/capability markers.
+
+Phase 2E-A: **READY FOR PHASE 2E-B IMAGE PRODUCTION ROLLOUT**. The initial missing-key
+stop is resolved. Migration and post-migration production smoke still require
+separate authorization; recheck backup freshness before applying. See
+[Phase 2E-A backup, continuation evidence and smoke/recovery plan](MESSAGES_IMAGE_PHASE2E_A.md).
+
+Read-only production check confirms the first five migrations and no IMAGE object
+or bucket collision. No production schema/data change, bucket creation, test data,
+frontend deployment, Realtime, commit or push. Staging verification remains passed.
+
+### Historical Messages Phase 2D final acceptance and pre-flight (2026-10-07)
+
+IMAGE backend: **STAGING VERIFIED**. IMAGE frontend/API: **STAGING E2E
+VERIFIED**. Final real-browser staging acceptance passed 39 groups with
+independent Seller/Buyer/Outsider sessions, failure/retry/cancellation, signed URL
+renewal, TEXT regression, sold/deleted listings and 390/430/1280/1536 layouts.
+Final disposable users/data/Storage/local fixture residue is zero.
+
+Production IMAGE: **NOT DEPLOYED**. Production pre-flight: **READY FOR PHASE 2E
+ROLLOUT PREPARATION**. Read-only catalog inspection confirms TEXT migration
+applied, eight baseline function bodies unchanged and no IMAGE object/bucket
+collisions. Explicit production dry-run proposes only 202610070002, no seeds or
+roles; staging remains linked. Production was not modified.
+
+Before rollout: take a new verified external logical backup (the older backup
+predates TEXT), review production enablement of the intentionally staging-only
+IMAGE guard, and configure the server-only credential securely. No new backup,
+production service-role key, migration application or deployment in this phase.
+Realtime: **NOT IMPLEMENTED**. No functionality/dependency changes, commit or
+push. See [Phase 2D evidence, checks and rollout prerequisites](MESSAGES_IMAGE_PHASE2D.md).
+
+### Historical Messages Phase 2C IMAGE API/frontend (2026-10-07)
+
+Durable IMAGE persistence is **INTEGRATED AND REAL FRONTEND E2E VERIFIED ON
+STAGING**, using the local Next.js application. Actual browser Files flow through
+the existing attachment UI, prepare API, private upload, independent receipt
+verification and atomic finalize. Unified history/preview/read state, five-minute
+private URL renewal, canonical retries and cancellation are implemented. The
+complete staging browser suite passed all 13 groups with independent Seller,
+Buyer and Outsider Auth sessions and generated decodable image/boundary fixtures.
+
+Final staging verification reports zero disposable users, listings, conversations,
+messages, image metadata, reservations, cleanup records or Storage test objects.
+Generated local image/SQL/session artifacts are removed, with no persistent test
+credentials. The private bucket and already-applied Phase 2 migration remain.
+Both migration SQL files and production `.env.local` are unchanged.
+
+Production IMAGE remains **NOT DEPLOYED AND GATED**. New IMAGE endpoints fail
+closed outside staging; the server-only key cannot inherit production dotenv
+through the staging launcher. No production contact/mutation, schema change,
+Realtime, hosted frontend deployment, commit or push. See
+[Phase 2C implementation, acceptance and limits](MESSAGES_PHASE2C.md).
+
+### Historical Messages Phase 2B hosted IMAGE verification (2026-10-07)
+
+The unchanged `202610070002_messages_images.sql` is **AUTHORED, DEPLOYED TO
+STAGING and HOSTED STAGING EXECUTION VERIFIED; NOT DEPLOYED TO PRODUCTION**.
+Confirmed target was western-marketplace-staging (`pcaqxezdfxofysghssyo`); dry-run
+and push applied only this migration. Hosted schema/Storage compatibility, private
+bucket, real Auth/RLS, JPEG/PNG/WebP bytes, 1/4-image finalize, incomplete rejection,
+verified receipts, nonce retries, independent-session concurrency, signed reads,
+historical retention and normal Storage API cleanup passed. No SQL defect/fix,
+reset/reapply, policy weakening or migration-history repair was required.
+
+The unchanged Phase 1 hosted TEXT suite passed all 13 groups. Staging database
+lint found no errors; final fixture/table/object/queue counts are zero, with the
+private bucket retained. Expiry/cleanup-age predicates used explicitly scoped
+administrative fixture-clock setup; no real 24-hour waiting is claimed. See
+[actual results, limitations and cleanup evidence](MESSAGES_IMAGE_STAGING_VERIFICATION.md).
+
+Frontend IMAGE persistence is **NOT INTEGRATED**. IMAGE Send remains **GATED**;
+no application upload/signing route, Realtime or production IMAGE deployment.
+Server-role Storage credentials were used only in the staging test process,
+never browser/public env or reports. Production and Phase 1 runtime source are
+unchanged. No commit or push was performed in Phase 2B. Frontend hosting remains
+**NOT DEPLOYED**. Do not start Phase 2C without separate authorization.
+
+### Historical Messages Phase 2A IMAGE design/SQL authoring (2026-10-07)
+
+Phase 1 TEXT remains production deployed and locally smoke verified; the user
+reports its checkpoint is committed/pushed. Phase 2A adds only the
+[durable IMAGE backend design](MESSAGES_IMAGE_BACKEND_DESIGN.md),
+[202610070002_messages_images.sql](../supabase/migrations/202610070002_messages_images.sql)
+and static contract checks. **AUTHORED ONLY: NOT APPLIED OR EXECUTED.** Staging
+verification and API/frontend integration are pending separate authorization.
+No Supabase connection, bucket creation, production change, Realtime, commit or
+push was performed in Phase 2A. Phase 1 migration, runtime/types and UI are unchanged.
+
+The design uses a private `chat-images` bucket, separate author-only reservations,
+server-verified bytes/hash receipts, one atomic IMAGE with 1-4 ordered immutable
+children (JPEG/PNG/WebP, 3,145,728 bytes each), five-minute server-signed reads
+after participant RLS and a passive cleanup worklist. Direct client Storage
+operations are denied; the future privileged Storage/receipt client is server-only.
+The local backup's Storage schema/installed SDK were inspected offline; actual
+hosted schema/API compatibility must still be checked before Phase 2B application.
+Current durable IMAGE backend remains **NOT IMPLEMENTED/APPLIED**, IMAGE Send
+**DISABLED / GATED** and hosted frontend **NOT DEPLOYED**.
+Safe local checks passed: TypeScript, new-test ESLint, both migration source
+contracts, Messages API/environment guards, 117 documentation links and diff check.
+These are static checks, not SQL/Storage/RLS/concurrency execution evidence.
+
+### Messages Phase 1E-B production rollout baseline (2026-10-07)
 
 The authorized, unchanged `202610070001_messages_text.sql` migration has now
 **successfully applied to production campus-marketplace**. Production migration

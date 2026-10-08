@@ -40,11 +40,7 @@ const emptyCollections = {
 const mergeMessages = (a: readonly Message[], b: readonly Message[]) =>
   Array.from(
     new Map([...a, ...b].map((item) => [item.id, item])).values()
-  ).sort(
-    (left, right) =>
-      (left.type === 'TEXT' ? left.sequence || 0 : 0) -
-      (right.type === 'TEXT' ? right.sequence || 0 : 0)
-  )
+  ).sort((left, right) => (left.sequence || 0) - (right.sequence || 0))
 
 // eslint-disable-next-line complexity -- Owns the existing two responsive screens and their async lifecycle.
 export function Messages({
@@ -253,6 +249,21 @@ export function Messages({
         )
     }
   }
+  const sentImage = async (message: Message) => {
+    if (!mounted.current || account.current !== userId) return
+    const id = message.conversationId
+    setHistories((current) => ({
+      ...current,
+      [id]: mergeMessages(current[id] || [], [message]),
+    }))
+    try {
+      const item = await getConversation(id)
+      if (mounted.current && account.current === userId)
+        updateConversation(item)
+    } catch {
+      /* A presentation refresh cannot undo the committed send. */
+    }
+  }
   const [loadingOlder, setLoadingOlder] = useState(false)
   const loadOlder = async () => {
     if (!selectedId || !before[selectedId] || loadingOlder) return
@@ -308,7 +319,9 @@ export function Messages({
             </button>
           ) : undefined
         }
+        imageSendingEnabled={Boolean(selected.imageSendingEnabled)}
         onSend={send}
+        onImageSent={sentImage}
         onRendered={markRendered}
       />
     ) : null
