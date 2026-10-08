@@ -9,7 +9,80 @@ provider was selected. Development and production-mode builds run locally with
 the existing Next.js/PWA configuration. Hosted Supabase databases are separate
 from frontend deployment. See [Netlify reference audit and cleanup](NETLIFY_CLEANUP.md).
 
-### Current Messages Phase 2E-B production migration (2026-10-07)
+### Current Messages Phase 3E production rollout (2026-10-08)
+
+Realtime backend migration: **PRODUCTION DEPLOYED** to campus-marketplace only.
+Fresh external pre-Realtime backup verified; exactly 202610080001 applied; seven-
+version history and helper/trigger/policy catalog verified. Existing Phase 1/2
+definitions, grants, buckets and application publications remain unchanged.
+Production Realtime is healthy and linked DB lint reports no schema errors.
+The minimal exact-project browser/bridge production gate is enabled locally.
+Frontend: **PRODUCTION-CONFIGURED / AUTHENTICATED SMOKE VERIFIED**. Existing
+production account Buying/Selling/bridge returned 200; own private join passed;
+mount/leave/remount/logout counts were 1/0/1/0, maximum 1; other/malformed/anonymous
+topics were rejected. Phase 1 TEXT and Phase 2 IMAGE remain **PRODUCTION**.
+**Phase 3E COMPLETE; SAFE FOR FINAL PHASE 3 CHECKPOINT COMMIT.** Clean production
+build, TypeScript, focused lint, local tests, browser secret scan, documentation
+links and diff check pass. Temporary smoke routes/server/artifacts were removed;
+external backup is readable; Git index is empty. GlideSelect.jsx global parser
+lint debt remains unchanged. Two-account production mutation: **DEFERRED**.
+Hosted frontend: **NOT DEPLOYED**. No production fixtures/message mutations,
+further migration, commit or push. See [Phase 3E rollout and audit evidence](MESSAGES_REALTIME_PHASE3E.md).
+
+### Historical Messages Phase 3D release acceptance (2026-10-08)
+
+Realtime backend and frontend: **STAGING VERIFIED / FINAL ACCEPTANCE COMPLETE**.
+The concise independent-browser release run passed 28 groups, including live
+TEXT/IMAGE, one-channel lifecycle, unread/reorder, reconnect, privacy,
+retry/IME/gallery and 390/430/1280/1536 layouts; disposable residue is zero.
+Production read-only capability preflight **PASSED**: healthy managed Realtime,
+six expected TEXT/IMAGE migrations and dry-run proposing ONLY 202610080001.
+The candidate hash and staging helper bodies still match Phase 3B. Production-
+configured build and focused checks pass; privileged browser-secret scan is clean.
+GlideSelect.jsx global lint parser debt remains unchanged.
+
+**READY FOR PHASE 3E PRODUCTION ROLLOUT**, with fresh post-IMAGE backup and final
+identity/dry-run gates. Production Realtime **NOT DEPLOYED**; browser/bridge gates
+remain staging-only until the separately authorized rollout. No production
+application schema/data/settings modification or hosted frontend deployment.
+No commit/push. See [Phase 3D evidence, rollout and recovery plan](MESSAGES_REALTIME_PHASE3D.md).
+
+### Historical Messages Phase 3C Realtime integration (2026-10-08)
+
+Realtime backend: **STAGING VERIFIED**. Realtime frontend: **INTEGRATED / STAGING
+E2E VERIFIED** on western-marketplace-staging. The final independent-browser run
+passed 31 groups: live reciprocal TEXT, one/four IMAGE, canonical reconciliation,
+one shared private user channel across Buying/Selling, preview/order/unread,
+rendered read boundaries, upward scroll, recovery, actual server JWT refresh,
+privacy, retries, gallery/IME and 390/430/1280/1536 layouts. All disposable fixture
+counts are zero. TypeScript, focused lint, local regressions and a production-mode
+staging-configured build pass; browser output contains no service-role key or its
+environment reference. Existing GlideSelect.jsx global lint parser debt is unchanged.
+
+Production Realtime: **NOT DEPLOYED**. Browser subscriptions and the token bridge
+are intentionally staging-only in this phase. Hosted frontend: **NOT DEPLOYED**.
+No production contact/data/schema change, new migration application, typing,
+presence, read-receipt feature, commit or push. Natural signed JWT expiry was not
+waited out; the browser test forced disposable SSR expiry metadata and verified
+a genuinely refreshed token. See [Phase 3C evidence and limitations](MESSAGES_REALTIME_PHASE3C.md).
+
+### Historical Messages Phase 3B Realtime backend (2026-10-08)
+
+Phase 3 Realtime backend: **DEPLOYED TO STAGING. HOSTED REALTIME AUTH/DELIVERY
+VERIFIED.** Only western-marketplace-staging received the unchanged 202610080001
+migration. Independent private WebSocket sessions verified participant delivery,
+nine unauthorized joins, receive-only publishing, canonical TEXT/IMAGE APIs,
+zero-partition cold-start persistence, scoped notification failure isolation,
+token refresh, logout teardown and historical/deleted-participant behavior.
+Disposable fixture residue is zero; Phase 1/2 objects and application runtime
+remain unchanged. Frontend Realtime: **NOT INTEGRATED**. Production Realtime:
+**NOT DEPLOYED**. Correctly signed natural JWT expiry was not waited out; cached
+authorization does not imply immediate global bearer-token revocation. See the
+[staging evidence and limitations](MESSAGES_REALTIME_STAGING_VERIFICATION.md),
+[Phase 3A design](MESSAGES_REALTIME_DESIGN.md) and
+[staging-applied migration](../supabase/migrations/202610080001_messages_realtime.sql).
+
+### Messages Phase 2E-B production migration (2026-10-07)
 
 The explicitly authorized, unchanged 202610070002 IMAGE migration **APPLIED
 SUCCESSFULLY TO PRODUCTION campus-marketplace**. All six local/remote migration

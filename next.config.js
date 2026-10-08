@@ -18,6 +18,9 @@ const ifdefOpts = {
 
 /** @type {import('next').NextConfig} */
 module.exports = withNextPlugins([withBundleAnalyzer, withPWA], {
+  env: {
+    NEXT_PUBLIC_MESSAGES_ENV: process.env.APP_ENV || '',
+  },
   generateBuildId: () => 'build',
   eslint: {
     dirs: ['pages', 'components', 'config', 'layouts', 'lib', 'utils', 'hooks'],

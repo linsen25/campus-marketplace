@@ -22,6 +22,14 @@ export async function marketplaceRequest<T>(
   method: string,
   input?: unknown
 ): Promise<T> {
+  if (path === '/api/auth/sign-out' && typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('marketplace-session-ended'))
+    try {
+      localStorage.setItem('marketplace-session-ended', String(Date.now()))
+    } catch {
+      /* No persistent credentials. */
+    }
+  }
   const response = await fetch(path, {
     method,
     cache: 'no-store',
@@ -37,6 +45,8 @@ export async function marketplaceRequest<T>(
     throw new Error(
       body?.error || 'Unable to complete the request. Please try again.'
     )
+  if (path === '/api/auth/sign-out' && typeof window !== 'undefined')
+    window.dispatchEvent(new Event('marketplace-session-ended'))
   return body
 }
 

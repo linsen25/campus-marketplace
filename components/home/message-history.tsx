@@ -1,5 +1,11 @@
 /* eslint-disable jsx-a11y/no-noninteractive-tabindex -- The history viewport must support keyboard scrolling. */
-import { useLayoutEffect, useRef } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useCallback,
+} from 'react'
 
 import { UserAvatar } from '@/components/ui/user-avatar'
 import { groupMessages } from '@/lib/message-presentation'
@@ -43,35 +49,110 @@ export function MessageHistory({
     height: 0,
     active: false,
   })
+  const following = useRef(true)
+  const anchor = useRef<{ id: string; top: number } | null>(null)
+  const [newMessages, setNewMessages] = useState(false)
+  const painted = useRef<ReturnType<typeof requestAnimationFrame>>()
+  const observe = useCallback(() => {
+    const viewport = body.current
+    if (!viewport) return
+    following.current =
+      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80
+    const bounds = viewport.getBoundingClientRect()
+    const visible = Array.from(
+      viewport.querySelectorAll<HTMLElement>('[data-message-id]')
+    ).filter((row) => {
+      const box = row.getBoundingClientRect()
+      return box.bottom > bounds.top && box.top < bounds.bottom
+    })
+    const first = visible[0]
+    anchor.current = first
+      ? {
+          id: first.dataset.messageId || '',
+          top: first.getBoundingClientRect().top - bounds.top,
+        }
+      : null
+    if (following.current) setNewMessages(false)
+    if (painted.current) cancelAnimationFrame(painted.current)
+    if (
+      !active ||
+      !onRendered ||
+      document.visibilityState !== 'visible' ||
+      !viewport.getBoundingClientRect().width
+    )
+      return
+    const highest = visible.reduce(
+      (sequence, row) =>
+        Math.max(sequence, Number(row.dataset.messageSequence || 0)),
+      0
+    )
+    painted.current = requestAnimationFrame(() => {
+      if (document.visibilityState === 'visible' && highest) onRendered(highest)
+    })
+  }, [active, onRendered])
   useLayoutEffect(() => {
     const viewport = body.current
     if (!viewport) return
-    const lastId = messages[messages.length - 1]?.id || ''
+    const last = messages[messages.length - 1]
+    const changed = previous.current.lastId !== (last?.id || '')
+    const initial =
+      previous.current.conversationId !== conversationId ||
+      !previous.current.active
     if (active) {
       if (
-        previous.current.conversationId !== conversationId ||
-        !previous.current.active ||
-        previous.current.lastId !== lastId
-      )
+        initial ||
+        following.current ||
+        (changed && last?.senderId === currentUserId)
+      ) {
         viewport.scrollTop = viewport.scrollHeight
-      else if (viewport.scrollHeight > previous.current.height)
-        viewport.scrollTop += viewport.scrollHeight - previous.current.height
+      } else {
+        const row = Array.from(
+          viewport.querySelectorAll<HTMLElement>('[data-message-id]')
+        ).find((item) => item.dataset.messageId === anchor.current?.id)
+        if (row && anchor.current)
+          viewport.scrollTop +=
+            row.getBoundingClientRect().top -
+            viewport.getBoundingClientRect().top -
+            anchor.current.top
+        if (changed) setNewMessages(true)
+      }
     }
     previous.current = {
       conversationId,
-      lastId,
+      lastId: last?.id || '',
       height: viewport.scrollHeight,
       active,
     }
-  }, [conversationId, messages, active])
-
-  const highest = messages.reduce(
-    (sequence, item) => Math.max(sequence, item.sequence || 0),
-    0
-  )
-  useLayoutEffect(() => {
-    if (active && highest > 0) onRendered?.(highest)
-  }, [active, highest, conversationId, onRendered, messages])
+    observe()
+  }, [conversationId, messages, active, currentUserId, observe, newMessages])
+  useEffect(() => {
+    const viewport = body.current
+    if (!viewport) return undefined
+    viewport.addEventListener('scroll', observe)
+    document.addEventListener('visibilitychange', observe)
+    const resize = new ResizeObserver(() => {
+      if (following.current && active)
+        viewport.scrollTop = viewport.scrollHeight
+      else {
+        const row = Array.from(
+          viewport.querySelectorAll<HTMLElement>('[data-message-id]')
+        ).find((item) => item.dataset.messageId === anchor.current?.id)
+        if (row && anchor.current)
+          viewport.scrollTop +=
+            row.getBoundingClientRect().top -
+            viewport.getBoundingClientRect().top -
+            anchor.current.top
+      }
+      observe()
+    })
+    Array.from(viewport.children).forEach((child) => resize.observe(child))
+    return () => {
+      viewport.removeEventListener('scroll', observe)
+      document.removeEventListener('visibilitychange', observe)
+      resize.disconnect()
+      if (painted.current) cancelAnimationFrame(painted.current)
+    }
+  }, [observe, messages, active])
 
   return (
     <div
@@ -82,6 +163,18 @@ export function MessageHistory({
       data-message-history={conversationId}
       tabIndex={0}
     >
+      {newMessages && (
+        <button
+          type="button"
+          style={{ position: 'sticky', top: 0, zIndex: 1 }}
+          onClick={() => {
+            if (body.current) body.current.scrollTop = body.current.scrollHeight
+            observe()
+          }}
+        >
+          New messages ? Jump to latest
+        </button>
+      )}
       {status}
       {olderControl}
       {groupMessages(messages).map((group) => (
@@ -100,6 +193,7 @@ export function MessageHistory({
                 key={message.id}
                 className={styles.messageRow}
                 data-message-id={message.id}
+                data-message-sequence={message.sequence}
                 data-sent={sent}
               >
                 {!sent && (

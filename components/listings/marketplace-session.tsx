@@ -43,10 +43,6 @@ export function MarketplaceSessionProvider({
       '/api/auth/session',
       'GET'
     )
-    if (!data.seller)
-      throw new Error(
-        'Unable to load your signed-in account. Please try signing in again.'
-      )
     if (version === requestVersion.current)
       setState({
         ...initialSession,

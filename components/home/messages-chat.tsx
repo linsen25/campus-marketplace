@@ -157,7 +157,9 @@ export function MessagesChat({
             active={active}
             status={historyStatus}
             olderControl={olderControl}
-            onRendered={attachmentMounted ? undefined : onRendered}
+            onRendered={
+              attachmentMounted || showListingPreview ? undefined : onRendered
+            }
           />
           {sendError && (
             <p role="alert" className={styles.sendError}>

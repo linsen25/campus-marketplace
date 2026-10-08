@@ -15,7 +15,16 @@ export function MessagePhotos({ message }: { message: ImageMessage }) {
   const mounted = useRef(true)
   const lastRenewal = useRef(0)
   useEffect(() => {
-    setImages(message.images)
+    setImages((current) =>
+      message.images.map((image) => {
+        const previous = current.find((item) => item.id === image.id)
+        return previous &&
+          Date.parse(previous.expiresAt || '') >
+            Date.parse(image.expiresAt || '')
+          ? previous
+          : image
+      })
+    )
   }, [message.images])
   useEffect(
     () => () => {

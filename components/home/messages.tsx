@@ -27,6 +27,12 @@ import {
   sendText,
   readConversation,
 } from '@/lib/messages-api'
+import { connectMessagesRealtime } from '@/lib/messages-realtime'
+import {
+  createMessageRefreshQueue,
+  fetchCanonicalCatchUp,
+  mergeCanonicalMessages,
+} from '@/lib/messages-reconciliation'
 import { pageSlideOptions } from '@/lib/page-slide'
 import type { Message } from '@/types/message'
 
@@ -37,10 +43,7 @@ const emptyCollections = {
   buying: [] as Conversation[],
   selling: [] as Conversation[],
 }
-const mergeMessages = (a: readonly Message[], b: readonly Message[]) =>
-  Array.from(
-    new Map([...a, ...b].map((item) => [item.id, item])).values()
-  ).sort((left, right) => (left.sequence || 0) - (right.sequence || 0))
+const mergeMessages = mergeCanonicalMessages
 
 // eslint-disable-next-line complexity -- Owns the existing two responsive screens and their async lifecycle.
 export function Messages({
@@ -52,10 +55,15 @@ export function Messages({
 }) {
   const active = destination === 'selling' ? 'selling' : 'buying'
   const router = useRouter()
-  const { seller, loading: sessionLoading } = useMarketplaceSession()
+  const {
+    seller,
+    loading: sessionLoading,
+    refresh: refreshSession,
+  } = useMarketplaceSession()
   const userId = seller?.id
   const [collections, setCollections] = useState(emptyCollections)
   const [histories, setHistories] = useState<Record<string, Message[]>>({})
+  const [catchUp, setCatchUp] = useState<Record<string, Message[]>>({})
   const [loaded, setLoaded] = useState<Record<string, boolean>>({})
   const [before, setBefore] = useState<Record<string, number | null>>({})
   const [cursor, setCursor] = useState<Record<string, string | null>>({})
@@ -70,6 +78,14 @@ export function Messages({
     Record<'buying' | 'selling', string | null>
   >({ buying: null, selling: null })
   const consumedEntry = useRef<string | null>(null)
+  const sessionOpen = useRef(true)
+  const accountGeneration = useRef(0)
+  const previousAccount = useRef(userId)
+  if (previousAccount.current !== userId) {
+    previousAccount.current = userId
+    accountGeneration.current += 1
+    sessionOpen.current = Boolean(userId)
+  }
   const account = useRef(userId)
   account.current = userId
   const mounted = useRef(true)
@@ -84,6 +100,7 @@ export function Messages({
     setCollections(emptyCollections)
     setHistories({})
     setLoaded({})
+    setCatchUp({})
     setBefore({})
     setCursor({})
     setSelectedIds({ buying: null, selling: null })
@@ -92,69 +109,72 @@ export function Messages({
   useEffect(() => setDetailDestination(null), [active])
   const showDetail = detailDestination === active
   const updateConversation = useCallback((item: Conversation) => {
-    setCollections((current) => ({
-      ...current,
-      [item.role]: [
-        ...current[item.role].filter((entry) => entry.id !== item.id),
-        item,
-      ],
-    }))
+    setCollections((current) => {
+      const previous = current[item.role].find((entry) => entry.id === item.id)
+      if (
+        previous &&
+        (previous.lastMessageSequence > item.lastMessageSequence ||
+          (previous.lastMessageSequence === item.lastMessageSequence &&
+            previous.lastReadSequence > item.lastReadSequence))
+      )
+        return current
+      return {
+        ...current,
+        [item.role]: [
+          ...current[item.role].filter((entry) => entry.id !== item.id),
+          item,
+        ],
+      }
+    })
   }, [])
+  const refreshJobs = useRef<ReturnType<typeof createMessageRefreshQueue>>()
   useEffect(() => {
     if (!userId) {
       setListLoading(sessionLoading)
-      return undefined
+      return
     }
-    let valid = true
     setListLoading(true)
     setError('')
-    listConversations(active)
-      .then(async (page) => {
-        if (!valid) return
-        let entries = page.conversations
-        const requested =
-          router.query.section === 'messages' &&
-          typeof router.query.conversation === 'string'
-            ? router.query.conversation
-            : null
-        if (requested && consumedEntry.current !== requested) {
-          const item =
-            entries.find((entry) => entry.id === requested) ||
-            (await getConversation(requested))
-          if (!valid) return
-          if (item.role === active) {
-            if (!entries.some((entry) => entry.id === item.id))
-              entries = [...entries, item]
-            setSelectedIds((ids) => ({ ...ids, [active]: item.id }))
-            consumedEntry.current = requested
-            setDetailDestination(active)
-          }
-        }
-        if (!mobile)
-          setSelectedIds((ids) => ({
-            ...ids,
-            [active]: ids[active] || entries[0]?.id || null,
-          }))
-        setCollections((current) => ({ ...current, [active]: entries }))
-        setCursor((current) => ({ ...current, [active]: page.nextCursor }))
+    refreshJobs.current?.dirty(active)
+  }, [active, userId, sessionLoading, retry])
+  useEffect(() => {
+    if (!userId) return undefined
+    let valid = true
+    const generation = accountGeneration.current
+    const requested =
+      router.query.section === 'messages' &&
+      typeof router.query.conversation === 'string'
+        ? router.query.conversation
+        : null
+    if (!requested || consumedEntry.current === requested) return undefined
+    getConversation(requested)
+      .then((item) => {
+        if (
+          !valid ||
+          !sessionOpen.current ||
+          accountGeneration.current !== generation ||
+          account.current !== userId ||
+          item.role !== active
+        )
+          return
+        updateConversation(item)
+        setSelectedIds((ids) => ({ ...ids, [active]: item.id }))
+        consumedEntry.current = requested
+        setDetailDestination(active)
       })
-      .catch((reason) => {
-        if (valid) setError(reason.message)
-      })
-      .finally(() => {
-        if (valid) setListLoading(false)
+      .catch(() => {
+        if (valid) setError('Unable to open this conversation. Please retry.')
       })
     return () => {
       valid = false
     }
   }, [
     active,
-    mobile,
     userId,
-    sessionLoading,
     retry,
     router.query.section,
     router.query.conversation,
+    updateConversation,
   ])
   const conversations = sortConversationsByRecent(collections[active])
   const selected =
@@ -163,62 +183,203 @@ export function Messages({
   const selectedId = selected?.id
   const chatActive = !mobile || showDetail
   useEffect(() => {
-    if (!selectedId || !chatActive || !userId) return undefined
+    if (selectedId && chatActive && userId)
+      refreshJobs.current?.dirty('history')
+  }, [selectedId, chatActive, userId, retry])
+  const realtimeView = useRef({ selectedId, chatActive, active })
+  realtimeView.current = { selectedId, chatActive, active }
+  const historyChain = useRef<Promise<unknown>>(Promise.resolve())
+  const readHistory = useCallback((id: string, cursorBefore?: number) => {
+    const request = historyChain.current.then(() =>
+      getMessageHistory(id, cursorBefore)
+    )
+    historyChain.current = request.catch(() => {})
+    return request
+  }, [])
+  const historyCache = useRef(histories)
+  historyCache.current = histories
+  const viewVersion = useRef(0)
+  const previousView = useRef('')
+  const viewKey = `${userId}:${selectedId}:${chatActive}:${active}`
+  if (previousView.current !== viewKey) {
+    previousView.current = viewKey
+    viewVersion.current += 1
+  }
+  const sessionRefresh = useRef(refreshSession)
+  sessionRefresh.current = refreshSession
+  const selectedIdsRef = useRef(selectedIds)
+  selectedIdsRef.current = selectedIds
+  useEffect(() => {
+    if (!userId) return undefined
     let valid = true
-    setHistoryError('')
-    getMessageHistory(selectedId)
-      .then((page) => {
+    const generation = accountGeneration.current
+    const queue = createMessageRefreshQueue(async (scope) => {
+      const version = viewVersion.current
+      const view = realtimeView.current
+      const accepts = () =>
+        valid &&
+        mounted.current &&
+        account.current === userId &&
+        sessionOpen.current &&
+        accountGeneration.current === generation
+      try {
+        if (scope !== 'history') {
+          const page = await listConversations(scope)
+          const selectedOutside = selectedIdsRef.current[scope]
+          const detail =
+            selectedOutside &&
+            !page.conversations.some((item) => item.id === selectedOutside)
+              ? await getConversation(selectedOutside).catch(() => null)
+              : null
+          if (!accepts()) return
+          setCollections((current) => ({
+            ...current,
+            [scope]: detail
+              ? [...page.conversations, detail]
+              : page.conversations,
+          }))
+          setCursor((current) => ({ ...current, [scope]: page.nextCursor }))
+          if (scope === realtimeView.current.active) {
+            setListLoading(false)
+            setError('')
+          }
+        } else if (
+          view.selectedId &&
+          view.chatActive &&
+          document.visibilityState === 'visible'
+        ) {
+          const id = view.selectedId
+          const old = historyCache.current[id] || []
+          const result = await fetchCanonicalCatchUp(old, (older) =>
+            readHistory(id, older)
+          )
+          if (!accepts() || viewVersion.current !== version) return
+          const incoming = result.messages
+          const gap = result.gap
+          setHistories((current) => ({
+            ...current,
+            [id]: mergeMessages(current[id] || [], incoming),
+          }))
+          setBefore((current) => ({
+            ...current,
+            [id]:
+              !gap &&
+              old[0] &&
+              (old[0].sequence || 0) <= (incoming[0]?.sequence || 0) &&
+              current[id] !== undefined
+                ? current[id]
+                : result.nextBefore,
+          }))
+          setCatchUp((current) => ({ ...current, [id]: gap ? incoming : [] }))
+          setLoaded((current) => ({ ...current, [id]: true }))
+          setHistoryError('')
+        }
+      } catch {
+        if (
+          accepts() &&
+          scope !== 'history' &&
+          scope === realtimeView.current.active
+        ) {
+          setListLoading(false)
+          setError('Unable to refresh conversations. Please retry.')
+        }
+        if (accepts() && scope === 'history' && viewVersion.current === version)
+          setHistoryError('Unable to refresh messages. Please retry.')
+      }
+    })
+    refreshJobs.current = queue
+    queue.dirty('buying')
+    queue.dirty('selling')
+    queue.dirty('history')
+    const recover = () => {
+      if (!valid) return
+      queue.dirty('buying')
+      queue.dirty('selling')
+      queue.dirty('history')
+    }
+    const stop = connectMessagesRealtime(
+      userId,
+      (signal) => {
         if (!valid) return
-        setHistories((current) => ({
-          ...current,
-          [selectedId]: mergeMessages(current[selectedId] || [], page.messages),
-        }))
-        setBefore((current) => ({ ...current, [selectedId]: page.nextBefore }))
-        setLoaded((current) => ({ ...current, [selectedId]: true }))
-      })
-      .catch((reason) => {
-        if (valid) setHistoryError(reason.message)
-      })
+        queue.dirty(signal.role)
+        const view = realtimeView.current
+        if (view.chatActive && signal.conversationId === view.selectedId)
+          queue.dirty('history')
+      },
+      recover,
+      () => {
+        valid = false
+        sessionOpen.current = false
+        accountGeneration.current += 1
+        queue.stop()
+        sessionRefresh.current().catch(() => {})
+      }
+    )
     return () => {
       valid = false
+      queue.stop()
+      stop()
+      refreshJobs.current = undefined
     }
-  }, [selectedId, chatActive, userId, retry])
+  }, [userId, readHistory])
   const acknowledged = useRef<Record<string, number>>({})
+  const pendingRead = useRef<Record<string, number>>({})
+  const reading = useRef(new Set<string>())
   useEffect(() => {
     acknowledged.current = {}
+    pendingRead.current = {}
+    reading.current.clear()
   }, [userId])
   const markRendered = useCallback(
     (sequence: number) => {
       if (
+        !sessionOpen.current ||
         !selectedId ||
         !chatActive ||
         !userId ||
+        document.visibilityState !== 'visible' ||
         sequence <= (acknowledged.current[selectedId] || 0)
       )
         return
       const id = selectedId
-      acknowledged.current[id] = sequence
-      readConversation(id, sequence)
-        .then((result) => {
-          if (!mounted.current || account.current !== userId) return
-          setCollections((current) => ({
-            ...current,
-            [active]: current[active].map((item) =>
-              item.id === id && result.lastReadSequence >= item.lastReadSequence
-                ? {
-                    ...item,
-                    unreadCount: result.unreadCount,
-                    lastReadSequence: result.lastReadSequence,
-                  }
-                : item
-            ),
-          }))
-        })
-        .catch((reason) => {
-          if (!mounted.current || account.current !== userId) return
-          delete acknowledged.current[id]
-          setHistoryError(reason.message)
-        })
+      const generation = accountGeneration.current
+      pendingRead.current[id] = Math.max(pendingRead.current[id] || 0, sequence)
+      if (reading.current.has(id)) return
+      reading.current.add(id)
+      const flush = async () => {
+        try {
+          while (
+            sessionOpen.current &&
+            accountGeneration.current === generation &&
+            mounted.current &&
+            account.current === userId &&
+            realtimeView.current.selectedId === id &&
+            realtimeView.current.chatActive &&
+            document.visibilityState === 'visible' &&
+            (pendingRead.current[id] || 0) > (acknowledged.current[id] || 0)
+          ) {
+            const result = await readConversation(id, pendingRead.current[id])
+            if (!mounted.current || account.current !== userId) return
+            acknowledged.current[id] = Math.max(
+              acknowledged.current[id] || 0,
+              result.lastReadSequence
+            )
+            // Read response can race a newer message; refetch the canonical list.
+            refreshJobs.current?.dirty(active)
+          }
+        } catch {
+          if (
+            mounted.current &&
+            account.current === userId &&
+            sessionOpen.current &&
+            accountGeneration.current === generation
+          )
+            setHistoryError('Unable to acknowledge messages. Please retry.')
+        } finally {
+          reading.current.delete(id)
+        }
+      }
+      flush()
     },
     [selectedId, chatActive, userId, active]
   )
@@ -228,8 +389,15 @@ export function Messages({
     if (!selectedId || !userId)
       throw new Error('Open a conversation before sending.')
     const id = selectedId
+    const generation = accountGeneration.current
     const message = await sendText(id, content, clientMessageId)
-    if (!mounted.current || account.current !== userId) return
+    if (
+      !mounted.current ||
+      account.current !== userId ||
+      !sessionOpen.current ||
+      accountGeneration.current !== generation
+    )
+      return
     setHistories((current) => ({
       ...current,
       [id]: mergeMessages(current[id] || [], [message]),
@@ -238,10 +406,20 @@ export function Messages({
     // A detail-refresh failure must not report an already committed send as failed.
     try {
       const item = await getConversation(id)
-      if (mounted.current && account.current === userId)
+      if (
+        mounted.current &&
+        account.current === userId &&
+        sessionOpen.current &&
+        accountGeneration.current === generation
+      )
         updateConversation(item)
     } catch (reason) {
-      if (mounted.current && account.current === userId)
+      if (
+        mounted.current &&
+        account.current === userId &&
+        sessionOpen.current &&
+        accountGeneration.current === generation
+      )
         setError(
           reason instanceof Error
             ? reason.message
@@ -250,7 +428,9 @@ export function Messages({
     }
   }
   const sentImage = async (message: Message) => {
-    if (!mounted.current || account.current !== userId) return
+    if (!mounted.current || account.current !== userId || !sessionOpen.current)
+      return
+    const generation = accountGeneration.current
     const id = message.conversationId
     setHistories((current) => ({
       ...current,
@@ -258,7 +438,12 @@ export function Messages({
     }))
     try {
       const item = await getConversation(id)
-      if (mounted.current && account.current === userId)
+      if (
+        mounted.current &&
+        account.current === userId &&
+        sessionOpen.current &&
+        accountGeneration.current === generation
+      )
         updateConversation(item)
     } catch {
       /* A presentation refresh cannot undo the committed send. */
@@ -268,10 +453,17 @@ export function Messages({
   const loadOlder = async () => {
     if (!selectedId || !before[selectedId] || loadingOlder) return
     const id = selectedId
+    const generation = accountGeneration.current
     setLoadingOlder(true)
     try {
-      const page = await getMessageHistory(id, before[id] || undefined)
-      if (!mounted.current || account.current !== userId) return
+      const page = await readHistory(id, before[id] || undefined)
+      if (
+        !mounted.current ||
+        account.current !== userId ||
+        !sessionOpen.current ||
+        accountGeneration.current !== generation
+      )
+        return
       setHistories((current) => ({
         ...current,
         [id]: mergeMessages(current[id] || [], page.messages),
@@ -313,7 +505,39 @@ export function Messages({
         active={chatActive}
         historyStatus={status}
         olderControl={
-          before[selected.id] ? (
+          // eslint-disable-next-line no-nested-ternary -- Gap recovery precedes the existing older-page control.
+          catchUp[selected.id]?.length ? (
+            <button
+              type="button"
+              onClick={() => {
+                setHistories((current) => ({
+                  ...current,
+                  [selected.id]: catchUp[selected.id],
+                }))
+                setCatchUp((current) => ({ ...current, [selected.id]: [] }))
+                const generation = accountGeneration.current
+                const id = selected.id
+                requestAnimationFrame(() => {
+                  if (
+                    !sessionOpen.current ||
+                    accountGeneration.current !== generation ||
+                    realtimeView.current.selectedId !== id ||
+                    !realtimeView.current.chatActive
+                  )
+                    return
+                  const viewport = document.querySelector<HTMLElement>(
+                    `[data-message-history="${id}"]`
+                  )
+                  if (viewport) {
+                    viewport.scrollTop = viewport.scrollHeight
+                    viewport.dispatchEvent(new Event('scroll'))
+                  }
+                })
+              }}
+            >
+              Load latest messages
+            </button>
+          ) : before[selected.id] ? (
             <button type="button" disabled={loadingOlder} onClick={loadOlder}>
               Load older messages
             </button>
