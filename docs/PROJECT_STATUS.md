@@ -1,5 +1,19 @@
 # Campus Marketplace — Project Status
 
+## Current checkpoint and next-session entry point (2026-10-09)
+
+Git inspection confirms main at **4023d04** (`fix: improve auth signup and session
+flow`), matching origin/main and the read-only remote branch hash. Auth UX cleanup
+is committed/pushed; the working tree was clean before this documentation-only
+handoff task. Earlier no-commit/push statements below describe historical audit
+turns rather than the current Git checkpoint.
+
+Start a new session with [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md). The next priority
+is [Order/Payment product design](ORDER_PAYMENT_PRODUCT_DESIGN.md): **DESIGN IN
+PROGRESS / NOT IMPLEMENTED**, no provider/schema/migration/API/live money selected
+or created. Hosted frontend deployment comes later. Auth is production deployed
+and verified; real UWO email delivery remains deferred until custom SMTP.
+
 ## Current repository architecture (2026-10-07)
 
 There is currently **no hosted frontend deployment**. The user confirmed this
