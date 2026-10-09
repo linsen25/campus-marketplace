@@ -239,7 +239,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
       setIntent(null)
       pendingIntent.current = null
       const startedAt = performance.now()
-      const preparation = prepareMarket()
+      const preparation = prepareMarket(next)
       setSuccess({
         request: next,
         username: undefined,
@@ -249,30 +249,9 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
         attempt: 0,
         complete: resolve,
       })
-      // Identity resolution overlaps route preparation; neither keeps the form.
-      refresh().then(
-        (seller) => {
-          setSuccess((current) =>
-            current?.request === next
-              ? {
-                  ...current,
-                  username: seller?.displayName,
-                  usernameReady: true,
-                }
-              : current
-          )
-        },
-        () => {
-          setSuccess((current) =>
-            current?.request === next
-              ? { ...current, usernameReady: true }
-              : current
-          )
-        }
-      )
     })
   }
-  function prepareMarket(): Promise<void> {
+  function prepareMarket(request: AuthIntent): Promise<void> {
     const controller = new AbortController()
     let timer: ReturnType<typeof setTimeout>
     const timeout = new Promise<never>((_, reject) => {
@@ -282,6 +261,16 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
       }, 30000)
     })
     const destination = (async () => {
+      // Resolve the cookie-backed account before navigating. A profile/session
+      // failure belongs to the signed-in transition, never a second login attempt.
+      const seller = await refresh()
+      if (!seller) throw new Error('Authenticated account is unavailable.')
+      if (controller.signal.aborted) return
+      setSuccess((current) =>
+        current?.request === request
+          ? { ...current, username: seller.displayName, usernameReady: true }
+          : current
+      )
       const navigated = await router.push('/listings')
       if (!navigated || window.location.pathname !== '/listings')
         throw new Error('Navigation cancelled.')
@@ -330,7 +319,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
           onRetry={() =>
             setSuccess({
               ...success,
-              preparation: prepareMarket(),
+              preparation: prepareMarket(success.request),
               startedAt: performance.now(),
               attempt: success.attempt + 1,
             })

@@ -9,6 +9,55 @@ provider was selected. Development and production-mode builds run locally with
 the existing Next.js/PWA configuration. Hosted Supabase databases are separate
 from frontend deployment. See [Netlify reference audit and cleanup](NETLIFY_CLEANUP.md).
 
+### Auth UX cleanup (2026-10-09)
+
+- Auth UX cleanup: **PRODUCTION DEPLOYED / VERIFIED**.
+- Pending username correction migration: **PRODUCTION**.
+- Existing-account sign-in transition: **VERIFIED**.
+- Messages/Realtime Auth regression: **VERIFIED**.
+- Real UWO email delivery: **DEFERRED UNTIL CUSTOM SMTP**.
+
+Baseline a977fc9. Successful sign-in now awaits the verified session/profile
+before Marketplace navigation; bootstrap failure retries Market without another
+credential submission. Signup now distinguishes Create, Verify, Resend, Edit and
+Resume, keeps Create's blue success check, and saves edited passwords only after
+OTP/profile verification. Safe values remain available during editing; no token
+or password is persisted by this flow. Local intercepted browser tests cover
+390/430/1280/1536; Auth/session/Realtime regressions, focused lint, TypeScript and
+production build pass. The original intermittent real-account error was not
+reproduced or guessed.
+
+The authorized new Auth migration 202610090001_auth_pending_username.sql is
+**PRODUCTION**. Pending correction uses an
+original-signup-bound HttpOnly capability and database-authoritative unverified
+state; verified seven-day cooldown, uniqueness and direct-write restrictions
+remain intact. Hosted staging mutation tests pass using disposable unverified
+fixtures and admin-generated OTPs; actual old OTP rejection, collisions, races,
+password edits and verified cooldown were checked. Disposable residue is zero.
+The focused routing fix is production deployed: explicit fresh Create
+routes to /signup once, server-proven pending Resume/Resend routes to /resend,
+and missing/stale/verified drafts cannot dispatch provider resend. Unknown draft
+failures use one generic response and reset the UI to Create. Deterministic
+browser/API tests run on 127.0.0.1:3112 with zero cross-origin Auth requests.
+The earlier hosted event came from localhost:3000 and was a resend no-op; no
+3112-to-3000 proxy/redirect was found. **REAL UWO EMAIL DELIVERY: DEFERRED UNTIL
+CUSTOM SMTP IS CONFIGURED LATER**, per user scope. No SMTP change or real email
+send was made for this fix. See [Auth UX evidence and limits](AUTH_UX_CLEANUP.md).
+The production Auth migration was applied after a fresh verified logical backup,
+identity/hash checks and a dry-run proposing only that migration. Post-apply
+history, ownership/grants, authoritative Auth checks, 168-hour cooldown and direct
+write protections pass. Production DB lint finds no schema errors; messaging
+functions/triggers/policies/publications are unchanged. The user confirmed normal
+existing-account sign-in and successful transition into Market; the original
+reported issue concerned that post-authentication transition, not Login itself.
+Final production-configured localhost smoke passed: authenticated session and
+Buying/Selling/bridge HTTP 200, Messages UI, exactly one private channel, successful
+join, logout HTTP 200, zero channels afterward and post-logout API 401. Final
+runtime errors, unhandled rejections, probe errors and timeout are zero. Temporary
+smoke routes, instrumentation and server were removed. No hosted
+frontend deployment, Payments, email sends, SMTP configuration, commit or push.
+Phase 1/2/3 messaging is preserved.
+
 ### Current Messages Phase 3E production rollout (2026-10-08)
 
 Realtime backend migration: **PRODUCTION DEPLOYED** to campus-marketplace only.

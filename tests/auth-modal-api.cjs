@@ -55,6 +55,8 @@ async function main() {
   }
   let failure = null
   let passwordFailure = null
+  let pendingProofFailure = false
+  let usernameFailure = false
   const calls = []
   global.fetch = async (url, options = {}) => {
     const pathname = new URL(url).pathname
@@ -63,22 +65,61 @@ async function main() {
     const json = (data, status = 200) =>
       new Response(JSON.stringify(data), {
         status,
-        headers: { 'Content-Type': 'application/json', 'X-Supabase-Api-Version': '2024-01-01' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Supabase-Api-Version': '2024-01-01',
+        },
       })
-    if (passwordFailure && pathname.endsWith('/user') && options.method === 'PUT')
+    if (
+      passwordFailure &&
+      pathname.endsWith('/user') &&
+      options.method === 'PUT'
+    )
       return json(passwordFailure.body, passwordFailure.status)
-    if (failure && pathname.startsWith('/auth/') && !pathname.endsWith('/logout'))
+    if (
+      failure &&
+      pathname.startsWith('/auth/') &&
+      !pathname.endsWith('/logout')
+    )
       return json(failure.body, failure.status)
-    if (pathname.endsWith('/rpc/marketplace_username_available')) return json(true)
-    if (pathname.endsWith('/rpc/marketplace_confirm_username')) return json(null)
-    if (pathname.endsWith('/profiles')) return json({ id: user.id, display_name: 'Test_member' })
+    if (pathname.endsWith('/rpc/marketplace_correct_pending_username'))
+      return pendingProofFailure
+        ? json({ code: '42501', message: 'Pending signup unavailable.' }, 403)
+        : json(null)
+    if (pathname.endsWith('/rpc/marketplace_username_available'))
+      return json(true)
+    if (
+      usernameFailure &&
+      pathname.endsWith('/rpc/marketplace_confirm_username')
+    )
+      return json(
+        {
+          code: '23514',
+          message: 'Use the username associated with this verification.',
+        },
+        400
+      )
+    if (pathname.endsWith('/rpc/marketplace_confirm_username'))
+      return json(null)
+    if (pathname.endsWith('/profiles'))
+      return json({ id: user.id, display_name: 'Test_member' })
     if (pathname.endsWith('/signup')) return json(user)
     if (pathname.endsWith('/otp')) {
-      assert.equal(input.create_user, false, 'Legacy OTP must never create an Auth user')
-      assert(!input.data?.username, 'Compatibility login must not invent a username')
+      assert.equal(
+        input.create_user,
+        false,
+        'Legacy OTP must never create an Auth user'
+      )
+      assert(
+        !input.data?.username,
+        'Compatibility login must not invent a username'
+      )
       return input.email === user.email
         ? json({})
-        : json({ code: 'otp_disabled', msg: 'Signups not allowed for otp' }, 400)
+        : json(
+            { code: 'otp_disabled', msg: 'Signups not allowed for otp' },
+            400
+          )
     }
     if (pathname.endsWith('/resend') || pathname.endsWith('/recover'))
       return json({})
@@ -130,12 +171,7 @@ async function main() {
   const { passwordRules, validSignupPassword } = load('lib/auth-password.ts')
   assert.deepEqual(
     passwordRules.map((r) => r.label),
-    [
-      '8+ characters',
-      '1 uppercase letter',
-      '1 number',
-      '1 symbol',
-    ]
+    ['8+ characters', '1 uppercase letter', '1 number', '1 symbol']
   )
   assert(validSignupPassword('PASSWORD1!')) // Lowercase is not an invented rule.
   assert(validSignupPassword('11111111A!'))
@@ -151,54 +187,355 @@ async function main() {
     assert.equal((await request('signup-code', body)).statusCode, 400)
     assert.equal(calls.length, before, 'Invalid signup must not reach Supabase')
   }
+  const beforeWrongOrigin = calls.length
+  assert.equal(
+    (
+      await request('signup-code', input, {
+        host: '127.0.0.1:3112',
+        origin: 'http://localhost:3000',
+      })
+    ).statusCode,
+    403
+  )
+  assert.equal(
+    calls.length,
+    beforeWrongOrigin,
+    'Cross-port/origin signup rejected before provider'
+  )
+  const beforeFreshSend = calls.length
   assert.equal((await request('signup-code', input)).statusCode, 200)
+  assert.equal(
+    calls.slice(beforeFreshSend).filter((c) => c.pathname === '/auth/v1/signup')
+      .length,
+    1
+  )
+  assert.equal(
+    calls.slice(beforeFreshSend).filter((c) => c.pathname === '/auth/v1/resend')
+      .length,
+    0
+  )
   assert.equal(calls.at(-1).input.password, input.password)
   for (const password of ['11111111A!', ' Abcdefg1! ']) {
-    assert.equal((await request('signup-code', { ...input, password })).statusCode, 200)
-    assert.equal(calls.at(-1).input.password, password, 'SDK receives password unchanged')
+    assert.equal(
+      (await request('signup-code', { ...input, password })).statusCode,
+      200
+    )
+    assert.equal(
+      calls.at(-1).input.password,
+      password,
+      'SDK receives password unchanged'
+    )
   }
-  assert.deepEqual(calls.at(-1).input.data, {
-    username: input.username, display_name: input.username, marketplace_signup: true,
-  }, 'Real SDK sends username in Auth user metadata')
-  assert.equal((await request('resend-signup', input)).statusCode, 200)
-  assert.equal(calls.at(-1).input.type, 'signup')
+  const { pending_signup_ticket: pendingTicket, ...signupMetadata } =
+    calls.at(-1).input.data
+  assert.equal(/^[0-9a-f]{64}$/.test(pendingTicket), true)
+  assert.deepEqual(
+    signupMetadata,
+    {
+      username: input.username,
+      display_name: input.username,
+      marketplace_signup: true,
+    },
+    'Real SDK sends username in Auth user metadata'
+  )
+  const beforeMissingPending = calls.length
+  assert.equal((await request('resend-signup', input)).statusCode, 403)
+  assert.equal(
+    calls.length,
+    beforeMissingPending,
+    'Missing pending proof never reaches provider resend'
+  )
+  const correctionCookie = {
+    cookie: 'marketplace-pending-signup=' + 'a'.repeat(64),
+  }
+  assert.equal(
+    (await request('correct-signup-username', input)).statusCode,
+    403
+  )
+  process.env.APP_ENV = 'staging'
+  process.env.NEXT_PUBLIC_SUPABASE_URL =
+    'https://pcaqxezdfxofysghssyo.supabase.co'
+  const testKey = (role, ref) =>
+    Buffer.from('{}').toString('base64url') +
+    '.' +
+    Buffer.from(JSON.stringify({ role, ref })).toString('base64url') +
+    '.test'
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = testKey(
+    'anon',
+    'pcaqxezdfxofysghssyo'
+  )
+  process.env.SUPABASE_SERVICE_ROLE_KEY = ''
+  assert.equal(
+    (await request('correct-signup-username', input, correctionCookie))
+      .statusCode,
+    503
+  )
+  process.env.SUPABASE_SERVICE_ROLE_KEY = testKey(
+    'service_role',
+    'yzvchumzyonegujucyqs'
+  )
+  assert.equal(
+    (await request('correct-signup-username', input, correctionCookie))
+      .statusCode,
+    503
+  )
+  process.env.SUPABASE_SERVICE_ROLE_KEY = testKey(
+    'service_role',
+    'pcaqxezdfxofysghssyo'
+  )
+  assert.equal(
+    (
+      await request(
+        'correct-signup-username',
+        { ...input, userId: 'another-user', isVerified: false },
+        correctionCookie
+      )
+    ).statusCode,
+    200
+  )
+  assert.deepEqual(Object.keys(calls.at(-1).input).sort(), [
+    'p_email',
+    'p_ticket',
+    'p_username',
+  ])
+  const beforePendingSend = calls.length
+  assert.equal(
+    (await request('resend-signup', input, correctionCookie)).statusCode,
+    200
+  )
+  assert.deepEqual(
+    calls.slice(beforePendingSend).map((c) => c.pathname),
+    ['/rest/v1/rpc/marketplace_correct_pending_username', '/auth/v1/resend']
+  )
+  pendingProofFailure = true
+  const beforeStaleSend = calls.length
+  const staleResult = await request(
+    'resend-signup',
+    { ...input, resumeSignup: true, isVerified: false },
+    correctionCookie
+  )
+  assert.equal(staleResult.statusCode, 403)
+  assert.equal(
+    calls.slice(beforeStaleSend).filter((c) => c.pathname === '/auth/v1/resend')
+      .length,
+    0
+  )
+  assert.equal(
+    (await request('correct-signup-username', input, correctionCookie)).body
+      .error,
+    staleResult.body.error,
+    'Same generic response for absent/stale/verified state'
+  )
+  const beforeStaleCreate = calls.length
+  assert.equal(
+    (await request('signup-code', input, correctionCookie)).statusCode,
+    200
+  )
+  assert.equal(
+    calls
+      .slice(beforeStaleCreate)
+      .filter((c) => c.pathname === '/auth/v1/signup').length,
+    1
+  )
+  assert.equal(
+    calls
+      .slice(beforeStaleCreate)
+      .filter(
+        (c) =>
+          c.pathname === '/auth/v1/resend' ||
+          c.pathname.endsWith('marketplace_correct_pending_username')
+      ).length,
+    0,
+    'Stale capability cannot redirect Create into pending/resend flow'
+  )
+  pendingProofFailure = false
+  process.env.APP_ENV = 'production'
+  assert.equal(
+    (await request('correct-signup-username', input, correctionCookie))
+      .statusCode,
+    503
+  )
+  process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://127.0.0.1:54321'
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'public-test-key'
+  process.env.SUPABASE_SERVICE_ROLE_KEY = ''
   const beforeVerification = calls.length
-  passwordFailure = {status:422,body:{code:'same_password',msg:'New password should be different from the old password.'}}
+  passwordFailure = {
+    status: 422,
+    body: {
+      code: 'same_password',
+      msg: 'New password should be different from the old password.',
+    },
+  }
   const verified = await request('verify-signup', input)
   assert.equal(verified.statusCode, 200)
-  assert.deepEqual(calls.slice(beforeVerification).map(c=>[c.pathname,c.method]), [
-    ['/auth/v1/verify','POST'], ['/auth/v1/user','GET'],
-    ['/rest/v1/rpc/marketplace_confirm_username','POST'],
-  ], 'Signup verifies OTP/user/profile, without password PUT or logout')
+  assert.deepEqual(
+    calls.slice(beforeVerification).map((c) => [c.pathname, c.method]),
+    [
+      ['/auth/v1/verify', 'POST'],
+      ['/auth/v1/user', 'GET'],
+      ['/rest/v1/rpc/marketplace_confirm_username', 'POST'],
+    ],
+    'Signup verifies OTP/user/profile, without password PUT or logout'
+  )
   passwordFailure = null
+  const beforeEdited = calls.length
+  assert.equal(
+    (
+      await request('verify-signup', {
+        ...input,
+        password: 'Changed2!',
+        updateSignupPassword: true,
+      })
+    ).statusCode,
+    200
+  )
+  assert(
+    calls
+      .slice(beforeEdited)
+      .some(
+        (c) =>
+          c.pathname.endsWith('/user') &&
+          c.method === 'PUT' &&
+          c.input.password === 'Changed2!'
+      )
+  )
+  const verifyAt = calls
+    .slice(beforeEdited)
+    .findIndex((c) => c.pathname.endsWith('/verify'))
+  const updateAt = calls
+    .slice(beforeEdited)
+    .findIndex((c) => c.pathname.endsWith('/user') && c.method === 'PUT')
+  assert(
+    updateAt > verifyAt,
+    'Edited password is saved only after verification'
+  )
+  passwordFailure = {
+    status: 422,
+    body: { code: 'same_password', msg: 'Unchanged password' },
+  }
+  assert.equal(
+    (await request('verify-signup', { ...input, updateSignupPassword: true }))
+      .statusCode,
+    200
+  )
+  passwordFailure = {
+    status: 422,
+    body: { code: 'weak_password', msg: 'Rejected by provider' },
+  }
+  assert.equal(
+    (await request('verify-signup', { ...input, updateSignupPassword: true }))
+      .statusCode,
+    400
+  )
+  assert(
+    calls.at(-1).pathname.endsWith('/logout'),
+    'Edited-password failure closes the session'
+  )
+  passwordFailure = null
+  failure = { status: 400, body: { code: 'otp_expired', msg: 'Expired' } }
+  const beforeOld = calls.length
+  assert.equal(
+    (await request('verify-signup', { ...input, updateSignupPassword: true }))
+      .statusCode,
+    400
+  )
+  assert(
+    !calls.slice(beforeOld).some((c) => c.method === 'PUT'),
+    'Rejected old code cannot update credentials'
+  )
+  failure = null
+  usernameFailure = true
+  const beforeWrongName = calls.length
+  assert.equal(
+    (
+      await request('verify-signup', {
+        ...input,
+        username: 'Different_member',
+        updateSignupPassword: true,
+      })
+    ).statusCode,
+    503
+  )
+  assert(
+    !calls.slice(beforeWrongName).some((c) => c.method === 'PUT'),
+    'Username mismatch cannot update the account password'
+  )
+  assert(calls.at(-1).pathname.endsWith('/logout'))
+  usernameFailure = false
   assert(
     calls.some(
       (c) => c.pathname.endsWith('/verify') && c.input.type === 'email'
     )
   )
   assert(verified.headers.get('Set-Cookie').some((h) => /HttpOnly/i.test(h)))
-  const restored = await request('session', {}, {
-    cookie: verified.headers.get('Set-Cookie').map(h => h.split(';')[0]).join('; '),
-  })
+  const restored = await request(
+    'session',
+    {},
+    {
+      cookie: verified.headers
+        .get('Set-Cookie')
+        .map((h) => h.split(';')[0])
+        .join('; '),
+    }
+  )
   assert.equal(restored.statusCode, 200)
-  assert.deepEqual(restored.body.seller, { id: user.id, displayName: input.username },
-    'OTP response cookies authenticate the existing success-session refresh')
+  assert.deepEqual(
+    restored.body.seller,
+    { id: user.id, displayName: input.username },
+    'OTP response cookies authenticate the existing success-session refresh'
+  )
   assert.equal((await request('sign-in', input)).statusCode, 200)
   const beforeLegacy = calls.length
   assert.equal((await request('email', { email: user.email })).statusCode, 200)
-  assert.equal((await request('verify', { email: user.email, code: input.code })).statusCode, 200)
-  assert.equal((await request('email', { email: 'unknown@uwo.ca' })).statusCode, 400)
+  assert.equal(
+    (await request('verify', { email: user.email, code: input.code }))
+      .statusCode,
+    200
+  )
+  assert.equal(
+    (await request('email', { email: 'unknown@uwo.ca' })).statusCode,
+    400
+  )
   const legacyCalls = calls.slice(beforeLegacy)
-  assert.equal(legacyCalls.filter(c => c.pathname.endsWith('/otp')).length, 2)
-  assert(!legacyCalls.some(c => c.pathname.endsWith('/signup')), 'Legacy login cannot reach registration')
-  assert(legacyCalls.some(c => c.pathname.endsWith('/verify') && c.input.type === 'email'))
+  assert.equal(legacyCalls.filter((c) => c.pathname.endsWith('/otp')).length, 2)
+  assert(
+    !legacyCalls.some((c) => c.pathname.endsWith('/signup')),
+    'Legacy login cannot reach registration'
+  )
+  assert(
+    legacyCalls.some(
+      (c) => c.pathname.endsWith('/verify') && c.input.type === 'email'
+    )
+  )
   assert.equal((await request('recover', input)).statusCode, 200)
   const beforeRecovery = calls.length
   assert.equal((await request('reset-password', input)).statusCode, 200)
-  assert(calls.slice(beforeRecovery).some(c=>c.pathname.endsWith('/user') && c.method==='PUT' && c.input.password===input.password), 'Recovery still writes the new password')
-  passwordFailure = {status:422,body:{code:'same_password',msg:'New password should be different from the old password.'}}
-  assert.match((await request('reset-password', input)).body.error,/Unable to save this password/)
-  assert(calls.at(-1).pathname.endsWith('/logout'),'Recovery failure still signs out')
+  assert(
+    calls
+      .slice(beforeRecovery)
+      .some(
+        (c) =>
+          c.pathname.endsWith('/user') &&
+          c.method === 'PUT' &&
+          c.input.password === input.password
+      ),
+    'Recovery still writes the new password'
+  )
+  passwordFailure = {
+    status: 422,
+    body: {
+      code: 'same_password',
+      msg: 'New password should be different from the old password.',
+    },
+  }
+  assert.match(
+    (await request('reset-password', input)).body.error,
+    /Unable to save this password/
+  )
+  assert(
+    calls.at(-1).pathname.endsWith('/logout'),
+    'Recovery failure still signs out'
+  )
   passwordFailure = null
   assert(
     calls.some(
@@ -228,7 +565,10 @@ async function main() {
     status: 422,
     body: { code: 'weak_password', msg: 'Provider password policy details' },
   }
-  const weakPassword = await request('signup-code', { ...input, password: '11111111A!' })
+  const weakPassword = await request('signup-code', {
+    ...input,
+    password: '11111111A!',
+  })
   assert.equal(weakPassword.statusCode, 400)
   assert.equal(
     weakPassword.body.error,
@@ -239,25 +579,46 @@ async function main() {
     body: { code: 'over_email_send_rate_limit', msg: 'sensitive' },
   }
   assert.equal((await request('signup-code', input)).statusCode, 429)
-  failure = {status:500,body:{code:'unexpected_failure',msg:`Database error saving new user ${input.email} ${input.password} ${input.code} ${token}`}}
-  const diagnostics=[]
-  const previousError=console.error
+  failure = {
+    status: 500,
+    body: {
+      code: 'unexpected_failure',
+      msg: `Database error saving new user ${input.email} ${input.password} ${input.code} ${token}`,
+    },
+  }
+  const diagnostics = []
+  const previousError = console.error
   let signupFailed
-  console.error=(...args)=>diagnostics.push(args)
-  try { signupFailed=await request('signup-code',input) }
-  finally { console.error=previousError }
-  assert.equal(signupFailed.statusCode,400)
-  const diagnostic=diagnostics.find(d=>d[0]==='Marketplace signup provider failure')[1]
-  assert.equal(diagnostic.providerStatus,500)
-  assert.equal(diagnostic.providerCode,'unexpected_failure')
-  assert.match(diagnostic.providerMessage,/Database error saving new user/)
-  assert.equal(diagnostic.request.options.data.username,input.username)
+  console.error = (...args) => diagnostics.push(args)
+  try {
+    signupFailed = await request('signup-code', input)
+  } finally {
+    console.error = previousError
+  }
+  assert.equal(signupFailed.statusCode, 400)
+  const diagnostic = diagnostics.find(
+    (d) => d[0] === 'Marketplace signup provider failure'
+  )[1]
+  assert.equal(diagnostic.providerStatus, 500)
+  assert.equal(diagnostic.providerCode, 'unexpected_failure')
+  assert.match(diagnostic.providerMessage, /Database error saving new user/)
+  assert.equal(diagnostic.request.options.data.username, input.username)
   assert.deepEqual(diagnostic.passwordFacts, {
-    length: input.password.length, hasUppercase: true,
-    hasNumber: true, hasSymbol: true, hasLowercase: true,
+    length: input.password.length,
+    hasUppercase: true,
+    hasNumber: true,
+    hasSymbol: true,
+    hasLowercase: true,
   })
-  for(const secret of [input.email,input.password,input.code,token]) assert(!JSON.stringify(diagnostic).includes(secret),'Provider diagnostic redacts secrets')
-  assert(!signupFailed.body.error.includes('Database error'),'Raw provider details stay server-only')
+  for (const secret of [input.email, input.password, input.code, token])
+    assert(
+      !JSON.stringify(diagnostic).includes(secret),
+      'Provider diagnostic redacts secrets'
+    )
+  assert(
+    !signupFailed.body.error.includes('Database error'),
+    'Raw provider details stay server-only'
+  )
   failure = null
   assert.equal(
     (await request('sign-in', input, { origin: 'https://other.example' }))

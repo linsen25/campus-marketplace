@@ -14,6 +14,11 @@ import {
   requireMarketplaceUser,
   requireSameOriginWrite,
 } from '@/lib/server/marketplace-auth'
+import {
+  correctPendingUsername,
+  newSignupTicket,
+  setSignupTicket,
+} from '@/lib/server/pending-signup'
 import { createMarketplaceClient } from '@/lib/supabase/server'
 
 function authFailure(res: NextApiResponse, error: unknown) {
@@ -42,6 +47,19 @@ function signupDiagnosticMessage(message: string, secrets: unknown[]) {
 }
 
 type SignupProviderFailure = { status: number; code?: string; message: string }
+
+async function saveEditedSignupPassword(
+  client: ReturnType<typeof createMarketplaceClient>,
+  password: string
+) {
+  const { error } = await client.auth.updateUser({ password })
+  if (!error || error.code === 'same_password') return
+  await client.auth.signOut({ scope: 'local' })
+  throw new ListingApiError(
+    'Unable to save the edited password. Use password recovery to finish setting it.',
+    400
+  )
+}
 
 function signupDiagnosticFetch(
   record: (failure: SignupProviderFailure) => void
@@ -83,6 +101,7 @@ export default async function handler(
       'sign-in',
       'signup-code',
       'resend-signup',
+      'correct-signup-username',
       'verify-signup',
       'recover',
       'reset-password',
@@ -123,6 +142,7 @@ export default async function handler(
       const { error } = await client.auth.signOut({ scope: 'local' })
       if (error)
         throw new ListingApiError('Unable to sign out. Please retry.', 503)
+      setSignupTicket(req, res, '')
       return res.status(200).json(null)
     }
     const body = listingInputRecord(req.body)
@@ -180,7 +200,12 @@ export default async function handler(
       return res.status(200).json(null)
     }
     if (
-      ['signup-code', 'resend-signup', 'verify-signup'].includes(String(action))
+      [
+        'signup-code',
+        'resend-signup',
+        'verify-signup',
+        'correct-signup-username',
+      ].includes(String(action))
     ) {
       requireUsername(body.username)
       if (body.agreement !== true)
@@ -193,6 +218,7 @@ export default async function handler(
         )
     }
     if (action === 'signup-code') {
+      const ticket = newSignupTicket()
       const username = requireUsername(body.username)
       if (!(await usernameAvailable(client, username)))
         throw new ListingApiError(usernameTakenMessage, 409)
@@ -200,7 +226,12 @@ export default async function handler(
         email,
         password: body.password as string,
         options: {
-          data: { username, display_name: username, marketplace_signup: true },
+          data: {
+            username,
+            display_name: username,
+            marketplace_signup: true,
+            pending_signup_ticket: ticket,
+          },
         },
       })
       if (error) {
@@ -232,6 +263,7 @@ export default async function handler(
           providerMessage: signupDiagnosticMessage(
             signupProviderFailure?.message || error.message,
             [
+              ticket,
               email,
               body.email,
               body.password,
@@ -258,9 +290,19 @@ export default async function handler(
         throw new ListingApiError(
           'Unable to register this address. If you already have an account, log in or reset your password.'
         )
+      setSignupTicket(req, res, ticket)
+      return res.status(200).json(null)
+    }
+    if (action === 'correct-signup-username') {
+      await correctPendingUsername(req, email, requireUsername(body.username))
+      // Separate from resend: if delivery fails, the browser knows which name
+      // is now reserved, while old tokens remain invalidated.
       return res.status(200).json(null)
     }
     if (action === 'resend-signup') {
+      // A cookie's presence and browser draft are not proof of a pending user.
+      // The RPC checks the capability hash/expiry and authoritative Auth state.
+      await correctPendingUsername(req, email, requireUsername(body.username))
       const { error } = await client.auth.resend({ email, type: 'signup' })
       failAuth(error, 'Unable to resend verification. Please try again later.')
       return res.status(200).json(null)
@@ -291,6 +333,11 @@ export default async function handler(
           await client.auth.signOut({ scope: 'local' })
           throw cause
         }
+        // An edited pending password is assigned only after email ownership and
+        // the original reserved username are verified. Resend never saves it.
+        if (body.updateSignupPassword === true)
+          await saveEditedSignupPassword(client, body.password as string)
+        setSignupTicket(req, res, '')
         // signUp already assigned the password. Keep the verified session;
         // signup must not depend on a second password write succeeding.
         return res.status(200).json(null)

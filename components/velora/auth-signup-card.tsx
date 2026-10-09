@@ -6,12 +6,12 @@ import { useEffect, useId, useRef, useState } from 'react'
 import ShiningButton from '@/components/animata/button/shining-button'
 import ShiftTabs from '@/components/animata/tabs/shift-tabs'
 import { useUsernameAvailability } from '@/components/auth/use-username-availability'
-import HoldButton from '@/components/react-bits/hold-button/hold-button'
 import { StatefulButton } from '@/components/velora/stateful-button'
 import {
   passwordRules as RULES,
   validSignupPassword,
 } from '@/lib/auth-password'
+import { pendingSignupUnavailableMessage } from '@/lib/auth-pending'
 import {
   usernameInvalidMessage,
   usernameTakenMessage,
@@ -293,24 +293,26 @@ function AuthSubmit({
   busy,
   label,
   form,
+  verifySignup,
 }: {
   mode: keyof typeof modeCopy
   disabled: boolean
   busy: string
   label: string
   form: RefObject<HTMLFormElement>
+  verifySignup: () => Promise<void>
 }) {
   if (mode === 'signup')
     return (
-      <HoldButton
-        className={styles.holdSubmit}
+      <StatefulButton
+        className={styles.send}
         disabled={disabled}
-        holdTime={1000}
-        doneLabel="Create account"
-        onHold={() => form.current?.requestSubmit()}
+        successText="Verified"
+        errorText="Retry"
+        onClick={verifySignup}
       >
-        Hold to create account
-      </HoldButton>
+        Verify code
+      </StatefulButton>
     )
   if (mode === 'signin')
     return (
@@ -403,12 +405,26 @@ export function AuthSignupCard({
   const [agreement, setAgreement] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [sentEmail, setSentEmail] = useState('')
+  // Volatile only: one issued registration identity, never browser storage.
+  const registration = useRef<{
+    email: string
+    username: string
+    password?: string
+  }>()
+  const [createAttempt, setCreateAttempt] = useState(0)
+  const [createdHere, setCreatedHere] = useState(false)
   const [cooldown, setCooldown] = useState(0)
   const [busy, setBusy] = useState('')
-  const availability = useUsernameAvailability(
+  const lookup = useUsernameAvailability(
     username,
     mode === 'signup' && !sentEmail
   )
+  const ownsDraftName =
+    registration.current?.email === email.trim().toLowerCase() &&
+    registration.current?.username.toLowerCase() === username.toLowerCase()
+  const availability = ownsDraftName
+    ? { state: 'available', message: 'Reserved for this signup.' }
+    : lookup
   const [sendError, setSendError] = useState('')
   const formRef = useRef<HTMLFormElement>(null)
   const {
@@ -456,15 +472,18 @@ export function AuthSignupCard({
     setPassword('')
     setShowPassword(false)
     setPasswordError(false)
+    registration.current = undefined
+    setCreatedHere(false)
+    setCreateAttempt((value) => value + 1)
   }
   function validateEmail() {
     if (!isWesternEmail(email))
       throw new Error('Use your Western email to continue.')
   }
-  function validateSignup() {
+  function validateSignup(checkAvailability = true) {
     if (!validUsername(username)) throw new Error(usernameInvalidMessage)
     if (reservedUsername(username)) throw new Error(usernameReservedMessage)
-    if (!sent && availability.state === 'taken')
+    if (checkAvailability && !sent && availability.state === 'taken')
       throw new Error(usernameTakenMessage)
     if (!validSignupPassword(password)) {
       setPasswordError(true)
@@ -492,6 +511,13 @@ export function AuthSignupCard({
         cause instanceof Error
           ? cause.message
           : 'Authentication failed. Please try again.'
+      if (message === pendingSignupUnavailableMessage) {
+        registration.current = undefined
+        setSentEmail('')
+        setCode('')
+        setCreatedHere(false)
+        setCreateAttempt((value) => value + 1)
+      }
       if (action === 'send') setSendError(message)
       else setError(message)
       if (propagate) throw cause
@@ -500,7 +526,7 @@ export function AuthSignupCard({
       setBusy('')
     }
   }
-  const sendCode = async () => {
+  const sendCode = async (intent: 'create' | 'resend') => {
     await run(
       'send',
       async () => {
@@ -508,9 +534,31 @@ export function AuthSignupCard({
         if (mode === 'signup' && !validateSignup())
           throw new Error('Password must meet all requirements.')
         const sendAction = mode === 'recovery' ? 'recover' : 'signup-code'
+        const sameRegistration = registration.current?.email === normalizedEmail
+        if (
+          mode === 'signup' &&
+          intent === 'resend' &&
+          sameRegistration &&
+          !ownsDraftName
+        ) {
+          await marketplaceRequest(
+            '/api/auth/correct-signup-username',
+            'POST',
+            {
+              email: normalizedEmail,
+              username,
+              password,
+              agreement,
+            }
+          )
+          registration.current = { ...registration.current!, username }
+          setCode('')
+        }
         await marketplaceRequest(
           `/api/auth/${
-            mode === 'signup' && sent ? 'resend-signup' : sendAction
+            mode === 'signup' && intent === 'resend'
+              ? 'resend-signup'
+              : sendAction
           }`,
           'POST',
           {
@@ -520,7 +568,11 @@ export function AuthSignupCard({
             ...signupUsername(mode, username),
           }
         )
+        if (mode === 'signup' && !sameRegistration)
+          registration.current = { email: normalizedEmail, username, password }
+        if (mode === 'signup') setCreatedHere(true)
         setSentEmail(normalizedEmail)
+        setCode('')
         setCooldown(60)
         setStatus(
           mode === 'recovery'
@@ -531,8 +583,33 @@ export function AuthSignupCard({
       true
     )
   }
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const resumeSignup = async () => {
+    await run(
+      'send',
+      async () => {
+        validateEmail()
+        if (!validateSignup(false))
+          throw new Error('Password must meet all requirements.')
+        await marketplaceRequest('/api/auth/resend-signup', 'POST', {
+          resumeSignup: true,
+          email: normalizedEmail,
+          username,
+          password,
+          agreement,
+        })
+        // This is only a draft identity. OTP + the existing username RPC prove
+        // ownership before any password edit; availability is not authentication.
+        registration.current = { email: normalizedEmail, username }
+        setCreatedHere(false)
+        setSentEmail(normalizedEmail)
+        setCode('')
+        setCooldown(60)
+        setStatus('Verification code sent. Check your inbox.')
+      },
+      true
+    )
+  }
+  const submitForm = async (propagate = false) => {
     if (mode === 'signup' && !signupReady) {
       setAttempted(true)
       setPasswordError(!validSignupPassword(password))
@@ -543,26 +620,57 @@ export function AuthSignupCard({
       setError('')
       return
     }
-    await run('submit', async () => {
-      validateEmail()
-      if (!password) throw new Error('Enter your password.')
-      if (mode === 'signup' && !validateSignup()) return
-      if (mode !== 'signin' && (!sent || !/^\d{6,10}$/.test(code.trim())))
-        throw new Error('Send a code and enter it from your email.')
-      if (mode === 'recovery' && passed !== 4)
-        throw new Error('Your password must meet all four requirements.')
-      await marketplaceRequest(`/api/auth/${modeCopy[mode].action}`, 'POST', {
-        email: normalizedEmail,
-        password,
-        code: code.trim(),
-        agreement,
-        ...signupUsername(mode, username),
-      })
-      await onAuthenticated(mode)
-    })
+    await run(
+      'submit',
+      async () => {
+        validateEmail()
+        if (!password) throw new Error('Enter your password.')
+        if (mode === 'signup' && !validateSignup()) return
+        if (mode !== 'signin' && (!sent || !/^\d{6,10}$/.test(code.trim())))
+          throw new Error('Send a code and enter it from your email.')
+        if (mode === 'recovery' && passed !== 4)
+          throw new Error('Your password must meet all four requirements.')
+        await marketplaceRequest(`/api/auth/${modeCopy[mode].action}`, 'POST', {
+          email: normalizedEmail,
+          password,
+          code: code.trim(),
+          agreement,
+          ...signupUsername(mode, username),
+          ...(mode === 'signup'
+            ? {
+                updateSignupPassword:
+                  registration.current?.password !== password,
+              }
+            : {}),
+        })
+        await onAuthenticated(mode)
+      },
+      propagate
+    )
+  }
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    submitForm().catch(() => {})
+  }
+  const editSignup = () => {
+    if (pending.current) return
+    setSentEmail('')
+    setCode('')
+    setError('')
+    setSendError('')
+    setStatus(
+      'Edit your details, then request a new code. Use only the latest code.'
+    )
+    setAttempted(false)
+    setShowPassword(false)
+    setCreateAttempt((value) => value + 1)
   }
   const { title, subtitle, submit } = modeCopy[mode]
   const sendLabel = sendCodeLabel(sent, cooldown, busy)
+  let createLabel = 'Create'
+  if (registration.current?.email === normalizedEmail)
+    createLabel =
+      !sent && cooldown > 0 ? `Send new code in ${cooldown}s` : 'Send new code'
   return (
     <section className={styles.composition}>
       <div className={styles.header}>
@@ -581,10 +689,12 @@ export function AuthSignupCard({
           animate={phase}
           variants={contentVariants}
         >
-          {title}
+          {mode === 'signup' && sent ? 'Verify your email' : title}
         </motion.h2>
         <motion.p initial={false} animate={phase} variants={contentVariants}>
-          {subtitle}
+          {mode === 'signup' && sent
+            ? 'Enter the latest code sent to your Western email.'
+            : subtitle}
         </motion.p>
       </div>
       <div className={styles.card}>
@@ -638,7 +748,7 @@ export function AuthSignupCard({
               }
               placeholder="you@uwo.ca"
               value={email}
-              disabled={formDisabled}
+              disabled={formDisabled || (mode === 'signup' && sent)}
               aria-describedby={`${id}-access`}
               onChange={(event) => {
                 setEmail(event.target.value)
@@ -666,6 +776,15 @@ export function AuthSignupCard({
           {mode === 'signup' && attempted && !username && (
             <p className={styles.error}>Choose a username.</p>
           )}
+          {mode === 'signup' &&
+            !sent &&
+            registration.current?.email === normalizedEmail && (
+              <p className={styles.helper}>
+                Your username is reserved for this signup and can be corrected
+                before verification. Normal username changes follow the
+                seven-day rule after verification.
+              </p>
+            )}
           <div className={styles.field} data-help-field="password">
             <label htmlFor={`${fieldPrefix}-password`}>
               {mode === 'recovery' ? 'New password' : 'Password'}
@@ -684,7 +803,7 @@ export function AuthSignupCard({
                   mode === 'signin' ? 'current-password' : 'new-password'
                 }
                 value={password}
-                disabled={formDisabled}
+                disabled={formDisabled || (mode === 'signup' && sent)}
                 aria-describedby={passwordDescription}
                 aria-invalid={showPasswordError}
                 onChange={(event) => {
@@ -769,7 +888,51 @@ export function AuthSignupCard({
               </>
             )}
           </div>
-          {mode !== 'signin' && (
+          {mode === 'signup' && (!sent || createdHere) && (
+            <StatefulButton
+              key={`create-${createAttempt}`}
+              className={styles.create}
+              data-auth-create={true}
+              disabled={
+                formDisabled ||
+                (!sent &&
+                  registration.current?.email === normalizedEmail &&
+                  cooldown > 0) ||
+                (!sent &&
+                  (!isWesternEmail(email) ||
+                    !validSignupPassword(password) ||
+                    !agreement ||
+                    availability.state !== 'available'))
+              }
+              retainSuccess={true}
+              successText="Code sent"
+              errorText="Retry"
+              minLoadingMs={200}
+              onClick={() =>
+                sendCode(createLabel === 'Create' ? 'create' : 'resend')
+              }
+            >
+              {createLabel}
+            </StatefulButton>
+          )}
+          {mode === 'signup' && !sent && !registration.current && (
+            <div>
+              <p className={styles.helper}>
+                New signup? Use Create above. Resume only a signup already
+                started in this browser.
+              </p>
+              <StatefulButton
+                className={styles.send}
+                disabled={formDisabled}
+                successText="Sent"
+                errorText="Retry"
+                onClick={resumeSignup}
+              >
+                Resume verification
+              </StatefulButton>
+            </div>
+          )}
+          {mode !== 'signin' && (mode !== 'signup' || sent) && (
             <div className={styles.field}>
               <label htmlFor={`${id}-code`}>Verification code</label>
               <div className={styles.codeRow}>
@@ -791,7 +954,7 @@ export function AuthSignupCard({
                   successText="Sent"
                   errorText="Retry"
                   minLoadingMs={200}
-                  onClick={sendCode}
+                  onClick={() => sendCode('resend')}
                 >
                   {sendLabel}
                 </StatefulButton>
@@ -810,6 +973,26 @@ export function AuthSignupCard({
                 )}
             </div>
           )}
+          {mode === 'signup' && !sent && sendError && (
+            <p role="alert" className={styles.error}>
+              {sendError}
+            </p>
+          )}
+          {mode === 'signup' && sent && (
+            <div>
+              <p className={styles.helper}>
+                Need to change your signup information?
+              </p>
+              <button
+                type="button"
+                className={styles.secondary}
+                disabled={formDisabled}
+                onClick={editSignup}
+              >
+                Edit signup details
+              </button>
+            </div>
+          )}
           {mode === 'signup' && (
             <div className={styles.agreement}>
               <input
@@ -817,7 +1000,7 @@ export function AuthSignupCard({
                 type="checkbox"
                 required={true}
                 checked={agreement}
-                disabled={formDisabled}
+                disabled={formDisabled || sent}
                 onChange={(event) => setAgreement(event.target.checked)}
               />
               <div>
@@ -865,17 +1048,22 @@ export function AuthSignupCard({
               }
             }}
           >
-            <AuthSubmit
-              mode={mode}
-              disabled={formDisabled || (mode === 'signup' && !signupReady)}
-              busy={busy}
-              label={submit}
-              form={formRef}
-            />
+            {(mode !== 'signup' || sent) && (
+              <AuthSubmit
+                mode={mode}
+                disabled={formDisabled || (mode === 'signup' && !signupReady)}
+                busy={busy}
+                label={submit}
+                form={formRef}
+                verifySignup={() => submitForm(true)}
+              />
+            )}
           </div>
           {mode === 'signup' && !signupReady && (
             <p role="status" className={styles.helper}>
-              Complete all required fields to create your account.
+              {sent
+                ? 'Enter the latest verification code to continue.'
+                : 'Complete all required fields to begin verification.'}
               <span className={styles.srOnly}> {missing.join(' ')}</span>
             </p>
           )}

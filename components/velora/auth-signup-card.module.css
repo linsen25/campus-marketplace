@@ -36,11 +36,11 @@
   border-radius: 999px;
 }
 
-.dialog[aria-labelledby="auth-title"]:not([data-scrolling]) {
+.dialog[aria-labelledby='auth-title']:not([data-scrolling]) {
   scrollbar-color: transparent transparent;
 }
 
-.dialog[aria-labelledby="auth-title"]:not([data-scrolling])::-webkit-scrollbar-thumb {
+.dialog[aria-labelledby='auth-title']:not([data-scrolling])::-webkit-scrollbar-thumb {
   background: transparent;
 }
 
@@ -351,6 +351,10 @@
   padding: 0 12px;
   white-space: nowrap;
   font-size: 12px;
+}
+.create {
+  --surface: #2563eb;
+  align-self: flex-start;
 }
 .helper,
 .privacy {

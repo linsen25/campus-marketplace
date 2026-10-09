@@ -19,6 +19,8 @@ interface StatefulButtonProps
   successText?: string
   /** Shown beside the cross and announced when the promise rejects. */
   errorText?: string
+  /** Keep a completed action visible until its owner changes/remounts the step. */
+  retainSuccess?: boolean
 }
 
 // Every layer shares one grid cell, so the widest label sets a stable width.
@@ -39,6 +41,7 @@ export function StatefulButton({
   onStateChange,
   successText = 'Done',
   errorText = 'Failed',
+  retainSuccess = false,
   className,
   children,
   type = 'button',
@@ -65,7 +68,7 @@ export function StatefulButton({
 
   const handleClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
     // aria-disabled (not disabled) keeps focus on the button while pending.
-    if (pending.current) {
+    if (pending.current || (retainSuccess && state === 'success')) {
       event.preventDefault()
       return
     }
@@ -86,7 +89,8 @@ export function StatefulButton({
     pending.current = false
     if (!mounted.current) return
     setState(next)
-    timer.current = setTimeout(() => setState('idle'), resetAfter)
+    if (!(retainSuccess && next === 'success'))
+      timer.current = setTimeout(() => setState('idle'), resetAfter)
   }
 
   let announcement = ''
@@ -100,7 +104,11 @@ export function StatefulButton({
         {...props}
         data-state={state}
         aria-busy={busy || undefined}
-        aria-disabled={busy ? true : props['aria-disabled']}
+        aria-disabled={
+          busy || (retainSuccess && state === 'success')
+            ? true
+            : props['aria-disabled']
+        }
         className={cn(styles.button, className)}
         onClick={handleClick}
       >
