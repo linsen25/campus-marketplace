@@ -11,6 +11,7 @@ export type ListingRow = {
   subcategory: Listing['subcategory']
   condition: Listing['condition'] | null
   pickup_area: string
+  preferred_fulfillment?: 'DELIVERY' | 'ON_CAMPUS'
   status: Listing['status']
   created_at: string
   updated_at: string
@@ -34,6 +35,7 @@ export function mapListing(
     subcategory: row.subcategory,
     ...(row.condition ? { condition: row.condition } : {}),
     pickupArea: row.pickup_area,
+    preferredFulfillment: row.preferred_fulfillment ?? 'ON_CAMPUS',
     status: row.status,
     photoUrls: row.listing_images
       .filter((image) => image.ready)

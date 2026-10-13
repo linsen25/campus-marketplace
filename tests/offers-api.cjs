@@ -127,6 +127,7 @@ async function main() {
     status: 'active',
     currency: 'CAD',
     item_amount_cents: 7000,
+    created_at: new Date().toISOString(),
     sender_user_id: 'buyer',
     recipient_user_id: 'seller',
     seller_note: 'Offer terms',
@@ -140,6 +141,8 @@ async function main() {
   }
   assert.equal(service.mapOffer(row, 'buyer').canWithdraw, true)
   assert.equal(service.mapOffer(row, 'seller').canWithdraw, false)
+  assert.equal(service.mapOffer({...row,created_at:new Date(Date.now()-300000).toISOString()},'buyer').canWithdraw,false)
+  assert.equal(service.mapOffer({...row,status:'declined'},'seller').status,'Declined')
   assert.equal(
     service.mapOffer({ ...row, status: 'superseded' }, 'buyer').status,
     'Replaced'

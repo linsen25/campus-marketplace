@@ -12,6 +12,7 @@ export type ListingFields = {
   subcategory: string
   condition: string
   pickupArea: string
+  preferredFulfillment: 'DELIVERY' | 'ON_CAMPUS'
   description: string
 }
 
@@ -23,6 +24,7 @@ export function initialListingFields(listing?: Listing): ListingFields {
     subcategory: listing?.subcategory ?? '',
     condition: listing?.condition ?? '',
     pickupArea: listing?.pickupArea ?? '',
+    preferredFulfillment: listing?.preferredFulfillment ?? 'ON_CAMPUS',
     description: listing?.description ?? '',
   }
 }

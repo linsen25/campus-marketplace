@@ -11,6 +11,8 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+import { getScrollLockPadding } from '@/utils/browser'
+
 import styles from './expandable-card.module.css'
 
 interface ExpandableCardProps {
@@ -18,6 +20,7 @@ interface ExpandableCardProps {
   expandedTitle: string
   children: ReactNode
   media?: ReactNode
+  expandedMedia?: ReactNode
   topAction?: ReactNode
   primaryAction?: ReactNode
   className?: string
@@ -150,6 +153,7 @@ export function ExpandableCard({
   expandedTitle,
   children,
   media,
+  expandedMedia = media,
   topAction,
   primaryAction,
   className,
@@ -278,7 +282,7 @@ export function ExpandableCard({
     const oldScrollBehavior = html.style.scrollBehavior
     const page = document.getElementById('__next')
     const wasInert = page?.hasAttribute('inert')
-    const gutter = window.innerWidth - html.clientWidth
+    const gutter = getScrollLockPadding()
     body.style.paddingRight = `${
       parseFloat(getComputedStyle(body).paddingRight) + gutter
     }px`
@@ -477,7 +481,7 @@ export function ExpandableCard({
                             }
                           }}
                         >
-                          {media}
+                          {expandedMedia}
                         </motion.div>
                       )}
                       {topAction && (

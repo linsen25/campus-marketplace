@@ -9,9 +9,17 @@ domain and local/manual staging worker path exist. Notification email/push deliv
 implemented. See [current evidence](BACKEND_COMPLETION_STAGING.md) and the
 [external integrations backlog](EXTERNAL_INTEGRATIONS_BACKLOG.md).
 Older phase stop boundaries below are historical; preserve their evidence.
-Future UX: Agreement Card, Maps, Notifications feed/Bell, Browse/Search and general
+Future UX: Maps, Notifications feed/Bell, Browse/Search and general
 polish. The previous read-only production lint incident is documented, with zero
 production writes; use the guarded staging lint entry point for qualification.
+
+The current [V2 Offer / Agreement revision](V2_OFFER_AGREEMENT_REVISION.md) adds
+per-sender Active Offers, Declined, five-minute withdrawal, Listing preference,
+centered Agreement history and new 1% item-only / CA$5-cap economics. Eight additive
+migrations are applied to staging. **COMPLETE / STAGING VERIFIED:** full two-role,
+four-width qualification, 18 true-overlap races, V1/Market regressions and cleanup
+passed. The final evidence is in that report;
+older phase boundaries and fee evidence below are historical, not current defaults.
 
 ## V2-D2A implementation update (2026-10-12)
 
@@ -35,7 +43,6 @@ Delivery progression or Notifications. Stop before D2B implementation; D2B is re
 for planning only. Before V2-G, remind the user to create a stable Git checkpoint.
 Earlier D1/C2 statements below are historical phase scope.
 
-
 ## V2-D1 implementation update (2026-10-12)
 
 V2-D1 On Campus scheduling / mutual rescheduling / +60m no-show is complete
@@ -47,7 +54,6 @@ Synthetic data is cleaned; canonical/manual/media fingerprints are unchanged.
 remain intact. No D2 Payment/inspection/handoff/Protection or Notifications.
 Production/manual history untouched; no commit/push. Stop before G for a stable
 Git checkpoint.
-
 
 ## V2-C2 implementation update (2026-10-12)
 
@@ -61,7 +67,6 @@ are unchanged and synthetic fixtures are cleaned. See
 Earlier B/C1 scope statements below describe those phases, not current C2 scope.
 Production and manual history are untouched; no commit/push. D/E/F/Notifications
 remain out of scope. Before V2-G, stop for a stable Git checkpoint.
-
 
 ## V2-C1 private snapshot media foundation (2026-10-12)
 
@@ -99,7 +104,6 @@ No commit/push. Before future V2-G Notifications, require a stable code checkpoi
 Older phase records below are historical; their "UI remains V1 / B not started"
 statements describe the preceding checkpoints, not the current implementation.
 
-
 ## V2-A2 staging implementation (2026-10-12)
 
 V2-A2 backend mutation migration applied on staging only; current UI remains V1.
@@ -113,7 +117,6 @@ V2-B OFFER UX IS READY FOR IMPLEMENTATION PLANNING; do not begin automatically.
 No V2 Accept, Order creation, inventory/payment/timer/fulfillment changes or
 Notifications. Canonical manual/Nike histories protected; production untouched.
 The approved competitor-inspired future UX remains binding, deferred to its phases.
-
 
 ## Revised Marketplace V2 contract - documentation only (2026-10-11)
 
@@ -183,7 +186,6 @@ UI, Phase F Progress/Next Step, Settings, payout gate and simulator are untouche
 The manual Monitor Request is preserved. Production untouched; no commit or push.
 The sections below retain earlier implementation history.
 
-
 ## Phase F role/fulfillment Progress and Next Step - staging (2026-10-11)
 
 Formal Order Detail now derives one read-only presentation from the persisted
@@ -245,7 +247,6 @@ browser bundle scans, documentation links and git diff --check passed; index emp
 Screenshots/results are Git-ignored. No production access, email, commit or push.
 
 Earlier sections below are historical implementation records.
-
 
 ## Phase E role-specific Payment UI - staging (2026-10-11)
 
@@ -666,7 +667,7 @@ local configuration, never chat, logs, command arguments or repository files.
 | Legacy Next/Webpack on Node 24                                       | Existing validation uses --openssl-legacy-provider; do not change application code to compensate for a misconfigured build command.   |
 | No hosted frontend                                                   | Separate future release work, not proof that the Supabase backend is undeployed.                                                      |
 | Custom SMTP absent                                                   | Launch requirement; real UWO delivery acceptance remains deferred.                                                                    |
-| Financial implementation pending                                              | Formal Orders exist on staging; no provider, account financial setup, paid transition or payout backend exists.                                                    |
+| Financial implementation pending                                     | Formal Orders exist on staging; no provider, account financial setup, paid transition or payout backend exists.                       |
 | Typing/presence/live read receipts                                   | Intentionally outside Phase 3 scope. Durable read watermarks still exist.                                                             |
 | Natural full JWT expiry, prolonged stress, actual OS sleep           | Not exhaustively tested; do not inflate the smoke/E2E claims.                                                                         |
 | Seller account deletion                                              | Owned listings' seller FK can block deletion; deliberate listing cleanup is required. Do not promise automatic full account deletion. |

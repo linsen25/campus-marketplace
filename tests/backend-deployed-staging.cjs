@@ -58,11 +58,13 @@ for (const file of files) {
     sha256: crypto.createHash('sha256').update(sql).digest('hex'),
   })
   for (const m of sql.matchAll(
-    /create(?: or replace)? function ([a-z_.]+)\([\s\S]*?as \$\$([\s\S]*?)\$\$;/gi
+    /create(?: or replace)? function ([a-z_.]+)\([^;]*?as (\$[a-z_]*\$)([\s\S]*?)\2;/gi
   ))
     expected.set(m[1], {
-      body: m[2].replaceAll('\r\n', '\n').trim(),
-      definer: /security definer/i.test(m[0].slice(0, m[0].indexOf('as $$'))),
+      body: m[3].replaceAll('\r\n', '\n').trim(),
+      definer: /security definer/i.test(
+        m[0].slice(0, m[0].indexOf('as ' + m[2]))
+      ),
     })
 }
 const names = [...expected.keys()].map((n) => "'" + n + "'").join(',')

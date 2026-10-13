@@ -6,6 +6,11 @@ const assert = require('node:assert/strict')
 const { spawnSync } = require('node:child_process')
 const ref = 'pcaqxezdfxofysghssyo'
 const [mode, filename] = process.argv.slice(2)
+const revisionPlan = [
+  '202610130010_offer_revision_economics.sql',
+  '202610130011_offer_revision_domain.sql',
+  '202610130012_message_withdrawal.sql',
+]
 assert(['inventory', 'apply', 'verify'].includes(mode))
 const env = Object.fromEntries(
   fs
@@ -70,7 +75,15 @@ function fingerprint() {
     .map((t) => {
       const name = t.table_schema + '.' + t.table_name
       assert(/^[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*$/.test(name))
-      return `select '${name}' name,count(*) count,md5(coalesce(string_agg(to_jsonb(t)::text,'' order by to_jsonb(t)::text),'')) hash from ${name} t`
+      const additiveColumns = {
+        'public.listings': ['preferred_fulfillment'],
+        'public.order_requests': ['declined_at'],
+        'public.messages': ['withdrawn_at'],
+        'marketplace_private.offer_commands': ['comparison_offer_id', 'mutation_kind', 'comparison_terms'],
+      }
+      const omit = revisionPlan.includes(filename) ? additiveColumns[name] || [] : []
+      const value = omit.length ? `(to_jsonb(t)-array[${omit.map(quote).join(',')}])` : 'to_jsonb(t)'
+      return `select '${name}' name,count(*) count,md5(coalesce(string_agg(${value}::text,'' order by ${value}::text),'')) hash from ${name} t`
     })
     .join(' union all ')
   return query('begin read only;' + union + ';rollback;')
@@ -114,9 +127,10 @@ if (mode === 'verify') {
 }
 assert.deepEqual(
   pending,
-  [filename],
+  revisionPlan.includes(filename) ? revisionPlan.filter(f => !applied.has(f.slice(0, 12))) : [filename],
   'Apply requires exactly one pending candidate'
 )
+assert.equal(pending[0], filename, 'Apply only the next exact candidate in reviewed order')
 assert(!applied.has(version), 'Never rewrite an applied migration')
 assert(/commit;\s*$/.test(sql))
 assert(!sql.includes('$candidate_archive$'))

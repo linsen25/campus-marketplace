@@ -9,7 +9,12 @@ import { StatefulButton } from '@/components/velora/stateful-button'
 import { useFormalOffers } from '@/hooks/use-formal-offers'
 import { useFormalOrderRequests } from '@/hooks/use-formal-order-requests'
 import { marketplaceRequest } from '@/lib/listings-api'
-import { sendOffer, withdrawOffer, acceptOffer } from '@/lib/offers-api'
+import {
+  sendOffer,
+  withdrawOffer,
+  acceptOffer,
+  denyOffer,
+} from '@/lib/offers-api'
 import {
   submitOrderRequest,
   cancelOrderRequest,
@@ -22,6 +27,7 @@ import type { Message } from '@/types/message'
 import type { Offer } from '@/types/offer'
 import type { FormalOrder } from '@/types/order'
 
+import { AgreementCard } from './agreement-card'
 import { MessageAttachments } from './message-attachments'
 import { MessageHistory } from './message-history'
 import styles from './messages-chat.module.css'
@@ -120,9 +126,13 @@ export function MessagesChat({
     !offers.blocked &&
     !legacyActive &&
     listing.availability === 'available'
-  const activeOffer = offers.history?.offers.find(
-    (item) => item.status === 'Active'
+  const ownActiveOffer = offers.history?.offers.find(
+    (item) => item.status === 'Active' && item.senderId === currentUserId
   )
+  const otherActiveOffer = offers.history?.offers.find(
+    (item) => item.status === 'Active' && item.recipientId === currentUserId
+  )
+  const activeOffer = ownActiveOffer || otherActiveOffer
   const realSeller = requests.history?.sellerId === currentUserId
   const initialOfferLabel = realSeller ? 'Send Offer' : 'Make Offer'
   const responseOfferLabel =
@@ -300,7 +310,9 @@ export function MessagesChat({
     consumedOfferEntries.add(offerEntryKey)
     if (offerReady)
       openOfferEditor(
-        offers.history.offers.find((item) => item.status === 'Active')
+        offers.history.offers.find(
+          (item) => item.status === 'Active' && item.senderId === currentUserId
+        )
       )
     // Do not rewrite asPath here: the shared session provider reboots on route changes,
     // which would unmount this just-opened editor. The route intent is consumed once per mount.
@@ -445,11 +457,37 @@ export function MessagesChat({
           {orderVisuals.enabled && <OrderPreviewControls role={previewRole} />}
           <MessageHistory
             offers={formal ? offers.history?.offers || [] : []}
+            agreements={formal ? offers.history?.agreements || [] : []}
+            renderAgreement={(agreement) => (
+              <AgreementCard
+                agreement={agreement}
+                onView={() =>
+                  router
+                    .push(
+                      {
+                        pathname: '/home',
+                        query: {
+                          section: 'orders',
+                          destination:
+                            currentUserId === agreement.buyerId
+                              ? 'purchases'
+                              : 'sales',
+                          order: agreement.id,
+                        },
+                      },
+                      undefined,
+                      { shallow: true }
+                    )
+                    .catch(() => {})
+                }
+              />
+            )}
             renderOffer={(offer) => (
               <OfferCard
                 offer={offer}
                 listing={listing}
                 viewerId={currentUserId}
+                participantName={name}
                 blocked={offers.blocked || Boolean(offers.error)}
                 canEdit={offerReady}
                 onViewOrder={(value) => {
@@ -483,21 +521,13 @@ export function MessagesChat({
                     })
                   )
                   await offers.refresh()
-                  await router.push(
-                    {
-                      pathname: '/home',
-                      query: {
-                        section: 'orders',
-                        destination:
-                          result.buyerId === currentUserId
-                            ? 'purchases'
-                            : 'sales',
-                        order: result.orderId,
-                      },
-                    },
-                    undefined,
-                    { shallow: true }
-                  )
+                }}
+                onDeny={async (value, command) => {
+                  if (offers.isBlocked())
+                    throw new Error('Refresh the Offer before continuing.')
+                  const result = await denyOffer(value.id, command)
+                  offers.markSucceeded(result)
+                  await offers.refresh()
                 }}
                 onEdit={openOfferEditor}
                 onWithdraw={async (value) => {
@@ -760,15 +790,17 @@ export function MessagesChat({
                   {offerReady && (
                     <button
                       type="button"
-                      onClick={() =>
-                        openOfferEditor(
-                          offers.history?.offers.find(
-                            (item) => item.status === 'Active'
-                          )
-                        )
-                      }
+                      onClick={() => openOfferEditor(activeOffer)}
                     >
                       {offerActionLabel}
+                    </button>
+                  )}
+                  {offerReady && ownActiveOffer && otherActiveOffer && (
+                    <button
+                      type="button"
+                      onClick={() => openOfferEditor(otherActiveOffer)}
+                    >
+                      Counter Offer
                     </button>
                   )}
                   {destination === 'selling' &&
@@ -871,6 +903,8 @@ export function MessagesChat({
           listing={listing}
           initial={offerEditor.initial}
           viewerId={currentUserId}
+          buyer={!realSeller}
+          newRound={Boolean(offers.history?.offers.length)}
           onClose={() => setOfferEditor(null)}
           onSend={async (terms) => {
             if (!offerReady || offers.isBlocked())
@@ -883,7 +917,16 @@ export function MessagesChat({
             const result = await sendOffer(
               conversationId,
               terms,
-              offerIntent.current.id
+              offerIntent.current.id,
+              offerEditor.initial
+                ? {
+                    id: offerEditor.initial.id,
+                    kind:
+                      offerEditor.initial.senderId === currentUserId
+                        ? 'revise'
+                        : 'counter',
+                  }
+                : undefined
             )
             offers.markSucceeded(result)
             offerIntent.current = undefined

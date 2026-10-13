@@ -3,6 +3,8 @@ import type { Conversation } from '@/types/conversation'
 import type { Message, TextMessage, ImageAttachment } from '@/types/message'
 
 const base = '/api/messages/conversations'
+export const withdrawMessage = (messageId: string) =>
+  marketplaceRequest<Message>('/api/messages/withdraw', 'POST', { messageId })
 export const listConversations = (role: string, cursor?: string) =>
   marketplaceRequest<{
     conversations: Conversation[]

@@ -1,10 +1,10 @@
 # Marketplace V2: authoritative target product contract
 
-Revised and re-closed 2026-10-11. **TARGET PRODUCT V2; IMPLEMENTATION NOT STARTED.**
-Current staging remains V1. This document supersedes conflicting future product
-rules in [the V1 contract](ORDER_PAYMENT_PRODUCT_DESIGN.md), not its historical
-implementation records. No implementation, migration, data operation, provider
-integration or deployment is authorized by this documentation task.
+Current contract revised 2026-10-13. The complete Offer / Agreement revision is
+being implemented and qualified against staging only. See
+[V2 Offer / Agreement revision](V2_OFFER_AGREEMENT_REVISION.md) for its migration
+and qualification record. This revision supersedes conflicting V2 target rules;
+legacy V1 semantics and historical immutable Order economics remain preserved.
 
 Read with [Notifications design](NOTIFICATIONS_V2_PRODUCT_DESIGN.md) and the
 [repository impact/conflict audit](MARKETPLACE_V2_IMPACT_AUDIT.md).
@@ -30,17 +30,28 @@ grant authority. A proposal alone creates neither an Order nor inventory ownersh
 
 ## 2. Offer lifecycle and replacement
 
-| Offer state | Meaning |
-| --- | --- |
-| Active | Current proposal; authoritative eligibility must also permit acceptance |
-| Replaced | A newer Offer from either participant superseded it |
-| Accepted | Recipient accepted successfully and an Order was created |
-| Withdrawn | Sender voluntarily withdrew their Active proposal before acceptance |
-| Expired | Its authoritative agreed timing passed before acceptance |
-| Closed | Another transaction won/reserved the Listing; this proposal is no longer executable |
+| Offer state          | Meaning                                                                          |
+| -------------------- | -------------------------------------------------------------------------------- |
+| Active               | Current proposal; authoritative eligibility must also permit acceptance          |
+| Replaced             | A newer Offer from the same sender superseded it                                 |
+| Accepted             | Recipient accepted successfully and an Order was created                         |
+| Withdrawal tombstone | Backend withdrawal fact; lightweight timeline tombstone, no large Withdrawn card |
+| Declined             | Recipient pressed Deny; sender may propose new terms                             |
+| Expired              | Its authoritative agreed timing passed before acceptance                         |
+| No longer available  | Backend Closed: another authoritative transaction made the Offer non-executable  |
 
-At most **one Active Offer per conversation**. Buyer Offer A -> Seller Counter B
--> Buyer Counter C is symmetric: A and B become Replaced, C becomes Active.
+Within V2, each sender may have **one own Active Offer per conversation**.
+Buyer and Seller Active Offers may coexist. Countering preserves the recipient's
+Offer; a new own version replaces only that sender's previous Active Offer.
+V1/V2 Active proposals remain mutually exclusive within a conversation.
+
+Sender withdrawal is permitted only while Active and less than five server
+minutes old. User-authored TEXT and IMAGE messages use the same five-minute
+window. Both become chronological tombstones; system artifacts cannot be withdrawn.
+Recipient Active Offer actions are Cancel (close only), Deny (Declined), and
+Confirm (direct authoritative Accept, no second confirmation). Own Offer actions
+are Close, Revise and eligible Withdraw.
+
 Terms and sender remain immutable; old cards remain at their original timeline
 positions. New proposals have new IDs/timestamps. Withdrawal and Closed are not
 interchangeable. Accepted remains Accepted when its linked Order later expires,
@@ -124,12 +135,12 @@ Keep account-level Payment method **Unset / Set / Needs attention** and Payout
 account **Unset / Ready / Needs attention** in Settings -> Payments & payouts.
 The same user may buy and sell. No Order-specific card storage.
 
-| Action | Seller payout requirement |
-| --- | --- |
-| Create Listing, chat, negotiate, receive/view Buyer Offer | May proceed without Ready |
-| Seller sends initial/counter Offer | Ready required |
-| Seller accepts Buyer Offer | Ready required before Order creation |
-| Buyer accepts Seller Offer | Server rechecks the Listing Seller is Ready |
+| Action                                                    | Seller payout requirement                   |
+| --------------------------------------------------------- | ------------------------------------------- |
+| Create Listing, chat, negotiate, receive/view Buyer Offer | May proceed without Ready                   |
+| Seller sends initial/counter Offer                        | Ready required                              |
+| Seller accepts Buyer Offer                                | Ready required before Order creation        |
+| Buyer accepts Seller Offer                                | Server rechecks the Listing Seller is Ready |
 
 Buyer does not need a Payment method to browse, message, send/counter or Accept.
 **Set is required only when actual Buyer payment is attempted.** Receipt of a
@@ -140,14 +151,14 @@ must not leak the underlying financial account. Readiness is not payment success
 
 ## 5. Exactly two fulfillment models
 
-| Rule | On Campus | Delivery |
-| --- | --- | --- |
-| Offer terms | Item price, meetup location/date/time, optional note | Item price, agreed Delivery fee, Delivery method, optional terms/note |
-| Accept result | Order + Listing Pending + Payment Pending; wait for meetup | Order + Listing Pending + Payment Pending; checkout timing depends on accepter |
-| Payment timing | Meet -> Buyer inspect -> Buyer pay -> confirmed payment -> final handoff | Buyer pay -> authoritative confirmation -> deliver/ship |
-| Payment deadline | **No Accept + 30-minute payment deadline** | Buyer accepts Seller Offer: 30m immediately. Seller accepts Buyer Offer: 12h claim, then one-time 30m checkout window |
-| Expiry model | Authoritative meetup + 60m grace if unpaid, no handoff and no confirmed replacement schedule | No checkout within 12h, or unpaid at started 30m deadline -> Expired; Listing Available |
-| Delivery fee | None | Known before Accept; CA$0 or positive agreed amount |
+| Rule             | On Campus                                                                                    | Delivery                                                                                                              |
+| ---------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Offer terms      | Item price, meetup location/date/time, optional note                                         | Item price, agreed Delivery fee, Delivery method, optional terms/note                                                 |
+| Accept result    | Order + Listing Pending + Payment Pending; wait for meetup                                   | Order + Listing Pending + Payment Pending; checkout timing depends on accepter                                        |
+| Payment timing   | Meet -> Buyer inspect -> Buyer pay -> confirmed payment -> final handoff                     | Buyer pay -> authoritative confirmation -> deliver/ship                                                               |
+| Payment deadline | **No Accept + 30-minute payment deadline**                                                   | Buyer accepts Seller Offer: 30m immediately. Seller accepts Buyer Offer: 12h claim, then one-time 30m checkout window |
+| Expiry model     | Authoritative meetup + 60m grace if unpaid, no handoff and no confirmed replacement schedule | No checkout within 12h, or unpaid at started 30m deadline -> Expired; Listing Available                               |
+| Delivery fee     | None                                                                                         | Known before Accept; CA$0 or positive agreed amount                                                                   |
 
 Pickup and Meet cease to be separate primary V2 flows. On Campus and Delivery
 are the only top-level choices; fields switch with fulfillment rather than
@@ -231,8 +242,9 @@ starts checkout. Accept itself never charges Buyer.
 
 Offer snapshots agreed item price and, for Delivery, known Delivery fee. Marketplace
 calculates Buyer service fee from accepted terms and versioned platform pricing;
-Seller cannot enter that fee. Existing pricing rules are retained pending separate
-authorization, not silently repriced by this redesign.
+Seller cannot enter that fee. New V2 Orders use 1% of accepted item price only,
+no minimum and a CA$5 cap, with integer-cent half-up rounding. Delivery is
+excluded from the percentage base. Historical rule-tagged amounts are immutable.
 
 Seller platform fee = **CA$0**. Item earnings = agreed item price. Delivery fee is
 separate Seller reimbursement. Example: CA$80 item + CA$10 Delivery -> CA$90
@@ -300,12 +312,12 @@ enforceable. They do not block V2-A1 protocol isolation.
 
 ## 8. Role-specific UI and information hierarchy
 
-| Viewer | Target progression |
-| --- | --- |
-| On Campus Buyer | Offer accepted -> Meet & inspect -> Payment -> Handoff confirmed -> Protection -> Completed |
-| On Campus Seller | Offer accepted -> Meet buyer / inspection -> Buyer payment -> Handoff confirmed -> Payout on hold -> Payout |
-| Delivery Buyer | Offer accepted -> Checkout claim if Seller accepted -> Payment -> Delivery -> Received -> Protection -> Completed |
-| Delivery Seller | Offer accepted -> Await Buyer checkout/payment where applicable -> Deliver / Ship item -> Delivered / Protection -> Payout |
+| Viewer           | Target progression                                                                                                         |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| On Campus Buyer  | Offer accepted -> Meet & inspect -> Payment -> Handoff confirmed -> Protection -> Completed                                |
+| On Campus Seller | Offer accepted -> Meet buyer / inspection -> Buyer payment -> Handoff confirmed -> Payout on hold -> Payout                |
+| Delivery Buyer   | Offer accepted -> Checkout claim if Seller accepted -> Payment -> Delivery -> Received -> Protection -> Completed          |
+| Delivery Seller  | Offer accepted -> Await Buyer checkout/payment where applicable -> Deliver / Ship item -> Delivered / Protection -> Payout |
 
 Next Step and Payment presentation derive from authoritative role, fulfillment
 and persisted state. Seller is never payer; On Campus must not open with immediate
@@ -322,10 +334,18 @@ Unresolved nonterminal work remains Active; Expired, Cancelled, Completed, Refun
 remain History. Preserve exact Order-ID navigation, terminal sorting and list-origin
 back context. Messages owns Offer history; Orders owns accepted transactions.
 
-Keep four presentation levels: list bucket; compact Offer current outcome;
-expanded Offer status + linked Order outcome + agreed terms; full Order View
-details terminal report. Cancellation/refund reports belong only to full detail.
-Accepted Offer remains Accepted beneath a linked Order expired/cancelled outcome.
+Compact Offer cards show author/context, current item price, changed field names,
+Offer status and an open affordance. Full terms and role-specific economics belong
+in Review/detail. Initial comparison captures the Listing baseline; Counter uses
+the targeted Offer; Revise uses the immediately previous own Offer. Listing
+preferred_fulfillment defaults existing rows to ON_CAMPUS and permits DELIVERY;
+this is a negotiable preference, not a restriction.
+
+Accepted Offers remain separately Accepted. Each persisted Order has its own
+centered Agreement milestone, initially Agreement reached, then Cancelled,
+Expired or Completed from authoritative Order state. Confirm remains in Messages;
+View Order is an explicit navigation choice. Historical milestones are never
+replaced by a later negotiation round.
 Keep compact cards, approved responsive surfaces and concise desktop no-scroll
 expanded terms. Preserve mobile's single content scroll and normal accessibility.
 
@@ -367,15 +387,15 @@ event taxonomy, privacy and unread model are in the Notifications design.
 
 ## 10. Supersession, compatibility and closure
 
-| V1 rule | Target V2 replacement |
-| --- | --- |
-| Seller-only Request; Buyer-only Accept | Both send/counter; only immutable recipient accepts |
-| Pickup / Meet / Shipping | On Campus / Delivery; Seller delivery/Courier are subtypes |
-| Fixed-cost Accept -> 30-minute payment reservation | Delivery Buyer Accept: immediate 30m; Seller Accept: 12h checkout claim then once-only 30m. On Campus: meetup + 60m grace |
-| Shipping pending -> accepted quote workflow | Known Delivery fee before Accept; Counter Offer for changes |
-| Seller Ready before Request send only + Buyer Accept recheck | Seller Offer send and Seller acceptance plus all Accept rechecks |
-| Payment before in-person inspection milestone | On Campus inspection precedes payment; final handoff follows confirmed payment |
-| System alerts absent from primary navigation | Primary Notifications unified feed; human negotiation remains Messages |
+| V1 rule                                                      | Target V2 replacement                                                                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| Seller-only Request; Buyer-only Accept                       | Both send/counter; only immutable recipient accepts                                                                       |
+| Pickup / Meet / Shipping                                     | On Campus / Delivery; Seller delivery/Courier are subtypes                                                                |
+| Fixed-cost Accept -> 30-minute payment reservation           | Delivery Buyer Accept: immediate 30m; Seller Accept: 12h checkout claim then once-only 30m. On Campus: meetup + 60m grace |
+| Shipping pending -> accepted quote workflow                  | Known Delivery fee before Accept; Counter Offer for changes                                                               |
+| Seller Ready before Request send only + Buyer Accept recheck | Seller Offer send and Seller acceptance plus all Accept rechecks                                                          |
+| Payment before in-person inspection milestone                | On Campus inspection precedes payment; final handoff follows confirmed payment                                            |
+| System alerts absent from primary navigation                 | Primary Notifications unified feed; human negotiation remains Messages                                                    |
 
 Preserve all existing V1 historical Accepted Requests, Orders, cancellations,
 expiry records, snapshots, identifiers and audit events. Do not backdate or
@@ -389,26 +409,26 @@ by documenting a target.
 
 ## 11. Concise locked decision table
 
-| Decision | Target rule |
-| --- | --- |
-| Offer sender / withdrawal | Buyer or Seller; sender-only Withdrawn |
-| Offer lifecycle | Active / Replaced / Accepted / Withdrawn / Expired / Closed |
-| Proposal / inventory | One Active per conversation; one winning Order per Listing; competing Offers Closed |
-| Fulfillment | On Campus / Delivery; Delivery subtypes Seller delivery / Courier |
-| On Campus payment / Accept timer | Inspect at meetup, then pay; no Accept-based payment timer |
-| On Campus no-show | Authoritative meetup + 60m grace; unpaid/no handoff/no confirmed replacement -> expiry eligibility |
-| Reschedule | Other participant confirms location/date/time/note; existing schedule until confirmed; economic terms immutable |
-| Delivery Buyer accepts Seller Offer | Immediate authoritative 30m payment window |
-| Delivery Seller accepts Buyer Offer | 12h checkout claim from Accept, then one-time 30m when Buyer intentionally starts checkout |
-| Listing after Accept / terminal outcome | Pending; Cancelled/Expired before completion -> Available; Completed -> Sold |
-| Accepted evidence | Immutable Offer + Listing snapshot; live edits cannot rewrite history |
-| Active Offer material edit | Remains Active but canAccept=false until new/revised terms where required |
-| Lower public price | Asking price below Offer item price blocks Accept; no silent price mutation |
-| Physical handoff | Paid Buyer-held QR/6-digit credential, Seller verifies |
-| Courier receipt evidence | Trusted carrier Delivered / Buyer Confirm Received, not Seller Shipped alone |
-| Protection | 24h after trusted paid handoff/receipt; future policy coverage, not current guarantee |
-| Notifications | One newest-first priority-weighted feed; Action required / Informational |
-| Price Drop | One unread recipient/Listing item coalesces original/latest price; meaningful later drop after read may create new item |
+| Decision                                | Target rule                                                                                                             |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Offer sender / withdrawal               | Buyer or Seller; sender-only Withdrawn                                                                                  |
+| Offer lifecycle                         | Active / Replaced / Accepted / Withdrawn / Expired / Closed                                                             |
+| Proposal / inventory                    | One Active V2 per sender; V1/V2 Active exclusivity; one winning Order per Listing; losing Offers Closed                 |
+| Fulfillment                             | On Campus / Delivery; Delivery subtypes Seller delivery / Courier                                                       |
+| On Campus payment / Accept timer        | Inspect at meetup, then pay; no Accept-based payment timer                                                              |
+| On Campus no-show                       | Authoritative meetup + 60m grace; unpaid/no handoff/no confirmed replacement -> expiry eligibility                      |
+| Reschedule                              | Other participant confirms location/date/time/note; existing schedule until confirmed; economic terms immutable         |
+| Delivery Buyer accepts Seller Offer     | Immediate authoritative 30m payment window                                                                              |
+| Delivery Seller accepts Buyer Offer     | 12h checkout claim from Accept, then one-time 30m when Buyer intentionally starts checkout                              |
+| Listing after Accept / terminal outcome | Pending; Cancelled/Expired before completion -> Available; Completed -> Sold                                            |
+| Accepted evidence                       | Immutable Offer + Listing snapshot; live edits cannot rewrite history                                                   |
+| Active Offer material edit              | Remains Active but canAccept=false until new/revised terms where required                                               |
+| Lower public price                      | Asking price below Offer item price blocks Accept; no silent price mutation                                             |
+| Physical handoff                        | Paid Buyer-held QR/6-digit credential, Seller verifies                                                                  |
+| Courier receipt evidence                | Trusted carrier Delivered / Buyer Confirm Received, not Seller Shipped alone                                            |
+| Protection                              | 24h after trusted paid handoff/receipt; future policy coverage, not current guarantee                                   |
+| Notifications                           | One newest-first priority-weighted feed; Action required / Informational                                                |
+| Price Drop                              | One unread recipient/Listing item coalesces original/latest price; meaningful later drop after read may create new item |
 
 ## 12. Parameters, future decisions and bounded next phase
 
@@ -437,7 +457,13 @@ suspicious external-payment/contact instructions, without blindly blocking norma
 chat. Core safety: do not hand over until the authoritative Order shows Payment
 confirmed. None is implemented or blocks V2-A1.
 
-**V2-A remains paused; V2-A1 is next:** protocol/version isolation, V1/V2 authority
+### Historical authorization boundary before implementation
+
+The following records the earlier documentation-only checkpoint. It is not the
+current execution boundary; subsequent authorized staging implementation and the
+2026-10-13 revision are recorded in the linked current reports.
+
+**V2-A remained paused; V2-A1 was next:** protocol/version isolation, V1/V2 authority
 separation, sender/recipient foundation, legacy backfill/compatibility, V1 mutation
 guards and cross-protocol Active exclusivity only. It does not implement new
 fulfillment/timers, Pending, snapshots, rescheduling, handoff, Notifications or

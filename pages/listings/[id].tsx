@@ -3,7 +3,7 @@ import Head from 'next/head'
 
 import { Container } from '@/components/container/container'
 import { BackButton } from '@/components/listings/back-button'
-import { useMarketplaceSession } from '@/components/listings/marketplace-session'
+import { useListingOfferContext } from '@/components/listings/use-listing-offer-context'
 import { useMessageSeller } from '@/components/listings/use-message-seller'
 import { ProductImage } from '@/components/product/product-image'
 import { listingCategories, listingConditions } from '@/lib/listing-metadata'
@@ -18,8 +18,11 @@ type ListingPageProps = {
 }
 
 export default function ListingPage({ listing, error }: ListingPageProps) {
-  const { seller } = useMarketplaceSession()
   const messaging = useMessageSeller(listing?.id || '')
+  const offerContext = useListingOfferContext(
+    listing?.id || '',
+    listing?.seller.id || ''
+  )
   if (!listing)
     return (
       <main className="py-8">
@@ -103,22 +106,24 @@ export default function ListingPage({ listing, error }: ListingPageProps) {
                   >
                     Message Seller
                   </Button>
-                  {seller &&
-                    seller.id !== listing.seller.id &&
-                    listing.status === 'available' &&
-                    process.env.NEXT_PUBLIC_MESSAGES_ENV === 'staging' &&
-                    process.env.NEXT_PUBLIC_SUPABASE_URL ===
-                      'https://pcaqxezdfxofysghssyo.supabase.co' && (
+                  {offerContext.enabled &&
+                    (listing.status === 'available' ||
+                      offerContext.orderId) && (
                       <Button
                         type="primary"
                         size="large"
-                        disabled={messaging.busy}
-                        onClick={() => messaging.contact(true)}
+                        disabled={
+                          offerContext.busy || Boolean(offerContext.error)
+                        }
+                        onClick={() => offerContext.open()}
                       >
-                        Make Offer
+                        {offerContext.label}
                       </Button>
                     )}
                   {messaging.error && <p role="alert">{messaging.error}</p>}
+                  {offerContext.error && (
+                    <p role="alert">{offerContext.error}</p>
+                  )}
                   {listing.status === 'sold' && (
                     <p id="listing-sold" className="text-neutral-dark text-sm">
                       This listing has been sold.

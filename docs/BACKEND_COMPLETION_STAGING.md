@@ -1,6 +1,11 @@
 # Locked backend completion pass — staging
 
 Target: `western-marketplace-staging` / `pcaqxezdfxofysghssyo`.
+
+Historical checkpoint record: the later [V2 Offer / Agreement revision](V2_OFFER_AGREEMENT_REVISION.md)
+supersedes new V2 fee and Offer rules through eight additive migrations. Existing
+4% rule-tagged Orders and earlier qualification evidence below remain historical;
+new V2 Orders use 1% item-only, no minimum, CA$5 maximum. Agreement UI is now wired.
 Checkpoint policy (2026-10-13): **PROVIDER-INDEPENDENT BACKEND: COMPLETE / VERIFIED**.
 **EXTERNAL INTEGRATIONS: DEFERRED. FRONTEND PRODUCT POLISH: FUTURE.**
 **REAL-MONEY PAYMENT NOT YET INTEGRATED.** See the
@@ -103,17 +108,17 @@ All nine migrations are applied exactly once to staging. Deployed latest bodies,
 empty search paths, private RLS and the scheduler were inspected read-only.
 Already-applied migration sources/history were not rewritten.
 
-| Migration | SHA-256 | Purpose | Staging status / occurrences |
-| --- | --- | --- | --- |
-| `202610130001_notifications_domain.sql` | `885b9a5af2421c46edcfd2f8b042cee9bc605487963f7e832e3e8fbcb06d5a13` | Notification persistence/RLS/Price Drop | Applied / 1 |
-| `202610130002_delivery_area_economics.sql` | `af956ece51c84be13f43c45dd0b1bf8763c6a310971445c59ba615139439c007` | Coarse area and frozen integer-cent economics | Applied / 1 |
-| `202610130003_delivery_checkout_payment.sql` | `6d50b7c6f8e76fa67ed61eb83ee0bee436dc5690340144d2b09e95a3d589ca62` | Private address, checkout clocks and shared Payment | Applied / 1 |
-| `202610130004_handoff_protection.sql` | `0aac5f226cc4007ce5174e296a6768442d26036d1516a3f258907b6538546c50` | Single-use handoff and Protection/case/completion | Applied / 1 |
-| `202610130005_courier_possession.sql` | `9c00899d801e5243d4d11702e0510bed441ceb29a0e43d2065137ecef94c64e5` | Trusted Courier/Buyer possession boundary | Applied / 1 |
-| `202610130006_notifications_due_work.sql` | `4f91078777b8ab0215c1a29958eafa889085eed0f6f024d92b55fd0261a89dfb` | Event fanout, reminders and idempotent due-work | Applied / 1 |
-| `202610130007_staging_due_work_schedule.sql` | `d77596b564c49adec764ee2612325b96cf5be5f9fffa79234ac6e904c41032c1` | Hosted staging minute transaction cron | Applied / 1 |
-| `202610130008_backend_volatility.sql` | `da285bbabe22c620856875254f01701c37510053aaf530ded6d14c6759130fcf` | New helper/projection volatility correctness | Applied / 1 |
-| `202610130009_payout_notifications.sql` | `2ac9c8ee4550e1edddc1f893d56e9a1f4a44554e3428a1e9583f01966290b652` | Payout status/attention notification projection | Applied / 1 |
+| Migration                                    | SHA-256                                                            | Purpose                                             | Staging status / occurrences |
+| -------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------- | ---------------------------- |
+| `202610130001_notifications_domain.sql`      | `885b9a5af2421c46edcfd2f8b042cee9bc605487963f7e832e3e8fbcb06d5a13` | Notification persistence/RLS/Price Drop             | Applied / 1                  |
+| `202610130002_delivery_area_economics.sql`   | `af956ece51c84be13f43c45dd0b1bf8763c6a310971445c59ba615139439c007` | Coarse area and frozen integer-cent economics       | Applied / 1                  |
+| `202610130003_delivery_checkout_payment.sql` | `6d50b7c6f8e76fa67ed61eb83ee0bee436dc5690340144d2b09e95a3d589ca62` | Private address, checkout clocks and shared Payment | Applied / 1                  |
+| `202610130004_handoff_protection.sql`        | `0aac5f226cc4007ce5174e296a6768442d26036d1516a3f258907b6538546c50` | Single-use handoff and Protection/case/completion   | Applied / 1                  |
+| `202610130005_courier_possession.sql`        | `9c00899d801e5243d4d11702e0510bed441ceb29a0e43d2065137ecef94c64e5` | Trusted Courier/Buyer possession boundary           | Applied / 1                  |
+| `202610130006_notifications_due_work.sql`    | `4f91078777b8ab0215c1a29958eafa889085eed0f6f024d92b55fd0261a89dfb` | Event fanout, reminders and idempotent due-work     | Applied / 1                  |
+| `202610130007_staging_due_work_schedule.sql` | `d77596b564c49adec764ee2612325b96cf5be5f9fffa79234ac6e904c41032c1` | Hosted staging minute transaction cron              | Applied / 1                  |
+| `202610130008_backend_volatility.sql`        | `da285bbabe22c620856875254f01701c37510053aaf530ded6d14c6759130fcf` | New helper/projection volatility correctness        | Applied / 1                  |
+| `202610130009_payout_notifications.sql`      | `2ac9c8ee4550e1edddc1f893d56e9a1f4a44554e3428a1e9583f01966290b652` | Payout status/attention notification projection     | Applied / 1                  |
 
 ## Qualification
 

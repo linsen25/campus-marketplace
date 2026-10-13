@@ -22,6 +22,7 @@ import {
   validateBuilder,
 } from '@/lib/listing-builder'
 import type { ListingFields } from '@/lib/listing-builder'
+import { listingFulfillmentEnabled } from '@/lib/listing-fulfillment'
 import { validateListingImage } from '@/lib/listing-images'
 import { listingCategories, listingConditions } from '@/lib/listing-metadata'
 import {
@@ -214,6 +215,7 @@ export function ListingForm({
           description: input.description,
           condition: input.condition ?? null,
           pickupArea: input.pickupArea,
+          preferredFulfillment: input.preferredFulfillment,
         })
         if (leave) {
           leaveAfterExit.current = leave
@@ -502,6 +504,28 @@ export function ListingForm({
               onChange={(value: string) => change('pickupArea', value)}
             />
           </div>
+          {listingFulfillmentEnabled() && (
+            <div className={styles.field}>
+              <span>Preferred fulfillment</span>
+              <GlideSelect
+                ariaLabel="Preferred fulfillment"
+                size="lg"
+                surfaceColor="#2a2134"
+                highlightColor="#443451"
+                value={fields.preferredFulfillment}
+                disabled={busy || Boolean(pending)}
+                options={[
+                  { value: 'ON_CAMPUS', label: 'On Campus' },
+                  { value: 'DELIVERY', label: 'Delivery' },
+                ]}
+                onChange={(value: string) => {
+                  if (value === 'DELIVERY' || value === 'ON_CAMPUS')
+                    change('preferredFulfillment', value)
+                }}
+              />
+              <small>Buyers may propose another fulfillment mode.</small>
+            </div>
+          )}
           <label className={styles.field}>
             Description
             <textarea

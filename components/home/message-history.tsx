@@ -13,15 +13,17 @@ import {
   mergeMessageTimeline,
   groupMessageTimeline,
 } from '@/lib/message-timeline-preview'
+import { withdrawMessage } from '@/lib/messages-api'
 import type {
   PreviewRequest,
   PreviewConversationEvent,
 } from '@/lib/order-interaction-preview'
 import type { Message } from '@/types/message'
-import type { Offer } from '@/types/offer'
+import type { Agreement, Offer } from '@/types/offer'
 
 import { MessagePhotos } from './message-photos'
 import styles from './messages-chat.module.css'
+import { WithdrawContext } from './withdraw-context'
 
 const timeFormat = new Intl.DateTimeFormat('en-US', {
   hour: 'numeric',
@@ -96,6 +98,8 @@ export function MessageHistory({
   formalRequests = false,
   offers = [],
   renderOffer,
+  agreements = [],
+  renderAgreement,
 }: {
   conversationId: string
   messages: readonly Message[]
@@ -112,9 +116,16 @@ export function MessageHistory({
   previewEvents?: readonly PreviewConversationEvent[]
   offers?: readonly Offer[]
   renderOffer?: (offer: Offer) => React.ReactNode
+  agreements?: readonly Agreement[]
+  renderAgreement?: (agreement: Agreement) => React.ReactNode
   formalRequests?: boolean
   renderOrderRequest?: (request: PreviewRequest) => React.ReactNode
 }) {
+  // A server-issued withdrawal receipt redacts stale history while refetch recovers.
+  const [withdrawalReceipts, setWithdrawalReceipts] = useState<
+    Record<string, Message>
+  >({})
+  useEffect(() => setWithdrawalReceipts({}), [conversationId, currentUserId])
   const timeline = useMemo(
     () =>
       mergeMessageTimeline(
@@ -122,9 +133,10 @@ export function MessageHistory({
         orderRequests,
         previewEvents,
         formalRequests,
-        offers
+        offers,
+        agreements
       ),
-    [messages, orderRequests, previewEvents, formalRequests, offers]
+    [messages, orderRequests, previewEvents, formalRequests, offers, agreements]
   )
   const body = useRef<HTMLDivElement>(null)
   const previous = useRef({
@@ -274,6 +286,22 @@ export function MessageHistory({
       {status}
       {olderControl}
       {groupMessageTimeline(timeline).map((item) => {
+        if (item.kind === 'agreement')
+          return (
+            <section
+              key={item.id}
+              className={styles.messageGroup}
+              data-timeline-agreement={item.agreement.id}
+            >
+              <TimelineTimestamp
+                createdAt={item.createdAt}
+                show={item.showTimestamp}
+              />
+              <div className={styles.systemEvent}>
+                {renderAgreement?.(item.agreement)}
+              </div>
+            </section>
+          )
         if (item.kind === 'offer')
           return (
             <section
@@ -393,7 +421,8 @@ export function MessageHistory({
                 createdAt={group[0].createdAt}
                 show={item.showTimestamp}
               />
-              {group.map((message) => {
+              {group.map((source) => {
+                const message = withdrawalReceipts[source.id] || source
                 const sent = message.senderId === perspectiveUserId
                 return (
                   <MessageRow
@@ -413,11 +442,33 @@ export function MessageHistory({
                         />
                       </div>
                     )}
-                    {message.type === 'TEXT' && (
-                      <p className={styles.bubble}>{message.content}</p>
-                    )}
-                    {message.type === 'IMAGE' && (
-                      <MessagePhotos message={message} />
+                    {message.withdrawnAt ? (
+                      <small>{sent ? 'You' : name} withdrew a message.</small>
+                    ) : (
+                      <WithdrawContext
+                        enabled={sent && Boolean(message.canWithdraw)}
+                        createdAt={message.createdAt}
+                        onWithdraw={async () => {
+                          const receipt = await withdrawMessage(message.id)
+                          setWithdrawalReceipts((receipts) => ({
+                            ...receipts,
+                            [message.id]: receipt,
+                          }))
+                          window.dispatchEvent(
+                            new CustomEvent(
+                              'marketplace-messages-invalidated',
+                              { detail: { conversationId } }
+                            )
+                          )
+                        }}
+                      >
+                        {message.type === 'TEXT' && (
+                          <p className={styles.bubble}>{message.content}</p>
+                        )}
+                        {message.type === 'IMAGE' && (
+                          <MessagePhotos message={message} />
+                        )}
+                      </WithdrawContext>
                     )}
                   </MessageRow>
                 )

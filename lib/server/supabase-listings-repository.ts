@@ -1,3 +1,4 @@
+import { listingFulfillmentEnabled } from '@/lib/listing-fulfillment'
 import { listingConditions, listingSorts } from '@/lib/listing-metadata'
 import {
   ListingApiError,
@@ -51,6 +52,9 @@ function fields(input: CreateListingInput) {
     subcategory: input.subcategory,
     condition: input.condition || null,
     pickup_area: input.pickupArea,
+    ...(listingFulfillmentEnabled() && {
+      preferred_fulfillment: input.preferredFulfillment ?? 'ON_CAMPUS',
+    }),
     expected_image_count: input.expectedImageCount,
   }
 }
@@ -309,6 +313,9 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
           price_cents: validated.price,
           condition: validated.condition || null,
           pickup_area: validated.pickupArea,
+          ...(listingFulfillmentEnabled() && {
+            preferred_fulfillment: validated.preferredFulfillment,
+          }),
         })
         .eq('id', id)
         .select<string, ListingRow>(selection)

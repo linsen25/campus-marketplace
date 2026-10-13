@@ -1,7 +1,11 @@
 import { marketplaceRequest } from '@/lib/listings-api'
-import type { Offer, OfferEvent, OfferTerms } from '@/types/offer'
+import type { Agreement, Offer, OfferEvent, OfferTerms } from '@/types/offer'
 
-export type OfferHistory = { offers: Offer[]; events: OfferEvent[] }
+export type OfferHistory = {
+  offers: Offer[]
+  events: OfferEvent[]
+  agreements?: Agreement[]
+}
 export const getOffers = (id: string) =>
   marketplaceRequest<OfferHistory>(
     `/api/offers?conversationId=${encodeURIComponent(id)}`,
@@ -21,17 +25,30 @@ export function offerPayload(terms: OfferTerms) {
         fulfillment: 'delivery',
         delivery_fee_cents: terms.deliveryFeeCents,
         delivery_method: terms.deliveryMethod,
+        ...(terms.deliveryArea && {
+          delivery_area: {
+            country_code: terms.deliveryArea.countryCode,
+            province_code: terms.deliveryArea.provinceCode,
+            city_label: terms.deliveryArea.cityLabel,
+            postal_prefix: terms.deliveryArea.postalPrefix,
+          },
+        }),
       }
 }
 export const sendOffer = (
   conversationId: string,
   terms: OfferTerms,
-  clientActionId: string
+  clientActionId: string,
+  comparison?: { id: string; kind: 'counter' | 'revise' }
 ) =>
   marketplaceRequest<Offer>('/api/offers', 'POST', {
     conversationId,
     terms: offerPayload(terms),
     clientActionId,
+    ...(comparison && {
+      comparisonOfferId: comparison.id,
+      kind: comparison.kind,
+    }),
   })
 export const withdrawOffer = (id: string, clientActionId: string) =>
   marketplaceRequest<Offer>(
@@ -43,6 +60,12 @@ export const withdrawOffer = (id: string, clientActionId: string) =>
 export const acceptOffer = (id: string, clientActionId: string) =>
   marketplaceRequest<{ orderId: string; buyerId: string; sellerId: string }>(
     `/api/offers/${encodeURIComponent(id)}/accept`,
+    'POST',
+    { clientActionId }
+  )
+export const denyOffer = (id: string, clientActionId: string) =>
+  marketplaceRequest<Offer>(
+    `/api/offers/${encodeURIComponent(id)}/deny`,
     'POST',
     { clientActionId }
   )

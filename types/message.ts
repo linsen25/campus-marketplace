@@ -6,6 +6,8 @@ type MessageBase = {
   createdAt: string
   sequence?: number
   clientMessageId?: string
+  withdrawnAt?: string | null
+  canWithdraw?: boolean
 }
 
 export type TextMessage = MessageBase & {

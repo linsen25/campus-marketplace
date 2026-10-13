@@ -11,9 +11,23 @@ complete; its hosted executor is an accepted deferred external/ops integration.
 Notification persistence/reminders are implemented, not email/push delivery.
 Payment, Payout, Carrier, Maps, delivery channels and adjudication boundaries are
 listed in [External integrations backlog](EXTERNAL_INTEGRATIONS_BACKLOG.md).
-Future UI includes Agreement Card, Maps, Notifications visual feed/Bell,
+Future UI includes Maps, Notifications visual feed/Bell,
 Browse/Search and general frontend polish. Older phase sections below are
 historical scope/evidence and do not supersede this current status.
+
+## V2 Offer / Agreement revision (2026-10-13)
+
+Eight additive migrations are applied to staging only: per-sender dual Active,
+Deny/Declined, captured comparison terms, five-minute message/Offer withdrawal,
+Campus Offer expiry, Listing fulfillment preference and new V2 1% / CA$5-cap
+economics. Real compact Offers and centered per-Order Agreement history are wired
+into localhost:3000; no preview perspective or local transaction authority.
+**COMPLETE / STAGING VERIFIED.** Live source/hash verification, hosted rollback
+regressions, 18 true-overlap races and Buyer/Seller qualification at 390/430/1280/1536
+passed. Listing creation/edit/defaults, withdrawal touch/keyboard, terminal history,
+multi-round Agreement milestones, V1 and Market image regressions are verified.
+Disposable fixtures are removed and canonical/manual fingerprints are unchanged.
+[Current revision and evidence](V2_OFFER_AGREEMENT_REVISION.md).
 
 The previous read-only production lint incident remains documented; no production
 writes occurred. Staging lint now has an explicit target guard tested locally.
@@ -33,7 +47,6 @@ No production writes, .env.local edits, real provider operations, emails, commit
 or push. One incorrectly targeted read-only production DB lint occurred and is
 explicitly recorded in the report; production was not entirely unaccessed. Real
 Payment/Payout provider choices and dispute/refund policy remain unresolved.
-
 
 ## V2-D2A implementation update (2026-10-12)
 
@@ -57,7 +70,6 @@ Delivery progression or Notifications. Stop before D2B implementation; D2B is re
 for planning only. Before V2-G, remind the user to create a stable Git checkpoint.
 Earlier D1/C2 statements below are historical phase scope.
 
-
 ## V2-D1 implementation update (2026-10-12)
 
 V2-D1 On Campus scheduling / mutual rescheduling / +60m no-show is complete
@@ -69,7 +81,6 @@ Synthetic data is cleaned; canonical/manual/media fingerprints are unchanged.
 remain intact. No D2 Payment/inspection/handoff/Protection or Notifications.
 Production/manual history untouched; no commit/push. Stop before G for a stable
 Git checkpoint.
-
 
 ## V2-C2 implementation update (2026-10-12)
 
@@ -83,7 +94,6 @@ are unchanged and synthetic fixtures are cleaned. See
 Earlier B/C1 scope statements below describe those phases, not current C2 scope.
 Production and manual history are untouched; no commit/push. D/E/F/Notifications
 remain out of scope. Before V2-G, stop for a stable Git checkpoint.
-
 
 ## V2-C1 private snapshot media foundation (2026-10-12)
 
@@ -121,7 +131,6 @@ No commit/push. Before future V2-G Notifications, require a stable code checkpoi
 Older phase records below are historical; their "UI remains V1 / B not started"
 statements describe the preceding checkpoints, not the current implementation.
 
-
 ## V2-A2 staging implementation (2026-10-12)
 
 V2-A2 backend mutation migration applied on staging only; current UI remains V1.
@@ -135,7 +144,6 @@ V2-B OFFER UX IS READY FOR IMPLEMENTATION PLANNING; do not begin automatically.
 No V2 Accept, Order creation, inventory/payment/timer/fulfillment changes or
 Notifications. Canonical manual/Nike histories protected; production untouched.
 The approved competitor-inspired future UX remains binding, deferred to its phases.
-
 
 ## Revised Marketplace V2 contract - documentation only (2026-10-11)
 
@@ -178,7 +186,6 @@ time. Cancel returns to History; detail/back preserves filter origin; Messages
 terminal navigation derives History. No lifecycle or expiry authority changes.
 Expanded Request is a concise agreed-terms view; cancellation metadata lives only
 in full Order View details. Compact current-outcome priority is preserved.
-
 
 Validation: 48-case Buyer/Seller terminal/active/history matrix, followed by 16
 list/delayed-refetch/Active Request cases at 390/430/1280/1536; eight cancellation
@@ -229,8 +236,7 @@ changes and no production access.
 
 TypeScript, focused ESLint and Request/Accept/Orders/cancellation, Phase E Payment,
 Phase F Progress, Auth/session and Messages/timeline regressions pass. Focused
-authenticated Buyer/Seller browser checks cover six terminal/active states at
-1280. Nike is Accepted + Expired in both perspectives, with no Accept action;
+authenticated Buyer/Seller browser checks cover six terminal/active states at 1280. Nike is Accepted + Expired in both perspectives, with no Accept action;
 its Request/Order/Listing read-only fingerprints remain unchanged. Alternative
 outcomes are browser DTO projections, not hosted fixtures. Zero transaction writes
 and runtime errors. No commit/push.
@@ -307,7 +313,6 @@ UI, Phase F Progress/Next Step, Settings, payout gate and simulator are untouche
 The manual Monitor Request is preserved. Production untouched; no commit or push.
 The sections below retain earlier implementation history.
 
-
 ## Phase F role/fulfillment Progress and Next Step - staging (2026-10-11)
 
 Formal Order Detail now derives one read-only presentation from the persisted
@@ -369,7 +374,6 @@ browser bundle scans, documentation links and git diff --check passed; index emp
 Screenshots/results are Git-ignored. No production access, email, commit or push.
 
 Earlier sections below are historical implementation records.
-
 
 ## Phase E role-specific Payment UI - staging (2026-10-11)
 

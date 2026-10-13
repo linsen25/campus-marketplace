@@ -6,6 +6,8 @@ import { ListingMedia } from '@/components/listings/listing-media'
 import { ActionRow } from '@/components/ui/action-row'
 import { FadingDialog } from '@/components/ui/fading-dialog'
 import { offerAmount, parseOfferAmount } from '@/lib/offer-amount'
+import { offerChangedFields } from '@/lib/offer-changes'
+import { offerEconomics } from '@/lib/offer-economics'
 import {
   combineLocalDateAndTime,
   validateNewOrderSchedule,
@@ -20,6 +22,7 @@ import styles from './offer-ui.module.css'
 import requestStyles from './order-request-preview.module.css'
 import { OrderScheduleField } from './order-schedule-field'
 import profile from './profile.module.css'
+import { WithdrawContext, useWithdrawalEligibility } from './withdraw-context'
 
 function decimal(cents: number) {
   return `${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, '0')}`
@@ -72,6 +75,16 @@ export function OfferTermsSummary({ terms }: { terms: OfferTerms }) {
               ? 'Courier / shipping'
               : 'Seller delivery'}
           </dd>
+          {terms.deliveryArea && (
+            <>
+              <dt>Delivery area</dt>
+              <dd>
+                {terms.deliveryArea.cityLabel},{' '}
+                {terms.deliveryArea.provinceCode} ·{' '}
+                {terms.deliveryArea.postalPrefix}
+              </dd>
+            </>
+          )}
         </>
       )}
       {terms.note && (
@@ -87,277 +100,254 @@ export function OfferTermsSummary({ terms }: { terms: OfferTerms }) {
     </dl>
   )
 }
-// eslint-disable-next-line complexity -- Offer lifecycle actions, recipient confirmation and async barriers share the existing card surface.
+export function OfferEconomicsSummary({
+  terms,
+  buyer,
+}: {
+  terms: OfferTerms
+  buyer: boolean
+}) {
+  const money = offerEconomics(terms)
+  return (
+    <dl className={styles.terms}>
+      <dt>Item price</dt>
+      <dd>{offerAmount(money.item)}</dd>
+      {terms.fulfillment === 'delivery' && (
+        <>
+          <dt>Delivery fee</dt>
+          <dd>{offerAmount(money.delivery)}</dd>
+        </>
+      )}
+      <dt>{buyer ? 'Buyer service fee' : 'Seller platform fee'}</dt>
+      <dd>{offerAmount(buyer ? money.fee : money.sellerFee)}</dd>
+      <dt>{buyer ? 'Buyer total' : 'Seller transaction amount'}</dt>
+      <dd>{offerAmount(buyer ? money.total : money.sellerGross)}</dd>
+    </dl>
+  )
+}
+// eslint-disable-next-line complexity -- Recipient/owner lifecycle controls share the existing dialog and one async action guard.
 export function OfferCard({
   offer,
   listing,
   viewerId,
+  participantName,
   blocked,
   canEdit,
   onEdit,
   onWithdraw,
   onAccept,
+  onDeny,
   onViewOrder,
 }: {
   offer: Offer
   listing: ChatListing
   viewerId: string
-  canEdit: boolean
+  participantName: string
   blocked: boolean
+  canEdit: boolean
   onEdit: (offer: Offer) => void
   onWithdraw: (offer: Offer) => Promise<void>
   onAccept?: (offer: Offer, command: string) => Promise<void>
+  onDeny?: (offer: Offer, command: string) => Promise<void>
   onViewOrder?: (offer: Offer) => void
 }) {
   const [open, setOpen] = useState(false)
-  const [withdraw, setWithdraw] = useState(false)
-  const [confirmAccept, setConfirmAccept] = useState(false)
-  const accepted = useRef(false)
-  const acceptCommand = useRef<string>()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
-  const sending = useRef(false)
+  const busy = useRef(false)
+  const accepted = useRef(false)
+  const commands = useRef<{ accept?: string; deny?: string }>({})
   const own = offer.senderId === viewerId
+  const canWithdraw = useWithdrawalEligibility(
+    offer.createdAt,
+    own && offer.canWithdraw && !blocked
+  )
   const active = offer.status === 'Active' && !blocked && !accepted.current
-  const terms = offer.terms
-  const direction =
-    offer.senderId === offer.buyerId ? 'Buyer offer' : 'Seller offer'
-  const deliveryLabel =
-    terms.fulfillment === 'delivery' && terms.deliveryMethod === 'courier'
-      ? 'Courier / shipping'
-      : 'Seller delivery'
+  const status =
+    offer.status === 'Closed' ? 'No longer available' : offer.status
+  const direction = offer.senderId === offer.buyerId ? 'Buyer' : 'Seller'
+  const fields = offer.changedFields || []
   const close = () => {
     if (!pending) setOpen(false)
   }
+  const act = async (kind: 'accept' | 'deny') => {
+    if (busy.current || !active || own || offer.recipientId !== viewerId) return
+    if (kind === 'accept' && !offer.canAccept) return
+    const action = kind === 'accept' ? onAccept : onDeny
+    if (!action) return
+    busy.current = true
+    setPending(true)
+    setError('')
+    try {
+      if (!commands.current[kind]) commands.current[kind] = crypto.randomUUID()
+      const command = commands.current[kind] as string
+      await action(offer, command)
+      if (kind === 'accept') accepted.current = true
+      setOpen(false)
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : 'Unable to update Offer. Refresh and retry.'
+      )
+    } finally {
+      busy.current = false
+      setPending(false)
+    }
+  }
+  if (offer.status === 'Withdrawn')
+    return (
+      <small className={styles.tombstone}>
+        {own ? 'You' : participantName} withdrew an offer.
+      </small>
+    )
   return (
-    <div
-      className={styles.timelineCard}
-      data-offer-id={offer.id}
-      data-offer-status={offer.status}
+    <WithdrawContext
+      enabled={canWithdraw}
+      createdAt={offer.createdAt}
+      onWithdraw={() => onWithdraw(offer)}
     >
-      <button
-        className={`${requestStyles.collapsed} ${
-          offer.status !== 'Active' ? styles.terminal : ''
-        }`}
-        type="button"
-        aria-label={`Open ${direction}: ${offer.status}`}
-        onClick={() => setOpen(true)}
+      <div
+        className={styles.timelineCard}
+        data-offer-id={offer.id}
+        data-offer-status={status}
       >
-        <span>
-          <span className={requestStyles.status}>{offer.status}</span>
-          <strong>Offer</strong>
-          <small>{direction}</small>
-          <span>
-            {offerAmount(terms.itemAmountCents)}
-            {terms.fulfillment === 'delivery'
-              ? ` + ${offerAmount(terms.deliveryFeeCents)} delivery`
-              : ' · On Campus'}
-          </span>
-          <span className={requestStyles.location}>
-            {terms.fulfillment === 'on_campus'
-              ? `${terms.meetupLocation} · ${new Date(
-                  terms.scheduledAt
-                ).toLocaleString('en-CA', {
-                  timeZone: 'America/Toronto',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}`
-              : deliveryLabel}
-          </span>
-        </span>
-        <ChevronRight size={18} aria-hidden="true" />
-      </button>
-      {open && (
-        <FadingDialog
-          className={styles.dialog}
-          aria-labelledby={`offer-${offer.id}`}
-          onRequestClose={close}
+        <button
+          type="button"
+          className={`${requestStyles.collapsed} ${
+            offer.status !== 'Active' ? styles.terminal : ''
+          }`}
+          aria-label={`Open ${direction} Offer: ${status}`}
+          onClick={() => setOpen(true)}
         >
-          <header>
-            <h3 id={`offer-${offer.id}`}>Offer · {offer.status}</h3>
-            <p>{direction}</p>
-          </header>
-          <div className={styles.expanded}>
-            <OfferMedia listing={listing} />
-            <section>
-              <h4>{listing.title}</h4>
-              <OfferTermsSummary terms={terms} />
-              <p className={workspace.hint}>{offerExplanation(offer.status)}</p>
-            </section>
-          </div>
-          {error && <p role="alert">{error}</p>}
-          <ActionRow>
-            <CardAction variant="red" disabled={pending} onClick={close}>
-              Close
-            </CardAction>
-            {offer.status === 'Accepted' && offer.linkedOrderId && onViewOrder && (
-              <CardAction variant="green" onClick={() => onViewOrder(offer)}>
-                View Order
-              </CardAction>
+          <span>
+            <small>
+              {direction} ·{' '}
+              {offer.mutationKind === 'counter' ? 'Counter Offer' : 'Offer'}
+            </small>
+            <strong>{offerAmount(offer.terms.itemAmountCents)}</strong>
+            {fields.length > 0 && (
+              <small>
+                Changed: {fields.slice(0, 3).join(' · ')}
+                {fields.length > 3 ? ` · +${fields.length - 3} more` : ''}
+              </small>
             )}
-            {active && !own && offer.recipientId === viewerId && onAccept && (
-              <CardAction
-                variant="green"
-                disabled={!offer.canAccept || pending}
-                onClick={() => setConfirmAccept(true)}
-              >
-                Accept
-              </CardAction>
-            )}
-            {active && offer.acceptBlockReason === 'listing_changed' && (
+            <span className={requestStyles.status}>{status}</span>
+          </span>
+          <ChevronRight size={18} aria-hidden="true" />
+        </button>
+        {open && (
+          <FadingDialog
+            className={styles.dialog}
+            aria-labelledby={`offer-${offer.id}`}
+            onRequestClose={close}
+          >
+            <header>
+              <h3 id={`offer-${offer.id}`}>Offer · {status}</h3>
+              <p>{direction} Offer</p>
+            </header>
+            <div className={styles.expanded}>
+              <OfferMedia listing={listing} />
+              <section>
+                <h4>{listing.title}</h4>
+                <OfferTermsSummary terms={offer.terms} />
+                <OfferEconomicsSummary
+                  terms={offer.terms}
+                  buyer={viewerId === offer.buyerId}
+                />
+                {fields.length > 0 && (
+                  <p>Changed terms: {fields.join(' · ')}</p>
+                )}
+                <p className={workspace.hint}>
+                  {offerExplanation(offer.status)}
+                </p>
+              </section>
+            </div>
+            {error && <p role="alert">{error}</p>}
+            {offer.acceptBlockReason && active && (
               <p>
-                Listing changed since this offer. Review the updated listing and
-                send a new offer.
+                This Offer is not currently executable. Refresh and review the
+                Listing.
               </p>
             )}
-            {active && offer.acceptBlockReason === 'asking_price_lower' && (
-              <p>
-                The current asking price is lower than this offer. Send a new
-                offer.
-              </p>
-            )}
-            {active && (
-              <>
-                <CardAction
-                  disabled={!canEdit}
-                  variant="green"
-                  onClick={() => {
-                    setOpen(false)
-                    onEdit(offer)
-                  }}
-                >
-                  {own ? 'Revise Offer' : 'Counter Offer'}
-                </CardAction>
-                {own && (
-                  <CardAction variant="red" onClick={() => setWithdraw(true)}>
-                    Withdraw Offer
+            <ActionRow three={active && (!own || canWithdraw)}>
+              <CardAction variant="red" disabled={pending} onClick={close}>
+                {active && !own ? 'Cancel' : 'Close'}
+              </CardAction>
+              {active && !own && offer.recipientId === viewerId && (
+                <>
+                  <CardAction
+                    variant="red"
+                    disabled={pending || !onDeny}
+                    onClick={() => act('deny')}
+                  >
+                    Deny
+                  </CardAction>
+                  <CardAction
+                    variant="green"
+                    disabled={pending || !offer.canAccept || !onAccept}
+                    onClick={() => act('accept')}
+                  >
+                    {pending ? 'Working…' : 'Confirm'}
+                  </CardAction>
+                </>
+              )}
+              {active && own && (
+                <>
+                  <CardAction
+                    variant="green"
+                    disabled={pending || !canEdit}
+                    onClick={() => {
+                      setOpen(false)
+                      onEdit(offer)
+                    }}
+                  >
+                    Revise Offer
+                  </CardAction>
+                  {canWithdraw && (
+                    <CardAction
+                      variant="red"
+                      disabled={pending}
+                      onClick={async () => {
+                        if (busy.current) return
+                        busy.current = true
+                        setPending(true)
+                        setError('')
+                        try {
+                          await onWithdraw(offer)
+                          setOpen(false)
+                        } catch (failure) {
+                          setError(
+                            failure instanceof Error
+                              ? failure.message
+                              : 'Unable to withdraw Offer.'
+                          )
+                        } finally {
+                          busy.current = false
+                          setPending(false)
+                        }
+                      }}
+                    >
+                      Withdraw
+                    </CardAction>
+                  )}
+                </>
+              )}
+              {offer.status === 'Accepted' &&
+                offer.linkedOrderId &&
+                onViewOrder && (
+                  <CardAction
+                    variant="green"
+                    onClick={() => onViewOrder(offer)}
+                  >
+                    View Order
                   </CardAction>
                 )}
-              </>
-            )}
-          </ActionRow>
-        </FadingDialog>
-      )}
-      {confirmAccept && (
-        <FadingDialog
-          className={styles.confirm}
-          aria-labelledby={`accept-${offer.id}`}
-          onRequestClose={() => {
-            if (!pending) setConfirmAccept(false)
-          }}
-        >
-          <h3 id={`accept-${offer.id}`}>Accept this offer?</h3>
-          <OfferTermsSummary terms={terms} />
-          <p>
-            {terms.fulfillment === 'on_campus'
-              ? 'Accepting creates an Order and reserves the Listing for the agreed meetup. You will inspect the item before payment. You will not be charged now.'
-              : 'Accepting creates an Order and reserves the Listing. Payment will be required before Delivery. You will not be charged merely by accepting this Offer.'}
-          </p>
-          <ActionRow>
-            <CardAction
-              variant="red"
-              disabled={pending}
-              onClick={() => setConfirmAccept(false)}
-            >
-              Cancel
-            </CardAction>
-            <CardAction
-              variant="green"
-              disabled={
-                pending || blocked || accepted.current || !offer.canAccept
-              }
-              onClick={async () => {
-                if (
-                  sending.current ||
-                  blocked ||
-                  accepted.current ||
-                  !offer.canAccept ||
-                  own ||
-                  offer.recipientId !== viewerId ||
-                  !onAccept
-                )
-                  return
-                sending.current = true
-                setPending(true)
-                setError('')
-                acceptCommand.current ||= crypto.randomUUID()
-                try {
-                  await onAccept(offer, acceptCommand.current)
-                  accepted.current = true
-                  setConfirmAccept(false)
-                  setOpen(false)
-                } catch (failure) {
-                  setError(
-                    failure instanceof Error
-                      ? failure.message
-                      : 'Unable to accept Offer.'
-                  )
-                } finally {
-                  sending.current = false
-                  setPending(false)
-                }
-              }}
-            >
-              {pending ? 'Accepting?' : 'Accept & Reserve'}
-            </CardAction>
-          </ActionRow>
-          {error && <p role="alert">{error}</p>}
-        </FadingDialog>
-      )}
-      {withdraw && (
-        <FadingDialog
-          className={styles.confirm}
-          aria-labelledby={`withdraw-${offer.id}`}
-          onRequestClose={() => {
-            if (!pending) setWithdraw(false)
-          }}
-        >
-          <h3 id={`withdraw-${offer.id}`}>Withdraw this offer?</h3>
-          <p>
-            This offer will no longer be available for the other person to
-            accept. You can make a new offer later.
-          </p>
-          <ActionRow>
-            <CardAction
-              variant="green"
-              disabled={pending}
-              onClick={() => setWithdraw(false)}
-            >
-              Keep offer
-            </CardAction>
-            <CardAction
-              variant="red"
-              disabled={pending || blocked}
-              onClick={async () => {
-                if (sending.current || blocked) return
-                sending.current = true
-                setPending(true)
-                setError('')
-                try {
-                  await onWithdraw(offer)
-                  setWithdraw(false)
-                  setOpen(false)
-                } catch (failure) {
-                  setError(
-                    failure instanceof Error
-                      ? failure.message
-                      : 'Unable to withdraw Offer.'
-                  )
-                } finally {
-                  sending.current = false
-                  setPending(false)
-                }
-              }}
-            >
-              {pending ? 'Withdrawing…' : 'Withdraw offer'}
-            </CardAction>
-          </ActionRow>
-          {error && <p role="alert">{error}</p>}
-        </FadingDialog>
-      )}
-    </div>
+            </ActionRow>
+          </FadingDialog>
+        )}
+      </div>
+    </WithdrawContext>
   )
 }
 // eslint-disable-next-line complexity -- Two discriminated fulfillment drafts retain independent values and share one confirmation flow.
@@ -365,24 +355,34 @@ export function OfferEditor({
   listing,
   initial,
   viewerId,
+  buyer = true,
+  newRound = false,
   onClose,
   onSend,
 }: {
   listing: ChatListing
   initial?: Offer
   viewerId: string
+  buyer?: boolean
+  newRound?: boolean
   onClose: () => void
   onSend: (terms: OfferTerms) => Promise<void>
 }) {
   const original = initial?.terms
+  const askingPrice = listing.live?.price ?? listing.price
   const [price, setPrice] = useState(
-    decimal(original?.itemAmountCents ?? listing.price)
+    decimal(original?.itemAmountCents ?? askingPrice)
   )
   const [mode, setMode] = useState<'delivery' | 'on_campus' | null>(
-    original?.fulfillment ?? null
+    original?.fulfillment ??
+      (listing.live?.preferredFulfillment === 'DELIVERY'
+        ? 'delivery'
+        : 'on_campus')
   )
   const [location, setLocation] = useState(
-    original?.fulfillment === 'on_campus' ? original.meetupLocation : ''
+    original?.fulfillment === 'on_campus'
+      ? original.meetupLocation
+      : listing.live?.pickupArea ?? ''
   )
   const date =
     original?.fulfillment === 'on_campus'
@@ -406,6 +406,13 @@ export function OfferEditor({
     original?.fulfillment === 'delivery' ? original.deliveryMethod : ''
   )
   const [note, setNote] = useState(original?.note ?? '')
+  const originalArea =
+    original?.fulfillment === 'delivery' ? original.deliveryArea : undefined
+  const [province, setProvince] = useState(originalArea?.provinceCode ?? 'ON')
+  const [city, setCity] = useState(originalArea?.cityLabel ?? '')
+  const [postalPrefix, setPostalPrefix] = useState(
+    originalArea?.postalPrefix ?? ''
+  )
   const [confirmation, setConfirmation] = useState<OfferTerms | null>(null)
   const [discard, setDiscard] = useState(false)
   const [error, setError] = useState('')
@@ -419,6 +426,9 @@ export function OfferEditor({
     fee,
     method,
     note,
+    province,
+    city,
+    postalPrefix,
   ])
   const initialDraft = useRef(snapshot)
   const close = () => {
@@ -431,6 +441,8 @@ export function OfferEditor({
   const responseAction =
     initial?.senderId === viewerId ? 'Send Revised Offer' : 'Send Counter Offer'
   const action = initial ? responseAction : 'Send Offer'
+  let editorTitle = newRound ? 'Make a New Offer' : 'Make an Offer'
+  if (initial) editorTitle = responseTitle
   const review = () => {
     const amount = parseOfferAmount(price)
     const deliveryFee = parseOfferAmount(fee, true)
@@ -471,10 +483,14 @@ export function OfferEditor({
       if (
         deliveryFee === null ||
         !method ||
+        !city.trim() ||
+        !/^[ABCEGHJKLMNPRSTVXY][0-9][ABCEGHJKLMNPRSTVWXYZ]$/.test(
+          postalPrefix.toUpperCase().replace(/\s/g, '')
+        ) ||
         !Number.isSafeInteger(amount + deliveryFee)
       ) {
         setError(
-          'Enter a nonnegative Delivery fee and choose a Delivery method.'
+          'Enter the Delivery fee, method and Canadian destination city/postal prefix.'
         )
         return
       }
@@ -483,6 +499,12 @@ export function OfferEditor({
         fulfillment: 'delivery',
         deliveryFeeCents: deliveryFee,
         deliveryMethod: method,
+        deliveryArea: {
+          countryCode: 'CA',
+          provinceCode: province,
+          cityLabel: city.trim(),
+          postalPrefix: postalPrefix.toUpperCase().replace(/\s/g, ''),
+        },
       })
     }
     setError('')
@@ -495,13 +517,11 @@ export function OfferEditor({
         onRequestClose={close}
       >
         <header>
-          <h3 id="offer-editor-title">
-            {initial ? responseTitle : 'Make an Offer'}
-          </h3>
+          <h3 id="offer-editor-title">{editorTitle}</h3>
           <p>
-            {listing.title} ? Asking {offerAmount(listing.price)}
+            {listing.title} · Asking {offerAmount(askingPrice)}
           </p>
-          <p>A proposal only. No charge or Order is created.</p>
+          <p>This is only a proposal. No charge or Order is created yet.</p>
         </header>
         <div className={styles.editor}>
           <form
@@ -522,13 +542,6 @@ export function OfferEditor({
                 onChange={(event) => setPrice(event.target.value)}
               />
             </label>
-            <button
-              type="button"
-              className={styles.preset}
-              onClick={() => setPrice(decimal(listing.price))}
-            >
-              Asking price · {offerAmount(listing.price)}
-            </button>
             <fieldset>
               <legend>Fulfillment</legend>
               <div className={profile.segment}>
@@ -537,7 +550,10 @@ export function OfferEditor({
                     key={value}
                     type="button"
                     aria-pressed={mode === value}
-                    onClick={() => setMode(value)}
+                    onClick={() => {
+                      setMode(value)
+                      setError('')
+                    }}
                   >
                     {value === 'on_campus' ? 'On Campus' : 'Delivery'}
                   </button>
@@ -602,6 +618,51 @@ export function OfferEditor({
                     Agree the Delivery fee now. Delivery address comes later,
                     after acceptance.
                   </p>
+                  <label className={workspace.field}>
+                    Province / territory
+                    {/* eslint-disable-next-line jsx-a11y/no-onchange -- Controlled province selection does not navigate or move focus. */}
+                    <select
+                      value={province}
+                      onChange={(event) => setProvince(event.target.value)}
+                    >
+                      {[
+                        'AB',
+                        'BC',
+                        'MB',
+                        'NB',
+                        'NL',
+                        'NS',
+                        'NT',
+                        'NU',
+                        'ON',
+                        'PE',
+                        'QC',
+                        'SK',
+                        'YT',
+                      ].map((value) => (
+                        <option key={value}>{value}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={workspace.field}>
+                    Delivery city
+                    <input
+                      value={city}
+                      maxLength={120}
+                      required={true}
+                      onChange={(event) => setCity(event.target.value)}
+                    />
+                  </label>
+                  <label className={workspace.field}>
+                    Postal prefix (first 3 characters)
+                    <input
+                      value={postalPrefix}
+                      maxLength={4}
+                      required={true}
+                      placeholder="e.g. N6A"
+                      onChange={(event) => setPostalPrefix(event.target.value)}
+                    />
+                  </label>
                 </>
               )}
             </div>
@@ -621,7 +682,7 @@ export function OfferEditor({
           <aside className={styles.context}>
             <OfferMedia listing={listing} />
             <h4>{listing.title}</h4>
-            <p>Asking {offerAmount(listing.price)}</p>
+            <p>Asking {offerAmount(askingPrice)}</p>
           </aside>
         </div>
         <ActionRow>
@@ -644,9 +705,27 @@ export function OfferEditor({
           <h3 id="offer-confirm-title">Review your Offer</h3>
           <p>{listing.title}</p>
           <OfferTermsSummary terms={confirmation} />
+          <OfferEconomicsSummary terms={confirmation} buyer={buyer} />
+          <p>
+            Changed terms:{' '}
+            {offerChangedFields(
+              confirmation,
+              original ?? {
+                itemAmountCents: askingPrice,
+                fulfillment:
+                  listing.live?.preferredFulfillment === 'DELIVERY'
+                    ? 'delivery'
+                    : 'on_campus',
+              }
+            ).join(' · ') || 'None'}
+          </p>
           <p>
             Once sent, these terms cannot be edited. A revision creates a new
-            Offer{initial ? ' and replaces the current Offer' : ''}.
+            Offer
+            {initial?.senderId === viewerId
+              ? ' and replaces your current Offer'
+              : ''}
+            .
           </p>
           {error && <p role="alert">{error}</p>}
           <ActionRow>
@@ -690,13 +769,13 @@ export function OfferEditor({
           aria-labelledby="offer-discard-title"
           onRequestClose={() => setDiscard(false)}
         >
-          <h3 id="offer-discard-title">Discard Offer changes?</h3>
+          <h3 id="offer-discard-title">Discard offer changes?</h3>
           <ActionRow>
-            <CardAction variant="green" onClick={() => setDiscard(false)}>
-              Keep editing
-            </CardAction>
             <CardAction variant="red" onClick={onClose}>
               Discard
+            </CardAction>
+            <CardAction variant="green" onClick={() => setDiscard(false)}>
+              Keep editing
             </CardAction>
           </ActionRow>
         </FadingDialog>

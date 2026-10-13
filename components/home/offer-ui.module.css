@@ -89,6 +89,25 @@
   min-width: 0;
   max-width: 100%;
 }
+.tombstone {
+  color: #bdb4c5;
+  font-size: 12px;
+  opacity: 0.75;
+}
+.agreement {
+  width: min(400px, 100%);
+  margin: 12px auto;
+  padding: 16px;
+  border: 1px solid #8e819466;
+  border-radius: 16px;
+  background: #211e28;
+  text-align: center;
+  font-size: 13px;
+}
+.agreement button {
+  color: #b5edc6;
+  margin-top: 8px;
+}
 .terminal {
   border-color: #8e819466 !important;
   background: #211e28 !important;

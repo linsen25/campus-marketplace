@@ -20,7 +20,7 @@ begin
 select p.seller,p.buyer into seller,buyer from bc_people p;
 perform pg_temp.bc_actor(seller);
 insert into public.listings(seller_id,title,description,price_cents,currency,category,subcategory,condition,pickup_area,expected_image_count,published_at)
-select seller,'BC rollback fixture','Synthetic backend qualification',50000,currency,category,subcategory,condition,pickup_area,1,clock_timestamp()
+select seller,'BC rollback fixture','Synthetic backend qualification',greatest(50000,(terms->>'item_amount_cents')::bigint),currency,category,subcategory,condition,pickup_area,1,clock_timestamp()
 from public.listings where published_at is not null limit 1 returning id into lid;
 perform pg_temp.bc_actor(buyer);select id into cid from public.marketplace_find_or_create_conversation(lid);
 perform pg_temp.bc_actor(case when seller_origin then seller else buyer end);
@@ -46,20 +46,20 @@ select * into r from public.order_requests where id=o.request_id;
 perform pg_temp.bc_assert(r.status='accepted' and r.offer_terms->'delivery_area'->>'postal_prefix'='N6A','normalized immutable accepted Offer');
 perform pg_temp.bc_assert(o.terms_snapshot->'terms'->'delivery_area'=r.offer_terms->'delivery_area','Order freezes area');
 m:=public.marketplace_order_economics(o.id);
-perform pg_temp.bc_assert(m->>'fee'='400' and m->>'total'='11400' and m->>'sellerGross'='11000' and m->>'sellerFee'='0','item-only percentage and separate Seller economics');
+perform pg_temp.bc_assert(m->>'fee'='100' and m->>'total'='11100' and m->>'sellerGross'='11000' and m->>'sellerFee'='0','item-only percentage and separate Seller economics');
 perform pg_temp.bc_reject(format('update marketplace_private.v2_order_economics set buyer_service_fee_cents=440 where order_id=%L',o.id),'23514');
 perform pg_temp.bc_actor((select outsider from bc_people));
 perform pg_temp.bc_reject(format('select public.marketplace_order_economics(%L)',o.id),'42501');
-for item,expected in values(1000::bigint,100::bigint),(45000::bigint,1500::bigint),(2525::bigint,101::bigint),(10038::bigint,402::bigint),(10037::bigint,401::bigint) loop
+for item,expected in values(1000::bigint,10::bigint),(45000::bigint,450::bigint),(2525::bigint,25::bigint),(10038::bigint,100::bigint),(10037::bigint,100::bigint),(80000::bigint,500::bigint) loop
 terms:=jsonb_set(terms,'{item_amount_cents}',to_jsonb(item));o:=pg_temp.bc_accept(terms,true);
 m:=public.marketplace_order_economics(o.id);perform pg_temp.bc_assert((m->>'fee')::bigint=expected,'minimum/cap/cent rounding');
 end loop;
 terms:=jsonb_build_object('item_amount_cents',8000,'fulfillment','on_campus','meetup_location','Synthetic campus',
 'scheduled_at',date_trunc('hour',clock_timestamp())+interval '3 hours');
 o:=pg_temp.bc_accept(terms,true);m:=public.marketplace_order_economics(o.id);
-perform pg_temp.bc_assert(m->>'delivery'='0' and m->>'total'='8320','On Campus same frozen fee');
+perform pg_temp.bc_assert(m->>'delivery'='0' and m->>'total'='8080','On Campus same frozen fee');
 perform public.marketplace_confirm_campus_inspection(o.id,gen_random_uuid());
-perform pg_temp.bc_assert(public.marketplace_campus_payment_state(o.id)->>'totalCents'='8320','inspection reads frozen economics');
+perform pg_temp.bc_assert(public.marketplace_campus_payment_state(o.id)->>'totalCents'='8080','inspection reads frozen economics');
 perform pg_temp.bc_assert(not has_table_privilege('authenticated','marketplace_private.v2_order_economics','SELECT') and
 not has_function_privilege('authenticated','marketplace_private.v2_order_money(uuid)','EXECUTE'),'private economics access protected');
 end;$$;

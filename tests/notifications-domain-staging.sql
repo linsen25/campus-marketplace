@@ -30,7 +30,7 @@ begin
  perform marketplace_private.deliver_notification(event_id,seller,'ACTION_REQUIRED');
  perform pg_temp.nd_assert((select count(*)=1 from public.notifications where recipient_user_id=seller),'duplicate event idempotency');
  perform pg_temp.nd_actor(seller);
- select * into r from public.marketplace_create_offer(cid,terms,gen_random_uuid());
+ select * into r from public.marketplace_submit_offer(cid,terms,gen_random_uuid(),r.id,'counter');
  perform pg_temp.nd_assert((select count(*)=1 from public.notifications where recipient_user_id=buyer and event_type='incoming_counter_offer'),'counter recipient');
  perform public.marketplace_withdraw_offer(r.id,gen_random_uuid(),'Synthetic withdrawal');
  perform pg_temp.nd_assert((select count(*)=1 from public.notifications where recipient_user_id=buyer and event_type='offer_withdrawn'),'withdraw other participant');

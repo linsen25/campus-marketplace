@@ -3,6 +3,7 @@ export type OfferStatus =
   | 'Accepted'
   | 'Active'
   | 'Closed'
+  | 'Declined'
   | 'Expired'
   | 'Replaced'
   | 'Withdrawn'
@@ -48,6 +49,18 @@ export type Offer = {
   withdrawnBy: string | null
   withdrawalNote: string | null
   canWithdraw: boolean
+  changedFields?: string[]
+  mutationKind?: 'counter' | 'create' | 'revise'
+}
+export type Agreement = {
+  id: string
+  offerId: string
+  createdAt: string
+  status: 'cancelled' | 'completed' | 'expired' | 'open'
+  listingTitle: string
+  buyerId: string
+  sellerId: string
+  terms: OfferTerms
 }
 export type OfferEvent = {
   id: string
@@ -68,6 +81,8 @@ export type OfferEvent = {
     | 'offer_accepted'
     | 'offer_closed'
     | 'offer_created'
+    | 'offer_declined'
+    | 'offer_expired'
     | 'offer_replaced'
     | 'offer_withdrawn'
     | 'order_cancelled'

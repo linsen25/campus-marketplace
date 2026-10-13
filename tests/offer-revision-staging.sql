@@ -1,0 +1,78 @@
+-- All identities, data and simulated Storage receipts are transaction-local fixtures.
+do $$declare seller uuid;buyer uuid;outsider uuid;lid uuid;cid uuid;
+ a public.order_requests;b public.order_requests;r public.order_requests;
+ m public.messages;o public.orders;terms jsonb;cmd uuid;h jsonb;begin
+select p.seller,p.buyer,p.outsider into seller,buyer,outsider from bc_people p;
+perform public.marketplace_record_financial_capability(seller,'payout_account','ready','staging_test','revision_fixture','revision_payout','Test Bank','6789');
+perform pg_temp.bc_actor(seller);
+insert into public.listings(seller_id,title,description,price_cents,currency,category,subcategory,condition,pickup_area,expected_image_count,published_at)
+select seller,'V2 revision rollback fixture','Synthetic qualification',50000,currency,category,subcategory,condition,pickup_area,1,clock_timestamp()
+from public.listings where published_at is not null limit 1 returning id into lid;
+perform pg_temp.bc_assert((select preferred_fulfillment='ON_CAMPUS' from public.listings where id=lid),'existing Listing default');
+perform pg_temp.bc_actor(buyer);select id into cid from public.marketplace_find_or_create_conversation(lid);
+terms:=jsonb_build_object('item_amount_cents',10000,'fulfillment','delivery','delivery_method','seller_delivery','delivery_fee_cents',1000,
+'delivery_area',jsonb_build_object('country_code','CA','province_code','ON','city_label','London','postal_prefix','N6A'));
+select * into a from public.marketplace_submit_offer(cid,terms,gen_random_uuid());
+perform pg_temp.bc_actor(seller);select * into b from public.marketplace_submit_offer(cid,jsonb_set(terms,'{item_amount_cents}','11000'),gen_random_uuid(),a.id,'counter');
+perform pg_temp.bc_assert((select count(*)=2 from public.order_requests where conversation_id=cid and status='active'),'dual sender Active');
+perform pg_temp.bc_assert((select status='active' from public.order_requests where id=a.id),'Counter preserves opponent');
+select * into r from public.marketplace_submit_offer(cid,jsonb_set(terms,'{item_amount_cents}','12000'),gen_random_uuid(),b.id,'revise');
+perform pg_temp.bc_assert((select status='superseded' from public.order_requests where id=b.id),'same sender Replaced');
+perform pg_temp.bc_assert((select status='active' from public.order_requests where id=a.id),'Revise preserves opposite');
+perform pg_temp.bc_assert((select comparison_terms->>'item_amount_cents'='11000' from marketplace_private.offer_commands where offer_id=r.id),'Revise comparison basis');
+perform pg_temp.bc_assert(marketplace_private.offer_changed_fields(r.offer_terms,terms) ? 'Price','authoritative changed labels');
+perform pg_temp.bc_reject(format('select public.marketplace_deny_offer(%L,%L)',r.id,gen_random_uuid()),'42501');
+perform pg_temp.bc_actor(buyer);cmd:=gen_random_uuid();select * into r from public.marketplace_deny_offer(r.id,cmd);
+perform pg_temp.bc_assert(r.status='declined','recipient Deny');
+perform public.marketplace_deny_offer(r.id,cmd);
+perform pg_temp.bc_assert((select count(*)=1 from public.transaction_events where request_id=r.id and event_type='offer_declined'),'Deny exactly one event');
+perform pg_temp.bc_assert((select count(*)=1 from public.notifications where event_type='offer_declined' and destination->>'offerId'=r.id::text and recipient_user_id=seller),'Deny exactly one sender notice');
+perform pg_temp.bc_assert((select status='active' from public.order_requests where id=a.id),'Deny preserves own Active');
+perform pg_temp.bc_actor(outsider);perform pg_temp.bc_reject(format('select public.marketplace_offer_history(%L)',cid),'42501');
+perform pg_temp.bc_actor(buyer);h:=public.marketplace_offer_history(cid);
+perform pg_temp.bc_assert(jsonb_array_length(h->'offers')=3,'history retains versions');
+perform public.marketplace_withdraw_offer(a.id,gen_random_uuid());
+perform pg_temp.bc_reject(format('select public.marketplace_withdraw_offer(%L,%L)',a.id,gen_random_uuid()),'23505');
+select * into a from public.marketplace_create_offer(cid,terms,gen_random_uuid());
+set constraints all immediate;
+alter table public.order_requests disable trigger order_request_immutable;
+update public.order_requests set created_at=clock_timestamp()-interval '5 minutes' where id=a.id;
+alter table public.order_requests enable trigger order_request_immutable;
+set constraints all deferred;
+perform pg_temp.bc_reject(format('select public.marketplace_withdraw_offer(%L,%L)',a.id,gen_random_uuid()),'23505');
+select * into m from public.marketplace_send_text(cid,gen_random_uuid(),'Synthetic withdrawal');
+perform pg_temp.bc_actor(seller);perform pg_temp.bc_reject(format('select public.marketplace_withdraw_message(%L)',m.id),'42501');
+perform pg_temp.bc_actor(buyer);select * into m from public.marketplace_withdraw_message(m.id);
+perform pg_temp.bc_assert(m.withdrawn_at is not null and m.content is null,'Message tombstone redacts content');
+select * into m from public.marketplace_send_text(cid,m.client_message_id,'Synthetic withdrawal');
+perform pg_temp.bc_assert(m.withdrawn_at is not null and m.content is null,'Retry preserves withdrawal tombstone');
+perform pg_temp.bc_reject(format('select public.marketplace_send_text(%L,%L,%L)',cid,m.client_message_id,'Different text'),'23505');
+perform public.marketplace_withdraw_message(m.id);
+perform pg_temp.bc_assert((select count(*)=1 from marketplace_private.message_withdrawals where message_id=m.id),'Message idempotent audit');
+select * into m from public.marketplace_send_text(cid,gen_random_uuid(),'Boundary fixture');
+set constraints all immediate;
+alter table public.messages disable trigger messages_immutable;
+update public.messages set created_at=clock_timestamp()-interval '5 minutes' where id=m.id;
+alter table public.messages enable trigger messages_immutable;
+set constraints all deferred;
+perform pg_temp.bc_reject(format('select public.marketplace_withdraw_message(%L)',m.id),'23505');
+perform pg_temp.bc_assert(not has_table_privilege('authenticated','marketplace_private.message_withdrawals','SELECT'),'original message audit private');
+-- Campus scheduled-time expiry is separate from Order +60-minute no-show.
+terms:=jsonb_build_object('item_amount_cents',8000,'fulfillment','on_campus','meetup_location','Synthetic campus','scheduled_at',date_trunc('hour',clock_timestamp())+interval '3 hours');
+perform pg_temp.bc_actor(seller);select * into b from public.marketplace_create_offer(cid,terms,gen_random_uuid());
+set constraints all immediate;
+alter table public.order_requests disable trigger order_request_immutable;
+update public.order_requests set offer_terms=jsonb_set(offer_terms,'{scheduled_at}',to_jsonb(date_trunc('hour',clock_timestamp())-interval '1 hour')) where id=b.id;
+alter table public.order_requests enable trigger order_request_immutable;
+set constraints all deferred;
+h:=public.marketplace_offer_history(cid);
+perform pg_temp.bc_assert((select status='expired' from public.order_requests where id=b.id),'Campus Offer expires at its scheduled time');
+perform pg_temp.bc_assert((select status='active' from public.order_requests where id=a.id),'Delivery has no arbitrary TTL');
+o:=pg_temp.bc_accept(terms,true);
+perform pg_temp.bc_assert(public.marketplace_order_economics(o.id)->>'fee'='80','new Campus economics');
+h:=public.marketplace_offer_history(o.conversation_id);
+perform pg_temp.bc_assert(jsonb_array_length(h->'agreements')=1 and h->'agreements'->0->>'id'=o.id::text,'independent Agreement Order milestone');
+perform pg_temp.bc_assert((select status='accepted' from public.order_requests where id=o.request_id),'winning Offer Accepted');
+perform pg_temp.bc_assert(public.marketplace_order_economics(o.id)->>'feeRule'='item_only_1pct_max500_v2','new frozen rule');
+perform pg_temp.bc_reject(format('select public.marketplace_submit_offer(%L,%L::jsonb,%L,%L,%L)',cid,terms,gen_random_uuid(),a.id,'create'),'23514');
+end;$$;

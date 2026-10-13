@@ -1,9 +1,18 @@
 # Notifications V2 product design
 
-Revised target, 2026-10-11. **NOT IMPLEMENTED.** Authority:
-[Marketplace V2 contract](MARKETPLACE_V2_PRODUCT_CONTRACT.md). Current staging
-still runs V1; existing Realtime broadcast invalidation is not a persistent
-Notifications feed. No UI, APIs, storage, emails or dependencies change here.
+Original visual target, 2026-10-11; updated status 2026-10-13. Authority:
+[Marketplace V2 contract](MARKETPLACE_V2_PRODUCT_CONTRACT.md). Staging now has
+persistent transaction Notifications and invalidation; the visual feed/Bell and
+email/push delivery remain deferred. See the
+[backend evidence](BACKEND_COMPLETION_STAGING.md) and
+[Offer revision](V2_OFFER_AGREEMENT_REVISION.md).
+
+Current Offer semantics: Counter replaces only the sender's prior Active Offer,
+keeps the recipient's targeted Offer Active, and preserves its comparison ID.
+Deny produces one Declined event/recipient notification, with actor suppression.
+Competing accepted-Listing Offers display "No longer available"; historical events
+retain their persisted Offer/Order destination and do not reactivate negotiation.
+The visual directions below are a future UI target, not a claim of deployed feed UI.
 
 ## Purpose, destination and boundaries
 
@@ -59,20 +68,20 @@ from authoritative facts and to appropriate affected participants/account owners
 Avoid self-alert duplication or redundant Offer accepted/Order created alerts via
 later delivery policy, while retaining the underlying domain/audit events.
 
-| Family | Target events | Destination |
-| --- | --- | --- |
-| Offer | New Offer received; Counter Offer received | Exact conversation + Offer (Counter at least exact conversation) |
-| Offer | Accepted | Exact created Order |
-| Offer | Replaced where awareness useful; Withdrawn; Expired; Closed because Listing unavailable | Exact conversation + original Offer |
-| Listing | Price Drop for Favorited Listing; Listing unavailable where appropriate; Pending Listing available again for previously interested users | Exact Listing; recoverable unavailable context if removed; no automatic Offer resurrection |
-| Order | Created; Cancelled; Expired | Exact Order, terminal View details when applicable |
-| Payment | Complete Payment; started 30m payment deadline approaching | Exact Delivery Order Payment |
-| Payment | Confirmed; Failed where applicable; future Refund update | Exact Order Payment, owner-safe financial summary |
-| On Campus | Meetup soon; new meetup proposed awaiting other participant confirmation; reschedule confirmed; inspect-and-pay awareness | Exact On Campus Order + schedule context |
-| Delivery | Checkout available when Seller accepts Buyer-origin Offer; 12h claim awareness/reminder | Exact Delivery Order checkout; mount/navigation alone must not start the 30m timer |
-| Delivery | Delivery/Shipping started; supported tracking update; Delivered; Buyer receipt confirmation | Exact Delivery Order/fulfillment context |
-| Protection | Started; Ending; Issue reported; Issue updated/resolved | Exact Order protection/issue context |
-| Payout | Eligible; Processing; Paid; Needs attention | Seller's exact Order payout context / own setup where required |
+| Family     | Target events                                                                                                                            | Destination                                                                                |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Offer      | New Offer received; Counter Offer received                                                                                               | Exact conversation + Offer (Counter at least exact conversation)                           |
+| Offer      | Accepted                                                                                                                                 | Exact created Order                                                                        |
+| Offer      | Replaced where awareness useful; Withdrawn; Expired; Closed because Listing unavailable                                                  | Exact conversation + original Offer                                                        |
+| Listing    | Price Drop for Favorited Listing; Listing unavailable where appropriate; Pending Listing available again for previously interested users | Exact Listing; recoverable unavailable context if removed; no automatic Offer resurrection |
+| Order      | Created; Cancelled; Expired                                                                                                              | Exact Order, terminal View details when applicable                                         |
+| Payment    | Complete Payment; started 30m payment deadline approaching                                                                               | Exact Delivery Order Payment                                                               |
+| Payment    | Confirmed; Failed where applicable; future Refund update                                                                                 | Exact Order Payment, owner-safe financial summary                                          |
+| On Campus  | Meetup soon; new meetup proposed awaiting other participant confirmation; reschedule confirmed; inspect-and-pay awareness                | Exact On Campus Order + schedule context                                                   |
+| Delivery   | Checkout available when Seller accepts Buyer-origin Offer; 12h claim awareness/reminder                                                  | Exact Delivery Order checkout; mount/navigation alone must not start the 30m timer         |
+| Delivery   | Delivery/Shipping started; supported tracking update; Delivered; Buyer receipt confirmation                                              | Exact Delivery Order/fulfillment context                                                   |
+| Protection | Started; Ending; Issue reported; Issue updated/resolved                                                                                  | Exact Order protection/issue context                                                       |
+| Payout     | Eligible; Processing; Paid; Needs attention                                                                                              | Seller's exact Order payout context / own setup where required                             |
 
 An actionable alert must not send users to a generic homepage when its exact
 entity is known. Destination authorization is rechecked on navigation; possession

@@ -1,5 +1,5 @@
 import type { Message } from '../types/message'
-import type { Offer } from '../types/offer'
+import type { Agreement, Offer } from '../types/offer'
 
 import { groupMessages } from './message-presentation'
 import type {
@@ -36,16 +36,25 @@ export type MessageTimelineItem =
   | EventTimelineItem
   | OfferTimelineItem
   | RequestTimelineItem
+  | { kind: 'agreement'; id: string; createdAt: string; agreement: Agreement }
 
 /** Render-only merge. Local requests never acquire a durable message sequence. */
+// eslint-disable-next-line max-params -- Merge the existing five timeline inputs with immutable per-Order milestones, preserving callers.
 export function mergeMessageTimeline(
   messages: readonly Message[],
   requests: readonly PreviewRequest[],
   events: readonly PreviewConversationEvent[] = [],
   formalRequests = false,
-  offers: readonly Offer[] = []
+  offers: readonly Offer[] = [],
+  agreements: readonly Agreement[] = []
 ): MessageTimelineItem[] {
   return [
+    ...agreements.map((agreement) => ({
+      kind: 'agreement' as const,
+      id: `agreement:${agreement.id}`,
+      createdAt: agreement.createdAt,
+      agreement,
+    })),
     ...offers.map((offer) => ({
       kind: 'offer' as const,
       id: `offer:${offer.id}`,
@@ -84,7 +93,7 @@ export function groupMessageTimeline(timeline: readonly MessageTimelineItem[]) {
   const groups: Array<
     | Extract<
         MessageTimelineItem,
-        { kind: 'event' | 'offer' | 'order-request' }
+        { kind: 'agreement' | 'event' | 'offer' | 'order-request' }
       >
     | { kind: 'messages'; messages: Message[] }
   > = []

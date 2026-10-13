@@ -326,7 +326,20 @@ export function Messages({
         sessionRefresh.current().catch(() => {})
       }
     )
+    const localInvalidated = () => {
+      queue.dirty('buying')
+      queue.dirty('selling')
+      queue.dirty('history')
+    }
+    window.addEventListener(
+      'marketplace-messages-invalidated',
+      localInvalidated
+    )
     return () => {
+      window.removeEventListener(
+        'marketplace-messages-invalidated',
+        localInvalidated
+      )
       valid = false
       queue.stop()
       stop()

@@ -34,6 +34,9 @@ export function validateListingInput(input: unknown): CreateListingInput {
     typeof data.description === 'string' ? data.description.trim() : ''
   const pickupArea =
     typeof data.pickupArea === 'string' ? data.pickupArea.trim() : ''
+  const preferredFulfillment = validatePreferredFulfillment(
+    data.preferredFulfillment
+  )
   if (!title || title.length > listingLimits.title) {
     throw new ListingApiError(
       `Title is required and must be at most ${listingLimits.title} characters.`
@@ -94,13 +97,29 @@ export function validateListingInput(input: unknown): CreateListingInput {
     subcategory,
     ...(condition ? { condition } : {}),
     pickupArea,
+    preferredFulfillment: preferredFulfillment as 'DELIVERY' | 'ON_CAMPUS',
     photoUrls: Array.from(new Set(photoUrls)),
   }
+}
+function validatePreferredFulfillment(
+  value: unknown
+): 'DELIVERY' | 'ON_CAMPUS' {
+  if (value === undefined) return 'ON_CAMPUS'
+  if (value !== 'DELIVERY' && value !== 'ON_CAMPUS')
+    throw new ListingApiError('Choose On Campus or Delivery.')
+  return value
 }
 
 export function validateListingPatch(input: unknown): Record<string, unknown> {
   const patch = listingInputRecord(input)
-  const allowed = ['title', 'description', 'price', 'condition', 'pickupArea']
+  const allowed = [
+    'title',
+    'description',
+    'price',
+    'condition',
+    'pickupArea',
+    'preferredFulfillment',
+  ]
   if (Object.keys(patch).some((key) => !allowed.includes(key)))
     throw new ListingApiError(
       'Only title, price, description, condition, and pickup area may be changed; category and subcategory are locked. Use image actions for photos.'

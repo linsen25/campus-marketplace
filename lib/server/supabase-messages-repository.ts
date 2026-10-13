@@ -9,6 +9,7 @@ import {
   messageUuid,
   requireMessagesEnvironment,
 } from '@/lib/server/messages-environment'
+import { requireOrderRequestEnvironment } from '@/lib/server/order-request-service'
 import { mapListing } from '@/lib/supabase/listing-mapper'
 import type { ListingRow } from '@/lib/supabase/listing-mapper'
 import type { MarketplaceContext } from '@/lib/supabase/server'
@@ -22,6 +23,11 @@ export {
 } from '@/lib/server/messages-environment'
 function imagePreview(count: number) {
   return count === 1 ? 'Photo' : `${count} photos`
+}
+function messagePreview(row?: MessageRow) {
+  if (row?.withdrawn_at) return 'Message withdrawn'
+  if (row?.type === 'IMAGE') return imagePreview(row.image_count || 0)
+  return row?.content || ''
 }
 function checked(error: { code?: string } | null) {
   if (!error) return
@@ -91,6 +97,7 @@ type MessageRow = {
   created_at: string
   sequence: number
   client_message_id: string
+  withdrawn_at?: string | null
 }
 function message(row: MessageRow): TextMessage {
   return {
@@ -199,10 +206,7 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
           : live?.status || 'unavailable',
         ...(live ? { live } : {}),
       },
-      lastMessage:
-        latest.data?.[0]?.type === 'IMAGE'
-          ? imagePreview(latest.data[0].image_count)
-          : latest.data?.[0]?.content || '',
+      lastMessage: messagePreview(latest.data?.[0]),
       imageSendingEnabled: imageSendingEnabled(),
       createdAt: source.created_at,
       lastMessageAt: source.last_message_at,
@@ -213,16 +217,27 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
     }
   }
   async function present(rows: MessageRow[]): Promise<Message[]> {
+    const user = await actor()
     const images = await signMessageImages(
       client,
-      rows.filter((item) => item.type === 'IMAGE').map((item) => item.id)
+      rows
+        .filter((item) => item.type === 'IMAGE' && !item.withdrawn_at)
+        .map((item) => item.id)
     )
     return rows.map((item) => {
-      if (item.type === 'TEXT') return message(item)
+      const withdrawal = {
+        withdrawnAt: item.withdrawn_at || null,
+        canWithdraw:
+          process.env.APP_ENV === 'staging' &&
+          !item.withdrawn_at &&
+          item.sender_id === user.id &&
+          Date.now() < Date.parse(item.created_at) + 300000,
+      }
+      if (item.type === 'TEXT') return { ...message(item), ...withdrawal }
       const attachments = images
         .filter((image) => image.messageId === item.id)
         .map(imagePresentation)
-      if (attachments.length !== item.image_count)
+      if (!item.withdrawn_at && attachments.length !== item.image_count)
         throw new ListingApiError(
           'Unable to load complete private photos. Please retry.',
           503
@@ -236,12 +251,27 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
         clientMessageId: item.client_message_id,
         type: 'IMAGE',
         images: attachments,
+        ...withdrawal,
       }
     })
   }
   return {
     present,
     authorize: actor,
+    async withdraw(messageId: unknown) {
+      requireOrderRequestEnvironment()
+      await actor()
+      const { data, error } = await client.rpc('marketplace_withdraw_message', {
+        p_message_id: messageUuid(messageId),
+      })
+      if (error?.code === '23505')
+        throw new ListingApiError(
+          'The message is no longer withdrawable. Refresh to review.',
+          409
+        )
+      checked(error)
+      return (await present([data as MessageRow]))[0]
+    },
     async list(role: string, cursor?: string) {
       if (!['buying', 'selling'].includes(role))
         throw new ListingApiError('Choose Buying or Selling.')

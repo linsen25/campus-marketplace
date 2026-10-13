@@ -27,6 +27,7 @@ import { useMarketplaceSession } from '@/components/listings/marketplace-session
 import { AuthSignupCard } from '@/components/velora/auth-signup-card'
 import styles from '@/components/velora/auth-signup-card.module.css'
 import { waitForMarketReady } from '@/hooks/use-market-ready'
+import { getScrollLockPadding } from '@/utils/browser'
 
 type AuthMode = 'signin' | 'signup'
 type AuthRequest = {
@@ -77,7 +78,7 @@ function AuthDialog({
       padding: body.style.paddingRight,
       behavior: html.style.scrollBehavior,
     }
-    const gutter = innerWidth - html.clientWidth
+    const gutter = getScrollLockPadding()
     body.style.paddingRight = `${
       parseFloat(getComputedStyle(body).paddingRight) + gutter
     }px`

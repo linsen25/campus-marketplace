@@ -12,6 +12,7 @@ import { formatListingPrice } from '@/utils/format-listing-price'
 import detailStyles from './homepage-listing-demo.module.css'
 import { ListingMedia } from './listing-media'
 import { useMarketplaceSession } from './marketplace-session'
+import { useListingOfferContext } from './use-listing-offer-context'
 import { useMessageSeller } from './use-message-seller'
 
 export function ListingDetails({ listing }: { listing: Listing }) {
@@ -64,7 +65,7 @@ export function PublishedListingCard({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const messaging = useMessageSeller(listing.id)
-  const [photoIndex, setPhotoIndex] = useState(0)
+  const offerContext = useListingOfferContext(listing.id, listing.seller.id)
   useEffect(() => {
     if (!seller || own || initiallyFavorited) return undefined
     let active = true
@@ -106,13 +107,13 @@ export function PublishedListingCard({
       expandedTitle={listing.title}
       media={
         <ListingMedia
-          images={listing.photoUrls}
+          images={listing.photoUrls.slice(0, 1)}
           alt={listing.title}
-          activeIndex={photoIndex}
-          onIndexChange={setPhotoIndex}
         />
       }
-      interactiveMedia={listing.photoUrls.length > 1}
+      expandedMedia={
+        <ListingMedia images={listing.photoUrls} alt={listing.title} />
+      }
       overlayClassName={overlayClassName}
       overlayStyle={overlayStyle}
       topAction={
@@ -132,7 +133,7 @@ export function PublishedListingCard({
         ) : undefined
       }
       primaryAction={
-        !own && listing.status === 'available' ? (
+        !own && (listing.status === 'available' || offerContext.orderId) ? (
           <>
             <ShiningButton
               variant="green"
@@ -142,19 +143,16 @@ export function PublishedListingCard({
             >
               Message Seller
             </ShiningButton>
-            {seller &&
-              process.env.NEXT_PUBLIC_MESSAGES_ENV === 'staging' &&
-              process.env.NEXT_PUBLIC_SUPABASE_URL ===
-                'https://pcaqxezdfxofysghssyo.supabase.co' && (
-                <ShiningButton
-                  variant="green"
-                  desktopAppearance={true}
-                  disabled={messaging.busy}
-                  onClick={() => messaging.contact(true)}
-                >
-                  Make Offer
-                </ShiningButton>
-              )}
+            {offerContext.enabled && (
+              <ShiningButton
+                variant="green"
+                desktopAppearance={true}
+                disabled={offerContext.busy || Boolean(offerContext.error)}
+                onClick={() => offerContext.open()}
+              >
+                {offerContext.label}
+              </ShiningButton>
+            )}
           </>
         ) : undefined
       }
@@ -162,6 +160,7 @@ export function PublishedListingCard({
     >
       <ListingDetails listing={listing} />
       {messaging.error && <p role="alert">{messaging.error}</p>}
+      {offerContext.error && <p role="alert">{offerContext.error}</p>}
       {error && <p role="alert">{error}</p>}
     </ExpandableCard>
   )

@@ -1,3 +1,4 @@
+import { buyerServiceFeeDisplay } from '@/lib/offer-economics'
 import type { ChatListing } from '@/types/conversation'
 import { formatListingPrice } from '@/utils/format-listing-price'
 
@@ -29,12 +30,7 @@ export const fulfillmentLabels = {
   shipping: 'Shipping',
 }
 
-// Product-design assumption for visual review only: protected subtotal includes shipping.
-const previewBuyerFee = {
-  basisPoints: 400,
-  minimumCents: 100,
-  maximumCents: 1500,
-}
+// Display estimate only; V1 historical/server amounts remain unchanged.
 export function calculateOrderVisualAmounts(item: number, shipping = 0) {
   if (
     ![item, shipping].every(
@@ -42,13 +38,7 @@ export function calculateOrderVisualAmounts(item: number, shipping = 0) {
     )
   )
     throw new RangeError('Invalid preview amount')
-  const serviceFee = Math.min(
-    previewBuyerFee.maximumCents,
-    Math.max(
-      previewBuyerFee.minimumCents,
-      Math.round(((item + shipping) * previewBuyerFee.basisPoints) / 10000)
-    )
-  )
+  const serviceFee = buyerServiceFeeDisplay(item)
   const total = item + shipping + serviceFee
   if (!Number.isSafeInteger(total))
     throw new RangeError('Preview total is too large')

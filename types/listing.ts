@@ -23,6 +23,7 @@ export type Listing = {
   subcategory: ListingSubcategory
   condition?: ListingCondition
   pickupArea: string
+  preferredFulfillment?: 'DELIVERY' | 'ON_CAMPUS'
   photoUrls: string[]
   seller: SellerSummary
   status: ListingStatus

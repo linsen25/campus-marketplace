@@ -88,18 +88,25 @@ for (const file of files.filter((file) => file.endsWith('.md'))) {
     links++
   }
 }
-const report = fs.readFileSync('docs/BACKEND_COMPLETION_STAGING.md', 'utf8')
+const report =
+  fs.readFileSync('docs/BACKEND_COMPLETION_STAGING.md', 'utf8') +
+  fs.readFileSync('docs/V2_OFFER_AGREEMENT_REVISION.md', 'utf8')
 const migrations = fs
   .readdirSync('supabase/migrations')
   .filter((file) => file.startsWith('20261013'))
   .sort()
-assert.equal(migrations.length, 9)
+assert.equal(migrations.length, 17)
 for (const file of migrations) {
   const bytes = fs.readFileSync('supabase/migrations/' + file)
   const hash = crypto.createHash('sha256').update(bytes).digest('hex')
   assert(
-    report.includes('`' + file + '` | `' + hash + '`'),
-    'Migration report/hash mismatch'
+    report
+      .split(/\r?\n/)
+      .some(
+        (line) =>
+          line.includes('`' + file + '`') && line.includes('`' + hash + '`')
+      ),
+    'Migration report/hash mismatch: ' + file
   )
 }
 assert.equal(
@@ -113,7 +120,7 @@ assert.equal(
 )
 const counts = {}
 const changes = git(['status', '--porcelain', '-uall'])
-  .trim()
+  .trimEnd()
   .split(/\r?\n/)
   .filter(Boolean)
 for (const line of changes) {
@@ -125,7 +132,7 @@ console.log(
   JSON.stringify({
     eligibleFilesScanned: files.length,
     localDocumentationLinks: links,
-    migrationHashesMatched: 9,
+    migrationHashesMatched: migrations.length,
     privilegedValuesFound: 0,
     prohibitedFilesEligible: 0,
     generatedCacheExcluded: true,

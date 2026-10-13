@@ -187,7 +187,7 @@ async function download(b, p, client = admin) {
   assert(!r.error && r.data, 'Object must remain readable by authority')
   return Buffer.from(await r.data.arrayBuffer())
 }
-async function fixture(mode = 'on_campus') {
+async function fixture(mode = 'on_campus', createOffer = true) {
   for (const client of clients) {
     const refreshed = await client.auth.refreshSession()
     assert(!refreshed.error, 'Synthetic session refresh failed')
@@ -265,6 +265,7 @@ async function fixture(mode = 'on_campus') {
     p_listing_id: lid,
   })
   assert(!c.error)
+  if (!createOffer) return { lid, conversationId: c.data.id, images }
   const off = await clients[0].rpc('marketplace_create_offer', {
     p_conversation_id: c.data.id,
     p_terms: {
@@ -356,6 +357,24 @@ async function cleanup() {
     )
     for (const row of actualOrders)
       if (!orders.includes(row.id)) orders.push(row.id)
+    const uploaded = await query(
+      `select path from public.listing_images where listing_id in(${set(
+        listings
+      )});`
+    )
+    for (const row of uploaded)
+      if (!publicPaths.includes(row.path)) publicPaths.push(row.path)
+    // Real UI Accept creates its media batch on the server, outside prepare().
+    const media = await query(
+      `select b.id,a.path from marketplace_private.order_media_batches b left join marketplace_private.order_media_assets a on a.batch_id=b.id where b.listing_id in(${set(
+        listings
+      )});`
+    )
+    for (const row of media) {
+      if (!batches.includes(row.id)) batches.push(row.id)
+      if (row.path && !privatePaths.includes(row.path))
+        privatePaths.push(row.path)
+    }
   }
   journal()
   const bids = batches.length ? set(batches) : 'null'
@@ -431,6 +450,17 @@ set constraints all immediate;alter table public.order_meetup_revisions enable t
     }));`
   )
   assert.equal(left[0].count, 0)
+  const remaining = await query(
+    `select (select count(*) from auth.users where id in(${
+      users.length ? set(users) : 'null'
+    })) auth_users,(select count(*) from public.profiles where id in(${
+      users.length ? set(users) : 'null'
+    })) profiles,(select count(*) from public.listings where id in(${lids})) listings,(select count(*) from public.order_requests where listing_id in(${lids})) offers,(select count(*) from public.orders where listing_id in(${lids})) orders,(select count(*) from marketplace_private.order_media_batches where listing_id in(${lids})) media_batches;`
+  )
+  assert(
+    Object.values(remaining[0]).every((value) => Number(value) === 0),
+    'Synthetic fixture graph fully removed'
+  )
 }
 const report = {
   project: ref,
@@ -570,6 +600,7 @@ module.exports = {
   journal,
   orders,
   offers,
+  listings,
   identity: null,
 }
 
@@ -588,14 +619,16 @@ async function recover() {
   }))
     target.push(...scope[name])
   await cleanup()
-  assert.deepEqual(
-    await fingerprint(),
-    JSON.parse(
-      fs.readFileSync('tests/artifacts/meetup-d1/baseline.json', 'utf8')
+  const recoveryBaseline = path.join(root, 'qualification-baseline.json')
+  if (fs.existsSync(recoveryBaseline))
+    assert.deepEqual(
+      await fingerprint(),
+      JSON.parse(fs.readFileSync(recoveryBaseline, 'utf8'))
     )
-  )
   console.log(
-    'D1 exact recovery complete; canonical/manual/media baseline unchanged'
+    fs.existsSync(recoveryBaseline)
+      ? 'D1 exact recovery complete; canonical/manual/media baseline unchanged'
+      : 'D1 exact journal-scoped recovery complete; no original baseline file available'
   )
 }
 module.exports.recover = recover

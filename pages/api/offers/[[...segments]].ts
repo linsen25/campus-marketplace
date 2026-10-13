@@ -9,12 +9,20 @@ export const config = { api: { bodyParser: { sizeLimit: '16kb' } } }
 function validateBody(body: unknown, action: string) {
   if (!body || typeof body !== 'object' || Array.isArray(body))
     throw new ListingApiError('JSON object required.')
-  let allowed = ['clientActionId', 'conversationId', 'terms']
+  let allowed = [
+    'clientActionId',
+    'conversationId',
+    'terms',
+    'comparisonOfferId',
+    'kind',
+  ]
   if (action === 'accept') allowed = ['clientActionId']
+  if (action === 'deny') allowed = ['clientActionId']
   if (action === 'withdraw') allowed = ['clientActionId', 'note']
   if (Object.keys(body).some((key) => !allowed.includes(key)))
     throw new ListingApiError('Offer identity and lifecycle are server-owned.')
 }
+// eslint-disable-next-line complexity -- Keep one authenticated dispatcher for context/history and three guarded mutations.
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -26,7 +34,7 @@ export default async function handler(
       : req.query.segments || []
   if (
     parts.length &&
-    !(parts.length === 2 && ['withdraw', 'accept'].includes(parts[1]))
+    !(parts.length === 2 && ['withdraw', 'accept', 'deny'].includes(parts[1]))
   )
     return res.status(404).json({ error: 'Not found.' })
   if (
@@ -42,13 +50,15 @@ export default async function handler(
     let result
     if (parts[1] === 'accept') result = await service.accept(parts[0], body)
     else if (req.method === 'GET')
-      result = await service.history(req.query.conversationId)
-    else
-      result = await service.mutate(
-        parts.length ? 'withdraw' : 'create',
-        parts[0],
-        body
-      )
+      result = req.query.listingId
+        ? await service.context(req.query.listingId)
+        : await service.history(req.query.conversationId)
+    else {
+      let action: 'create' | 'deny' | 'withdraw' = 'create'
+      if (parts.length) action = 'withdraw'
+      if (parts[1] === 'deny') action = 'deny'
+      result = await service.mutate(action, parts[0], body)
+    }
     return res.status(200).json(result)
   } catch (error) {
     return res

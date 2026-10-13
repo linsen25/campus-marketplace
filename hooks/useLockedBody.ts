@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { getScrollbarWidth } from '@/utils/browser'
+import { getScrollLockPadding } from '@/utils/browser'
 
 type ReturnType = [boolean, (locked: boolean) => void]
 
@@ -18,11 +18,14 @@ export function useLockedBody(initialLocked = false): ReturnType {
     const originalPaddingRight = document.body.style.paddingRight
 
     // Get the scrollBar width
-    const scrollBarWidth = getScrollbarWidth()
+    const scrollBarWidth = getScrollLockPadding()
 
     // Avoid width reflow
     if (scrollBarWidth) {
-      document.body.style.paddingRight = `${scrollBarWidth}px`
+      document.body.style.paddingRight = `${
+        parseFloat(getComputedStyle(document.body).paddingRight) +
+        scrollBarWidth
+      }px`
     }
 
     // Lock body scroll

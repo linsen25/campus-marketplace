@@ -9,7 +9,13 @@ import { requireOrderRequestEnvironment } from '@/lib/server/order-request-servi
 import { prepareOrderSnapshotMedia } from '@/lib/server/order-snapshot-media'
 import { createMarketplaceClient } from '@/lib/supabase/server'
 import type { MarketplaceContext } from '@/lib/supabase/server'
-import type { Offer, OfferStatus, OfferEvent, OfferTerms } from '@/types/offer'
+import type {
+  Agreement,
+  Offer,
+  OfferStatus,
+  OfferEvent,
+  OfferTerms,
+} from '@/types/offer'
 
 type Row = {
   linked_order_id?: string | null
@@ -35,6 +41,9 @@ type Row = {
   withdrawn_at: string | null
   withdrawn_by: string | null
   withdrawal_note: string | null
+  can_withdraw?: boolean
+  changed_fields?: string[]
+  mutation_kind?: 'counter' | 'create' | 'revise'
 }
 function deliveryArea(value: unknown) {
   if (value === undefined) return undefined
@@ -110,6 +119,7 @@ export function mapOffer(row: Row, viewer: string): Offer {
     withdrawn: 'Withdrawn',
     expired: 'Expired',
     closed: 'Closed',
+    declined: 'Declined',
   }
   if (
     row.protocol_version !== 2 ||
@@ -143,7 +153,12 @@ export function mapOffer(row: Row, viewer: string): Offer {
     withdrawnAt: row.withdrawn_at,
     withdrawnBy: row.withdrawn_by,
     withdrawalNote: row.withdrawal_note,
-    canWithdraw: row.status === 'active' && row.sender_user_id === viewer,
+    canWithdraw:
+      row.status === 'active' &&
+      row.sender_user_id === viewer &&
+      (row.can_withdraw ?? Date.now() < Date.parse(row.created_at) + 300000),
+    changedFields: row.changed_fields ?? [],
+    mutationKind: row.mutation_kind ?? 'create',
   }
 }
 function acceptError(reason: string) {
@@ -185,6 +200,17 @@ export function createOffersService(context: MarketplaceContext) {
     return { data, viewer: user.id }
   }
   return {
+    async context(listingId: unknown) {
+      const { data } = await call('marketplace_listing_offer_context', {
+        p_listing_id: messageUuid(listingId),
+      })
+      return data as {
+        activeOfferId: string | null
+        orderId: string | null
+        hasHistory: boolean
+        available: boolean
+      }
+    },
     async accept(id: unknown, body: Record<string, unknown>) {
       const offerId = messageUuid(id)
       const commandId = messageUuid(body.clientActionId)
@@ -223,6 +249,30 @@ export function createOffersService(context: MarketplaceContext) {
       })
       return {
         offers: data.offers.map((row: Row) => mapOffer(row, viewer)),
+        agreements: (data.agreements || []).map(
+          (value: {
+            id: string
+            offer_id: string
+            created_at: string
+            status: Agreement['status']
+            listing_title: string
+            buyer_id: string
+            seller_id: string
+            terms: Record<string, unknown>
+          }): Agreement => ({
+            id: value.id,
+            offerId: value.offer_id,
+            createdAt: value.created_at,
+            status: value.status,
+            listingTitle: value.listing_title,
+            buyerId: value.buyer_id,
+            sellerId: value.seller_id,
+            terms: mapTerms({
+              item_amount_cents: Number(value.terms.item_amount_cents),
+              offer_terms: value.terms,
+            }),
+          })
+        ),
         events: data.events.map(
           (event: {
             id: string
@@ -245,7 +295,7 @@ export function createOffersService(context: MarketplaceContext) {
       }
     },
     async mutate(
-      action: 'create' | 'withdraw',
+      action: 'create' | 'deny' | 'withdraw',
       id: unknown,
       body: Record<string, unknown>
     ) {
@@ -255,13 +305,20 @@ export function createOffersService(context: MarketplaceContext) {
               p_conversation_id: messageUuid(body.conversationId),
               p_terms: body.terms,
               p_client_action_id: messageUuid(body.clientActionId),
+              p_comparison_offer_id: body.comparisonOfferId
+                ? messageUuid(body.comparisonOfferId)
+                : null,
+              p_kind: body.kind ?? 'create',
             }
           : {
               p_offer_id: messageUuid(id),
               p_client_action_id: messageUuid(body.clientActionId),
-              p_note: body.note ?? null,
+              ...(action === 'withdraw' ? { p_note: body.note ?? null } : {}),
             }
-      const { data, viewer } = await call(`marketplace_${action}_offer`, params)
+      const { data, viewer } = await call(
+        `marketplace_${action === 'create' ? 'submit' : action}_offer`,
+        params
+      )
       return mapOffer(data, viewer)
     },
   }

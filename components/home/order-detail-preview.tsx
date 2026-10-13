@@ -272,8 +272,8 @@ function PaymentPreview({
           <dd>{order.issue ? 'On hold' : 'Pending'}</dd>
         </dl>
         <p className={profile.caption}>
-          Preview rule: 4% of item + shipping, minimum CA$1, maximum CA$15. No
-          real pricing or payout behavior.
+          Preview rule: 1% of item only, no minimum, maximum CA$5. No real
+          pricing or payout behavior.
         </p>
       </div>
       <div className={styles.placeholder}>

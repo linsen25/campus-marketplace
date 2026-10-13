@@ -46,6 +46,9 @@
 
   html {
     @apply scroll-smooth;
+
+    /* Root scroll locks must retain the viewport's existing content width. */
+    scrollbar-gutter: stable;
   }
 
   body {
