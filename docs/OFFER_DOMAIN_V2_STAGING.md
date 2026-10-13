@@ -1,5 +1,9 @@
 # V2-B Offer UX and final negotiation terms - staging
 
+> Historical B/C qualification record. The [current Offer/Agreement revision](V2_OFFER_AGREEMENT_REVISION.md)
+> supersedes conflicting Active scope, Counter/replacement, withdrawal and fee
+> rules below. Historical applied migrations and transactions remain unchanged.
+
 ## V2-C2 implementation update (2026-10-12)
 
 C2 was applied only to staging as `202610120004_offer_accept.sql`.

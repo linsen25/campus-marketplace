@@ -1,5 +1,9 @@
 # V2-C2 Accept / Listing winner foundation
 
+> Historical C2/D1 qualification record. Use the [current Offer/Agreement revision](V2_OFFER_AGREEMENT_REVISION.md)
+> for current Offer rules and new Order economics. Earlier immutable records and
+> their rule-tagged economics remain unchanged.
+
 2026-10-12: staging implementation applied; hosted and browser qualification passed.
 V2-C ACCEPT / LISTING WINNER FOUNDATION COMPLETE.
 V2-D ON CAMPUS FLOW IS READY FOR IMPLEMENTATION PLANNING.

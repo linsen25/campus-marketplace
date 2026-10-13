@@ -17,7 +17,9 @@
     "postinstall": "cd cli && npm install",
     "demo:seed:staging": "node scripts/staging-demo.cjs seed",
     "demo:cleanup:staging": "node scripts/staging-demo.cjs cleanup",
-    "demo:dev:staging": "node scripts/staging-demo.cjs dev"
+    "demo:dev:staging": "node scripts/staging-demo.cjs dev",
+    "test:v2:staging": "node tests/v2-smoke-staging.cjs",
+    "demo:reset:v2:staging": "node scripts/demo-reset-v2-staging.cjs"
   },
   "dependencies": {
     "@algolia/autocomplete-js": "^1.7.1",

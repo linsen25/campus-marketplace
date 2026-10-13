@@ -1,5 +1,9 @@
 # V2-D2A On Campus inspection and payment
 
+> Historical D2A checkpoint. New V2 Offers/Orders now follow the
+> [current Offer/Agreement revision](V2_OFFER_AGREEMENT_REVISION.md): 1% of item
+> price only, no minimum, CA$5 cap. Earlier 4% rule-tagged Orders remain unchanged.
+
 Status: STAGING IMPLEMENTATION / HOSTED QUALIFICATION PASSED (2026-10-12).
 Final cleanup/privilege/security checkpoint passed.
 

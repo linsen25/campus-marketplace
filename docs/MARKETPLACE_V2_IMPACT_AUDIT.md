@@ -1,5 +1,9 @@
 # Marketplace V2 repository impact and conflict audit
 
+> Historical implementation-impact audit. The [current Offer/Agreement revision](V2_OFFER_AGREEMENT_REVISION.md)
+> supersedes conflicting future Active scope, Counter/replacement, withdrawal and
+> fee assumptions in this earlier audit; historical evidence is retained.
+
 ## V2-D2A implementation update (2026-10-12)
 
 V2-D2A On Campus Buyer inspection and explicit staging payment is implemented
