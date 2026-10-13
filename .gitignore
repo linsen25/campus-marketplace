@@ -40,3 +40,4 @@ yarn-error.log*
 # Isolated Messages staging development config and visual verification artifacts
 .env.staging.local
 /tests/artifacts/
+*.tsbuildinfo

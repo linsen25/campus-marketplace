@@ -53,12 +53,18 @@ interface DraggableCardWrapperProps {
   children: React.ReactNode
   onSendToBack: () => void
   sensitivity: number
+  position?: number
+  interactive?: boolean
+  draggable?: boolean
 }
 
 const DraggableCardWrapper: React.FC<DraggableCardWrapperProps> = ({
   children,
   onSendToBack,
   sensitivity,
+  position,
+  interactive = true,
+  draggable = true,
 }) => {
   const x = useMotionValue(0)
   const y = useMotionValue(0)
@@ -82,13 +88,15 @@ const DraggableCardWrapper: React.FC<DraggableCardWrapperProps> = ({
 
   return (
     <motion.div
-      drag={true}
+      drag={draggable}
       className={styles.draggable}
       style={{
         x,
         y,
         rotateX,
         rotateY,
+        zIndex: position,
+        pointerEvents: interactive ? 'auto' : 'none',
       }}
       dragConstraints={{ top: 0, right: 0, bottom: 0, left: 0 }}
       dragElastic={0.6}
@@ -184,6 +192,9 @@ export const CardStack = React.forwardRef<HTMLDivElement, CardStackProps>(
             <DraggableCardWrapper
               key={item.id || index}
               sensitivity={sensitivity}
+              position={presentation ? index : undefined}
+              interactive={!presentation || index === visibleDeck.length - 1}
+              draggable={!presentation && !disabled}
               onSendToBack={() => {
                 if (!presentation && !disabled) sendToBack(index)
               }}

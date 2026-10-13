@@ -1,0 +1,111 @@
+.root {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+}
+.track {
+  position: absolute;
+  top: 15px;
+  left: calc(100% / var(--step-count) / 2);
+  right: calc(100% / var(--step-count) / 2);
+  height: 2px;
+  background: #544161;
+  z-index: -1;
+}
+.fill {
+  height: 100%;
+  background: #b88cfa;
+  transform-origin: left;
+}
+.steps {
+  display: grid;
+  grid-template-columns: repeat(var(--step-count), minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  gap: 12px;
+}
+.step {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.marker {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid #544161;
+  border-radius: 50%;
+  background: #221a2c;
+  color: #c1adcf;
+  font-size: 12px;
+}
+.step[data-done] .marker {
+  background: #775497;
+  border-color: #775497;
+  color: white;
+}
+.step[aria-current] .marker {
+  border-color: #b88cfa;
+  color: #d6bee7;
+}
+.label {
+  font-size: 12px;
+  color: #c1adcf;
+  text-align: center;
+  line-height: 1.45;
+}
+.step[aria-current] .label {
+  color: #f5f3f7;
+  font-weight: 600;
+}
+@media (max-width: 767px) {
+  .steps {
+    gap: 4px;
+  }
+  .label {
+    font-size: 10px;
+    overflow-wrap: anywhere;
+  }
+  .marker {
+    width: 28px;
+    height: 28px;
+  }
+  .track {
+    top: 13px;
+  }
+  /* Formal variable-count flows retain the same markers/rail with readable labels. */
+  .root[data-readable-mobile] .steps {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .root[data-readable-mobile] .step {
+    flex-direction: row;
+  }
+  .root[data-readable-mobile] .label {
+    font-size: 12px;
+    text-align: left;
+    overflow-wrap: normal;
+  }
+  .root[data-readable-mobile] .track {
+    top: 14px;
+    bottom: 14px;
+    left: 13px;
+    right: auto;
+    width: 2px;
+    height: auto;
+  }
+  .root[data-readable-mobile] .fill {
+    transform: scaleY(var(--step-progress)) !important;
+    transform-origin: top;
+    transition: transform 0.4s ease-out;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .root[data-readable-mobile] .fill {
+    transition: none;
+  }
+}

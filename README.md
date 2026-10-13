@@ -2,6 +2,11 @@
 
 Current development status: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
 
+Provider-independent staging backend: **COMPLETE / VERIFIED through Backend Completion Pass**.
+External integrations are **DEFERRED**; real-money Payment is not yet integrated.
+Frontend product polish remains future work. See the
+[external integrations backlog](docs/EXTERNAL_INTEGRATIONS_BACKLOG.md).
+
 Current runtime: **Node.js 24 LTS** (latest 24.x patch), matching `.nvmrc`,
 `package.json` engines. Use `nvm install 24` / `nvm use 24`
 where nvm is available. Next.js 12.2 and React 18 remain unchanged.

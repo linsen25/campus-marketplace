@@ -73,7 +73,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
         name: 'View listing',
         exact: true,
       })
-      const plus = panel.getByRole('button', { name: 'Add attachment' })
+      const plus = panel.getByRole('button', { name: 'Add to conversation' })
 
       const screenshot = (name) =>
         page.screenshot({

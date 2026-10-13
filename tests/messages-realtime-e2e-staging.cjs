@@ -96,7 +96,7 @@ async function openChat(page, id, role = 'buying') {
     .locator(`[data-message-history="${id}"]`)
     .waitFor({ timeout: 60000 })
   await page
-    .getByRole('button', { name: 'Add attachment', exact: true })
+    .getByRole('button', { name: 'Add to conversation', exact: true })
     .waitFor()
   await page
     .locator('[data-message-history] [role=status]')
@@ -104,8 +104,9 @@ async function openChat(page, id, role = 'buying') {
 }
 async function attachments(page, files) {
   await page
-    .getByRole('button', { name: 'Add attachment', exact: true })
+    .getByRole('button', { name: 'Add to conversation', exact: true })
     .click()
+  await page.getByRole('button', { name: 'Attachment', exact: true }).click()
   const panel = page.locator('[data-attachment-panel]')
   await panel.locator('input[type=file]').setInputFiles(files)
   return panel

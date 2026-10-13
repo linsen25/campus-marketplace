@@ -25,6 +25,10 @@ import { AppLayout } from '@/layouts/app-layout'
 import { gaTrackingId, isDev, isProd } from '@/utils/env'
 import { scrollToTop } from '@/utils/scrollToTop'
 
+// eslint-disable-next-line import/extensions, import/no-unresolved -- Package CSS export is resolved by Next webpack; the legacy ESLint resolver does not support it.
+import '@daypicker/react/style.css'
+// eslint-disable-next-line import/extensions, import/no-unresolved -- Package CSS export is resolved by Next webpack; legacy ESLint cannot resolve it.
+import '@ncdai/react-wheel-picker/style.css'
 import '@/styles/_index.css'
 import '@/styles/desktop-app-tokens.css'
 import '@/components/ui/GradientWaves.css'

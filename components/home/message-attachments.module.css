@@ -22,7 +22,7 @@
   padding: 4px 0;
   border: 0;
   background: transparent;
-  color: inherit;
+  color: #c1adcf;
   font: inherit;
   font-size: 14px;
   cursor: pointer;
@@ -45,4 +45,45 @@
   margin-top: 8px;
   color: #c1adcf;
   font-size: 12px;
+}
+
+.composer .send.send:not([data-state='error']) {
+  --surface: #237a48;
+}
+.upload,
+.preview {
+  min-width: 0;
+}
+.photoArea {
+  position: relative;
+  isolation: isolate;
+}
+@media (min-width: 1024px) {
+  .upload {
+    align-self: center;
+  }
+  .upload [data-slot='file-drop'] {
+    width: min(100%, 360px, calc(100dvh - 370px));
+    margin-inline: auto;
+  }
+  .upload [data-slot='file-drop'] > label {
+    aspect-ratio: 1 / 1;
+    padding: 20px;
+  }
+  .content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    overflow: hidden;
+  }
+  .preview {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 0;
+  }
+  .photoArea {
+    min-height: 0;
+    padding: 16px;
+  }
 }

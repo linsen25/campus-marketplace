@@ -19,6 +19,10 @@ import clientStyles from '@/components/client-card.module.css'
 import styles from '@/components/listings/listing-workspace.module.css'
 import { useMarketplaceSession } from '@/components/listings/marketplace-session'
 import { WorkspaceEmpty } from '@/components/listings/workspace-empty'
+import {
+  ChatBodySkeleton,
+  MessagesWorkspaceSkeleton,
+} from '@/components/ui/workspace-skeletons'
 import { sortConversationsByRecent } from '@/lib/conversation-state'
 import {
   listConversations,
@@ -58,6 +62,7 @@ export function Messages({
   const {
     seller,
     loading: sessionLoading,
+    error: sessionError,
     refresh: refreshSession,
   } = useMarketplaceSession()
   const userId = seller?.id
@@ -293,6 +298,7 @@ export function Messages({
     queue.dirty('history')
     const recover = () => {
       if (!valid) return
+      window.dispatchEvent(new CustomEvent('marketplace-request-invalidated'))
       queue.dirty('buying')
       queue.dirty('selling')
       queue.dirty('history')
@@ -301,6 +307,11 @@ export function Messages({
       userId,
       (signal) => {
         if (!valid) return
+        window.dispatchEvent(
+          new CustomEvent('marketplace-request-invalidated', {
+            detail: { conversationId: signal.conversationId },
+          })
+        )
         queue.dirty(signal.role)
         const view = realtimeView.current
         if (view.chatActive && signal.conversationId === view.selectedId)
@@ -488,7 +499,7 @@ export function Messages({
       </button>
     </p>
   ) : selectedId && !loaded[selectedId] ? (
-    <p role="status">Loading messages...</p>
+    <ChatBodySkeleton />
   ) : undefined
   const chat =
     selected && userId ? (
@@ -497,6 +508,8 @@ export function Messages({
         conversationId={selected.id}
         messages={histories[selected.id] || []}
         currentUserId={userId}
+        otherParticipantId={selected.person.id}
+        currentUsername={seller.displayName}
         name={selected.person.name}
         image={selected.person.avatar}
         time={selected.time}
@@ -583,6 +596,7 @@ export function Messages({
   }, [mobile, showDetail])
   return (
     <section className={styles.workspace} aria-label="Messages">
+      {sessionError && <p role="alert">{sessionError}</p>}
       {error && (
         <p role="alert">
           {error}{' '}
@@ -591,16 +605,20 @@ export function Messages({
           </button>
         </p>
       )}
-      {listLoading && !conversations.length && (
-        <p role="status">Loading conversations...</p>
-      )}
-      {!listLoading && !error && !conversations.length && (
-        <WorkspaceEmpty>
-          {userId
-            ? 'No conversations yet.'
-            : 'Sign in with your Western account to view Messages.'}
-        </WorkspaceEmpty>
-      )}
+      {(sessionLoading || (userId && cursor[active] === undefined && !error)) &&
+        !conversations.length && <MessagesWorkspaceSkeleton mobile={mobile} />}
+      {!sessionLoading &&
+        !listLoading &&
+        (!userId || cursor[active] !== undefined) &&
+        !error &&
+        !sessionError &&
+        !conversations.length && (
+          <WorkspaceEmpty>
+            {userId
+              ? 'No conversations yet.'
+              : 'Sign in with your Western account to view Messages.'}
+          </WorkspaceEmpty>
+        )}
       {cursor[active] && (
         <button
           type="button"

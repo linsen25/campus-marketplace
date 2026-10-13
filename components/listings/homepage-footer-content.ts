@@ -41,7 +41,7 @@ export const panels: InformationPanel[] = [
       },
       {
         title: 'Protected payments',
-        copy: 'Planned protected payments will keep funds from being released immediately. Payment moves forward only after the exchange is confirmed and the protection period is complete.',
+        copy: 'In the planned flow, buyer payment comes before fulfillment. Marketplace Protection follows confirmed handoff or receipt; completing protection without a blocking issue makes the seller payout eligible for release.',
       },
       {
         title: 'Both sides confirm',

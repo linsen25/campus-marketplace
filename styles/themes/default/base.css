@@ -32,6 +32,14 @@
     @apply bg-brand-black text-white;
   }
 
+  /* Keep native editable selections visible on the app's dark form surfaces. */
+  input::selection,
+  textarea::selection,
+  [contenteditable='true']::selection {
+    background: #007aff;
+    color: #fff;
+  }
+
   #__next {
     @apply flex flex-col min-h-screen;
   }

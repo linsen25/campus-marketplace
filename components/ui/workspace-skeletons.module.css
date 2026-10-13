@@ -1,0 +1,95 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.card {
+  padding: 16px;
+  border: 1px solid #b995dc29;
+  border-radius: 16px;
+  background: #221a2c;
+  min-width: 0;
+}
+.media {
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  border-radius: 12px;
+}
+.line {
+  height: 16px;
+  width: 70%;
+}
+.short {
+  height: 14px;
+  width: 40%;
+}
+.action {
+  height: 40px;
+  width: 120px;
+  max-width: 100%;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+  min-width: 0;
+  min-height: 480px;
+  padding: 16px;
+}
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1;
+  min-height: 240px;
+  width: 100%;
+  padding: 12px;
+}
+.bubble {
+  height: 44px;
+  width: 58%;
+  max-width: 380px;
+  border-radius: 18px;
+}
+.bubble:nth-child(even) {
+  align-self: flex-end;
+  width: 43%;
+}
+.workspace {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #b995dc29;
+  border-radius: 16px;
+  background: #221a2c;
+}
+.rail {
+  width: 64px;
+  flex-shrink: 0;
+  padding: 16px 12px;
+}
+@media (max-width: 767px) {
+  .workspace {
+    flex-direction: column;
+  }
+  .rail {
+    display: none;
+  }
+  .chat {
+    min-height: 480px;
+  }
+}

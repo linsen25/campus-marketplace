@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 
 type Option = string | { value: string; label: ReactNode; tag?: string }
 export default function GlideSelect(props: {
+  placeholder?: string
+  accentColor?: string
   options: readonly Option[]
   value?: string
   defaultValue?: string

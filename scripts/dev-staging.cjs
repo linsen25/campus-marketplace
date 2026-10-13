@@ -55,6 +55,8 @@ const child = spawn(
     env: {
       ...process.env,
       APP_ENV: 'staging',
+      // The main app must never inherit the frozen viewer's interaction authority.
+      ORDER_PREVIEW_MODE: '',
       NEXT_PUBLIC_SUPABASE_URL: url,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: key,
       // Explicit empty value prevents Next dotenv from inheriting a production secret.

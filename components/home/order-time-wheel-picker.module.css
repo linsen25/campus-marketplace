@@ -1,0 +1,62 @@
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #766183;
+  border-radius: 10px;
+  background: #201729;
+  color: #f5f3f7;
+  text-align: left;
+}
+.trigger:focus-visible {
+  outline: 2px solid #b88cfa;
+  outline-offset: 2px;
+}
+.panel {
+  position: fixed;
+  inset: auto;
+  width: 320px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #8d68aa;
+  border-radius: 14px;
+  background: #201729;
+  color: #f5f3f7;
+  box-shadow: 0 20px 60px #08050d99;
+  z-index: 20;
+}
+.wheels {
+  display: flex;
+  width: 100%;
+}
+.wheels > div {
+  flex: 1;
+  min-width: 0;
+}
+.optionItem {
+  color: #c1adcf;
+  font-size: 18px;
+}
+.highlightWrapper {
+  background: #63407966;
+  border-block: 1px solid #b995dc80;
+}
+.highlightItem {
+  color: #fff;
+  font-size: 19px;
+  font-weight: 600;
+}
+.wheels :global([data-rwp]):focus-visible {
+  outline: 2px solid #b88cfa;
+  outline-offset: -2px;
+  border-radius: 10px;
+}
+.hint {
+  font-size: 11px;
+  color: #c1adcf;
+  margin: 12px 0 16px;
+  line-height: 1.5;
+}

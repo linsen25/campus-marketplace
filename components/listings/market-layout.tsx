@@ -13,6 +13,7 @@ import InfiniteGrid from '@/components/infinite-grid'
 import gridStyles from '@/components/infinite-grid.module.css'
 import { useDesktopRouteTransition } from '@/components/navigation/desktop-route-transition'
 import PulseHeart from '@/components/react-bits/pulse-heart'
+import { ListingSkeletonGrid } from '@/components/ui/workspace-skeletons'
 import { ExpandableCard } from '@/components/velora/expandable-card'
 import { useMarketReady } from '@/hooks/use-market-ready'
 import { useMarketScroll } from '@/hooks/use-market-scroll'
@@ -127,6 +128,7 @@ export function MarketLayout({
   const navigateHome = useDesktopRouteTransition()
   const [realListings, setRealListings] = useState(initialListings)
   const [listingError, setListingError] = useState(initialError || '')
+  const [listingPending, setListingPending] = useState(Boolean(initialError))
   const [reload, setReload] = useState(0)
   useEffect(() => {
     if (!initialListings) return undefined
@@ -134,6 +136,8 @@ export function MarketLayout({
     let version = 0
     const refresh = async () => {
       const request = ++version
+      setListingPending(true)
+      setListingError('')
       try {
         const rows: Listing[] = []
         let page = 1
@@ -159,6 +163,8 @@ export function MarketLayout({
               ? reason.message
               : 'Marketplace unavailable. Please try again.'
           )
+      } finally {
+        if (active && request === version) setListingPending(false)
       }
     }
     refresh()
@@ -632,9 +638,11 @@ export function MarketLayout({
             </button>
           </p>
         )}
-        {items.length ? (
-          browsing
-        ) : (
+        {listingPending && !items.length && (
+          <ListingSkeletonGrid className={gridStyles.grid} />
+        )}
+        {items.length > 0 && browsing}
+        {!listingPending && !items.length && !listingError && (
           <WorkspaceEmpty>
             {appliedQuery ? (
               `No listings found for "${appliedQuery}"`

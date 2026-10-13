@@ -5,7 +5,7 @@ export type ListingSubcategory = MarketSubcategory
 
 export type ListingCondition = 'fair' | 'good' | 'like-new' | 'new'
 
-export type ListingStatus = 'available' | 'sold'
+export type ListingStatus = 'available' | 'pending' | 'reserved' | 'sold'
 
 export type SellerSummary = {
   id: string

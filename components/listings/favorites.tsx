@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { ContentLoadingSpinner } from '@/components/ui/content-loading-spinner'
 import { useContentReveal } from '@/components/ui/content-reveal'
+import { ListingSkeletonGrid } from '@/components/ui/workspace-skeletons'
 import { getFavoriteListings } from '@/lib/favorites-api'
 import type { Listing } from '@/types/listing'
 
@@ -11,7 +11,7 @@ import { ListingSortFilter } from './listing-sort-filter'
 import styles from './listing-workspace.module.css'
 import type { MarketFilterValues } from './market-filter'
 import { PublishedListingCard } from './published-listing-card'
-import { ContentStateRegion, WorkspaceEmpty } from './workspace-empty'
+import { WorkspaceEmpty } from './workspace-empty'
 
 export function Favorites() {
   const [items, setItems] = useState<Listing[]>([])
@@ -54,7 +54,6 @@ export function Favorites() {
       setHasNext(result.length === 20)
     } catch (reason) {
       if (request === version.current) {
-        setItems([])
         setError(
           reason instanceof Error ? reason.message : 'Unable to load favorites.'
         )
@@ -65,6 +64,7 @@ export function Favorites() {
   }, [applied, sort, page])
   useEffect(() => {
     setLoading(true)
+    setItems([])
     load()
     const refresh = () => {
       if (document.visibilityState === 'visible') load()
@@ -102,16 +102,12 @@ export function Favorites() {
           }}
         />
       </div>
-      {loading && (
-        <ContentStateRegion>
-          <ContentLoadingSpinner />
-        </ContentStateRegion>
-      )}
+      {loading && <ListingSkeletonGrid />}
       {!loading && error && (
         <ContentStateError
           className={reveal}
           onRetry={() => {
-            setLoading(true)
+            setLoading(!items.length)
             load()
           }}
         >

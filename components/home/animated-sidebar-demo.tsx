@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   MessageCircle,
   Package,
+  ClipboardList,
   Settings,
   UserRound,
 } from 'lucide-react'
@@ -27,6 +28,8 @@ import { Link } from '@ui/link/link'
 
 import styles from './animated-sidebar-demo.module.css'
 import { Messages } from './messages'
+import { useOrderVisual } from './order-visual-context'
+import { Orders } from './orders'
 import { ProfileAnalytics } from './profile-analytics'
 import type { ChartReplayHistory } from './profile-chart-animation'
 import { useProfileLogout } from './profile-logout'
@@ -44,7 +47,7 @@ const GradientWaves = dynamic(
   }
 )
 
-type Group = 'listings' | 'messages' | 'profile'
+type Group = 'listings' | 'messages' | 'orders' | 'profile'
 
 const groups: Array<{
   id: Group
@@ -77,8 +80,17 @@ const groups: Array<{
     label: 'Messages',
     icon: <MessageCircle />,
     children: [
-      { id: 'buying', label: 'Buying', heading: 'Messages' },
-      { id: 'selling', label: 'Selling', heading: 'Messages' },
+      { id: 'buying', label: 'Buying', heading: 'Buying' },
+      { id: 'selling', label: 'Selling', heading: 'Selling' },
+    ],
+  },
+  {
+    id: 'orders',
+    label: 'Orders',
+    icon: <ClipboardList />,
+    children: [
+      { id: 'purchases', label: 'Purchases', heading: 'Purchases' },
+      { id: 'sales', label: 'Sales', heading: 'Sales' },
     ],
   },
 ]
@@ -105,6 +117,7 @@ const mobileGroups = groups.map((group) =>
 // eslint-disable-next-line complexity -- Existing responsive Home destinations keep separate mobile and desktop rendering branches.
 export function AnimatedSidebarDemo() {
   const router = useRouter()
+  const orderVisuals = useOrderVisual()
   const navigate = useDesktopRouteTransition()
   const logout = useProfileLogout()
   const pendingDestination = usePendingDestination()
@@ -176,23 +189,53 @@ export function AnimatedSidebarDemo() {
     profile: 'overview',
     listings: 'my-listings',
     messages: 'buying',
+    orders: 'purchases',
   })
+  // Preview navigation follows Home's existing local destination pattern. No route/API request.
   useEffect(() => {
-    const section = router.query.section
-    if (section === 'messages') {
-      setActive('messages')
-      setSelected((current) => ({
-        ...current,
-        messages: router.query.destination === 'selling' ? 'selling' : 'buying',
-      }))
+    if (!orderVisuals.selection) return
+    setActive('orders')
+    setSelected((current) => ({
+      ...current,
+      orders: orderVisuals.selection?.workspace || current.orders,
+    }))
+  }, [orderVisuals.selection])
+  useEffect(() => {
+    const syncSection = () => {
+      const section = router.query.section
+      if (section === 'settings') setActive('settings')
+      if (section === 'orders') {
+        setActive('orders')
+        setSelected((current) => ({
+          ...current,
+          orders: ['sales', 'selling'].includes(
+            String(router.query.destination)
+          )
+            ? 'sales'
+            : 'purchases',
+        }))
+      }
+      if (section === 'messages') {
+        setActive('messages')
+        setSelected((current) => ({
+          ...current,
+          messages:
+            router.query.destination === 'selling' ? 'selling' : 'buying',
+        }))
+      }
+      if (
+        ['my-listings', 'create-listing', 'favorites'].includes(String(section))
+      ) {
+        setActive('listings')
+        setSelected((current) => ({ ...current, listings: String(section) }))
+      }
     }
-    if (
-      ['my-listings', 'create-listing', 'favorites'].includes(String(section))
-    ) {
-      setActive('listings')
-      setSelected((current) => ({ ...current, listings: String(section) }))
-    }
-  }, [router.query.section, router.query.destination])
+    syncSection()
+    // Local sidebar selection can diverge from an unchanged URL. Reapply even
+    // when a Settings link navigates to the same query as a previous visit.
+    router.events.on('routeChangeComplete', syncSection)
+    return () => router.events.off('routeChangeComplete', syncSection)
+  }, [router, router.query.section, router.query.destination])
   // Primary entries classify child pages; explicit group selection starts at
   // its first child. Rail width/hover/pinning never calls this selection path.
   const selectSection = (id: Group | 'settings', child?: string) => {
@@ -200,8 +243,14 @@ export function AnimatedSidebarDemo() {
       id === 'profile' && (desktop ? !child : child === 'analytics')
     const alreadySelected =
       id === active && child && selected[id as Group] === child
-    if (alreadySelected && !replayCharts) return
+    if (
+      alreadySelected &&
+      !replayCharts &&
+      !(id === 'orders' && orderVisuals.selection)
+    )
+      return
     const select = () => {
+      orderVisuals.showList()
       if (replayCharts) setChartReplayToken((token) => token + 1)
       if (alreadySelected || (desktop && id === 'profile' && active === id))
         return
@@ -293,6 +342,7 @@ export function AnimatedSidebarDemo() {
                 <ProfileOverview
                   showHeading={false}
                   avatarImage={avatarImage}
+                  onFinancialSettings={() => selectSection('settings')}
                   onUsername={setUsername}
                   onAvatarSave={saveAvatar}
                 />
@@ -309,6 +359,14 @@ export function AnimatedSidebarDemo() {
           {!desktop && active === 'messages' && (
             <Messages destination={selected.messages} mobile={true} />
           )}
+          {!desktop && active === 'orders' && (
+            <Orders
+              key={selected.orders}
+              destination={selected.orders}
+              desktop={desktop}
+              onNavigate={(mode) => selectSection('orders', mode)}
+            />
+          )}
           {!desktop && active === 'settings' && (
             <ProfileOverview
               settings={true}
@@ -316,6 +374,7 @@ export function AnimatedSidebarDemo() {
               sessionAction={
                 <SettingsLogout onConfirm={() => logout(username)} />
               }
+              onFinancialSettings={() => selectSection('settings')}
               onAvatarSave={saveAvatar}
               onUsername={setUsername}
             />
@@ -405,6 +464,7 @@ export function AnimatedSidebarDemo() {
             <>
               <ProfileOverview
                 avatarImage={avatarImage}
+                onFinancialSettings={() => selectSection('settings')}
                 onUsername={setUsername}
                 onAvatarSave={saveAvatar}
               />
@@ -417,6 +477,14 @@ export function AnimatedSidebarDemo() {
           {desktop && active === 'messages' && (
             <Messages destination={selected.messages} />
           )}
+          {desktop && active === 'orders' && (
+            <Orders
+              key={selected.orders}
+              destination={selected.orders}
+              desktop={desktop}
+              onNavigate={(mode) => selectSection('orders', mode)}
+            />
+          )}
           {desktop && active === 'settings' && (
             <ProfileOverview
               settings={true}
@@ -424,6 +492,7 @@ export function AnimatedSidebarDemo() {
               sessionAction={
                 <SettingsLogout onConfirm={() => logout(username)} />
               }
+              onFinancialSettings={() => selectSection('settings')}
               onAvatarSave={saveAvatar}
               onUsername={setUsername}
             />

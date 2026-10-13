@@ -3,6 +3,7 @@ import Head from 'next/head'
 
 import { Container } from '@/components/container/container'
 import { BackButton } from '@/components/listings/back-button'
+import { useMarketplaceSession } from '@/components/listings/marketplace-session'
 import { useMessageSeller } from '@/components/listings/use-message-seller'
 import { ProductImage } from '@/components/product/product-image'
 import { listingCategories, listingConditions } from '@/lib/listing-metadata'
@@ -17,6 +18,7 @@ type ListingPageProps = {
 }
 
 export default function ListingPage({ listing, error }: ListingPageProps) {
+  const { seller } = useMarketplaceSession()
   const messaging = useMessageSeller(listing?.id || '')
   if (!listing)
     return (
@@ -36,7 +38,7 @@ export default function ListingPage({ listing, error }: ListingPageProps) {
   return (
     <>
       <Head>
-        <title>{listing.title} | Campus Marketplace</title>
+        <title>{`${listing.title} | Campus Marketplace`}</title>
       </Head>
       <main className="py-8 laptop:py-12">
         <Container>
@@ -99,8 +101,23 @@ export default function ListingPage({ listing, error }: ListingPageProps) {
                     }
                     onClick={() => messaging.contact()}
                   >
-                    Contact Seller
+                    Message Seller
                   </Button>
+                  {seller &&
+                    seller.id !== listing.seller.id &&
+                    listing.status === 'available' &&
+                    process.env.NEXT_PUBLIC_MESSAGES_ENV === 'staging' &&
+                    process.env.NEXT_PUBLIC_SUPABASE_URL ===
+                      'https://pcaqxezdfxofysghssyo.supabase.co' && (
+                      <Button
+                        type="primary"
+                        size="large"
+                        disabled={messaging.busy}
+                        onClick={() => messaging.contact(true)}
+                      >
+                        Make Offer
+                      </Button>
+                    )}
                   {messaging.error && <p role="alert">{messaging.error}</p>}
                   {listing.status === 'sold' && (
                     <p id="listing-sold" className="text-neutral-dark text-sm">

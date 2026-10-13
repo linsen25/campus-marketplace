@@ -2,9 +2,9 @@ import { AnimatePresence } from 'framer-motion'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import FluidTabs from '@/components/animata/tabs/fluid-tabs'
-import { ContentLoadingSpinner } from '@/components/ui/content-loading-spinner'
 import { useContentReveal } from '@/components/ui/content-reveal'
 import { LocalTabContent } from '@/components/ui/local-tab-content'
+import { ListingSkeletonGrid } from '@/components/ui/workspace-skeletons'
 import {
   deleteListing,
   getMyListings,
@@ -21,7 +21,7 @@ import { ListingSortFilter } from './listing-sort-filter'
 import styles from './listing-workspace.module.css'
 import type { MarketFilterValues } from './market-filter'
 import { PublishedListingCard } from './published-listing-card'
-import { ContentStateRegion, WorkspaceEmpty } from './workspace-empty'
+import { WorkspaceEmpty } from './workspace-empty'
 
 export function HomeListings({
   page,
@@ -147,7 +147,11 @@ export function HomeListings({
   const visible = items
     .filter(
       (item) =>
-        item.status === (tab === 0 ? 'available' : 'sold') &&
+        (tab === 0
+          ? item.status === 'available' ||
+            item.status === 'reserved' ||
+            item.status === 'pending'
+          : item.status === 'sold') &&
         (!applied.category || item.category === applied.category) &&
         (!applied.subcategory || item.subcategory === applied.subcategory) &&
         (!applied.place || item.pickupArea === applied.place) &&
@@ -182,16 +186,12 @@ export function HomeListings({
       </div>
       <LocalTabContent tab={tab}>
         {notice && <p role="status">{notice}</p>}
-        {loading && (
-          <ContentStateRegion>
-            <ContentLoadingSpinner />
-          </ContentStateRegion>
-        )}
+        {loading && <ListingSkeletonGrid />}
         {!loading && error && !confirmation && (
           <ContentStateError
             className={reveal}
             onRetry={() => {
-              setLoading(true)
+              setLoading(!items.length)
               load()
             }}
           >
@@ -234,7 +234,17 @@ export function HomeListings({
                   </button>
                 </div>
               ) : (
-                <p>Sold · Read-only</p>
+                <p>
+                  {
+                    {
+                      pending: 'Pending transaction',
+                      reserved: 'Reserved',
+                      sold: 'Sold',
+                      available: 'Available',
+                    }[listing.status]
+                  }{' '}
+                  · Read-only
+                </p>
               )}
             </article>
           ))}

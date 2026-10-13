@@ -205,11 +205,10 @@ export function MessageAttachments({
     <section className={styles.composer} aria-label="Add attachment">
       <div className={styles.actions}>
         <button type="button" className={styles.back} onClick={cancel}>
-          <ArrowLeft size={18} aria-hidden="true" />
-          Add attachment
+          <span aria-hidden="true">&lt;</span> Back
         </button>
         <StatefulButton
-          className={sendClassName}
+          className={`${sendClassName} ${styles.send}`}
           disabled={!sendEnabled || (!photos.length && !sending)}
           minLoadingMs={300}
           resetAfter={800}
@@ -228,25 +227,28 @@ export function MessageAttachments({
             and will not be uploaded.
           </p>
         )}
-        <FileDrop
-          inputId="message-photos"
-          inputLabel="Attachment photos"
-          accept="image/jpeg,image/png,image/webp"
-          files={photos.map(({ file }) => file)}
-          showFiles={false}
-          disabled={sending || reserved}
-          onFiles={select}
-        />
-        <p className={styles.hint}>
-          1-4 photos. JPEG, PNG or WebP. Maximum 3 MB each.
-        </p>
-        {error && <p role="alert">{error}</p>}
-        <div data-selected-photos="true">
-          <div className={uploaderStyles.action}>
+        <div className={styles.upload}>
+          <FileDrop
+            inputId="message-photos"
+            inputLabel="Attachment photos"
+            accept="image/jpeg,image/png,image/webp"
+            files={photos.map(({ file }) => file)}
+            showFiles={false}
+            disabled={sending || reserved}
+            onFiles={select}
+          />
+          <p className={styles.hint}>
+            1-4 photos. JPEG, PNG or WebP. Maximum 3 MB each.
+          </p>
+          {error && <p role="alert">{error}</p>}
+        </div>
+        <div className={styles.preview} data-selected-photos="true">
+          <div className={`${uploaderStyles.action} ${styles.photoArea}`}>
             <AccessibleAction
               items={cards}
               activeIndex={index}
               maxVisible={messageImageLimit}
+              cardWidth="min(300px, max(160px, calc(100dvh - 370px)))"
               disabled={sending || reserved}
             />
           </div>
@@ -260,7 +262,11 @@ export function MessageAttachments({
               >
                 <ArrowLeft size={18} aria-hidden="true" />
               </WorkButton>
-              <CardAction disabled={sending || reserved} onClick={discard}>
+              <CardAction
+                variant="red"
+                disabled={sending || reserved}
+                onClick={discard}
+              >
                 Discard
               </CardAction>
               <WorkButton

@@ -781,7 +781,10 @@ async function main() {
       }
       r.page.on('request', observe)
       await chat(r.page)
-        .getByRole('button', { name: 'Add attachment', exact: true })
+        .getByRole('button', { name: 'Add to conversation', exact: true })
+        .click()
+      await r.page
+        .getByRole('button', { name: 'Attachment', exact: true })
         .click()
       const panel = r.page.locator('[data-attachment-panel]')
       await panel.waitFor()

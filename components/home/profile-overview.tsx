@@ -15,6 +15,7 @@ import { passwordRules } from '@/lib/auth-password'
 import { reservedUsername, validUsername } from '@/lib/auth-username'
 import { marketplaceRequest } from '@/lib/listings-api'
 
+import { FinancialSettings } from './financial-settings'
 import { AvatarDialog, ProfileAvatar } from './profile-avatar'
 import styles from './profile.module.css'
 
@@ -260,11 +261,13 @@ export function ProfileOverview({
   sessionAction,
   avatarImage,
   onAvatarSave,
+  onFinancialSettings,
 }: {
   settings?: boolean
   sessionAction?: ReactNode
   avatarImage?: string
   onAvatarSave: (file: File) => void
+  onFinancialSettings?: () => void
   showHeading?: boolean
   onUsername?: (username: string | null) => void
 }) {
@@ -331,13 +334,23 @@ export function ProfileOverview({
       <div className={styles.accountRow} data-profile-avatar-row="true">
         <div className={styles.avatarIdentity}>
           {!settings && <span className={styles.fieldLabel}>Avatar</span>}
-          <ProfileAvatar
-            username={account?.username ?? 'User'}
-            image={avatarImage}
-          />
+          {loading ? (
+            <Skeleton
+              style={{ width: 72, height: 72, borderRadius: '50%' }}
+              aria-label="Loading profile avatar"
+            />
+          ) : (
+            <ProfileAvatar
+              username={account?.username ?? 'User'}
+              image={avatarImage}
+            />
+          )}
         </div>
         {settings ? (
-          <SettingsChange disabled={false} onClick={() => setDialog('avatar')}>
+          <SettingsChange
+            disabled={loading || !account}
+            onClick={() => setDialog('avatar')}
+          >
             Set avatar
           </SettingsChange>
         ) : (
@@ -443,6 +456,7 @@ export function ProfileOverview({
           </div>
         </>
       )}
+      <FinancialSettings settings={settings} onManage={onFinancialSettings} />
       <AnimatePresence>
         {dialog === 'avatar' && (
           <AvatarDialog

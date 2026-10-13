@@ -162,7 +162,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
       })
       const add = async () => {
         await panel
-          .getByRole('button', { name: 'Add attachment', exact: true })
+          .getByRole('button', { name: 'Add to conversation', exact: true })
+          .click()
+        await panel
+          .getByRole('button', { name: 'Attachment', exact: true })
           .click()
         await page.waitForTimeout(360)
       }

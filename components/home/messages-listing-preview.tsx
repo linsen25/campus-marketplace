@@ -7,6 +7,7 @@ import { formatListingPrice } from '@/utils/format-listing-price'
 
 import workspaceStyles from '../listings/listing-workspace.module.css'
 import actionStyles from '../listings/market-filter.module.css'
+import cardStyles from '../velora/expandable-card.module.css'
 
 import styles from './messages-listing-preview.module.css'
 
@@ -39,10 +40,10 @@ export function MessagesListingPreview({
         <div className={`${actionStyles.actions} ${styles.actions}`}>
           <button
             type="button"
-            className={actionStyles.cancel}
+            className={cardStyles.raisedButtonDanger}
             onClick={onCancel}
           >
-            <span>Cancel</span>
+            <span className={cardStyles.raisedButtonDangerSurface}>Cancel</span>
           </button>
           <ShiningButton
             variant="green"
@@ -54,6 +55,7 @@ export function MessagesListingPreview({
         </div>
       }
     >
+      {listing.availability === 'pending' && <p>Pending transaction</p>}
       {listing.live ? (
         <ListingDetails listing={listing.live} />
       ) : (

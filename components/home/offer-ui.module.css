@@ -1,0 +1,131 @@
+.dialog,
+.confirm {
+  margin: auto;
+  border: 1px solid #8d68aa;
+  border-radius: 20px;
+  background: #1b1523;
+  color: #f5f3f7;
+  padding: 24px;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+}
+.dialog {
+  width: min(1040px, calc(100vw - 32px));
+  max-width: none;
+}
+.confirm {
+  width: min(520px, calc(100vw - 32px));
+}
+.dialog::backdrop,
+.confirm::backdrop {
+  background: #08050dcc;
+}
+.dialog header {
+  margin-bottom: 16px;
+}
+.dialog h3,
+.confirm h3 {
+  font-size: 24px;
+  font-weight: 600;
+}
+.dialog h4 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 12px 0;
+}
+.dialog p,
+.confirm p {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 8px 0;
+  color: #c1adcf;
+}
+.expanded,
+.editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.media {
+  height: clamp(180px, 30vh, 320px);
+  overflow: hidden;
+  border-radius: 12px;
+}
+.media > * {
+  height: 100%;
+}
+.media img {
+  object-fit: contain !important;
+}
+.terms {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 8px 16px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.terms dt {
+  color: #c1adcf;
+}
+.terms dd {
+  margin: 0;
+}
+.note {
+  white-space: pre-wrap;
+}
+.preset {
+  text-align: left;
+  color: #b5edc6;
+  font-size: 13px;
+}
+.conditional {
+  min-height: 190px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.timelineCard {
+  min-width: 0;
+  max-width: 100%;
+}
+.terminal {
+  border-color: #8e819466 !important;
+  background: #211e28 !important;
+  color: #bdb4c5 !important;
+}
+@media (max-width: 767px) {
+  .dialog,
+  .confirm {
+    padding: 16px;
+  }
+  .expanded,
+  .editor {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .context {
+    display: none;
+  }
+  .media {
+    height: 180px;
+  }
+  .terms {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .terms dt {
+    margin-top: 8px;
+  }
+  .note {
+    max-height: none;
+    overflow: visible;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog,
+  .confirm {
+    animation: none !important;
+    transition: none !important;
+  }
+}

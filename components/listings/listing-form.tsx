@@ -9,6 +9,7 @@ import WorkButton from '@/components/animata/button/work-button'
 import GlideSelect from '@/components/ui/GlideSelect'
 import { ActionRow } from '@/components/ui/action-row'
 import { DynamicAction } from '@/components/ui/dynamic-action'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   ExpandableCard,
   ExpandedCardPreview,
@@ -66,7 +67,11 @@ export function ListingForm({
   onSaved,
   onGuardChange,
 }: ListingFormProps) {
-  const { seller } = useMarketplaceSession()
+  const {
+    seller,
+    loading: sessionLoading,
+    error: sessionError,
+  } = useMarketplaceSession()
   const initial = useMemo(() => initialListingFields(listing), [listing])
   const [fields, setFields] = useState(initial)
   const [files, setFiles] = useState<File[]>([])
@@ -280,7 +285,34 @@ export function ListingForm({
     ),
     children: <ListingDetails listing={preview} />,
   }
-  if (listing?.status === 'sold') return <p>Sold listings are read-only.</p>
+  if (sessionLoading)
+    return (
+      <div
+        className={styles.builder}
+        role="status"
+        aria-label="Loading listing editor"
+      >
+        <div className={styles.form} style={{ display: 'grid', gap: 24 }}>
+          {[0, 1, 2, 3, 4, 5].map((id) => (
+            <div key={id}>
+              <Skeleton
+                style={{ height: 16, width: '40%', marginBottom: 12 }}
+              />
+              <Skeleton style={{ height: 44 }} />
+            </div>
+          ))}
+        </div>
+        <Skeleton style={{ aspectRatio: '4 / 3', width: '100%' }} />
+      </div>
+    )
+  if (sessionError) return <p role="alert">{sessionError}</p>
+  if (listing && listing.status !== 'available')
+    return (
+      <p>
+        {listing.status === 'reserved' ? 'Reserved' : 'Sold'} listings are
+        read-only.
+      </p>
+    )
   return (
     <div
       ref={builderRef}

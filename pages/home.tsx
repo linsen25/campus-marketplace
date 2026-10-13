@@ -1,6 +1,7 @@
 import Head from 'next/head'
 
 import { AnimatedSidebarDemo } from '@/components/home/animated-sidebar-demo'
+import { OrderVisualProvider } from '@/components/home/order-visual-context'
 
 export default function HomePage() {
   return (
@@ -8,7 +9,9 @@ export default function HomePage() {
       <Head>
         <title>Home | Campus Marketplace</title>
       </Head>
-      <AnimatedSidebarDemo />
+      <OrderVisualProvider>
+        <AnimatedSidebarDemo />
+      </OrderVisualProvider>
     </>
   )
 }

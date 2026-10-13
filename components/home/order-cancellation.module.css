@@ -1,0 +1,23 @@
+.dialog.dialog {
+  width: min(560px, calc(100vw - 32px));
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.dialog.dialog h3 {
+  margin: 0;
+}
+.dialog fieldset {
+  min-width: 0;
+  display: grid;
+  gap: 20px;
+}
+.dialog textarea {
+  width: 100%;
+}
+@media (max-width: 767px) {
+  .dialog.dialog {
+    padding: 24px;
+  }
+}

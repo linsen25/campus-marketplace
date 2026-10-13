@@ -136,7 +136,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
             name: 'Message',
             exact: true,
           }),
-          plus = panel.getByRole('button', { name: 'Add attachment' }),
+          plus = panel.getByRole('button', { name: 'Add to conversation' }),
           send = panel.getByRole('button', { name: 'Send', exact: true })
         const a = await input.boundingBox(),
           b = await plus.boundingBox(),
@@ -240,7 +240,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
         })
         const a = await input.boundingBox(),
           b = await panel
-            .getByRole('button', { name: 'Add attachment' })
+            .getByRole('button', { name: 'Add to conversation' })
             .boundingBox()
         assert(Math.abs(a.y - b.y) < 5)
         await card.getByRole('button', { name: 'Expand conversations' }).click()

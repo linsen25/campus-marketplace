@@ -132,7 +132,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
       assert(!(await input.isDisabled()))
       const beforeBox = await input.boundingBox()
       const attachmentBox = await panel
-        .getByRole('button', { name: 'Add attachment' })
+        .getByRole('button', { name: 'Add to conversation' })
         .boundingBox()
       const sendBox = await send.boundingBox()
       if (mobile) {

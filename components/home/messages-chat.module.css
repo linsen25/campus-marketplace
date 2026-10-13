@@ -108,8 +108,9 @@
 .normalChat[data-inactive='true'] {
   pointer-events: none;
 }
-
 .attachmentLayer {
+  opacity: 0;
+  transition: opacity 200ms ease-out;
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -126,6 +127,8 @@
 }
 
 .composer {
+  --composer-action-size: 40px;
+
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -163,6 +166,10 @@
   flex-shrink: 0;
   min-width: 0;
   padding: 0 12px;
+}
+
+.composer .send.send {
+  height: var(--composer-action-size);
 }
 
 .messageGroup + .messageGroup {
@@ -218,11 +225,44 @@
 .attachment.attachment {
   --surface: #007aff;
 
-  flex: 0 0 48px;
-  width: 48px;
-  height: 48px;
+  flex: 0 0 var(--composer-action-size);
+  width: var(--composer-action-size);
+  height: var(--composer-action-size);
   min-width: 0;
   padding: 0;
+}
+
+.addMenu {
+  position: relative;
+  flex: 0 0 var(--composer-action-size);
+}
+
+.addOptions {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  z-index: 2;
+  width: 208px;
+  padding: 6px;
+  border: 1px solid #766183;
+  border-radius: 12px;
+  background: #221a2c;
+  box-shadow: 0 12px 32px #08050d66;
+}
+
+.addOptions button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  color: #f5f3f7;
+  font-size: 13px;
+  text-align: left;
+}
+
+.addOptions button:hover,
+.addOptions button:focus-visible {
+  background: #775497;
+  outline: 2px solid #b88cfa;
 }
 
 @media (max-width: 1023px) {
@@ -241,7 +281,7 @@
 
   .composer {
     display: grid;
-    grid-template-columns: 48px minmax(0, 1fr) auto;
+    grid-template-columns: var(--composer-action-size) minmax(0, 1fr) auto;
   }
 
   .composer textarea {
@@ -256,9 +296,14 @@
     justify-self: end;
   }
 
-  .attachment {
+  .addMenu {
     grid-column: 1;
     grid-row: 2;
+  }
+
+  .addOptions {
+    left: 0;
+    right: auto;
   }
 }
 
@@ -272,4 +317,34 @@
   overflow: auto;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+.systemEvent {
+  width: min(344px, 100%);
+  margin-inline: auto;
+  padding: 12px 16px;
+  border: 1px dashed #777080;
+  border-radius: 16px;
+  background: #25212b;
+  color: #d1cad7;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.systemEvent p {
+  margin-top: 8px;
+  white-space: pre-wrap;
+}
+
+.automaticNotification strong,
+.automaticLabel {
+  display: block;
+}
+
+.automaticLabel {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.automaticNotification p {
+  margin-top: 4px;
 }

@@ -1,0 +1,382 @@
+.detail {
+  width: 100%;
+  max-width: 1120px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 400;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.header h3 {
+  font-size: 24px;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+.eyebrow {
+  font-size: 12px;
+  color: #c1adcf;
+  margin-bottom: 8px;
+}
+.reviewControls {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.reviewControls > span {
+  margin-left: auto;
+}
+.stageField {
+  max-width: 240px;
+  flex: 1;
+  min-width: 180px;
+  font-size: 12px;
+}
+.next {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.next h4 {
+  font-size: 20px;
+  font-weight: 600;
+}
+.progress h4,
+.tabPanel h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+.progress {
+  padding: 24px;
+}
+.tabPanel {
+  min-height: 320px;
+}
+.overview,
+.payment {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 32px;
+}
+.overview {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.item {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 14px;
+}
+.item img {
+  height: 100%;
+  object-fit: cover;
+}
+.identities {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 20px;
+}
+.identities dt,
+.amounts dt {
+  color: #c1adcf;
+}
+.identities dd,
+.amounts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.amounts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+.amounts dd {
+  text-align: right;
+  color: #f5f3f7;
+}
+.total {
+  border-top: 1px solid #b995dc29;
+  padding-top: 16px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.placeholder {
+  padding: 24px;
+  border: 1px dashed #766183;
+  border-radius: 12px;
+  color: #c1adcf;
+  line-height: 1.6;
+}
+.placeholder h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f5f3f7;
+  margin-bottom: 12px;
+}
+.note {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-top: 16px;
+}
+.nextActions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.secondary {
+  color: #c1adcf;
+  font-size: 12px;
+  align-self: flex-start;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.secondary:focus-visible,
+.previewControls button:focus-visible {
+  outline: 2px solid #b88cfa;
+  outline-offset: 3px;
+}
+.countdown {
+  font-size: 13px;
+  margin-top: 12px;
+  color: #e4d4ee;
+  font-variant-numeric: tabular-nums;
+}
+.previewControls {
+  border: 1px dashed #766183;
+  padding: 16px;
+  border-radius: 12px;
+  margin-top: 16px;
+  color: #c1adcf;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.previewControls button {
+  border: 1px solid #766183;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin: 8px 0;
+  background: #18121f;
+}
+.previewControls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.stateful {
+  margin-top: 20px;
+  --surface: #285d91;
+}
+.dialog {
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+.dialog > label,
+.dialog > p {
+  margin: 20px 0;
+}
+.codePanel {
+  padding: 24px;
+  border: 1px solid #b995dc55;
+  border-radius: 12px;
+}
+.code {
+  display: block;
+  font-size: 32px;
+  letter-spacing: 0.2em;
+  font-variant-numeric: tabular-nums;
+  margin: 16px 0;
+}
+.qrPlaceholder {
+  color: #c1adcf;
+  font-size: 12px;
+  border: 1px dashed #766183;
+  padding: 16px;
+  width: fit-content;
+  border-radius: 8px;
+}
+.orderList {
+  display: grid;
+  gap: 16px;
+  padding-top: 20px;
+}
+.orderCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px;
+}
+.orderCard h4 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.orderCard p {
+  margin: 8px 0;
+}
+.orderCard > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.historicalCard.historicalCard {
+  background: #242227;
+  border-color: #514d56;
+  color: #d2cfd6;
+}
+.historicalStatus {
+  color: #bcb7c2;
+  font-size: 12px;
+}
+.historyAction {
+  color: #dedbe2;
+  border: 1px solid #65606b;
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 10px 16px;
+  flex-shrink: 0;
+}
+.historyAction:focus-visible {
+  outline: 2px solid #c1adcf;
+  outline-offset: 3px;
+}
+.terminalReport h4 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.terminalReport p {
+  color: #bcb7c2;
+  margin-bottom: 20px;
+}
+@media (max-width: 1023px) {
+  .detail {
+    gap: 20px;
+  }
+  .overview,
+  .payment {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .formGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .orderCard {
+    flex-wrap: wrap;
+  }
+  .next {
+    flex-wrap: wrap;
+  }
+  .progress {
+    padding: 16px;
+  }
+  .reviewControls > span {
+    margin-left: 0;
+  }
+  .header {
+    align-items: flex-start;
+  }
+}
+
+.workspaceTitle {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  min-height: 44px;
+  color: #c1adcf;
+  font-size: 13px;
+}
+.loadingCard {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid #544161;
+  border-radius: 16px;
+}
+@media (max-width: 1023px) {
+  .orderCard {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .orderCard.orderCard > span {
+    width: 100%;
+  }
+  .orderCard.orderCard > span > button {
+    width: 100%;
+    min-height: 48px;
+  }
+  .header {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+.previewControls h5 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.paymentAccount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.paymentTest {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 16px;
+  border: 1px dashed #766183;
+  border-radius: 8px;
+  color: #c1adcf;
+  font-size: 12px;
+}
+.paymentTest button {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.listFilter {
+  width: fit-content;
+  margin-bottom: 16px;
+}
+.listFilter button {
+  min-height: 40px;
+  min-width: 96px;
+}
+
+/* Immutable V2 listing titles may contain long unbroken words. */
+.snapshotTitle {
+  overflow-wrap: anywhere;
+}

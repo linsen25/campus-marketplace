@@ -452,7 +452,10 @@ async function main() {
         path: `tests/artifacts/messages-phase1c/${width}-text.png`,
       })
       await chat
-        .getByRole('button', { name: 'Add attachment', exact: true })
+        .getByRole('button', { name: 'Add to conversation', exact: true })
+        .click()
+      await page
+        .getByRole('button', { name: 'Attachment', exact: true })
         .click()
       const panel = page.locator('[data-attachment-panel]')
       await panel.waitFor()

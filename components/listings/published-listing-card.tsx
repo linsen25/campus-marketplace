@@ -133,14 +133,29 @@ export function PublishedListingCard({
       }
       primaryAction={
         !own && listing.status === 'available' ? (
-          <ShiningButton
-            variant="green"
-            desktopAppearance={true}
-            disabled={messaging.busy}
-            onClick={() => messaging.contact()}
-          >
-            Contact seller
-          </ShiningButton>
+          <>
+            <ShiningButton
+              variant="green"
+              desktopAppearance={true}
+              disabled={messaging.busy}
+              onClick={() => messaging.contact()}
+            >
+              Message Seller
+            </ShiningButton>
+            {seller &&
+              process.env.NEXT_PUBLIC_MESSAGES_ENV === 'staging' &&
+              process.env.NEXT_PUBLIC_SUPABASE_URL ===
+                'https://pcaqxezdfxofysghssyo.supabase.co' && (
+                <ShiningButton
+                  variant="green"
+                  desktopAppearance={true}
+                  disabled={messaging.busy}
+                  onClick={() => messaging.contact(true)}
+                >
+                  Make Offer
+                </ShiningButton>
+              )}
+          </>
         ) : undefined
       }
       onOverlayActiveChange={onOverlayActiveChange}

@@ -23,7 +23,7 @@ export function useMessageSeller(listingId: string) {
       pending.current = false
     }
   }, [])
-  async function contact() {
+  async function contact(makeOffer = false) {
     if (running.current) return
     if (!seller) {
       pending.current = true
@@ -44,7 +44,11 @@ export function useMessageSeller(listingId: string) {
       const conversation = await findConversation(listingId)
       if (mounted.current)
         await router.push(
-          `/home?section=messages&destination=${conversation.role}&conversation=${conversation.id}`
+          `/home?section=messages&destination=${
+            conversation.role
+          }&conversation=${conversation.id}${
+            makeOffer ? `&offer=new&offerIntent=${crypto.randomUUID()}` : ''
+          }`
         )
     } catch (reason) {
       if (mounted.current)

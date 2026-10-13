@@ -1,5 +1,12 @@
 # Homepage design and implementation
 
+> **CURRENT STAGING V1 / historical implementation reference.**
+> The approved [Marketplace V2 product contract](MARKETPLACE_V2_PRODUCT_CONTRACT.md)
+> supersedes conflicting future product rules in this document. Current V1 code,
+> applied-state records and historical transaction facts remain unchanged.
+> V2 implementation has NOT started. Check the V2 contract before further V1
+> feature expansion; this notice authorizes no implementation or data operation.
+
 Last verified: 2026-10-02. Read alongside [PROJECT_STATUS.md](PROJECT_STATUS.md).
 This document describes the actual repository, not superseded chat mockups.
 
@@ -199,8 +206,12 @@ Existing verified-email sign-in is distinct from these planned transaction tools
 
 Future implementation requirements (not implemented by this task):
 - Buyer AND seller confirm the handoff/delivery.
-- Payment held during the transaction; release/payout only after both confirmations
-  and the72-hour protection period, subject to the future protection/dispute flow.
+- The earlier Trust-copy 72-hour protection concept is superseded by the
+  [finalized Payment/Payout contract](ORDER_PAYMENT_PRODUCT_DESIGN.md): 24 hours
+  after successful handoff/receipt, followed by payout eligibility if no issue.
+  Handoff and Buyer payment do not immediately execute payout. Existing rendered
+  Trust copy is not changed in this documentation-only pass; copy reconciliation
+  is future UI work. Do not call this provider-level escrow without provider support.
 - Meetup or shipping; recommended public campus locations or a mutually agreed
   custom meetup location.
 - Pre-exchange/pre-shipping condition photos, timestamps, transaction updates,

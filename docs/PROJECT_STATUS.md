@@ -1,18 +1,571 @@
 # Campus Marketplace — Project Status
 
+## Current checkpoint policy (2026-10-13)
+
+Scope: `western-marketplace-staging` / `pcaqxezdfxofysghssyo`; no production rollout.
+
+**PROVIDER-INDEPENDENT BACKEND: COMPLETE / VERIFIED through Backend Completion Pass.**
+**EXTERNAL INTEGRATIONS: DEFERRED. FRONTEND PRODUCT POLISH: FUTURE.**
+**REAL-MONEY PAYMENT NOT YET INTEGRATED.** The private media cleanup domain is
+complete; its hosted executor is an accepted deferred external/ops integration.
+Notification persistence/reminders are implemented, not email/push delivery.
+Payment, Payout, Carrier, Maps, delivery channels and adjudication boundaries are
+listed in [External integrations backlog](EXTERNAL_INTEGRATIONS_BACKLOG.md).
+Future UI includes Agreement Card, Maps, Notifications visual feed/Bell,
+Browse/Search and general frontend polish. Older phase sections below are
+historical scope/evidence and do not supersede this current status.
+
+The previous read-only production lint incident remains documented; no production
+writes occurred. Staging lint now has an explicit target guard tested locally.
+
+## Locked backend completion pass (2026-10-12)
+
+The user explicitly authorized staging writes/additive migrations and resolved
+Delivery coarse-area and item-only Buyer service-fee decisions. Nine additive
+migrations are applied only to staging. Delivery checkout/shared payment authority,
+paid handoff, Protection/case hold/completion, Courier possession, durable
+Notifications and the minute due-work job are implemented. 21 independent overlapping concurrency runs passed with zero deadlocks, lock
+timeouts or invariant failures. Synthetic graphs are cleaned; manual/canonical
+fingerprints are unchanged and the minute job is active. Do not treat the earlier
+D2A stop boundary below as the active instruction. [Implementation, hashes, evidence and boundaries](BACKEND_COMPLETION_STAGING.md).
+
+No production writes, .env.local edits, real provider operations, emails, commit
+or push. One incorrectly targeted read-only production DB lint occurred and is
+explicitly recorded in the report; production was not entirely unaccessed. Real
+Payment/Payout provider choices and dispute/refund policy remain unresolved.
+
+
+## V2-D2A implementation update (2026-10-12)
+
+V2-D2A On Campus Buyer inspection and explicit staging payment is implemented
+and hosted-qualified only on western-marketplace-staging (`pcaqxezdfxofysghssyo`).
+008/009/010 additive migrations are applied once; accepted C2 snapshots stay immutable.
+Inspection never charges. New payment checks the actual Buyer and authoritative Set
+capability; a private intent enters Processing before trusted simulator resolution.
+Processing/Paid block ordinary Cancel, no-show release and meetup changes. Failed
+remains retry/cancel/expiry compatible; inspection alone does not block expiry.
+Paid remains Open / Listing Pending / payout Not eligible / fulfillment pending.
+
+Twenty overlapping races passed without deadlocks, timeouts or invariant failures.
+Buyer/Seller private updates 5/5, outsider 0 with polling disabled; fresh UI Pay, restart
+reconciliation, ten states at four widths, D1/V1/Delivery regressions and optimized
+staging build passed. Synthetic fixtures are cleaned and manual/Nike/media
+fingerprints unchanged. [Full authority, hashes and 51-item closure](ORDER_CAMPUS_PAYMENT_V2_STAGING.md).
+Production and `.env.local` untouched; no real charges/emails, commit/push or hosted
+deployment. No QR/6-digit handoff, Protection, Completion/Sold, payout release,
+Delivery progression or Notifications. Stop before D2B implementation; D2B is ready
+for planning only. Before V2-G, remind the user to create a stable Git checkpoint.
+Earlier D1/C2 statements below are historical phase scope.
+
+
+## V2-D1 implementation update (2026-10-12)
+
+V2-D1 On Campus scheduling / mutual rescheduling / +60m no-show is complete
+on staging only. All three additive migrations are applied and immutable. Hosted
+qualification, 14 true-concurrency runs, historical FK retention, V1/Delivery
+regressions and 390/430/1280/1536 authenticated Realtime browser checks passed.
+Synthetic data is cleaned; canonical/manual/media fingerprints are unchanged.
+[Technical record](ORDER_MEETUP_V2_STAGING.md). C2 snapshots and winner authority
+remain intact. No D2 Payment/inspection/handoff/Protection or Notifications.
+Production/manual history untouched; no commit/push. Stop before G for a stable
+Git checkpoint.
+
+
+## V2-C2 implementation update (2026-10-12)
+
+C2 was applied only to staging as `202610120004_offer_accept.sql`.
+Recipient-only Accept, explicit V2 Order protocol, immutable snapshots/private
+media binding, one Listing winner/Pending, competing V2 Closed and safe unpaid
+cancellation are implemented. Hosted qualification, 13 true-concurrency runs, three-session Realtime and
+390/430/1280/1536 browser qualification passed. Canonical/manual fingerprints
+are unchanged and synthetic fixtures are cleaned. See
+[the C2 technical record](OFFER_ACCEPT_V2_STAGING.md).
+Earlier B/C1 scope statements below describe those phases, not current C2 scope.
+Production and manual history are untouched; no commit/push. D/E/F/Notifications
+remain out of scope. Before V2-G, stop for a stable Git checkpoint.
+
+
+## V2-C1 private snapshot media foundation (2026-10-12)
+
+**MEDIA RETENTION FOUNDATION COMPLETE / STAGING QUALIFIED.** Only additive
+migration `202610120003_order_snapshot_media.sql` was applied to staging
+`pcaqxezdfxofysghssyo`. Private immutable copies, authoritative preparation,
+byte verification, complete-batch binding, leased orphan cleanup and participant
+signed reads passed hosted tests, including four independent overlapping
+transaction cases with both winner orders and zero deadlocks/lock timeouts.
+[Technical implementation and qualification](ORDER_SNAPSHOT_MEDIA_V2_STAGING.md).
+Canonical/manual fingerprints are unchanged; synthetic fixtures are removed.
+Public Listing and private chat media behavior remain intact. Production was not
+accessed; no commit/push. Full V2 Accept, Listing winner/Pending, timers and
+Notifications are **not implemented by C1**. V2-C may resume only as a subsequent
+task; do not resume automatically. Keep the stable checkpoint requirement before
+V2-G.
+
+## Current V2-B staging implementation (2026-10-12)
+
+Final On Campus/Delivery Offer terms migration `202610120002` applied only to
+staging `pcaqxezdfxofysghssyo`; Offer UX is COMPLETE / QUALIFIED with final two-session browser
+qualification passed. [Implementation and evidence](OFFER_DOMAIN_V2_STAGING.md).
+Listing Make Offer reuses exact conversation identity. Messages supports both
+roles' initial/Counter/Revision and sender-only Withdraw, with authoritative
+history/Realtime refresh, payout gating and stale-mutation recovery. V1 history
+remains semantically Order Request, with Active compatibility conflict handling.
+No V2 Accept, Order creation, inventory mutation, payment/timer, Protection or
+Notifications implementation. Production and manual/Nike histories untouched.
+Four responsive widths, native modal/reduced-motion, real IMAGE, refresh persistence
+and forced stale-refetch recovery passed. Seven synthetic Offers were removed;
+canonical/manual history fingerprint unchanged. Zero Orders / inventory mutation.
+V2-C Accept / Listing winner foundation is ready for implementation planning only.
+No commit/push. Before future V2-G Notifications, require a stable code checkpoint.
+
+Older phase records below are historical; their "UI remains V1 / B not started"
+statements describe the preceding checkpoints, not the current implementation.
+
+
+## V2-A2 staging implementation (2026-10-12)
+
+V2-A2 backend mutation migration applied on staging only; current UI remains V1.
+[Technical authority/qualification](OFFER_DOMAIN_V2_STAGING.md) documents Buyer/Seller
+Create/Counter, sender-only Withdraw, sender-specific payout gating, protocol
+isolation and stale retry protection. Migration `202610120001`,
+SHA-256 `2bab910d14e5b1ee486731681c928e8e97bbf2feca7f896e6add92f5051d86be`.
+A2 COMPLETE / QUALIFIED: 13 true concurrent cases, zero deadlock/timeout/invariant
+failures, safe two-participant Realtime invalidation and synthetic cleanup pass.
+V2-B OFFER UX IS READY FOR IMPLEMENTATION PLANNING; do not begin automatically.
+No V2 Accept, Order creation, inventory/payment/timer/fulfillment changes or
+Notifications. Canonical manual/Nike histories protected; production untouched.
+The approved competitor-inspired future UX remains binding, deferred to its phases.
+
+
+## Revised Marketplace V2 contract - documentation only (2026-10-11)
+
+**V2 contract REVISED AND RE-CLOSED. V2-A1 protocol isolation IMPLEMENTED on
+staging; user-facing app remains V1. A2 backend implemented as recorded above; V2-B UI is not started.** Authoritative future product source:
+[MARKETPLACE_V2_PRODUCT_CONTRACT.md](MARKETPLACE_V2_PRODUCT_CONTRACT.md), with
+[Notifications design](NOTIFICATIONS_V2_PRODUCT_DESIGN.md),
+[impact/phase audit](MARKETPLACE_V2_IMPACT_AUDIT.md) and
+[Offer compatibility audit](OFFER_DOMAIN_V2_STAGING.md).
+
+New V2 Offers use Withdrawn (Cancelled is an Order outcome). Accept creates a
+Pending Listing and immutable transaction evidence; Completed makes Sold,
+cancellation/expiry before completion releases Available. On Campus inspects
+before payment and uses meetup + 60m no-show grace with mutually confirmed
+rescheduling. Delivery is direction-aware: Buyer accepts Seller Offer -> immediate
+30m payment; Seller accepts Buyer Offer -> 12h checkout claim then one-time 30m
+when Buyer intentionally starts checkout. Do not implement old universal
+Delivery/On Campus Accept-timer assumptions or reinterpret legacy deadlines.
+Paid physical handoff requires Buyer QR/6-digit verification; Notifications remain
+one priority-weighted feed with unread Price Drop coalescing. Protection coverage
+is future policy direction, not an implemented real-money guarantee.
+
+A1 only isolates protocols/authority, sender/recipient, legacy compatibility,
+V1 mutation guards and cross-protocol Active exclusivity. A2 owns bidirectional
+mutations; no fulfillment, timers, Pending, snapshots, reschedule, handoff or
+Notifications implementation belongs to A1. Lower dated records retain V1 history.
+A1 applied only `202610110004_offer_protocol_isolation.sql` to staging
+`pcaqxezdfxofysghssyo`; explicit immutable protocol/sender/recipient, validated
+4-row V1 backfill, legacy Accept/Cancel/Replace guards, filtered V1 history and
+cross-protocol Active exclusivity. No V2 Accept/mutation/UI or future fulfillment,
+timer, Pending/snapshot or Notifications implementation. Original historical
+fields/Orders/events preserved. See Offer audit for checksum and verification.
+Production/.env.local untouched; no commit/push. Email/custom SMTP deferred.
+
+## Active / History presentation cleanup - staging (2026-10-11)
+
+Purchases/Sales default to Active and expose History using the existing segmented
+control. Terminal rows remain separate by Order ID, sorted by authoritative outcome
+time. Cancel returns to History; detail/back preserves filter origin; Messages
+terminal navigation derives History. No lifecycle or expiry authority changes.
+Expanded Request is a concise agreed-terms view; cancellation metadata lives only
+in full Order View details. Compact current-outcome priority is preserved.
+
+
+Validation: 48-case Buyer/Seller terminal/active/history matrix, followed by 16
+list/delayed-refetch/Active Request cases at 390/430/1280/1536; eight cancellation
+cases and four-width Accept direct/recovery flows pass. Three real Nike history
+Orders remain separate and navigate to their exact IDs. Protected Nike graph
+fingerprint is unchanged. Cancel/expiry test transitions are intercepted browser
+DTOs only: zero hosted transaction writes, zero runtime errors. Desktop concise
+Requests have no internal scroll; mobile has at most one content scroll region.
+Background refetch retains content without a skeleton; empty views are stable.
+TypeScript, focused ESLint, Orders/Request/cancel/expiry/Phase E/Phase F,
+Messages/Auth-session regressions, 93 documentation links and diff checks pass.
+Completed/Refunded bucket/timestamp checks are pure future-state fixtures, not
+new hosted lifecycle implementation. No backend/schema/migration/RPC changes;
+production untouched; no commit/push.
+
+## Manual-flow UX consistency - staging (2026-10-11)
+
+Formal transaction proceed CTAs are green; close/cancel CTAs are red. Accept
+success plus authoritative history confirmation opens the exact returned Order
+under Purchases (including successful recovery after failed history refresh).
+Cancel success returns Buyer to Purchases / Seller to Sales; failed list reads
+remain recoverable without resurrecting active state. Cancel uses the existing
+GlideSelect with spacious FadingDialog layout. Expanded Request shows concise
+Request status, Order outcome, agreed terms and green View details; terminal list navigation stays
+neutral. Desktop Request images fill their pane with centered cover; mobile
+stacking remains intact. Status derivation and all transaction authority unchanged.
+
+390/430/1280/1536: Accept direct/recovery + refresh, both-role cancel/list recovery,
+terminal reports, confirmation/payout colors and loaded Nike/MacBook media pass.
+Zero hosted transaction/capability writes and runtime errors in browser tests.
+GlideSelect Space/Enter, arrow/Home/End selection, Escape and focus pass for both
+roles at 1280; no native system menu or new dependency.
+Synthetic staging rollback tests pass Accept uniqueness/idempotency, cancellation
+idempotency and both payment/cancel winner orders; canonical fingerprints unchanged.
+TypeScript, focused ESLint, Request/Accept/Orders/Payment/Progress/Messages
+regressions pass. No migration, production access, commit or push.
+
+## Messages Request status priority - staging (2026-10-11)
+
+Presentation only: `lib/request-card-status.ts` supplies the same primary badge,
+secondary historical text and tone to both authenticated roles. Accepted plus
+Expired/Cancelled now shows Order expired / Order cancelled as primary, with
+Request accepted secondary; active linked Orders retain Accepted. Expanded cards
+retain Request status and Order outcome as separate fields. Completed requires an
+explicit authoritative lifecycle value (not yet in the current backend model);
+Refunded reads payment status. No lifecycle, Accept, expiry, API/RPC or migration
+changes and no production access.
+
+TypeScript, focused ESLint and Request/Accept/Orders/cancellation, Phase E Payment,
+Phase F Progress, Auth/session and Messages/timeline regressions pass. Focused
+authenticated Buyer/Seller browser checks cover six terminal/active states at
+1280. Nike is Accepted + Expired in both perspectives, with no Accept action;
+its Request/Order/Listing read-only fingerprints remain unchanged. Alternative
+outcomes are browser DTO projections, not hosted fixtures. Zero transaction writes
+and runtime errors. No commit/push.
+
+## Terminal Order presentation cleanup - staging (2026-10-11)
+
+Expired/Cancelled remain visible as muted history with neutral View details.
+Existing detail becomes a terminal report, omitting Next Step, Stepper, countdown,
+payment/account-setup/simulator and fulfillment actions. Both Messages perspectives
+show Request Accepted separately from the linked Expired/Cancelled Order outcome.
+Buyer method remains optional before Accept; active Pending/Paid/Shipping-pending
+flows and all backend authority remain unchanged. Production untouched; no commit/push.
+
+Validation passes: TypeScript, focused ESLint, terminal/linked-outcome tests,
+Request/Accept/cancellation/expiry, Phase E Payment and Phase F active regressions.
+104 authenticated browser state/width cases at 390/430/1280/1536 have zero runtime
+errors or hosted transaction writes. Existing Nike Accepted Request/Expired Order/
+Listing fingerprints unchanged. Buyer Unset-method Accept remains available.
+
+## Current manual-flow fixes and pre-payment cancellation (2026-10-11)
+
+Staging cancellation migration `202610110003` applied. Both-role cancellation,
+Accepted Request history, inventory release, idempotency and both winner orderings
+are covered by transaction-local rollback tests. Four-width UI checks cover
+measured attachment fades, editor controls and cancelled history navigation.
+Payment/Progress authority and production unchanged.
+
+The existing Nike Order's expiry at 09:41:17 UTC after its original 09:40:31 UTC
+deadline is expected lazy expiry: the real page remained open with authoritative
+15-second refetch. No restore/extension performed.
+
+**ORDER CANCELLATION CONCURRENCY VALIDATION COMPLETE.** Fifteen real overlapping
+independent-transaction pairs cover both Cancel/Payment winners, both Cancel/Expiry
+winners and identical Cancel idempotency (three repetitions each). Distinct PIDs,
+transaction IDs and actual blocking locks verified. Zero deadlocks, lock/statement
+timeouts or invariant failures. Synthetic graphs cleaned; canonical data, financial
+capabilities and the Expired Nike Order exactly match pre-test fingerprints;
+trigger states restored. No implementation or migration changes required. See
+[full results and limitations](ORDER_CANCELLATION_STAGING.md). No later-phase work,
+commit or push.
+
+## Narrow post-Phase-F cleanup - staging (2026-10-11)
+
+Only the three remaining recorded UI bugs were corrected:
+
+- Accept confirmation now uses the existing `profile.dialog` card surface with
+  `FadingDialog`; title, snapshot terms, actions and backend call are unchanged.
+- Successful Accept immediately installs a per-authenticated-user/conversation
+  interaction barrier for that Request and fences pre-success history reads.
+  It does not rewrite Request status or synthesize an Order. A failed refresh
+  retains the barrier and shows a recoverable error/Retry; an old Active response
+  remains non-actionable. Fresh server non-Active/absent state reconciles the barrier.
+- Homepage planned-payment copy now distinguishes Buyer payment before fulfillment,
+  Protection after confirmed handoff/receipt and later Seller payout eligibility.
+  No escrow claim, 72-hour reference or payment-after-Protection implication.
+
+New recovery tests cover synchronous barriers, stale read fencing, refresh failure,
+server-truth recovery and conversation/user scope. Four-width browser checks
+(390/430/1280/1536) use real staging authentication but fully intercepted synthetic
+Accept/Order/history responses: correct card surface, native keyboard/focus,
+Cancel/Escape zero writes, disabled duplicate confirmation and recoverable stale
+eligibility. Actual transaction writes and runtime errors are zero.
+
+Final validation: TypeScript, focused ESLint, Request/Accept, Orders, Phase E
+Payment, Phase F Progress, Auth/session and Messages local regressions passed.
+The unchanged Phase F/Payment read-only two-session browser matrix passed 64
+state/viewport cases with zero runtime errors and transaction writes. Read-only
+staging fingerprint verification preserved the manual Monitor Request and
+financial state. Sensitive-value/bundle scans, documentation links and
+`git diff --check` passed; Git index remains empty.
+
+No database/migration/RPC or lifecycle/financial semantics changed. Phase E Payment
+UI, Phase F Progress/Next Step, Settings, payout gate and simulator are untouched.
+The manual Monitor Request is preserved. Production untouched; no commit or push.
+The sections below retain earlier implementation history.
+
+
+## Phase F role/fulfillment Progress and Next Step - staging (2026-10-11)
+
+Formal Order Detail now derives one read-only presentation from the persisted
+Order DTO and the authenticated Buyer/Seller identity. `lib/order-progress-ui.ts`
+selects Pickup/Meet, fixed Shipping or shipping-quote milestones; the shared
+`OrderProgress`/Velora Stepper renders supplied labels and variable step counts.
+The frozen preview retains its isolated legacy sequence. No preview transaction
+store or client progression participates in formal derivation.
+Formal flows have 5/6/7 milestones. Mobile uses the same markers and rail in a
+vertical arrangement so the full labels remain readable; desktop remains
+horizontal. The isolated preview keeps its existing responsive layout.
+Paid marks only accepted/payment complete, with no current future milestone;
+Next Step interprets the persisted awaiting-fulfillment state separately.
+
+- Fixed Pending: Buyer **Complete payment**; Seller **Waiting for buyer payment**.
+  Only the authoritative unpaid reservation displays a countdown.
+- Paid Pickup/Meet: Buyer **Meet the seller**; Seller **Meet the buyer**. Shared
+  snapshot location, schedule and optional note appear; Payment is completed.
+- Paid Shipping: Buyer **Waiting for seller to ship**; Seller **Ship the item**.
+- Shipping cost pending: Buyer **Waiting for shipping quote**; Seller **Set
+  shipping cost**. No quote action, countdown or finalized payable total.
+- Expired: terminal **Reservation expired**, role-specific explanation, no active
+  Payment step. Completed/current/inactive milestones have accessible labels.
+- Fulfillment, Protection, completion and payout milestones remain inactive.
+  `payoutStatus` never fabricates fulfillment progress; Not eligible stays inactive.
+
+Phase E Payment UI and simulator semantics are unchanged. A successful simulator
+POST followed by the exact authoritative Order GET naturally updates this
+presentation; no optimistic transaction transition is introduced. Overview,
+Fulfillment, Payment tabs and Next Step/Stepper styles are preserved.
+
+No migration, schema, RPC, reservation, inventory, Request/Accept, financial
+semantics, provider or future fulfillment action changed. Production untouched.
+The manual Monitor Active Request `88260b5b-0851-4bf2-a100-8a5c11edd8c9` is preserved.
+Remaining known bugs: Accept confirmation surface; Accept success/history-refetch
+stale eligibility; Homepage payment/payout trust copy. Global GlideSelect.jsx
+parser debt remains pre-existing. No commit or push.
+
+Phase F validation passed: 64 read-only state/viewport cases in independent
+real Buyer/Seller staging sessions (Pickup and Meet tested separately), 8 detail/
+navigation checks and 44 skeleton/loading checks. All report zero runtime errors
+and zero transaction writes. Approved Phase E browser regression passed 36
+state/viewport cases, including exactly one Buyer simulator POST, held exact Order
+GET, subsequent persisted Paid presentation and Seller refresh of the same Order.
+Pending presentation stayed until the authoritative GET completed; Paid then
+marked accepted/payment complete and removed the reservation Next Step/countdown.
+Seller never received Buyer payment controls; Buyer never received payout account
+metadata. Scoped synthetic fixtures were removed, capabilities restored to Unset,
+and canonical/manual history fingerprints unchanged.
+
+TypeScript, focused ESLint, pure mapping/Stepper accessibility tests, financial/
+capability guards, payout gate, Request/Accept/static contracts, Orders/schedule/
+expiry, Auth/session and Messages TEXT/IMAGE/Realtime regressions passed.
+Staging financial rollback SQL regression passed without applying migrations.
+An additional optional local marketplace-security PGlite check could not run:
+the separately installed PGlite tooling is absent; no dependency was installed.
+The corresponding hosted rollback security regression passed. Sensitive-value/
+browser bundle scans, documentation links and git diff --check passed; index empty.
+Screenshots/results are Git-ignored. No production access, email, commit or push.
+
+Earlier sections below are historical implementation records.
+
+
+## Phase E role-specific Payment UI - staging (2026-10-11)
+
+The formal localhost:3000 Order Payment tab now derives Buyer/Seller role solely
+from the authenticated user ID and persisted Order participants. Buyer sees the
+Order money snapshot, own account payment method, reservation context or confirmed
+amount/paid time. Seller sees Buyer payment, item earnings, separate shipping
+reimbursement, zero platform fee, authoritative payout status and own payout
+account metadata. Account setup links reuse Settings -> Payments & payouts.
+
+The exact-staging Buyer-only STAGING ONLY simulator calls the existing Phase D
+API. Unset/Needs attention disables it. Success ignores the mutation DTO and
+refetches the exact Order; background reads retain content. Shipping pending,
+Expired and Paid show no simulator/countdown. No normal production Pay action.
+Independent real Buyer/Seller sessions, Settings navigation and 36 responsive
+state checks at 390/430/1280/1536 passed. Held-refetch testing proved no optimistic
+Paid state/full-page loading flash; refresh preserves Paid for both roles. Scoped
+fixtures were removed and canonical data/manual Monitor Request preserved.
+
+Seller Payment mirroring Buyer is fixed. The other four known bugs remain:
+role-shared Stepper labels, Accept confirmation surface, Accept/refetch stale
+eligibility and Homepage trust copy. Backend financial semantics, Request UI,
+Overview/Fulfillment and milestone labels were not changed. Phase F remains next.
+Production untouched; no migrations, emails, provider, commit or push.
+See [financial state record](ORDER_FINANCIAL_STATE_STAGING.md#phase-e---role-specific-payment-ui).
+
+## Phase D Order financial state - staging (2026-10-11)
+
+[Phase D technical record](ORDER_FINANCIAL_STATE_STAGING.md): one additive
+migration `202610110002_order_financial_state.sql` applied exactly once to staging.
+Orders now separate Payment (initial Pending) and Payout (initial Not eligible),
+with an authoritative paid timestamp. Three historical expired Orders were
+backfilled without revival or history changes. The Buyer-only staging simulator
+requires a persisted Set payment method and a payable, unexpired reservation;
+shipping pending is rejected. Paid retains inventory and cannot be expired by the
+unpaid reservation path. Idempotent retries emit no duplicate payment event.
+Hosted lock races, competing inventory, security tests and independent Buyer/Seller
+API/read/refresh checks passed. Test fixtures were removed; canonical capabilities
+restored to Unset and manual Monitor Request preserved. Minimal Paid display and
+unpaid-countdown hiding only; the five known UI bugs remain unchanged. No provider,
+normal Pay UI, payout execution or other Phase E/F work. Production untouched;
+no emails, commit or push. Earlier phase entries below are historical.
+
+## Phase C seller payout gate - staging (2026-10-11)
+
+The [Phase C record](FINANCIAL_CAPABILITIES_STAGING.md#phase-c---seller-payout-gate-2026-10-11)
+uses one additive function-only migration `202610110001_order_payout_gate.sql`.
+Create/Replace and first Accept require current persisted Seller payout Ready at
+one serialized database boundary; Cancel and completed idempotent retries remain
+independent. Seller entry reads its own safe financial API and routes blocked
+attempts to Settings. Buyer sees only a safe temporary eligibility explanation.
+No schema/backfill/payment state/provider changes. Prior Phase A/B entries below
+are historical and their statements about Phase C not implemented are superseded
+by this entry. Production remains untouched; no email, commit or push.
+
+## Phase B financial Settings ? implemented on staging (2026-10-11)
+
+[Financial capability integration](FINANCIAL_CAPABILITIES_STAGING.md#phase-b--settings-integration-2026-10-11):
+Settings Payments & payouts plus Overview status summaries use persisted safe data.
+Separate STAGING ONLY Set/Ready/Needs attention/Clear controls use authenticated,
+exact-project guarded server mutations marked staging_test; not real onboarding.
+Actual UI persistence, isolation, responsive/loading/error checks and regressions
+passed. Canonical demos restored to Unset/Unset; manual Active Request untouched.
+No schema/migration change. Phase C payout gate, Order payment state, provider and
+five known UI bugs remain unimplemented/unchanged. Production untouched; no emails,
+commit or push. Prior Phase A entry below is historical infrastructure scope.
+
+## Phase A financial capabilities ? implemented on staging (2026-10-10)
+
+[Phase A technical record](FINANCIAL_CAPABILITIES_STAGING.md): private account-level
+payment/payout capability rows, identity-bound safe GET projection and
+service-role-only trusted read/mutation helpers. Migration `202610100003` applied
+only to staging; rollback security tests and four real demo cookie sessions passed.
+Existing users remain Unset/Unset. No Payment UI, payout gate, Order payment state,
+simulator or provider integration. Existing manual fixtures and RPCs unchanged;
+production untouched. Five known UI/client bugs remain separate work. No commit/push.
+
+The following contract-closure entry records the prior documentation-only pass.
+
+## Current Payment/Payout contract (2026-10-10)
+
+**PRODUCT CONTRACT CLOSED FOR CURRENT PLANNED PHASES.**
+[Approved V1 closure](ORDER_PAYMENT_PRODUCT_DESIGN.md#13-decision-closure-and-next-phase-boundary)
+locks terminal visibility, historical Accepted plus linked outcome, Completed
+independent of payout Paid, tracked shipping/trusted receipt, issue payout holds,
+shipping reimbursement, late-payment reconciliation, handoff defaults and optional
+Maps. These rules are not yet implementation changes. Five known UI/client bugs
+are recorded in the contract and remain unfixed. Phase A is safe when separately
+authorized; provider/security details do not reopen product decisions.
+
+The [finalized product contract](ORDER_PAYMENT_PRODUCT_DESIGN.md) is authoritative:
+account-level Payment method and Payout account under Settings; Seller payout Ready
+before sending a Request; Buyer method setup may follow Accept; distinct payment
+and payout lifecycles, item-price Seller earnings, 24-hour Protection, role-specific
+progress and persisted Buyer-only staging payment simulation as future work.
+
+Formal Requests/Accept/Orders/reservations/expiry are implemented on staging.
+[Order Detail parity](FORMAL_ORDER_DETAIL_PARITY.md) now includes Next Step,
+Stepper, Overview/Fulfillment/Payment and exact URL-based View Order navigation.
+Payment method/onboarding/gates, paid transition/simulator and fulfillment/payout
+backend remain unimplemented. Next proposed phases are A-H in the contract;
+implementation requires separate authorization. This pass changes documentation
+only: no code, data, production operation, commit or push.
+
+## Historical minimal formal UI recovery (2026-10-10)
+
+This historical recovery preceded the separately approved detail parity above.
+The global pass's loaded-state additions and the interrupted parity expansion
+have been withdrawn. Structural skeletons remain loading-only; the prior loaded
+Request/Order components and navigation are preserved. No new filtering, linked
+Order outcome, archive or transaction rule applies. See the exact
+[recovery audit](FORMAL_UI_REGRESSION_RECOVERY.md). Stop for manual inspection of
+the real staging localhost:3000 app; production and manual fixtures are untouched.
+
 ## Current checkpoint and next-session entry point (2026-10-09)
 
-Git inspection confirms main at **4023d04** (`fix: improve auth signup and session
-flow`), matching origin/main and the read-only remote branch hash. Auth UX cleanup
+Git inspection confirms main at **4023d04** (`fix: improve auth signup and session flow`), matching origin/main and the read-only remote branch hash. Auth UX cleanup
 is committed/pushed; the working tree was clean before this documentation-only
 handoff task. Earlier no-commit/push statements below describe historical audit
 turns rather than the current Git checkpoint.
 
 Start a new session with [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md). The next priority
-is [Order/Payment product design](ORDER_PAYMENT_PRODUCT_DESIGN.md): **DESIGN IN
-PROGRESS / NOT IMPLEMENTED**, no provider/schema/migration/API/live money selected
-or created. Hosted frontend deployment comes later. Auth is production deployed
+is [Order/Payment product design](ORDER_PAYMENT_PRODUCT_DESIGN.md): **PAYMENT/PAYOUT CONTRACT FINALIZED / FINANCIAL IMPLEMENTATION NOT STARTED**.
+Formal Orders are staging implemented; no payment provider/account setup/paid
+transition/payout execution or live money is implemented. Hosted frontend deployment comes later. Auth is production deployed
 and verified; real UWO email delivery remains deferred until custom SMTP.
+
+## Reusable staging demo data (2026-10-09)
+
+The Orders preview is **LOCAL PREVIEW QUALIFIED / FROZEN**. Formal Order Backend
+Phase 1 is **STAGING IMPLEMENTED / TWO-ACCOUNT VERIFIED / AWAITING MANUAL CHECK**
+(2026-10-10). [Implementation record](ORDERS_BACKEND_STAGING_DESIGN.md#17-formal-phase-1-staging-implementation-2026-10-10):
+`202610100001_order_requests.sql` is applied only to staging. Requests, append-only
+events, guarded create/replace/cancel RPCs, participant RLS, private Broadcast
+invalidation and real localhost:3000 UI integration are verified, including refresh
+and server-restart persistence. Seller menu exposes Send Order Request; Buyer does
+not. Credentials/artifacts are ignored; production configuration is unchanged.
+The user-authorized minimal [formal Accept slice](ORDERS_ACCEPT_STAGING.md) is now
+staging implemented and two-account verified. Migration `202610100002_order_accept.sql`
+adds atomic Buyer Accept, persisted Orders/Purchases/Sales, fixed-cost 30-minute
+inventory reservations and lazy server expiry release. Shipping pending creates
+an Order without an inventory hold or countdown. Payments/handoff/protection are
+not implemented. Stop for manual inspection; production is untouched.
+
+Manual Accept fixture is now prepared on the existing **Demo_buyer_a ↔
+Demo_seller_b / [DEMO] 24-inch Monitor** Conversation. Request
+`88260b5b-0851-4bf2-a100-8a5c11edd8c9` remains Active with no Order/reservation;
+Buyer sees Accept, Seller does not, and both refreshes pass. Automation did not
+click Accept. Nike Accepted Request/Order history is preserved; its original
+reservation has expired. Fresh API/DOM audits show one Demo_buyer_b row, no
+duplicate identities/scopes or retained race fixtures. The user corrected the
+repeated contact name to **Demo_seller_b in Buyer Buying**: these are the legitimate
+Monitor and Calculus Textbook seeded Conversations. Fresh API/mobile DOM confirms
+distinct IDs and visible Listing context. Both are retained. Separately, test
+deletion now emits invalidation to clear potentially stale mounted lists. See
+[manual-fixture repair](ORDERS_ACCEPT_STAGING.md#manual-fixture-repair-and-test-hygiene-2026-10-10).
+
+Manual-feedback follow-up: View Listing uses the existing red Cancel; composer
+Add/Send share 40px height. Editable selection uses a visible shared blue highlight;
+native selection already worked in the investigated Chrome session, so a global
+selection-blocking defect was not reproduced. Real Seller/Buyer checks pass at
+390/430/1280/1536, with no preview controls, runtime errors or page overflow.
+Physical mobile long-press handles remain a manual check. Fresh staging rollback
+RLS tests, DB lint, TypeScript, focused ESLint and existing regressions pass.
+See the [compatibility follow-up](ORDERS_BACKEND_STAGING_DESIGN.md#manual-feedback-compatibility-follow-up-2026-10-10).
+These compatibility fixes preceded the later staging-only Accept migration.
+
+Formal Request timeline cleanup: terminal collapsed cards now show badge/card
+only. Cancellation alone becomes an aligned automatic message projected from the
+persisted event; replacement/expiry stay audit-only. Expanded details retain full
+lifecycle metadata. No generic Buyer-response timeout exists: Pickup/Meet expire
+at scheduled_at using server time; Shipping has no arbitrary expiry. Real
+two-account responsive checks and rollback-only backend regressions pass. See
+[timeline cleanup](ORDERS_BACKEND_STAGING_DESIGN.md#formal-request-timeline-cleanup-2026-10-10).
+
+The dedicated 3112 reference viewer retains the
+[presentational UI preview](ORDERS_PAYMENT_UI_PREVIEW.md), using local React state
+only. In that viewer Orders tabs populate through local acceptance; those preview
+actions never persist. The real 3000 app instead uses the Phase 1 Request backend
+described above and the persisted Accept slice. The frozen viewer remains clickable:
+immutable requests/supersession, local acceptance, Buyer/Seller perspectives,
+reservation/release, synthetic shipping address, simulated payment, handoff code,
+shipment/delivery and protection-window/issue previews. Orders tabs may temporarily
+show locally accepted Orders; refresh clears them. No Order API, live inventory,
+payment, address persistence, carrier integration or payout exists. Debug controls
+are restricted to the exact staging environment/project.
+
+Real synthetic demo content is available only in western-marketplace-staging:
+four disposable identities, six listings (five available, one sold), seven listing
+images, five Favorites, four conversations, TEXT and a durable IMAGE. Seed reuse,
+scoped cleanup/reseed and independent Buyer/Seller browser checks passed.
+Use `npm run demo:seed:staging`, `npm run demo:cleanup:staging` and the isolated
+`npm run demo:dev:staging` viewer on localhost:3112. Credentials/configuration are
+local and Git-ignored. See [STAGING_DEMO_DATA.md](STAGING_DEMO_DATA.md).
+Production is unchanged; formal Orders/Accept are staging-only and Payments remain design only. These workflow
+changes have not been committed or pushed.
 
 ## Current repository architecture (2026-10-07)
 
@@ -846,8 +1399,8 @@ Account HTML and Next page-data are excluded from PWA runtime caching; session
 requests continue to use the existing no-store/auth flow. No schema, RLS, Storage,
 CRUD, or identity validation changes were made.
 
-Future account functionality (documentation only): Payments > Payment methods /
-Payout account. No bank/card controls or payments implementation are shown.
+Historical account sketch (superseded): financial management now belongs under
+Settings -> Payments & payouts, per the finalized contract above. No bank/card controls or payments implementation are shown.
 Intended messaging flow: Market listing -> Message seller -> conversation ->
 the retired personal menu > Messages. The messages route is only a placeholder; no chat backend
 or favorites persistence was added.
@@ -998,7 +1551,7 @@ Production build with --no-lint passed.
 - Added the supplied React Bits GradientWaves JSX and separated its CSS. Shader,
   uniforms, pointer handling, visibility observers, animation loop and cleanup are
   unchanged. The only integration edit in the supplied JSX moves its global CSS
-  import to pages/_app.tsx, as required by the Next.js Pages Router.
+  import to pages/\_app.tsx, as required by the Next.js Pages Router.
 - Existing uncommitted package changes already installed ogl@1.0.11 (^1.0.11).
   They were preserved; no dependency installation/version change was needed.
 - GradientWaves is dynamically loaded without SSR for WebGL, with one canvas scoped
@@ -1037,7 +1590,7 @@ OTP were not re-tested. Production build with --no-lint passed.
 ## Welcome Hero / Infinite Spiral Refinement - Completed
 
 - Added the supplied InfiniteSpiral.jsx and its separated global CSS. Source comparison
-  confirms the animation logic is unchanged; only the CSS import moves to _app.tsx
+  confirms the animation logic is unchanged; only the CSS import moves to \_app.tsx
   for Pages Router compatibility. A small .d.ts describes the JSX integration without
   converting the implementation. Like GradientWaves, the supplied JSX is narrowly
   excluded from repository TypeScript style rules and linted separately as JavaScript.
@@ -1084,7 +1637,7 @@ only the existing GradientWaves height uniform changes with scroll.
 - Removed InfiniteSpiral.jsx/.css/.d.ts, its global CSS import and lint exclusion,
   Hero image mapping/repetition and gallery styling. No runtime references remain.
 - Added supplied DepthText, TextType and TearTicket JSX/CSS plus small integration
-  declaration files. Global CSS imports live in _app.tsx. Supplied JSX receives the
+  declaration files. Global CSS imports live in \_app.tsx. Supplied JSX receives the
   same narrow style-lint exclusion and separate JS correctness check as GradientWaves.
 - DepthText uses two left-aligned near-white lines with restrained 10 layers, .65
   depth, tilt 3, no auto orbit, no shadow. TextType types the original sentence once
@@ -1142,7 +1695,7 @@ This pass replaces Tear Ticket only; the approved text and scroll behavior remai
   ticket-only styles. No runtime TearTicket/tear-ticket references remain.
 - Added supplied DriftWall.jsx/.css plus a small TypeScript declaration. Its animation,
   transforms, hover behavior, ResizeObserver and RAF cleanup are retained. Global CSS
-  is imported through _app.tsx. The only source edits are that import relocation and
+  is imported through \_app.tsx. The only source edits are that import relocation and
   removal of the Picsum demo defaults (items defaults to an empty array).
 - Existing page Listing[] data is passed through HomepageScene into WelcomeHero. Up
   to 15 existing photo URLs use listing titles/photo numbers as alt text and real
@@ -1297,6 +1850,7 @@ selected/focus states and a compact panel with space reserved against text jumps
 Buttons use aria-pressed and aria-controls; content has polite announcements.
 
 Panels use the owner's exact suggested copy:
+
 - About: An independent marketplace for the Western community to buy and sell
   second-hand items nearby.
 - Community: Built around local exchange, reuse, and easier connections within
@@ -1398,7 +1952,7 @@ section as intended, not its internal 3D construction. Global h1 and .copy h1 ru
 did not override the internal font/color/3D declarations. No conflicting CSS selector
 was found and no Hero/global/component CSS was changed for this fix.
 
-Two causes were confirmed: normal mode was configured with only 10 * 0.65 = 6.5px
+Two causes were confirmed: normal mode was configured with only 10 \* 0.65 = 6.5px
 of total depth and tilt=3 (base rotation -0.96deg / 1.26deg), visibly subtle even in
 isolation. In reduced-motion mode WelcomeHero's `reduced !== false` conditional
 replaced the entire DepthText component with plain text, despite supplied DepthText
@@ -1451,7 +2005,7 @@ is layer0; Lanyard sibling layer1; nav layer2. The sibling stacking structure ke
 all wall transforms/masks below Lanyard. No absurd z-index or Hero-wide scaling.
 
 Gooey Nav: `components/ui/GooeyNav.jsx`, CSS and declaration; stylesheet imported
-from _app. Only About and Log in are shown alongside the existing brand. Original
+from \_app. Only About and Log in are shown alongside the existing brand. Original
 particle animation retained; bounded timer/frame cleanup, accessible About control,
 keyboard link activation and reduced-motion particle skip added. Scoped its easing
 variable to its container and made the filter's black backdrop pseudo-element
@@ -1545,7 +2099,7 @@ Welcome fade-out, background-only gap, Section 2 fade-in and wave horizon unchan
 
 Replaced rendered DepthText with the owner's supplied MaskedHeading source from
 attachment1a07fcdf. Preserved SVG text clip, measurement/ResizeObserver, GSAP reveal,
-media drift and pointer parallax. CSS imported from _app as required by Pages
+media drift and pointer parallax. CSS imported from \_app as required by Pages
 Router; added JSX declaration and narrow vendor lint exclusion. Existing gsap
 used; no dependencies installed. Two span instances inside the accessible h1
 retain the two headline lines. Left alignment, weight900, textScale0.14, rise
@@ -1629,7 +2183,7 @@ and Shining Button, under components/animata/button. Converted utility styles to
 plain scoped CSS preserving original shadows, pressed movement, violet border,
 arrow hover and shining sweep. Added responsive sizes/focus/reduced-motion rules.
 Labels are About and Log in. About remains deferred as previously agreed; Log in
-is a semantic link to /auth/sign-in. Styles imported from _app for Pages Router.
+is a semantic link to /auth/sign-in. Styles imported from \_app for Pages Router.
 Added only the requested lucide-react dependency for ArrowRight. No shadcn/Tailwind
 installation or upgrade. Unused striped/blinking-red demo theme omitted because
 the supplied shining component does not use it.
@@ -1663,7 +2217,7 @@ pending the owner's source.
 
 Integrated the owner's supplied TearTicket JSX/CSS (attachment f7f8b6a4) without
 rewriting its tear geometry, spring/physics, pointer capture, keyboard support or
-reduced-motion behavior. Global stylesheet is imported through _app; dynamic
+reduced-motion behavior. Global stylesheet is imported through \_app; dynamic
 client-only component avoids server layout-effect warnings. Added TS declaration
 and narrow supplied-source lint exclusion; no dependency additions.
 
@@ -1732,7 +2286,8 @@ requested copy with a future-functionality notice. Height changes animate throug
 a measured wrapper; mobile tabs scroll internally. About explicitly independent.
 
 Transaction PRODUCT DIRECTION finalized: mutual buyer/seller confirmation, held
-payment,72-hour protection before release/payout, meetup or shipping, recommended
+payment, an earlier 72-hour protection concept (now superseded by the finalized
+24-hour contract before payout eligibility), meetup or shipping, recommended
 public/custom agreed locations, condition photos, listing snapshot, timestamps,
 transaction evidence and future dispute workflow. These payment/backend/shipping
 features are NOT implemented; this task adds copy/documentation only.
@@ -1974,7 +2529,6 @@ IMAGE backend, commit or push.
 
 ### Historical accepted local UI implementation
 
-
 This is the Messages source of truth for future implementation work. Read this
 section before changing Messages. It supersedes older Home/Messages placeholder
 or deferred-navigation statements in this document. **Current** describes the
@@ -2007,23 +2561,22 @@ segmented controls or modes inside a Messages card.
 
 ### Current implementation and ownership
 
-| Source | Responsibility |
-| --- | --- |
-| [Home navigation](../components/home/animated-sidebar-demo.tsx) | Navigation tree; `active` parent and `selected.messages` child; responsive presentation; mobile child title. |
-| [Mobile menu](../components/smooth-dropdown.tsx) | Independent `expandedParent` disclosure state; parent/child/leaf actions and active-child styling. |
-| [Messages](../components/home/messages.tsx) | Local fixtures/history state, independent `collections` and `selectedIds`, destination-specific selection/read clearing and text append/activity updates, one shared sorted result, mobile list/detail lifecycle. |
-| [ClientCard](../components/client-card.tsx) and [styles](../components/client-card.module.css) | `Conversation` presentation type, desktop recent rail/expanded list, reusable `ConversationList` and `ClientCardBack`. |
-| [Mobile Messages styles](../components/home/messages.module.css) | Stable clipped viewport and adjacent local sliding screens. |
-| [Chat panel](../components/home/messages-chat.tsx) and [styles](../components/home/messages-chat.module.css) | Identity/time, scrollable demo message body, responsive composer and preview-open state. |
-| [Message history](../components/home/message-history.tsx), [text model](../types/message.ts) and [demo histories](../lib/demo-message-history.ts) | One desktop/mobile bubble renderer, per-conversation TEXT histories and sender groups. |
-| [Listing overlay](../components/home/messages-listing-overlay.tsx) and [preview](../components/home/messages-listing-preview.tsx) | Portal, shared focus backdrop/fade, selected-listing preview, Cancel and visual-only send action. |
-| [Slide options](../lib/page-slide.ts) and [route transition](../components/navigation/desktop-route-transition.tsx) | Shared physical-track timing for local mobile Messages and Market/Home navigation. |
-| [Activity helpers](../lib/conversation-state.ts) | Pure activity-time fallback and immutable descending sort shared by all Messages presentations. |
-| [UserAvatar](../components/ui/user-avatar.tsx) | Existing circular image/initial fallback; shared with other UI. |
-| [Arrow interaction](../components/animata/button/shining-button.css) | Shared `shining-button__arrow` hover/focus/press movement for mobile rows and action buttons. |
+| Source                                                                                                                                            | Responsibility                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Home navigation](../components/home/animated-sidebar-demo.tsx)                                                                                   | Navigation tree; `active` parent and `selected.messages` child; responsive presentation; mobile child title.                                                                                                      |
+| [Mobile menu](../components/smooth-dropdown.tsx)                                                                                                  | Independent `expandedParent` disclosure state; parent/child/leaf actions and active-child styling.                                                                                                                |
+| [Messages](../components/home/messages.tsx)                                                                                                       | Local fixtures/history state, independent `collections` and `selectedIds`, destination-specific selection/read clearing and text append/activity updates, one shared sorted result, mobile list/detail lifecycle. |
+| [ClientCard](../components/client-card.tsx) and [styles](../components/client-card.module.css)                                                    | `Conversation` presentation type, desktop recent rail/expanded list, reusable `ConversationList` and `ClientCardBack`.                                                                                            |
+| [Mobile Messages styles](../components/home/messages.module.css)                                                                                  | Stable clipped viewport and adjacent local sliding screens.                                                                                                                                                       |
+| [Chat panel](../components/home/messages-chat.tsx) and [styles](../components/home/messages-chat.module.css)                                      | Identity/time, scrollable demo message body, responsive composer and preview-open state.                                                                                                                          |
+| [Message history](../components/home/message-history.tsx), [text model](../types/message.ts) and [demo histories](../lib/demo-message-history.ts) | One desktop/mobile bubble renderer, per-conversation TEXT histories and sender groups.                                                                                                                            |
+| [Listing overlay](../components/home/messages-listing-overlay.tsx) and [preview](../components/home/messages-listing-preview.tsx)                 | Portal, shared focus backdrop/fade, selected-listing preview, Cancel and visual-only send action.                                                                                                                 |
+| [Slide options](../lib/page-slide.ts) and [route transition](../components/navigation/desktop-route-transition.tsx)                               | Shared physical-track timing for local mobile Messages and Market/Home navigation.                                                                                                                                |
+| [Activity helpers](../lib/conversation-state.ts)                                                                                                  | Pure activity-time fallback and immutable descending sort shared by all Messages presentations.                                                                                                                   |
+| [UserAvatar](../components/ui/user-avatar.tsx)                                                                                                    | Existing circular image/initial fallback; shared with other UI.                                                                                                                                                   |
+| [Arrow interaction](../components/animata/button/shining-button.css)                                                                              | Shared `shining-button__arrow` hover/focus/press movement for mobile rows and action buttons.                                                                                                                     |
 
-The current `Conversation` shape is `{ id, person, listing, lastMessage, createdAt,
-lastMessageAt?, unreadCount, time? }`. Activity values are ISO timestamp strings;
+The current `Conversation` shape is `{ id, person, listing, lastMessage, createdAt, lastMessageAt?, unreadCount, time? }`. Activity values are ISO timestamp strings;
 lastMessageAt may be absent/null and unreadCount is a local viewer count.
 `listing` is the canonical frontend `Listing`, not a database row. Each destination
 has 18 local demo conversations, including the same person about different listings.
@@ -2190,11 +2743,11 @@ button includes unread in its label); preserve this so color is not the only cue
 
 Example (all times on the same day):
 
-| Event | Activity order, newest first | Sarah unread count |
-| --- | --- | --- |
-| Alex/Chair 10:42; Sarah/AirPods 10:40; Mike/Monitor 10:30 | Alex, Sarah (dot), Mike | 2 |
-| Sarah sends another incoming message at 10:45 while not open | Sarah (dot), Alex, Mike | 3 |
-| Current user opens Sarah/AirPods | Sarah, Alex, Mike | 0 |
+| Event                                                        | Activity order, newest first | Sarah unread count |
+| ------------------------------------------------------------ | ---------------------------- | ------------------ |
+| Alex/Chair 10:42; Sarah/AirPods 10:40; Mike/Monitor 10:30    | Alex, Sarah (dot), Mike      | 2                  |
+| Sarah sends another incoming message at 10:45 while not open | Sarah (dot), Alex, Mike      | 3                  |
+| Current user opens Sarah/AirPods                             | Sarah, Alex, Mike            | 0                  |
 
 Reading changes unread state, not the 10:45 activity timestamp or ordering.
 

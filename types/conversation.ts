@@ -9,7 +9,13 @@ export type ChatListing = {
   currency: 'CAD'
   category: string
   photoUrls: string[]
-  availability: 'available' | 'deleted' | 'sold' | 'unavailable'
+  availability:
+    | 'available'
+    | 'deleted'
+    | 'pending'
+    | 'reserved'
+    | 'sold'
+    | 'unavailable'
   live?: Listing
 }
 

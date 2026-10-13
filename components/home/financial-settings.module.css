@@ -1,0 +1,49 @@
+.section {
+  margin-top: 24px;
+  min-width: 0;
+}
+.testControls {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px dashed #b995dc70;
+  border-radius: 12px;
+  background: #130f19;
+}
+.testControls > div {
+  margin-top: 16px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.actions button {
+  max-width: 100%;
+  font-size: 12px;
+}
+.link {
+  margin-top: 12px;
+  color: #d1b4f6;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.section button:focus-visible {
+  outline: 2px solid #d1b4f6;
+  outline-offset: 3px;
+}
+
+@media (max-width: 479px) {
+  .section .row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-block: 12px;
+  }
+
+  .section .row > span {
+    width: auto;
+    max-width: 130px;
+    flex: none;
+  }
+}

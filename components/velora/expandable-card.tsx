@@ -36,9 +36,10 @@ export function ExpandedCardPreview({
   media,
   className,
   actions,
+  topAction,
 }: Pick<
   ExpandableCardProps,
-  'children' | 'className' | 'expandedTitle' | 'media' | 'title'
+  'children' | 'className' | 'expandedTitle' | 'media' | 'title' | 'topAction'
 > & { actions?: ReactNode }) {
   return (
     <section
@@ -48,6 +49,7 @@ export function ExpandedCardPreview({
     >
       <div className={styles.scrollArea}>
         <div className={styles.media}>{media}</div>
+        {topAction && <div className={styles.topAction}>{topAction}</div>}
         <div className={styles.info}>
           <p className={styles.price}>{title}</p>
           <h3 className={styles.title}>{expandedTitle}</h3>

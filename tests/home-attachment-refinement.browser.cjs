@@ -175,7 +175,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
       const scrollBefore = await history.evaluate((el) => el.scrollTop)
       await shot('normal-chat')
       await panel
-        .getByRole('button', { name: 'Add attachment', exact: true })
+        .getByRole('button', { name: 'Add to conversation', exact: true })
+        .click()
+      await page
+        .getByRole('button', { name: 'Attachment', exact: true })
         .click()
       const layer = panel.locator('[data-attachment-panel]')
       const entering = await layer.evaluate(async (el) => {
