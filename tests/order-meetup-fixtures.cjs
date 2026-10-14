@@ -8,6 +8,7 @@ const fs = require('fs'),
   ts = require('typescript')
 const { spawn, spawnSync } = require('child_process')
 const { createClient } = require('@supabase/supabase-js')
+const { parseRows } = require('../scripts/cli-json-result.cjs')
 const ref = 'pcaqxezdfxofysghssyo',
   root = path.resolve('tests/artifacts/meetup-d1-fixtures'),
   bucket = 'order-snapshot-media'
@@ -37,6 +38,15 @@ const claims = JSON.parse(
 )
 assert.equal(claims.ref, ref)
 assert.equal(claims.role, 'service_role')
+global.fetch = require('./staging-media-transport.cjs').createStagingMediaFetch(
+  global.fetch,
+  undefined,
+  (diagnostic) =>
+    fs.appendFileSync(
+      path.join(root, 'private-upload-diagnostic.jsonl'),
+      JSON.stringify(diagnostic) + '\n'
+    )
+)
 const resolve = Module._resolveFilename
 Module._resolveFilename = function (id, ...args) {
   return resolve.call(
@@ -117,17 +127,26 @@ async function query(sql) {
       e = ''
     p.stdout.on('data', (b) => (o += b))
     p.stderr.on('data', (b) => (e += b))
-    p.on('error', no)
+    const fail = (message, code = null) => {
+      fs.writeFileSync(
+        f + '.diagnostic',
+        JSON.stringify({
+          message,
+          code,
+          stdoutLength: o.length,
+          stderrLength: e.length,
+        })
+      )
+      no(Error(message + '; diagnostic remains ignored'))
+    }
+    p.on('error', () => fail('Staging SQL process launch failed'))
     p.on('close', (code) => {
       fs.unlinkSync(f)
-      if (code) {
-        fs.writeFileSync(f + '.diagnostic', e || o)
-        return no(Error('Staging SQL failed; diagnostic remains ignored'))
-      }
+      if (code !== 0) return fail('Staging SQL process failed', code)
       try {
-        ok(JSON.parse(o.slice(o.indexOf('{'))).rows)
+        ok(parseRows(o))
       } catch (err) {
-        no(err)
+        fail(err.message, code)
       }
     })
   })

@@ -92,7 +92,18 @@ function query(sql) {
         'Staging maintenance query failed; see ignored last-query-error.json'
       )
     }
-    return JSON.parse(r.stdout.slice(r.stdout.indexOf('{'))).rows
+    try {
+      return require('./cli-json-result.cjs').parseRows(r.stdout)
+    } catch (error) {
+      fs.writeFileSync(
+        path.join(path.dirname(file), 'last-query-error.json'),
+        JSON.stringify({
+          message: error.message,
+          stdoutLength: r.stdout.length,
+        })
+      )
+      throw error
+    }
   } finally {
     fs.unlinkSync(file)
   }
