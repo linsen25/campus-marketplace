@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { CardAction } from '@/components/listings/card-actions'
 import successStyles from '@/components/listings/create-success.module.css'
 import { ListingMedia } from '@/components/listings/listing-media'
+import { MeetingLocationInput } from '@/components/listings/meeting-location-input'
 import { ActionRow } from '@/components/ui/action-row'
 import { DynamicAction } from '@/components/ui/dynamic-action'
 import { FadingDialog } from '@/components/ui/fading-dialog'
@@ -17,6 +18,7 @@ import {
 } from '@/lib/order-schedule-preview'
 import type { ScheduleDraft } from '@/lib/order-schedule-preview'
 import type { ChatListing } from '@/types/conversation'
+import type { MeetingPlaceReference } from '@/types/meeting-location'
 import type { Agreement, Offer, OfferTerms } from '@/types/offer'
 
 import workspace from '../listings/listing-workspace.module.css'
@@ -46,18 +48,28 @@ function offerExplanation(status: Offer['status']) {
   if (status === 'Closed') return 'Listing no longer available'
   return 'A proposal only. No charge or Order has been created.'
 }
-export function OfferTermsSummary({ terms }: { terms: OfferTerms }) {
+export function OfferTermsSummary({
+  terms,
+  showItemOffer = true,
+}: {
+  terms: OfferTerms
+  showItemOffer?: boolean
+}) {
   return (
     <dl className={styles.terms}>
-      <dt>Item offer</dt>
-      <dd>{offerAmount(terms.itemAmountCents)}</dd>
+      {showItemOffer && (
+        <>
+          <dt>Item offer</dt>
+          <dd>{offerAmount(terms.itemAmountCents)}</dd>
+        </>
+      )}
       <dt>Fulfillment</dt>
-      <dd>{terms.fulfillment === 'on_campus' ? 'On Campus' : 'Delivery'}</dd>
+      <dd>{terms.fulfillment === 'on_campus' ? 'Meeting' : 'Delivery'}</dd>
       {terms.fulfillment === 'on_campus' ? (
         <>
-          <dt>Meetup location</dt>
+          <dt>Meeting location</dt>
           <dd>{terms.meetupLocation}</dd>
-          <dt>Meetup date / time</dt>
+          <dt>Meeting date / time</dt>
           <dd>
             {new Date(terms.scheduledAt).toLocaleString('en-CA', {
               timeZone: 'America/Toronto',
@@ -274,7 +286,12 @@ export function OfferCard({
         </span>
         {open && (
           <FadingDialog
-            className={styles.dialog}
+            className={`${styles.dialog} ${styles.detailDialog}`}
+            // Focus the mobile dialog itself without scrolling to a bottom action.
+            focusAtTop={
+              typeof window !== 'undefined' &&
+              window.matchMedia('(max-width: 767px)').matches
+            }
             aria-labelledby={`offer-${offer.id}`}
             onRequestClose={close}
           >
@@ -284,16 +301,23 @@ export function OfferCard({
             </header>
             <div className={styles.expanded}>
               <OfferMedia listing={listing} />
-              <section>
+              <section className={styles.detailInfo}>
+                <dl className={styles.primaryOffer}>
+                  <dt>Item offer</dt>
+                  <dd>{offerAmount(offer.terms.itemAmountCents)}</dd>
+                </dl>
                 <h4>{listing.title}</h4>
-                <OfferTermsSummary terms={offer.terms} />
+                <OfferTermsSummary terms={offer.terms} showItemOffer={false} />
                 <OfferEconomicsSummary
                   terms={offer.terms}
                   buyer={viewerId === offer.buyerId}
                   showItemPrice={false}
                 />
                 {fields.length > 0 && (
-                  <p>Changed terms: {fields.join(' · ')}</p>
+                  <p className={styles.detailChanges}>
+                    <strong>Changed terms:</strong>{' '}
+                    <span>{fields.join(' · ')}</span>
+                  </p>
                 )}
                 <p className={workspace.hint}>
                   {offerExplanation(offer.status)}
@@ -417,8 +441,21 @@ export function OfferEditor({
   const [location, setLocation] = useState(
     original?.fulfillment === 'on_campus'
       ? original.meetupLocation
-      : listing.live?.pickupArea ?? ''
+      : listing.live?.meetingLocation?.label ?? ''
   )
+  const initialMeeting =
+    original?.fulfillment === 'on_campus'
+      ? {
+          provider: original.meetupLocationProvider,
+          placeId: original.meetupPlaceId,
+        }
+      : listing.live?.meetingLocation
+  const [meetingReference, setMeetingReference] =
+    useState<MeetingPlaceReference | null>(
+      initialMeeting?.provider && initialMeeting.placeId
+        ? { provider: 'google', placeId: initialMeeting.placeId }
+        : null
+    )
   const date =
     original?.fulfillment === 'on_campus'
       ? new Date(original.scheduledAt)
@@ -435,7 +472,7 @@ export function OfferEditor({
   const [fee, setFee] = useState(
     original?.fulfillment === 'delivery'
       ? decimal(original.deliveryFeeCents)
-      : ''
+      : decimal(listing.live?.estimatedDeliveryFeeCents ?? 0)
   )
   const [method, setMethod] = useState<'' | 'courier' | 'seller_delivery'>(
     original?.fulfillment === 'delivery' ? original.deliveryMethod : ''
@@ -465,6 +502,7 @@ export function OfferEditor({
     province,
     city,
     postalPrefix,
+    meetingReference,
   ])
   const initialDraft = useRef(snapshot)
   const close = () => {
@@ -487,7 +525,7 @@ export function OfferEditor({
       return false
     }
     if (!mode) {
-      setError('Choose On Campus or Delivery.')
+      setError('Choose Meeting or Delivery.')
       return false
     }
     const common = {
@@ -513,6 +551,12 @@ export function OfferEditor({
         ...common,
         fulfillment: 'on_campus',
         meetupLocation: location.trim(),
+        ...(meetingReference
+          ? {
+              meetupLocationProvider: meetingReference.provider,
+              meetupPlaceId: meetingReference.placeId,
+            }
+          : {}),
         scheduledAt: scheduled.toISOString(),
       })
     } else {
@@ -594,7 +638,7 @@ export function OfferEditor({
                         setError('')
                       }}
                     >
-                      {value === 'on_campus' ? 'On Campus' : 'Delivery'}
+                      {value === 'on_campus' ? 'Meeting' : 'Delivery'}
                     </button>
                   ))}
                 </div>
@@ -602,16 +646,23 @@ export function OfferEditor({
               <div className={styles.conditional}>
                 {mode === 'on_campus' && (
                   <>
-                    <label className={workspace.field}>
-                      Meetup location
-                      <input
-                        maxLength={120}
-                        value={location}
-                        placeholder="e.g. Outside Weldon Library"
-                        required={true}
-                        onChange={(event) => setLocation(event.target.value)}
-                      />
-                    </label>
+                    <MeetingLocationInput
+                      label="Meetup location"
+                      value={location}
+                      required={true}
+                      selected={meetingReference}
+                      onChange={(value) => {
+                        setLocation(value)
+                        setMeetingReference(null)
+                      }}
+                      onSelect={(place) =>
+                        setMeetingReference(
+                          place
+                            ? { provider: 'google', placeId: place.placeId }
+                            : null
+                        )
+                      }
+                    />
                     <fieldset className={styles.scheduleGroups}>
                       <OrderScheduleField
                         value={schedule}
@@ -620,7 +671,7 @@ export function OfferEditor({
                       />
                     </fieldset>
                     <p className={workspace.hint}>
-                      Choose a public campus location. Meet, inspect, pay, then
+                      Choose a public meeting location. Meet, inspect, pay, then
                       handoff.
                     </p>
                   </>

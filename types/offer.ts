@@ -24,7 +24,13 @@ export type OfferTerms = {
         postalPrefix: string
       }
     }
-  | { fulfillment: 'on_campus'; meetupLocation: string; scheduledAt: string }
+  | {
+      fulfillment: 'on_campus'
+      meetupLocation: string
+      scheduledAt: string
+      meetupLocationProvider?: 'google'
+      meetupPlaceId?: string
+    }
 )
 export type Offer = {
   id: string

@@ -19,7 +19,7 @@ import pageStyles from './order-stage-page.module.css'
 import profile from './profile.module.css'
 
 function ConfirmedFulfillment({ terms }: { terms: OfferTerms }) {
-  const mode = terms.fulfillment === 'on_campus' ? 'On Campus' : 'Delivery'
+  const mode = terms.fulfillment === 'on_campus' ? 'Meeting' : 'Delivery'
   return (
     <dl className={styles.amounts}>
       <dt>Fulfillment</dt>
@@ -34,7 +34,7 @@ function ConfirmedFulfillment({ terms }: { terms: OfferTerms }) {
       )}
       {terms.fulfillment === 'on_campus' ? (
         <>
-          <dt>Confirmed meetup</dt>
+          <dt>Meeting location</dt>
           <dd>{terms.meetupLocation}</dd>
           <dt>Date / time</dt>
           <dd>
@@ -334,7 +334,7 @@ function FulfillmentDetails({ order, role, flow, terms }: StageProps) {
         <dd>{offerAmount(terms.itemAmountCents)}</dd>
         {terms.fulfillment === 'on_campus' && (
           <>
-            <dt>Confirmed meetup</dt>
+            <dt>Meeting location</dt>
             <dd>{terms.meetupLocation}</dd>
             <dt>Date / time</dt>
             <dd>
@@ -378,7 +378,7 @@ export function OrderStageDetails(props: StageProps) {
   if (props.page === 'review') return <AgreementDetails {...props} />
   let title = 'Delivery Details'
   let content = <FulfillmentDetails {...props} />
-  if (props.terms.fulfillment === 'on_campus') title = 'Meetup Details'
+  if (props.terms.fulfillment === 'on_campus') title = 'Meeting Details'
   else if (props.terms.deliveryMethod === 'courier') title = 'Shipping Details'
   if (props.page === 'payment') {
     title = 'Price Details'

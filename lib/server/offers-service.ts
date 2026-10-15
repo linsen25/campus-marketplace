@@ -1,4 +1,5 @@
 import { ListingApiError } from '@/lib/listing-validation'
+import { validMeetingReference } from '@/lib/meeting-location'
 import {
   SellerPayoutNotReadyError,
   sellerPayoutNotReady,
@@ -84,6 +85,7 @@ export function mapTerms(
   if (
     v.fulfillment === 'on_campus' &&
     typeof v.meetup_location === 'string' &&
+    validMeetingReference(v.meetup_location_provider, v.meetup_place_id) &&
     typeof v.scheduled_at === 'string' &&
     Number.isFinite(Date.parse(v.scheduled_at))
   )
@@ -91,6 +93,12 @@ export function mapTerms(
       ...common,
       fulfillment: 'on_campus',
       meetupLocation: v.meetup_location,
+      ...(v.meetup_location_provider === 'google'
+        ? {
+            meetupLocationProvider: 'google',
+            meetupPlaceId: v.meetup_place_id as string,
+          }
+        : {}),
       scheduledAt: v.scheduled_at,
     }
   if (

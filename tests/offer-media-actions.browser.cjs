@@ -22,6 +22,7 @@ entry = entry.replace(
   "window.actions.push('accept');if(window.controlAccept)await new Promise((resolve,reject)=>{window.resolveAccept=resolve;window.rejectAccept=reject})"
 )
 entry += `\nimport {DynamicAction} from '@/components/ui/dynamic-action';window.showDefault=()=>flushSync(()=>root.render(<DynamicAction variant="green" onClick={()=>{}}>Continue</DynamicAction>));`
+entry += `\nimport {ExpandedCardPreview} from '@/components/velora/expandable-card';import {ListingMedia} from '@/components/listings/listing-media';import marketDetails from '@/components/listings/homepage-listing-demo.module.css';window.showReference=()=>flushSync(()=>root.render(<ExpandedCardPreview title="CA$70" expandedTitle="Fixture item" media={<ListingMedia images={['data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500"/>')]} alt="Reference"/>}><div className={marketDetails.details}><dl className={marketDetails.metadata}><dt>Label</dt><dd>Value</dd></dl></div></ExpandedCardPreview>));`
 fs.writeFileSync(path.join(root, 'entry.tsx'), entry)
 async function run() {
   await build(require('./browser-fixture-mocks.cjs')(root))
@@ -35,7 +36,7 @@ async function run() {
   })
   let cases = 0
   try {
-    for (const width of [390, 430, 1280, 1536]) {
+    for (const width of [390, 430, 820, 1280, 1536]) {
       const p = await b.newPage({
           viewport: { width, height: 900 },
           reducedMotion: 'reduce',
@@ -47,6 +48,33 @@ async function run() {
       await p.goto(
         'file:///' + path.join(root, 'index.html').replaceAll('\\', '/')
       )
+      await p.evaluate(() => window.showReference())
+      const reference = await p
+        .locator('[data-listing-preview]')
+        .evaluate((e) => {
+          const grid = e.firstElementChild
+          const media = grid.children[0]
+          const info = grid.children[1]
+          const title = info.querySelector('h3')
+          const terms = info.querySelector('dl')
+          return {
+            gap: getComputedStyle(grid).columnGap,
+            radius: getComputedStyle(media).borderRadius,
+            ratio: getComputedStyle(media).aspectRatio,
+            padding: getComputedStyle(info).padding,
+            title: getComputedStyle(title).fontSize,
+            titleLine: getComputedStyle(title).lineHeight,
+            titleMargin: getComputedStyle(title).margin,
+            terms: getComputedStyle(terms).fontSize,
+            termsLine: getComputedStyle(terms).lineHeight,
+            rowGap: getComputedStyle(terms).rowGap,
+            columnGap: getComputedStyle(terms).columnGap,
+            label: getComputedStyle(terms.querySelector('dt')).fontSize,
+            primarySize: getComputedStyle(info.querySelector('p')).fontSize,
+            primaryLine: getComputedStyle(info.querySelector('p')).lineHeight,
+            primaryWeight: getComputedStyle(info.querySelector('p')).fontWeight,
+          }
+        })
       const action = async (dialog, name, arrow) => {
         const button = dialog.getByRole('button', { name, exact: true })
         assert.equal(
@@ -59,12 +87,20 @@ async function run() {
         assert(r.x >= 0 && r.x + r.width <= width)
         return button
       }
-      for (const state of ['own', 'recipient', 'historical'])
+      for (const state of [
+        'own',
+        'recipient',
+        'Replaced',
+        'Accepted',
+        'Declined',
+        'Expired',
+        'Closed',
+      ])
         for (const count of [1, 3]) {
           const v = {
             viewer: state === 'own' ? 'seller' : 'buyer',
             sender: 'seller',
-            status: state === 'historical' ? 'Replaced' : 'Active',
+            status: ['own', 'recipient'].includes(state) ? 'Active' : state,
             count,
           }
           await p.evaluate((v) => window.showCase(v), v)
@@ -80,7 +116,122 @@ async function run() {
             .first()
             .evaluate((i) => i.decode())
           const box = await media.boundingBox()
-          assert.equal(box.height, width < 768 ? 180 : 270)
+          assert(
+            Math.abs(box.width / box.height - (width < 768 ? 4 / 3 : 4 / 5)) <
+              0.01
+          )
+          const expanded = d
+            .locator('[class*="offer_ui_module_css_expanded"]')
+            .first()
+          const geometry = await expanded.evaluate((e) => {
+            const media = e.children[0].getBoundingClientRect()
+            const info = e.children[1].getBoundingClientRect()
+            const title = e.querySelector('h4')
+            const lists = e.children[1].querySelectorAll(':scope > dl')
+            const primary = lists[0]
+            const terms = lists[1]
+            const economics = lists[2]
+            const paragraphs = e.children[1].querySelectorAll(':scope > p')
+            return {
+              width: e.clientWidth,
+              mediaWidth: media.width,
+              infoWidth: info.width,
+              infoOffset: info.x - e.getBoundingClientRect().x,
+              topDifference: info.top - media.top,
+              titleSize: getComputedStyle(title).fontSize,
+              termsSize: getComputedStyle(terms).fontSize,
+              changedSize: getComputedStyle(paragraphs[0]).fontSize,
+              helperSize: getComputedStyle(paragraphs[paragraphs.length - 1])
+                .fontSize,
+              gap: getComputedStyle(e).columnGap,
+              radius: getComputedStyle(e.children[0]).borderRadius,
+              ratio: getComputedStyle(e.children[0]).aspectRatio,
+              padding: getComputedStyle(e.children[1]).padding,
+              titleLine: getComputedStyle(title).lineHeight,
+              titleMargin: getComputedStyle(title).margin,
+              termsLine: getComputedStyle(terms).lineHeight,
+              rowGap: getComputedStyle(terms).rowGap,
+              columnGap: getComputedStyle(terms).columnGap,
+              label: getComputedStyle(terms.querySelector('dt')).fontSize,
+              primarySize: getComputedStyle(primary.querySelector('dd'))
+                .fontSize,
+              primaryLine: getComputedStyle(primary.querySelector('dd'))
+                .lineHeight,
+              primaryWeight: getComputedStyle(primary.querySelector('dd'))
+                .fontWeight,
+              primaryAboveTitle:
+                primary.getBoundingClientRect().bottom <=
+                title.getBoundingClientRect().top,
+              economicsGap: getComputedStyle(economics).marginTop,
+              totalSize: getComputedStyle(
+                economics.querySelector('dd:last-child')
+              ).fontSize,
+              changedGap: getComputedStyle(paragraphs[0]).marginTop,
+              changedWeight: getComputedStyle(
+                paragraphs[0].querySelector('strong')
+              ).fontWeight,
+              termsColumns: getComputedStyle(terms).gridTemplateColumns,
+            }
+          })
+          assert(
+            Math.abs(
+              geometry.mediaWidth -
+                (width < 768 ? geometry.width : (geometry.width - 32) / 2)
+            ) < 1
+          )
+          if (width >= 768) {
+            assert(Math.abs(geometry.infoWidth - (geometry.width - 32) / 2) < 1)
+            assert(
+              Math.abs(geometry.infoOffset - ((geometry.width - 32) / 2 + 32)) <
+                1
+            )
+            assert.equal(geometry.topDifference, 0)
+          }
+          assert.equal(geometry.titleSize, reference.title)
+          assert.equal(geometry.termsSize, reference.terms)
+          assert.equal(geometry.changedSize, '16px')
+          assert.equal(geometry.helperSize, '13px')
+          assert.equal(geometry.rowGap, '4px')
+          assert.equal(geometry.termsColumns.split(' ').length, 1)
+          assert.equal(geometry.economicsGap, '24px')
+          assert.equal(geometry.totalSize, '18px')
+          assert.equal(geometry.changedGap, '24px')
+          assert.equal(geometry.changedWeight, '700')
+          assert(geometry.primaryAboveTitle)
+          const labels = await expanded.locator('dt').allTextContents()
+          assert.equal(labels.filter((x) => x === 'Item offer').length, 1)
+          assert.deepEqual(labels, [
+            'Item offer',
+            'Fulfillment',
+            'Meeting location',
+            'Meeting date / time',
+            ...(v.viewer === 'buyer'
+              ? ['Buyer service fee', 'Total']
+              : ['Seller platform fee', 'Seller transaction amount']),
+          ])
+          assert.equal(
+            await expanded.locator('dl').first().locator('dd').innerText(),
+            'CA$70.00'
+          )
+          for (const key of [
+            'gap',
+            'radius',
+            'ratio',
+            'padding',
+            'titleLine',
+            'titleMargin',
+            'termsLine',
+            'label',
+            'primarySize',
+            'primaryLine',
+            'primaryWeight',
+          ])
+            assert.equal(
+              geometry[key],
+              reference[key],
+              key + ' matches actual Market layout'
+            )
+          assert(await d.evaluate((e) => e.scrollWidth <= e.clientWidth))
           assert.equal(
             await media
               .locator('img')
@@ -109,7 +260,7 @@ async function run() {
             await action(d, 'Deny', false)
             await action(d, 'Confirm', true)
           }
-          if (state === 'historical') {
+          if (!['own', 'recipient'].includes(state)) {
             for (const name of ['Revise Offer', 'Confirm', 'Deny'])
               assert.equal(
                 await d.getByRole('button', { name, exact: true }).count(),

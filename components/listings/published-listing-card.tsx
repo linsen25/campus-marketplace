@@ -19,7 +19,15 @@ import { useMessageSeller } from './use-message-seller'
 export function ListingDetails({ listing }: { listing: Listing }) {
   return (
     <div className={detailStyles.details}>
-      <p>Location: {listing.pickupArea || 'Choose a place'}</p>
+      {listing.meetingLocation?.label && (
+        <p>Meeting location: {listing.meetingLocation.label}</p>
+      )}
+      {listing.preferredFulfillment === 'DELIVERY' && (
+        <p>
+          Estimated delivery fee:{' '}
+          {formatListingPrice(listing.estimatedDeliveryFeeCents ?? 0)}
+        </p>
+      )}
       <h4>Seller</h4>
       <p>{listing.seller.displayName || 'You'}</p>
       <dl className={detailStyles.metadata}>

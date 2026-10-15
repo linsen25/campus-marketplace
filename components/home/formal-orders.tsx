@@ -33,7 +33,7 @@ import profile from './profile.module.css'
 function orderFulfillmentLabel(order: FormalOrder) {
   if (order.protocolVersion !== 2)
     return fulfillmentLabels[order.snapshot.draft.fulfillment]
-  return order.v2?.terms.fulfillment === 'on_campus' ? 'On Campus' : 'Delivery'
+  return order.v2?.terms.fulfillment === 'on_campus' ? 'Meeting' : 'Delivery'
 }
 function OrderState({ order, offset }: { order: FormalOrder; offset: number }) {
   const outcome = orderListOutcome(order)

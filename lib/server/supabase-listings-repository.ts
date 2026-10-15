@@ -51,9 +51,13 @@ function fields(input: CreateListingInput) {
     category: input.category,
     subcategory: input.subcategory,
     condition: input.condition || null,
-    pickup_area: input.pickupArea,
+    pickup_area: input.pickupArea ?? null,
     ...(listingFulfillmentEnabled() && {
       preferred_fulfillment: input.preferredFulfillment ?? 'ON_CAMPUS',
+      meeting_location: input.meetingLocation?.label ?? null,
+      meeting_location_provider: input.meetingLocation?.provider ?? null,
+      meeting_place_id: input.meetingLocation?.placeId ?? null,
+      estimated_delivery_fee_cents: input.estimatedDeliveryFeeCents ?? 0,
     }),
     expected_image_count: input.expectedImageCount,
   }
@@ -312,9 +316,15 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
           description: validated.description,
           price_cents: validated.price,
           condition: validated.condition || null,
-          pickup_area: validated.pickupArea,
+          pickup_area: validated.pickupArea ?? null,
           ...(listingFulfillmentEnabled() && {
             preferred_fulfillment: validated.preferredFulfillment,
+            meeting_location: validated.meetingLocation?.label ?? null,
+            meeting_location_provider:
+              validated.meetingLocation?.provider ?? null,
+            meeting_place_id: validated.meetingLocation?.placeId ?? null,
+            estimated_delivery_fee_cents:
+              validated.estimatedDeliveryFeeCents ?? 0,
           }),
         })
         .eq('id', id)

@@ -34,6 +34,7 @@ const fields = {
   condition: 'good',
   pickupArea: 'On campus',
   description: 'Works well.',
+  meetingLocation: { label: 'Outside library front entrance' },
 }
 assert.throws(() => validateBuilder(fields, []), /1-6/)
 for (const count of [1, 6]) {

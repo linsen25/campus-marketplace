@@ -33,10 +33,8 @@ import {
 import type { PublicationResult } from '@/lib/listing-publication'
 import { listingLimits } from '@/lib/listing-validation'
 import { abandonListing, updateListing } from '@/lib/listings-api'
-import {
-  marketLocations,
-  marketSubcategoryOptions,
-} from '@/lib/market-taxonomy'
+import { marketSubcategoryOptions } from '@/lib/market-taxonomy'
+import { parseOfferAmount } from '@/lib/offer-amount'
 import type { Listing } from '@/types/listing'
 import { formatListingPrice } from '@/utils/format-listing-price'
 import { parseListingPrice } from '@/utils/parse-listing-price'
@@ -49,6 +47,7 @@ import { ListingMedia } from './listing-media'
 import uploaderStyles from './listing-uploader.module.css'
 import styles from './listing-workspace.module.css'
 import { useMarketplaceSession } from './marketplace-session'
+import { MeetingLocationInput } from './meeting-location-input'
 import { ListingDetails } from './published-listing-card'
 
 export type ListingLeaveGuard = (leave: () => void) => void
@@ -188,6 +187,8 @@ export function ListingForm({
       publishedAt: null,
     }),
     ...fields,
+    estimatedDeliveryFeeCents:
+      parseOfferAmount(fields.estimatedDeliveryFee.trim() || '0', true) ?? 0,
     price,
     currency: 'CAD',
     category: fields.category as Listing['category'],
@@ -214,8 +215,9 @@ export function ListingForm({
           price: input.price,
           description: input.description,
           condition: input.condition ?? null,
-          pickupArea: input.pickupArea,
           preferredFulfillment: input.preferredFulfillment,
+          meetingLocation: input.meetingLocation,
+          estimatedDeliveryFeeCents: input.estimatedDeliveryFeeCents,
         })
         if (leave) {
           leaveAfterExit.current = leave
@@ -485,25 +487,6 @@ export function ListingForm({
               onChange={(value: string) => change('condition', value)}
             />
           </div>
-          <div className={styles.field}>
-            <span>Place</span>
-            <GlideSelect
-              ariaLabel="Place"
-              size="lg"
-              surfaceColor="#2a2134"
-              highlightColor="#443451"
-              value={fields.pickupArea}
-              disabled={busy || Boolean(pending)}
-              options={[
-                { value: '', label: 'Choose a place' },
-                ...marketLocations.map((place) => ({
-                  value: place,
-                  label: place,
-                })),
-              ]}
-              onChange={(value: string) => change('pickupArea', value)}
-            />
-          </div>
           {listingFulfillmentEnabled() && (
             <div className={styles.field}>
               <span>Preferred fulfillment</span>
@@ -515,7 +498,7 @@ export function ListingForm({
                 value={fields.preferredFulfillment}
                 disabled={busy || Boolean(pending)}
                 options={[
-                  { value: 'ON_CAMPUS', label: 'On Campus' },
+                  { value: 'ON_CAMPUS', label: 'Meeting' },
                   { value: 'DELIVERY', label: 'Delivery' },
                 ]}
                 onChange={(value: string) => {
@@ -524,6 +507,53 @@ export function ListingForm({
                 }}
               />
               <small>Buyers may propose another fulfillment mode.</small>
+              <MeetingLocationInput
+                required={true}
+                value={fields.meetingLocation?.label || ''}
+                selected={
+                  fields.meetingLocation?.provider &&
+                  fields.meetingLocation.placeId
+                    ? {
+                        provider: 'google',
+                        placeId: fields.meetingLocation.placeId,
+                      }
+                    : null
+                }
+                disabled={busy || Boolean(pending)}
+                onChange={(value) =>
+                  setFields((current) => ({
+                    ...current,
+                    meetingLocation: value.trim() ? { label: value } : null,
+                  }))
+                }
+                onSelect={(place) =>
+                  setFields((current) => ({
+                    ...current,
+                    meetingLocation: current.meetingLocation
+                      ? {
+                          label: current.meetingLocation.label,
+                          ...(place
+                            ? { provider: 'google', placeId: place.placeId }
+                            : {}),
+                        }
+                      : null,
+                  }))
+                }
+              />
+              {fields.preferredFulfillment === 'DELIVERY' && (
+                <label className={styles.field}>
+                  Estimated delivery fee (CA$)
+                  <input
+                    name="estimatedDeliveryFee"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={fields.estimatedDeliveryFee}
+                    onChange={(event) =>
+                      change('estimatedDeliveryFee', event.target.value)
+                    }
+                  />
+                </label>
+              )}
             </div>
           )}
           <label className={styles.field}>
@@ -538,7 +568,9 @@ export function ListingForm({
           </label>
         </fieldset>
         {error && <p role="alert">{error}</p>}
-        {!error && validation && <p className={styles.hint}>{validation}</p>}
+        {!error && validation && validation !== 'Choose 1-6 photos.' && (
+          <p className={styles.hint}>{validation}</p>
+        )}
         <div className={!listing ? styles.createFooter : undefined}>
           <ActionRow mobileThree={!listing}>
             <CardAction

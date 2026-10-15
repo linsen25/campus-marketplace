@@ -10,8 +10,12 @@ export type ListingRow = {
   category: Listing['category']
   subcategory: Listing['subcategory']
   condition: Listing['condition'] | null
-  pickup_area: string
+  pickup_area: string | null
+  estimated_delivery_fee_cents?: number | null
   preferred_fulfillment?: 'DELIVERY' | 'ON_CAMPUS'
+  meeting_location?: string | null
+  meeting_location_provider?: 'google' | null
+  meeting_place_id?: string | null
   status: Listing['status']
   created_at: string
   updated_at: string
@@ -34,8 +38,17 @@ export function mapListing(
     category: row.category,
     subcategory: row.subcategory,
     ...(row.condition ? { condition: row.condition } : {}),
-    pickupArea: row.pickup_area,
+    pickupArea: row.pickup_area ?? undefined,
+    estimatedDeliveryFeeCents: row.estimated_delivery_fee_cents ?? 0,
     preferredFulfillment: row.preferred_fulfillment ?? 'ON_CAMPUS',
+    meetingLocation: row.meeting_location
+      ? {
+          label: row.meeting_location,
+          ...(row.meeting_location_provider === 'google' && row.meeting_place_id
+            ? { provider: 'google', placeId: row.meeting_place_id }
+            : {}),
+        }
+      : null,
     status: row.status,
     photoUrls: row.listing_images
       .filter((image) => image.ready)

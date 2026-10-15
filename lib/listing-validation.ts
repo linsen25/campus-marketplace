@@ -4,6 +4,7 @@ import {
   isMarketPair,
   isMarketSubcategory,
 } from '@/lib/market-taxonomy'
+import { parseMeetingLocation } from '@/lib/meeting-location'
 import type { CreateListingInput } from '@/types/listing'
 
 export const listingLimits = {
@@ -32,10 +33,13 @@ export function validateListingInput(input: unknown): CreateListingInput {
   const title = typeof data.title === 'string' ? data.title.trim() : ''
   const description =
     typeof data.description === 'string' ? data.description.trim() : ''
-  const pickupArea =
-    typeof data.pickupArea === 'string' ? data.pickupArea.trim() : ''
+  const pickupArea = validateLegacyPickupArea(data.pickupArea)
   const preferredFulfillment = validatePreferredFulfillment(
     data.preferredFulfillment
+  )
+  const meetingLocation = requireMeetingLocation(data.meetingLocation)
+  const estimatedDeliveryFeeCents = validateDeliveryEstimate(
+    data.estimatedDeliveryFeeCents
   )
   if (!title || title.length > listingLimits.title) {
     throw new ListingApiError(
@@ -48,11 +52,6 @@ export function validateListingInput(input: unknown): CreateListingInput {
   ) {
     throw new ListingApiError(
       `Description must be at most ${listingLimits.description} characters.`
-    )
-  }
-  if (!pickupArea || pickupArea.length > listingLimits.pickupArea) {
-    throw new ListingApiError(
-      `Pickup area is required and must be at most ${listingLimits.pickupArea} characters.`
     )
   }
   if (
@@ -97,16 +96,48 @@ export function validateListingInput(input: unknown): CreateListingInput {
     subcategory,
     ...(condition ? { condition } : {}),
     pickupArea,
+    meetingLocation,
+    estimatedDeliveryFeeCents,
     preferredFulfillment: preferredFulfillment as 'DELIVERY' | 'ON_CAMPUS',
     photoUrls: Array.from(new Set(photoUrls)),
   }
+}
+function requireMeetingLocation(value: unknown) {
+  let location
+  try {
+    location = parseMeetingLocation(value)
+  } catch {
+    throw new ListingApiError('Check the Meeting location.')
+  }
+  if (!location) throw new ListingApiError('Meeting location is required.')
+  return location
+}
+function validateDeliveryEstimate(value: unknown): number {
+  const cents = value ?? 0
+  if (typeof cents !== 'number' || !Number.isSafeInteger(cents) || cents < 0)
+    throw new ListingApiError(
+      'Estimated delivery fee must be non-negative integer cents.'
+    )
+  return cents
+}
+function validateLegacyPickupArea(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined
+  if (
+    typeof value !== 'string' ||
+    !value.trim() ||
+    value.trim().length > listingLimits.pickupArea
+  )
+    throw new ListingApiError(
+      `Legacy pickup area must be at most ${listingLimits.pickupArea} characters when supplied.`
+    )
+  return value.trim()
 }
 function validatePreferredFulfillment(
   value: unknown
 ): 'DELIVERY' | 'ON_CAMPUS' {
   if (value === undefined) return 'ON_CAMPUS'
   if (value !== 'DELIVERY' && value !== 'ON_CAMPUS')
-    throw new ListingApiError('Choose On Campus or Delivery.')
+    throw new ListingApiError('Choose Meeting or Delivery.')
   return value
 }
 
@@ -119,6 +150,8 @@ export function validateListingPatch(input: unknown): Record<string, unknown> {
     'condition',
     'pickupArea',
     'preferredFulfillment',
+    'meetingLocation',
+    'estimatedDeliveryFeeCents',
   ]
   if (Object.keys(patch).some((key) => !allowed.includes(key)))
     throw new ListingApiError(

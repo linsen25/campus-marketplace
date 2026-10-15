@@ -18,7 +18,7 @@ export function AgreementCard({
       </p>
     )
   const terms = agreement.terms
-  let fulfillment = 'On Campus'
+  let fulfillment = 'Meeting'
   let summary = ''
   if (terms.fulfillment === 'on_campus')
     summary = `${terms.meetupLocation} · ${new Date(

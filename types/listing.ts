@@ -1,4 +1,5 @@
 import type { MarketCategory, MarketSubcategory } from '@/lib/market-taxonomy'
+import type { MeetingLocation } from '@/types/meeting-location'
 
 export type ListingCategory = MarketCategory
 export type ListingSubcategory = MarketSubcategory
@@ -22,8 +23,10 @@ export type Listing = {
   category: ListingCategory
   subcategory: ListingSubcategory
   condition?: ListingCondition
-  pickupArea: string
+  pickupArea?: string
   preferredFulfillment?: 'DELIVERY' | 'ON_CAMPUS'
+  meetingLocation?: MeetingLocation | null
+  estimatedDeliveryFeeCents?: number
   photoUrls: string[]
   seller: SellerSummary
   status: ListingStatus

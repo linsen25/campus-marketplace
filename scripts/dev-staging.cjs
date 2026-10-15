@@ -61,6 +61,8 @@ const child = spawn(
       NEXT_PUBLIC_SUPABASE_ANON_KEY: key,
       // Explicit empty value prevents Next dotenv from inheriting a production secret.
       SUPABASE_SERVICE_ROLE_KEY: storageKey,
+      // Explicit server-only value; never inherit a production Google key.
+      GOOGLE_PLACES_API_KEY: values.GOOGLE_PLACES_API_KEY || '',
     },
   }
 )

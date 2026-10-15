@@ -40,18 +40,103 @@
   margin: 8px 0;
   color: #c1adcf;
 }
-.expanded,
 .editor {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }
+.expanded {
+  composes: scrollArea from '../velora/expandable-card.module.css';
+  align-items: start;
+}
+.detailInfo {
+  composes: info from '../velora/expandable-card.module.css';
+}
 .media {
   width: 100%;
   height: clamp(180px, 30vh, 320px);
   overflow: hidden;
   border-radius: 12px;
+}
+.expanded .media {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  align-self: start;
+  border-radius: 14px;
+}
+.expanded > section > h4 {
+  font-size: 24px;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  margin: 12px 0 28px;
+}
+.expanded .terms {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  margin-top: 0;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.expanded .terms dt {
+  font-size: 13px;
+  color: #bbacc6;
+  margin-top: 16px;
+}
+.expanded .terms dt:first-child {
+  margin-top: 0;
+}
+.expanded .terms dd {
+  font-weight: 500;
+}
+.expanded .terms + .terms {
+  margin-top: 24px;
+}
+.expanded .terms:last-of-type dd:last-child {
+  font-size: 18px;
+  font-weight: 600;
+}
+.primaryOffer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  margin: 0;
+}
+.primaryOffer dt {
+  grid-row: 2;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #bbacc6;
+}
+.primaryOffer dd {
+  grid-row: 1;
+  margin: 0;
+  font-size: 30px;
+  font-weight: 750;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.expanded > section > p {
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+}
+.expanded > section > p:last-child {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 14px;
+}
+.expanded > section > .detailChanges {
+  margin-top: 24px;
+}
+.detailChanges strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-bottom: 4px;
+  color: #f5f3f7;
 }
 .media > * {
   height: 100%;
@@ -339,14 +424,26 @@
   color: #bdb4c5 !important;
 }
 @media (max-width: 767px) {
+  .detailDialog {
+    overscroll-behavior: contain;
+  }
+  .detailDialog .expanded {
+    /* The outer dialog owns touch/wheel scrolling. Keep the stable gutter and
+       clipping geometry, without a nested scrolling/overscroll gesture trap. */
+    overflow: hidden;
+    overscroll-behavior: auto;
+  }
   .media {
     height: 180px;
+  }
+  .expanded .media {
+    aspect-ratio: 4 / 3;
+    grid-column: 1 / -1;
   }
   .dialog,
   .confirm {
     padding: 16px;
   }
-  .expanded,
   .editor {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;

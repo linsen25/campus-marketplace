@@ -16,8 +16,12 @@ export function FadingDialog({
   onRequestClose,
   onCancel,
   onKeyDownCapture,
+  focusAtTop = false,
   ...props
-}: DialogHTMLAttributes<HTMLDialogElement> & { onRequestClose?: () => void }) {
+}: DialogHTMLAttributes<HTMLDialogElement> & {
+  onRequestClose?: () => void
+  focusAtTop?: boolean
+}) {
   const ref = useRef<HTMLDialogElement>(null)
   const [present, remove] = usePresence()
   const reduced = useReducedMotion()
@@ -25,12 +29,18 @@ export function FadingDialog({
     const dialog = ref.current
     const opener = document.activeElement
     dialog?.showModal()
+    // Opt-in dialog focus runs synchronously with showModal, before its first
+    // painted frame. Native focus otherwise scrolls to the first bottom action.
+    if (focusAtTop && dialog) {
+      dialog.focus({ preventScroll: true })
+      dialog.scrollTop = 0
+    }
     return () => {
       dialog?.close()
       if (opener instanceof HTMLElement && opener.isConnected)
         opener.focus({ preventScroll: true })
     }
-  }, [])
+  }, [focusAtTop])
   useEffect(() => {
     if (present) return undefined
     const timer = setTimeout(() => remove?.(), reduced ? 0 : dialogExitDuration)
