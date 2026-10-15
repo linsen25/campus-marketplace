@@ -6,12 +6,7 @@ import {
   useReducedMotion,
 } from 'motion/react'
 import { useRouter } from 'next/router'
-import type {
-  KeyboardEvent,
-  MouseEvent,
-  ReactNode,
-  SyntheticEvent,
-} from 'react'
+import type { KeyboardEvent, ReactNode, SyntheticEvent } from 'react'
 import {
   createContext,
   useContext,
@@ -128,18 +123,6 @@ function AuthDialog({
           event.stopPropagation()
 
           onClose()
-        }}
-        onClick={(event: MouseEvent<HTMLDialogElement>) => {
-          if (event.target === event.currentTarget) {
-            const bounds = event.currentTarget.getBoundingClientRect()
-            if (
-              event.clientX < bounds.left ||
-              event.clientX > bounds.right ||
-              event.clientY < bounds.top ||
-              event.clientY > bounds.bottom
-            )
-              onClose()
-          }
         }}
         onKeyDown={(event: KeyboardEvent<HTMLDialogElement>) => {
           if ((event.target as HTMLElement).closest('dialog') !== ref.current)

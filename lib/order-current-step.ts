@@ -16,11 +16,10 @@ export type CurrentOrderStep =
   | 'review'
   | 'shipment'
 
-/** Presentation derivation only. Review is the sole local navigation gate. */
+/** Presentation derivation only; Agreement readiness is server-authoritative. */
 export function currentOrderStep(
   order: FormalOrder,
-  data: OrderFlowData | null,
-  reviewed: boolean
+  data: OrderFlowData | null
 ): CurrentOrderStep {
   if (order.lifecycle !== 'open') return order.lifecycle
   if (!data) return 'loading'
@@ -33,6 +32,7 @@ export function currentOrderStep(
     }
     return 'handoff'
   }
+  if (!data.fulfillment.agreement?.complete) return 'review'
   if (
     order.paymentStatus === 'processing' ||
     order.paymentStatus === 'refunded'
@@ -43,7 +43,6 @@ export function currentOrderStep(
     data.checkout?.checkoutStartedAt
   )
     return 'checkout'
-  if (!reviewed) return 'review'
   return order.v2?.terms.fulfillment === 'delivery' ? 'checkout' : 'payment'
 }
 
@@ -82,7 +81,7 @@ export function currentOrderProgress(
       'Protection',
       'Completed',
     ]
-  let reached = 1
+  let reached = data?.fulfillment.agreement?.complete ? 1 : 0
   if (order.paymentPaidAt || order.paymentStatus === 'paid') reached = 2
   if (!campus && !courier && data?.fulfillment.deliveryStartedAt) reached = 3
   if (courier && data?.courier?.shippedAt) reached = 3

@@ -79,6 +79,19 @@
   gap: 16px;
   padding-bottom: env(safe-area-inset-bottom);
 }
+.stageContent {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+.navigation button:disabled {
+  --shine-color: #514b57;
+  background-color: #514b57;
+  color: #c7c2cc;
+  opacity: 1;
+  border-color: transparent;
+}
 @media (min-width: 1024px) {
   .navigation {
     padding-bottom: 24px;

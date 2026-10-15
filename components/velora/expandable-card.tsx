@@ -11,6 +11,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+import { listingLayoutTransition } from '@/lib/listing-layout-motion'
 import { getScrollLockPadding } from '@/utils/browser'
 
 import styles from './expandable-card.module.css'
@@ -330,9 +331,7 @@ export function ExpandableCard({
     }
   }, [active, onOverlayActiveChange, close])
 
-  const spring = reducedMotion
-    ? { duration: 0 }
-    : { type: 'spring' as const, stiffness: 320, damping: 32 }
+  const spring = listingLayoutTransition(reducedMotion)
   // Multi-photo media has native buttons. Avoid nesting those inside a button;
   // the source geometry and every shared-media animation remain unchanged.
   const Trigger = interactiveMedia ? 'div' : 'button'

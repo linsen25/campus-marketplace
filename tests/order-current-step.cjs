@@ -27,7 +27,10 @@ const data = {
   checkout: null,
 }
 assert.equal(currentOrderStep(order, data, false), 'review')
-assert.equal(currentOrderStep(order, data, true), 'payment')
+assert.equal(currentOrderStep(order, data, true), 'review')
+assert.equal(currentOrderProgress(order, data).completed, 0)
+data.fulfillment.agreement = { complete: true }
+assert.equal(currentOrderStep(order, data), 'payment')
 assert.equal(currentOrderProgress(order, data).current, 1)
 assert.equal(currentOrderProgress(order, data).completed, 1)
 for (const paymentStatus of ['processing', 'paid']) {
@@ -46,7 +49,7 @@ assert.equal(
     data,
     false
   ),
-  'review'
+  'payment'
 )
 for (const deliveryMethod of ['courier', 'seller_delivery']) {
   const value = {
@@ -115,5 +118,30 @@ console.log(
   'PASS authoritative Review/payment-before-inspection/handoff/Delivery/Courier/Protection/terminal mapping; local review excluded from Stepper; future stages never falsely completed; immutable inputs'
 )
 
-assert.equal(currentOrderStep({...order,paymentStatus:'processing'}, {...data,fulfillment:{...data.fulfillment,cancellation:{state:'payment_pending'}}},true),'cancellation')
-assert.equal(currentOrderProgress({...order,paymentStatus:'processing'}, {...data,fulfillment:{...data.fulfillment,cancellation:{state:'payment_pending'}}}).current,null)
+assert.equal(
+  currentOrderStep(
+    { ...order, paymentStatus: 'processing' },
+    {
+      ...data,
+      fulfillment: {
+        ...data.fulfillment,
+        cancellation: { state: 'payment_pending' },
+      },
+    },
+    true
+  ),
+  'cancellation'
+)
+assert.equal(
+  currentOrderProgress(
+    { ...order, paymentStatus: 'processing' },
+    {
+      ...data,
+      fulfillment: {
+        ...data.fulfillment,
+        cancellation: { state: 'payment_pending' },
+      },
+    }
+  ).current,
+  null
+)

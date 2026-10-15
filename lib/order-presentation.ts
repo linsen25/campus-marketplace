@@ -55,16 +55,10 @@ export function orderPresentation(
       ? Boolean(data.courier?.shippedAt)
       : !campus && Boolean(data.fulfillment.deliveryStartedAt)
     const current = advanced ? 3 : 2
-    const maximum = campus && data.fulfillment.handoffReady ? 3 : current
-    return { pages, current, maximum }
+    return { pages, current, maximum: current }
   }
-  const current =
-    ['processing', 'failed', 'refunded'].includes(order.paymentStatus) ||
-    data.checkout?.checkoutStartedAt
-      ? 1
-      : 0
-  // Agreement review may always open Payment; unpaid fulfillment remains inaccessible.
-  return { pages, current, maximum: 1 }
+  const current = data.fulfillment.agreement?.complete ? 1 : 0
+  return { pages, current, maximum: current }
 }
 
 export function orderPageAction(

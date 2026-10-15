@@ -1,8 +1,10 @@
 import { ChevronLeft } from 'lucide-react'
+import { motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState } from 'react'
 
 import { DynamicAction } from '@/components/ui/dynamic-action'
 import { useOrderFlow } from '@/hooks/use-order-flow'
+import { listingLayoutTransition } from '@/lib/listing-layout-motion'
 import { currentOrderProgress } from '@/lib/order-current-step'
 import { orderPageAction, orderPresentation } from '@/lib/order-presentation'
 import type { OrderWorkspace } from '@/lib/order-workspaces'
@@ -19,21 +21,22 @@ import profile from './profile.module.css'
 
 function OrderPageNavigation({
   mobile,
+  showMobileBack,
   index,
   maximum,
   disabled,
   onNavigate,
 }: {
   mobile: boolean
+  showMobileBack: boolean
   index: number
   maximum: number
   disabled: boolean
   onNavigate: (index: number) => void
 }) {
-  if (mobile && index >= maximum) return null
   return (
     <nav className={pageStyles.navigation} aria-label="Order page navigation">
-      {!mobile &&
+      {(!mobile || showMobileBack) &&
         (index > 0 ? (
           <DynamicAction
             variant="blue"
@@ -45,10 +48,10 @@ function OrderPageNavigation({
         ) : (
           <span />
         ))}
-      {index < maximum && (
+      {index < 5 && (
         <DynamicAction
           variant="green"
-          disabled={disabled}
+          disabled={disabled || index >= maximum}
           onClick={() => onNavigate(Math.min(index + 1, maximum))}
         >
           Next
@@ -58,6 +61,7 @@ function OrderPageNavigation({
   )
 }
 
+// eslint-disable-next-line complexity -- Existing authoritative stage/role branches plus the Agreement readiness label.
 function V2OrderPresentation({
   order,
   role,
@@ -78,6 +82,7 @@ function V2OrderPresentation({
   onUpdated?: (order: FormalOrder, serverTime: string) => void
 }) {
   const [mobile, setMobile] = useState(false)
+  const reducedMotion = useReducedMotion()
   useEffect(() => {
     const query = window.matchMedia('(max-width: 1023px)')
     const update = () => setMobile(query.matches)
@@ -95,6 +100,7 @@ function V2OrderPresentation({
     flow.data?.fulfillment.deliveryStartedAt,
     flow.data?.fulfillment.protectionStartedAt,
     flow.data?.fulfillment.cancellation?.state,
+    flow.data?.fulfillment.agreement?.complete,
     flow.data?.courier?.state,
   ])
   const [selection, setSelection] = useState<{
@@ -111,7 +117,9 @@ function V2OrderPresentation({
     !flow.data && order.lifecycle === 'open' ? 'loading' : stage
   const readOnly = index < presentation.current || order.lifecycle !== 'open'
   const status = {
-    open: 'Agreement reached',
+    open: flow.data?.fulfillment.agreement?.complete
+      ? 'Agreement reached'
+      : 'Agreement pending',
     cancelled: 'Order cancelled',
     expired: 'Order expired',
     completed: 'Completed',
@@ -172,38 +180,48 @@ function V2OrderPresentation({
         </span>
       </header>
       <OrderProgress {...progress} terminalLabel={status} />
-      <OrderStageDetails
-        order={order}
-        role={role}
-        terms={currentTerms}
-        flow={flow}
-        page={page}
-        offset={offset}
-        status={status}
-      />
-      <OrderCurrentStep
-        order={order}
-        role={role}
-        flow={flow}
-        stage={displayedStage}
-        readOnly={readOnly}
-        stageTitle={stageTitle}
-        onRefresh={onRefresh}
-        onUpdated={onUpdated || (() => {})}
-      />
-      {!['protection', 'completed'].includes(page) && (
-        <OrderFlowCancellation
+      <motion.div
+        className={pageStyles.stageContent}
+        layout={true}
+        layoutDependency={page}
+        transition={listingLayoutTransition(reducedMotion)}
+      >
+        <OrderStageDetails
+          order={order}
+          role={role}
+          terms={page === 'review' ? terms : currentTerms}
+          flow={flow}
+          page={page}
+          offset={offset}
+          status={status}
+        />
+        <OrderCurrentStep
           order={order}
           role={role}
           flow={flow}
-          onUpdated={onUpdated || (() => {})}
+          stage={displayedStage}
+          readOnly={readOnly}
+          stageTitle={stageTitle}
           onRefresh={onRefresh}
-          onCancelled={onCancelled}
+          onUpdated={onUpdated || (() => {})}
         />
-      )}
+        {!['protection', 'completed'].includes(page) && (
+          <OrderFlowCancellation
+            order={order}
+            role={role}
+            flow={flow}
+            onUpdated={onUpdated || (() => {})}
+            onRefresh={onRefresh}
+            onCancelled={onCancelled}
+          />
+        )}
+      </motion.div>
       {order.lifecycle === 'open' && (
         <OrderPageNavigation
           mobile={mobile}
+          showMobileBack={
+            page === 'fulfillment' && terms.fulfillment === 'on_campus'
+          }
           index={index}
           maximum={presentation.maximum}
           disabled={!flow.data || !order.economics}

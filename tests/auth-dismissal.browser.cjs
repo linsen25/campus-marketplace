@@ -67,7 +67,13 @@ const base = process.env.BASE_URL || 'http://localhost:3100'
               .getByRole('button', { name: 'Close authentication' })
               .click()
           else if (method === 'Escape') await page.keyboard.press('Escape')
-          else await page.mouse.click(2, 2)
+          else {
+            await page.mouse.click(2, 2)
+            assert(await auth.isVisible(), 'Backdrop must not dismiss Auth')
+            await auth
+              .getByRole('button', { name: 'Close authentication' })
+              .click()
+          }
           await auth.waitFor({ state: 'detached' })
           assert.equal(page.url(), before, 'Dismissal must not change route')
           assert(await home.isVisible(), 'Original Welcome remains mounted')

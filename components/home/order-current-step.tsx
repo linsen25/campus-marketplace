@@ -7,19 +7,19 @@ import GlideSelect from '@/components/ui/GlideSelect'
 import { StatefulButton } from '@/components/velora/stateful-button'
 import { useFinancialCapabilities } from '@/hooks/use-financial-capabilities'
 import type { useOrderFlow } from '@/hooks/use-order-flow'
+import { HandoffError } from '@/lib/handoff'
 import type { CurrentOrderStep } from '@/lib/order-current-step'
 import { actOnOrderFlow } from '@/lib/order-flow-api'
 import type { FormalOrder } from '@/types/order'
 
 import workspace from '../listings/listing-workspace.module.css'
 
+import { BuyerHandoffCredential } from './handoff-credential'
+import { HandoffScanner } from './handoff-scanner'
+import { HandoffVerification } from './handoff-verification'
 import { OrderCampusPayment } from './order-campus-payment'
 import styles from './order-detail-preview.module.css'
-import {
-  CourierShipmentForm,
-  DeliveryAddressForm,
-  SellerHandoffForm,
-} from './order-flow-actions'
+import { CourierShipmentForm, DeliveryAddressForm } from './order-flow-actions'
 import profile from './profile.module.css'
 
 const cancellationCopy: Record<string, string> = {
@@ -130,6 +130,8 @@ export function OrderCurrentStep({
   const [error, setError] = useState('')
   const [addressDirty, setAddressDirty] = useState(false)
   const [reason, setReason] = useState('')
+  const [scannerOpen, setScannerOpen] = useState(false)
+  const [numericRetryAt, setNumericRetryAt] = useState<string>()
   const busy = useRef(false)
   const needsReconciliation = useRef(false)
   const command = useRef<{ digest: string; id: string }>()
@@ -175,22 +177,39 @@ export function OrderCurrentStep({
       !data ||
       Boolean(data?.fulfillment.cancellation?.state) ||
       order.lifecycle !== 'open' ||
-      sellerAction === buyer ||
+      (action !== 'confirm-agreement' && sellerAction === buyer) ||
       (paidAction && order.paymentStatus !== 'paid')
     )
       return
-    if (!paidAction && !['pending', 'failed'].includes(order.paymentStatus))
+    if (
+      !paidAction &&
+      action !== 'confirm-agreement' &&
+      !['pending', 'failed'].includes(order.paymentStatus)
+    )
       return
     busy.current = true
     setBlocked(true)
     setError('')
-    const digest = JSON.stringify([action, body])
-    if (command.current?.digest !== digest)
-      command.current = { digest, id: crypto.randomUUID() }
     try {
+      // Fingerprint the existing idempotency intent without retaining raw credentials.
+      const input = JSON.stringify([action, body])
+      const digest =
+        action === 'handoff'
+          ? Array.from(
+              new Uint8Array(
+                await crypto.subtle.digest(
+                  'SHA-256',
+                  new TextEncoder().encode(input)
+                )
+              ),
+              (value) => value.toString(16).padStart(2, '0')
+            ).join('')
+          : input
+      if (command.current?.digest !== digest)
+        command.current = { digest, id: crypto.randomUUID() }
       await actOnOrderFlow(order.id, action, {
         ...body,
-        ...(!['address', 'checkout'].includes(action)
+        ...(!['address', 'checkout', 'confirm-agreement'].includes(action)
           ? { clientActionId: command.current.id }
           : {}),
       })
@@ -198,9 +217,23 @@ export function OrderCurrentStep({
       await refresh()
       command.current = undefined
     } catch (failure) {
+      if (
+        action === 'handoff' &&
+        failure instanceof HandoffError &&
+        failure.code === 'numeric_temporarily_locked'
+      )
+        setNumericRetryAt(failure.retryAt)
       needsReconciliation.current = true
       try {
         await refresh()
+        if (
+          action === 'handoff' &&
+          failure instanceof HandoffError &&
+          failure.code === 'handoff_already_redeemed'
+        ) {
+          command.current = undefined
+          return
+        }
       } catch {
         // The retry/Refresh entry point will reconcile before another mutation.
       }
@@ -229,7 +262,7 @@ export function OrderCurrentStep({
     loading: 'Loading current step…',
     payment: buyer ? 'Payment' : 'Waiting for Buyer payment',
     protection: 'Protection',
-    review: 'Review',
+    review: 'Agreement',
     shipment: buyer ? 'Waiting for shipment / receipt' : 'Courier fulfillment',
   }
   const instructions: Record<CurrentOrderStep, string> = {
@@ -285,6 +318,45 @@ export function OrderCurrentStep({
             ? 'Review this recorded stage. Completed transaction facts are read-only.'
             : instructions[stage]}
         </p>
+        {stage === 'review' && !readOnly && data?.fulfillment.agreement && (
+          <>
+            {data.fulfillment.agreement.complete ? (
+              <p>Both parties have confirmed the frozen Agreement.</p>
+            ) : (
+              <>
+                <p>
+                  Buyer:{' '}
+                  {data.fulfillment.agreement.buyerConfirmedAt
+                    ? 'Confirmed'
+                    : 'Not confirmed'}
+                  . Seller:{' '}
+                  {data.fulfillment.agreement.sellerConfirmedAt
+                    ? 'Confirmed'
+                    : 'Not confirmed'}
+                  .
+                </p>
+                {(
+                  buyer
+                    ? data.fulfillment.agreement.buyerConfirmedAt
+                    : data.fulfillment.agreement.sellerConfirmedAt
+                ) ? (
+                  <p role="status">
+                    Agreement confirmed. Waiting for the{' '}
+                    {buyer ? 'Seller' : 'Buyer'} to confirm.
+                  </p>
+                ) : (
+                  <StatefulButton
+                    className={success.createButton}
+                    disabled={blocked}
+                    onClick={() => act('confirm-agreement')}
+                  >
+                    Confirm Agreement
+                  </StatefulButton>
+                )}
+              </>
+            )}
+          </>
+        )}
         {stage === 'loading' && !flow.error && (
           <p role="status">Loading authoritative transaction information.</p>
         )}
@@ -363,59 +435,26 @@ export function OrderCurrentStep({
                   )}
               </>
             )}
-            {stage === 'handoff' && order.paymentStatus === 'paid' && (
-              <>
-                {buyer ? (
-                  <>
-                    <p>
-                      Show your credential only when you are ready to receive
-                      the item.
-                    </p>
-                    {data?.credential?.available &&
-                    /^[0-9]{6}$/.test(data.credential.code || '') ? (
-                      <>
-                        <div
-                          className={styles.qrReserved}
-                          aria-label="Handoff QR area"
-                        >
-                          <strong>QR Code</strong>
-                          <p>Available here in a future update</p>
-                        </div>
-                        <section
-                          className={styles.codePanel}
-                          aria-label="6-digit handoff code"
-                        >
-                          <h5>6-digit code</h5>
-                          <output
-                            className={styles.code}
-                            data-handoff-code={true}
-                          >
-                            {data.credential.code}
-                          </output>
-                        </section>
-                      </>
-                    ) : (
-                      <p>Waiting for the server-issued handoff credential.</p>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {data?.fulfillment.handoffReady ? (
-                      <>
-                        <section
-                          className={styles.qrReserved}
-                          aria-label="Handoff QR area"
-                        >
-                          <strong>QR Code</strong>
-                          <p>Available here in a future update</p>
-                        </section>
-                        <section
-                          className={styles.codePanel}
-                          aria-label="6-digit handoff verification"
-                        >
-                          <h5>6-digit code</h5>
-                          <SellerHandoffForm
+            {stage === 'handoff' &&
+              order.paymentStatus === 'paid' &&
+              (terms.fulfillment === 'on_campus' ||
+                (terms.deliveryMethod === 'seller_delivery' &&
+                  data?.fulfillment.deliveryStartedAt)) && (
+                <>
+                  {buyer ? (
+                    <BuyerHandoffCredential
+                      key={order.id}
+                      orderId={order.id}
+                      credential={data?.credential}
+                    />
+                  ) : (
+                    <>
+                      {data?.fulfillment.handoffReady ? (
+                        <>
+                          <HandoffVerification
                             disabled={blocked}
+                            numericRetryAt={numericRetryAt}
+                            onOpenScanner={() => setScannerOpen(true)}
                             onVerify={(code) =>
                               act('handoff', {
                                 channel: 'code',
@@ -423,15 +462,26 @@ export function OrderCurrentStep({
                               })
                             }
                           />
-                        </section>
-                      </>
-                    ) : (
-                      <p>Waiting for authoritative handoff availability.</p>
-                    )}
-                  </>
-                )}
-              </>
-            )}
+                          {scannerOpen && (
+                            <HandoffScanner
+                              key={order.id}
+                              onClose={() => setScannerOpen(false)}
+                              onVerify={(token) =>
+                                act('handoff', {
+                                  channel: 'qr',
+                                  credential: token,
+                                })
+                              }
+                            />
+                          )}
+                        </>
+                      ) : (
+                        <p>Waiting for authoritative handoff availability.</p>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
             {stage === 'delivery' && order.paymentStatus === 'paid' && (
               <>
                 {buyer ? (

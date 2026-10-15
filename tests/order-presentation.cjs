@@ -43,16 +43,33 @@ for (const mode of ['campus', 'seller_delivery', 'courier']) {
     checkout: null,
     courier: null,
   }
-  const before = JSON.stringify([order, data])
-  assert.deepEqual(orderPresentation(order, data).maximum, 1)
-  assert.equal(JSON.stringify([order, data]), before)
+  const before = JSON.stringify(order)
+  assert.equal(orderPresentation(order, data).maximum, 0)
+  assert.equal(orderPresentation(order, data).current, 0)
+  data.fulfillment.agreement = {
+    complete: false,
+    buyerConfirmedAt: 'server-time',
+    sellerConfirmedAt: null,
+  }
+  assert.equal(
+    orderPresentation(order, data).maximum,
+    0,
+    'One actor is insufficient'
+  )
+  data.fulfillment.agreement = {
+    complete: true,
+    buyerConfirmedAt: 'server-time',
+    sellerConfirmedAt: 'server-time',
+  }
+  assert.equal(orderPresentation(order, data).current, 1)
+  assert.equal(JSON.stringify(order), before)
   order.paymentStatus = 'processing'
   assert.equal(orderPresentation(order, data).current, 1)
   assert.equal(orderPresentation(order, data).maximum, 1)
   order.paymentStatus = 'paid'
   data.fulfillment.handoffReady = true
   assert.equal(orderPresentation(order, data).current, 2)
-  if (mode === 'campus') assert.equal(orderPresentation(order, data).maximum, 3)
+  if (mode === 'campus') assert.equal(orderPresentation(order, data).maximum, 2)
   else {
     assert.equal(orderPresentation(order, data).maximum, 2)
     if (mode === 'courier') data.courier = { shippedAt: 'server-time' }

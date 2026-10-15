@@ -4,6 +4,7 @@ import {
   createTrustedFinancialClient,
   requireFinancialEnvironment,
 } from '@/lib/server/financial-capabilities-service'
+import { HandoffApiError, handoffRpcError } from '@/lib/server/handoff-error'
 import { requireMarketplaceUser } from '@/lib/server/marketplace-auth'
 import { messageUuid } from '@/lib/server/messages-environment'
 import { createMarketplaceClient } from '@/lib/supabase/server'
@@ -16,6 +17,7 @@ export function createOrderDomainService(context: MarketplaceContext) {
     await requireMarketplaceUser(client)
     const { data, error } = await client.rpc(name, params)
     if (error) {
+      if (name === 'marketplace_verify_handoff') throw handoffRpcError(error)
       let status = 503
       if (error.code === '42501') status = 403
       else if (error.code === '23505') status = 409
@@ -39,6 +41,7 @@ export function createOrderDomainService(context: MarketplaceContext) {
         credential: 'marketplace_handoff_credential',
         courier: 'marketplace_courier_state',
         cancellation: 'marketplace_order_cancellation_state',
+        agreement: 'marketplace_order_agreement',
       }
       if (!names[resource]) throw new ListingApiError('Not found.', 404)
       return call(names[resource], { p_order_id: messageUuid(id) })
@@ -46,6 +49,14 @@ export function createOrderDomainService(context: MarketplaceContext) {
     async write(id: unknown, action: string, body: Record<string, unknown>) {
       const orderId = messageUuid(id)
       const definitions: Record<string, { name: string; fields: string[] }> = {
+        'confirm-agreement': {
+          name: 'marketplace_confirm_order_agreement',
+          fields: [],
+        },
+        'generate-qr': {
+          name: 'marketplace_generate_handoff_qr',
+          fields: ['clientActionId'],
+        },
         checkout: { name: 'marketplace_start_delivery_checkout', fields: [] },
         'start-delivery': {
           name: 'marketplace_start_seller_delivery',
@@ -108,6 +119,27 @@ export function createOrderDomainService(context: MarketplaceContext) {
       const trusted =
         action === 'payment' ? createTrustedFinancialClient() : null
       const data = await call(definition.name, params)
+      if (action === 'handoff' && data?.errorCode) {
+        const code = data.errorCode
+        if (
+          [
+            'invalid_handoff_credential',
+            'numeric_temporarily_locked',
+            'handoff_already_redeemed',
+            'qr_expired',
+          ].includes(code)
+        )
+          throw new HandoffApiError(
+            code,
+            409,
+            code === 'numeric_temporarily_locked' &&
+            typeof data.retryAt === 'string' &&
+            Number.isFinite(Date.parse(data.retryAt))
+              ? data.retryAt
+              : undefined
+          )
+        throw new HandoffApiError('handoff_not_ready', 409)
+      }
       if (data?.errorCode)
         throw new ListingApiError(
           'Review your payment method and current Order state before retrying.',

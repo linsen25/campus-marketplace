@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { ArrowRight } from 'lucide-react'
+import { useId, useRef, useState } from 'react'
 
 import success from '@/components/listings/create-success.module.css'
 import { StatefulButton } from '@/components/velora/stateful-button'
@@ -6,6 +7,7 @@ import type { DeliveryAddress } from '@/lib/order-flow-api'
 
 import workspace from '../listings/listing-workspace.module.css'
 
+import handoff from './handoff-credential.module.css'
 import detail from './order-detail-preview.module.css'
 
 export function DeliveryAddressForm({
@@ -97,42 +99,55 @@ export function SellerHandoffForm({
   disabled?: boolean
 }) {
   const [code, setCode] = useState('')
+  const codeId = useId()
   const form = useRef<HTMLFormElement>(null)
   return (
     <form
       ref={form}
-      className={workspace.form}
+      className={`${workspace.form} ${handoff.verifyForm}`}
       aria-label="Handoff verification"
       onSubmit={(e) => e.preventDefault()}
     >
-      <label className={workspace.field}>
+      <label
+        className={`${workspace.field} ${handoff.verifyLabel}`}
+        htmlFor={codeId}
+      >
         Buyer handoff code
-        <input
-          required={true}
-          disabled={disabled}
-          inputMode="numeric"
-          autoComplete="off"
-          pattern="[0-9]{6}"
-          maxLength={6}
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-        />
       </label>
+      <div className={handoff.verifyRow}>
+        <div className={workspace.field}>
+          <input
+            id={codeId}
+            required={true}
+            disabled={disabled}
+            inputMode="numeric"
+            autoComplete="off"
+            pattern="[0-9]{6}"
+            maxLength={6}
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
+        </div>
+        <span className={handoff.forwardAction}>
+          <StatefulButton
+            disabled={disabled}
+            className={success.createButton}
+            type="submit"
+            onClick={(event) => {
+              event.preventDefault()
+              return form.current?.reportValidity() ? onVerify(code) : undefined
+            }}
+          >
+            <span className={handoff.forwardLabel}>
+              Verify handoff <ArrowRight size={16} aria-hidden={true} />
+            </span>
+          </StatefulButton>
+        </span>
+      </div>
       <p className={workspace.hint}>
         Verify the Buyer-held credential at handoff. Verification is performed
         by the server.
       </p>
-      <StatefulButton
-        disabled={disabled}
-        className={success.createButton}
-        type="submit"
-        onClick={(event) => {
-          event.preventDefault()
-          return form.current?.reportValidity() ? onVerify(code) : undefined
-        }}
-      >
-        Verify handoff
-      </StatefulButton>
     </form>
   )
 }

@@ -42,6 +42,23 @@ module.exports = withNextPlugins([withBundleAnalyzer, withPWA], {
     dynamicStartUrl: false,
     runtimeCaching: [
       {
+        // Credentials and verification must never fall back to a cached response.
+        urlPattern: ({ url }) =>
+          url.origin === self.location.origin &&
+          /^\/api\/order-domain(?:\/|$)/.test(url.pathname),
+        handler: 'NetworkOnly',
+        method: 'GET',
+        options: {},
+      },
+      {
+        urlPattern: ({ url }) =>
+          url.origin === self.location.origin &&
+          /^\/api\/order-domain(?:\/|$)/.test(url.pathname),
+        handler: 'NetworkOnly',
+        method: 'POST',
+        options: {},
+      },
+      {
         // Private signed media must precede extension-based default image caching.
         urlPattern: ({ url }) =>
           /\/storage\/v1\/object\/(?:sign|authenticated)\/chat-images\//.test(
