@@ -25,15 +25,18 @@ export function OrderCampusPayment({
   role,
   onRefresh,
   onUpdated,
+  showDetails = true,
 }: {
   order: FormalOrder
   role: 'buyer' | 'seller'
   onRefresh: () => Promise<void>
   onUpdated: (order: FormalOrder, serverTime: string) => void
+  showDetails?: boolean
 }) {
   const router = useRouter()
   const capability = useFinancialCapabilities()
   const busy = useRef(false)
+  const needsReconciliation = useRef(false)
   const command = useRef<{ action: string; key: string }>()
   const [blocked, setBlocked] = useState(false)
   const [running, setRunning] = useState(false)
@@ -42,21 +45,33 @@ export function OrderCampusPayment({
   const buyer = role === 'buyer'
   const active = order.lifecycle === 'open'
   const eligible = active && ['pending', 'failed'].includes(order.paymentStatus)
-  const inspected = Boolean(payment?.inspectionConfirmedAt)
   const method = capability.data?.paymentMethod.status
   const refresh = async () => {
     try {
       await onRefresh()
       await capability.refresh()
+      needsReconciliation.current = false
       setBlocked(false)
       setError('')
     } catch {
-      setError(
-        'Unable to refresh. Actions remain unavailable until the Order can be loaded.'
-      )
+      setError('Unable to refresh. Retry refreshing the Order to recover.')
     }
   }
-  async function act(action: 'inspection' | 'payment') {
+  async function act(action: 'payment') {
+    if (busy.current) return
+    if (needsReconciliation.current) {
+      busy.current = true
+      setRunning(true)
+      setBlocked(true)
+      try {
+        await refresh()
+      } finally {
+        busy.current = false
+        setRunning(false)
+        setBlocked(false)
+      }
+      return
+    }
     const reconciling =
       action === 'payment' &&
       order.lifecycle === 'open' &&
@@ -79,57 +94,49 @@ export function OrderCampusPayment({
       await onRefresh()
       setBlocked(false)
     } catch (e) {
+      needsReconciliation.current = true
+      await refresh()
       setError(
         e instanceof Error
           ? e.message
           : 'Unable to load the latest payment state.'
       )
-      if (action === 'payment') await capability.refresh()
-      // A transport failure may follow a committed mutation. Never restore eligibility blindly.
+      // Eligibility comes from the refreshed Order; an error does not permanently disable it.
     } finally {
       busy.current = false
       setRunning(false)
+      setBlocked(false)
     }
   }
   let title = paymentTitles[order.paymentStatus]
   if (!buyer && order.paymentStatus === 'failed')
     title = 'Payment not completed'
   if (!active) title = 'Payment not completed'
-  const inspect = () => act('inspection')
   const pay = () => act('payment')
   const manage = () => {
     router.push('/home?section=settings&focus=payments-payouts').catch(() => {})
   }
   return (
     <section
-      className={profile.panel}
+      className={showDetails ? profile.panel : undefined}
       aria-label="Payment"
       data-campus-payment={order.paymentStatus}
     >
       <h4>{title}</h4>
       {!active && <p>This Order is closed. No payment was completed.</p>}
-      {active && !buyer && (
+      {showDetails && active && !buyer && (
         <p>
-          Meet the Buyer and allow them to inspect the item. Verify Payment
-          confirmed in this Marketplace Order; do not rely on screenshots,
-          emails or chat claims.
+          Waiting for Buyer payment. Fulfillment follows authoritative Payment
+          confirmed; do not rely on screenshots, emails or chat claims.
         </p>
       )}
-      {active && !buyer && inspected && (
+      {showDetails && active && buyer && (
         <p>
-          The Buyer has inspected the item and chosen to continue to payment.
+          Secure payment before meeting and inspecting the item. Payment does
+          not confirm possession or release Seller payout.
         </p>
       )}
-      {active && buyer && inspected && (
-        <p>You chose to continue after inspecting the item.</p>
-      )}
-      {active && buyer && !inspected && (
-        <p>
-          Confirm that you have inspected the item and want to continue to
-          payment. This does not charge you.
-        </p>
-      )}
-      {payment && (
+      {showDetails && payment && (
         <dl className={detail.amounts}>
           <dt>Item price</dt>
           <dd>{offerAmount(payment.itemCents)}</dd>
@@ -161,8 +168,8 @@ export function OrderCampusPayment({
       )}
       {order.paymentStatus === 'processing' && (
         <p>
-          Waiting for authoritative payment confirmation. Cancellation and
-          no-show settlement are blocked while payment resolves.
+          Waiting for authoritative payment confirmation. Any accepted
+          cancellation will be processed automatically when payment resolves.
         </p>
       )}
       {buyer && active && order.paymentStatus === 'processing' && (
@@ -170,12 +177,7 @@ export function OrderCampusPayment({
           Refresh payment
         </CardAction>
       )}
-      {buyer && eligible && !inspected && (
-        <CardAction variant="green" disabled={blocked} onClick={inspect}>
-          Continue to payment
-        </CardAction>
-      )}
-      {buyer && eligible && inspected && (
+      {buyer && eligible && (
         <>
           {method !== 'set' || capability.error ? (
             <>

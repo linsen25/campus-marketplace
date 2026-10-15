@@ -32,6 +32,7 @@ type Row = {
   created_at: string
   updated_at: string
   item_amount_cents: number
+  listing_price_cents_snapshot: number
   currency: string
   seller_note: string | null
   offer_terms: Record<string, unknown> | null
@@ -125,7 +126,9 @@ export function mapOffer(row: Row, viewer: string): Offer {
     row.protocol_version !== 2 ||
     !statuses[row.status] ||
     row.currency !== 'CAD' ||
-    !Number.isSafeInteger(Number(row.item_amount_cents))
+    !Number.isSafeInteger(Number(row.item_amount_cents)) ||
+    !Number.isSafeInteger(row.listing_price_cents_snapshot) ||
+    row.listing_price_cents_snapshot < 0
   )
     throw new ListingApiError('Invalid Offer response.', 503)
   return {
@@ -141,6 +144,7 @@ export function mapOffer(row: Row, viewer: string): Offer {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     terms: mapTerms(row),
+    askingPriceCents: row.listing_price_cents_snapshot,
     listingUpdatedAtAtOffer: row.listing_updated_at_at_offer,
     linkedOrderId: row.linked_order_id || null,
     canAccept:

@@ -2,6 +2,10 @@
   width: min(320px, 65%);
   min-width: 0;
 }
+.singleGallery,
+.singleTrigger {
+  display: contents;
+}
 
 .stack {
   position: relative;
@@ -22,7 +26,7 @@
 .expandedPhoto {
   overflow: hidden;
   padding: 0;
-  border: 3px solid #2a2134;
+  border: 0;
   border-radius: 22px;
   background: #2a2134;
   box-shadow: 0 12px 24px rgb(0 0 0 / 20%);
@@ -53,7 +57,7 @@
 }
 
 .expandedPhoto .image img {
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .back {
@@ -76,5 +80,73 @@
 @media (max-width: 1023px) {
   .gallery {
     width: min(320px, 82%);
+  }
+}
+
+/* Inset overlay preserves the existing outer dimensions and clips no media. */
+.photo::after,
+.expandedPhoto::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid #fff;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 60;
+}
+.singleTrigger img {
+  outline: 1px solid #fff;
+  outline-offset: -1px;
+}
+.viewer {
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  max-height: calc(
+    100dvh - max(16px, env(safe-area-inset-top, 0px)) -
+      max(16px, env(safe-area-inset-bottom, 0px))
+  );
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+}
+.viewer .back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.viewer::backdrop {
+  background: #000b;
+}
+.viewerMedia {
+  --viewer-max-width: min(920px, 72vw);
+  --viewer-max-height: min(760px, 76vh);
+  position: relative;
+  width: min(
+    var(--viewer-max-width),
+    calc(var(--viewer-max-height) * var(--viewer-ratio))
+  );
+  height: min(
+    var(--viewer-max-height),
+    calc(var(--viewer-max-width) / var(--viewer-ratio))
+  );
+  overflow: hidden;
+  border: 1px solid #fff;
+  border-radius: 22px;
+  transition: width 180ms ease-out, height 180ms ease-out;
+}
+.viewerMedia img {
+  object-fit: contain;
+}
+@media (max-width: 1023px) {
+  .viewerMedia {
+    --viewer-max-width: calc(100vw - 32px);
+    --viewer-max-height: min(70dvh, 680px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .viewerMedia {
+    transition: none;
   }
 }

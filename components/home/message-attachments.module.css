@@ -54,6 +54,15 @@
 .preview {
   min-width: 0;
 }
+.upload > .hint {
+  width: min(100%, 360px, calc(100dvh - 370px));
+  margin-inline: auto;
+  text-align: center;
+}
+.upload [data-slot='file-drop'] > label {
+  border-color: #fff;
+  outline-color: #fff;
+}
 .photoArea {
   position: relative;
   isolation: isolate;

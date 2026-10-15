@@ -1,0 +1,134 @@
+.details {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.details > h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+.details h5 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 20px 0 12px;
+}
+.reference {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 20px;
+}
+.reference > div {
+  min-width: 0;
+  flex: 1;
+}
+.reference p {
+  font-family: monospace;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.copy {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: #c1adcf;
+}
+.copy svg {
+  grid-area: 1 / 1;
+  transition: opacity 100ms ease-in-out;
+}
+.copyIcon {
+  opacity: 1;
+}
+.checkIcon {
+  opacity: 0;
+}
+.copy[data-copy-state='check'] .copyIcon {
+  opacity: 0;
+}
+.copy[data-copy-state='check'] .checkIcon {
+  opacity: 1;
+}
+/* Order-only ratio override; the existing compact width/grid is unchanged. */
+.agreementListing.agreementListing > div > div:first-child {
+  aspect-ratio: 4 / 5;
+}
+@media (prefers-reduced-motion: reduce) {
+  .copy svg {
+    transition: none;
+  }
+}
+.copy:hover,
+.copy:focus-visible {
+  background: #463b50;
+}
+.copyFeedback {
+  grid-column: 1 / -1;
+  justify-self: end;
+  font-size: 12px;
+}
+.navigation {
+  display: grid;
+  grid-template-columns: minmax(0, 180px) minmax(0, 180px);
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@media (min-width: 1024px) {
+  .navigation {
+    padding-bottom: 24px;
+  }
+}
+@media (max-width: 1023px) {
+  .navigation > :last-child {
+    grid-column: 2;
+  }
+}
+.cancelAction {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+.cancelAction > span {
+  flex: 0 1 220px;
+}
+.cancelDisclosure {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.cancelDisclosure button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  font-size: 13px;
+  color: #c1adcf;
+}
+.cancelDisclosure svg {
+  flex: none;
+  transition: rotate 150ms ease-out;
+}
+.cancelDisclosure [aria-expanded='true'] svg {
+  rotate: 180deg;
+}
+.cancelExpanded {
+  margin-top: 16px;
+  border-top: 1px solid #463b50;
+  padding-top: 16px;
+}
+.cancelExpanded h5 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.cancelExpanded fieldset {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}

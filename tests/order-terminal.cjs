@@ -12,6 +12,7 @@ function load(file) {
   if (cache.has(full)) return cache.get(full)
   const module = { exports: {} }
   const code = ts.transpileModule(fs.readFileSync(full, 'utf8'), {
+    fileName: full,
     compilerOptions: {
       module: ts.ModuleKind.CommonJS,
       target: ts.ScriptTarget.ES2020,
@@ -56,11 +57,20 @@ function load(file) {
           OrderCountdown: () =>
             React.createElement('span', { 'data-active-countdown': true }),
         }
+      if (name === '@/components/ui/dynamic-action')
+        return {
+          DynamicAction: ({ children }) =>
+            React.createElement('button', null, children),
+        }
       if (name.startsWith('@/') || name.startsWith('.')) {
         const stem = name.startsWith('@/')
           ? path.resolve(name.slice(2))
           : path.resolve(path.dirname(full), name)
-        return load(stem + (fs.existsSync(stem + '.tsx') ? '.tsx' : '.ts'))
+        const extension = ['.tsx', '.ts', '.jsx', '.js'].find((ext) =>
+          fs.existsSync(stem + ext)
+        )
+        assert(extension, 'Unresolved local test import: ' + name)
+        return load(stem + extension)
       }
       return require(name)
     },

@@ -1,11 +1,11 @@
+﻿import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
-import { CardAction } from '@/components/listings/card-actions'
-import { ActionRow } from '@/components/ui/action-row'
-import { FadingDialog } from '@/components/ui/fading-dialog'
+import sortStyles from '@/components/filter-interaction.module.css'
+import { sortPanelFade } from '@/lib/sort-panel-fade'
 
-import styles from './offer-ui.module.css'
+import styles from './withdraw-context.module.css'
 
 export function useWithdrawalEligibility(createdAt: string, enabled: boolean) {
   const [now, setNow] = useState(Date.now())
@@ -17,7 +17,12 @@ export function useWithdrawalEligibility(createdAt: string, enabled: boolean) {
   return enabled && now < Date.parse(createdAt) + 300000
 }
 
-/** Presentation eligibility only; the server owns the five-minute deadline. */
+type FloatingElement = HTMLDivElement & {
+  showPopover?: () => void
+  hidePopover?: () => void
+}
+
+/** TEXT interaction only; sizing remains the caller's responsibility. */
 export function WithdrawContext({
   enabled,
   createdAt,
@@ -32,134 +37,135 @@ export function WithdrawContext({
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
-  const timer = useRef<ReturnType<typeof setTimeout>>()
-  const releaseTimer = useRef<ReturnType<typeof setTimeout>>()
-  const suppress = useRef(false)
+  const anchor = useRef<HTMLDivElement>(null)
+  const panel = useRef<FloatingElement>(null)
   const busy = useRef(false)
   const eligible = useWithdrawalEligibility(createdAt, enabled)
-  useEffect(() => () => clearTimeout(timer.current), [])
+  const close = (restore = false) => {
+    setOpen(false)
+    if (restore) anchor.current?.focus({ preventScroll: true })
+  }
+  useEffect(() => {
+    if (!eligible) setOpen(false)
+  }, [eligible])
   useEffect(() => {
     if (!open) return undefined
-    // A long press opens a portal above the original touch. Its compatibility
-    // click can land on the new backdrop instead of bubbling through the group.
-    const release = () => {
-      if (!suppress.current) return
-      clearTimeout(releaseTimer.current)
-      releaseTimer.current = setTimeout(() => {
-        suppress.current = false
-      }, 250)
+    const node = panel.current
+    const position = () => {
+      if (!node || !anchor.current) return
+      const rect = (
+        anchor.current.querySelector('p') || anchor.current
+      ).getBoundingClientRect()
+      node.style.left = `${Math.max(
+        8,
+        Math.min(
+          rect.right - node.offsetWidth,
+          innerWidth - node.offsetWidth - 8
+        )
+      )}px`
+      const below = rect.bottom + 8
+      const top =
+        below + node.offsetHeight <= innerHeight - 8
+          ? below
+          : rect.top - node.offsetHeight - 8
+      node.style.top = `${Math.max(
+        8,
+        Math.min(top, innerHeight - node.offsetHeight - 8)
+      )}px`
     }
-    document.addEventListener('pointerup', release, true)
-    document.addEventListener('touchend', release, true)
+    node?.showPopover?.()
+    position()
+    node
+      ?.querySelector<HTMLButtonElement>('[role="menuitem"]')
+      ?.focus({ preventScroll: true })
+    const outside = (event: PointerEvent) => {
+      if (
+        !node?.contains(event.target as Node) &&
+        !anchor.current?.contains(event.target as Node)
+      )
+        close()
+    }
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        close(true)
+      }
+    }
+    const scroll = () => close()
+    document.addEventListener('pointerdown', outside)
+    document.addEventListener('keydown', escape, true)
+    document.addEventListener('scroll', scroll, true)
+    window.addEventListener('resize', position)
     return () => {
-      document.removeEventListener('pointerup', release, true)
-      document.removeEventListener('touchend', release, true)
-      clearTimeout(releaseTimer.current)
-      suppress.current = false
+      node?.hidePopover?.()
+      document.removeEventListener('pointerdown', outside)
+      document.removeEventListener('keydown', escape, true)
+      document.removeEventListener('scroll', scroll, true)
+      window.removeEventListener('resize', position)
     }
   }, [open])
   return (
     <>
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- This content group exposes its conventional context menu by pointer and keyboard. */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Eligible TEXT content opens its contextual menu. */}
       <div
+        ref={anchor}
         role="group"
         aria-label={eligible ? 'Own content actions' : undefined}
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Own content supports the conventional keyboard context-menu shortcut.
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Keyboard menu target.
         tabIndex={eligible ? 0 : undefined}
         onKeyDown={(event) => {
-          if (
-            eligible &&
-            (event.key === 'ContextMenu' ||
-              (event.shiftKey && event.key === 'F10'))
-          ) {
+          if (eligible && ['Enter', ' ', 'ContextMenu'].includes(event.key)) {
             event.preventDefault()
             setOpen(true)
           }
         }}
-        onPointerDown={(event) => {
-          if (!eligible || event.pointerType === 'mouse') return
-          timer.current = setTimeout(() => {
-            suppress.current = true
-            setOpen(true)
-          }, 550)
-        }}
-        onPointerUp={() => clearTimeout(timer.current)}
-        onPointerCancel={() => clearTimeout(timer.current)}
-        onPointerMove={() => clearTimeout(timer.current)}
-        onContextMenu={(event) => {
-          if (eligible) {
-            event.preventDefault()
-            setOpen(true)
-          }
-        }}
-        onClickCapture={(event) => {
-          if (suppress.current) {
-            suppress.current = false
-            event.preventDefault()
-            event.stopPropagation()
-          } else if (
-            eligible &&
-            !(event.target as Element).closest('button,a,input,textarea,select')
-          ) {
-            setOpen(true)
-          }
+        onClick={() => {
+          if (eligible) setOpen(true)
         }}
       >
         {children}
       </div>
       {open && (
-        <FadingDialog
-          className={styles.confirm}
-          aria-label="Message actions"
-          onRequestClose={() => {
-            if (!pending && !suppress.current) setOpen(false)
-          }}
-          onClickCapture={() => {
-            suppress.current = false
-          }}
-          onKeyDownCapture={(event) => {
-            if (event.key === 'Escape') suppress.current = false
-          }}
+        <motion.div
+          ref={panel}
+          {...{ popover: 'manual' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={sortPanelFade}
+          className={`${sortStyles.panel} ${sortStyles.sortPanel} ${styles.menu}`}
+          role="menu"
+          aria-label="Content actions"
         >
-          <h3>Actions</h3>
           {error && <p role="alert">{error}</p>}
-          <ActionRow>
-            <CardAction
-              variant="red"
-              disabled={pending}
-              onClick={() => setOpen(false)}
-            >
-              Close
-            </CardAction>
-            {eligible && (
-              <CardAction
-                variant="red"
-                disabled={pending}
-                onClick={async () => {
-                  if (busy.current) return
-                  busy.current = true
-                  setPending(true)
-                  setError('')
-                  try {
-                    await onWithdraw()
-                    setOpen(false)
-                  } catch (failure) {
-                    setError(
-                      failure instanceof Error
-                        ? failure.message
-                        : 'Unable to withdraw. Refresh and retry.'
-                    )
-                  } finally {
-                    busy.current = false
-                    setPending(false)
-                  }
-                }}
-              >
-                {pending ? 'Withdrawing…' : 'Withdraw'}
-              </CardAction>
-            )}
-          </ActionRow>
-        </FadingDialog>
+          <button
+            type="button"
+            role="menuitem"
+            className={sortStyles.option}
+            disabled={pending || !eligible}
+            onClick={async () => {
+              if (busy.current || !eligible) return
+              busy.current = true
+              setPending(true)
+              setError('')
+              try {
+                await onWithdraw()
+                close(true)
+              } catch (failure) {
+                setError(
+                  failure instanceof Error
+                    ? failure.message
+                    : 'Unable to withdraw. Refresh and retry.'
+                )
+              } finally {
+                busy.current = false
+                setPending(false)
+              }
+            }}
+          >
+            {pending ? 'Withdrawing…' : 'Withdraw'}
+          </button>
+        </motion.div>
       )}
     </>
   )

@@ -1,5 +1,19 @@
 # Campus Marketplace — Project Status
 
+## Master Order flow rework (2026-10-14)
+
+Staging-only additive migrations `202610140001` and `202610140002` are applied and
+their deployed definitions/grants verified. On Campus now secures payment before
+inspection; cancellation has authoritative intent, refund/release authorization,
+Seller delivery start/compensation, and existing Case holds. Order Detail uses the
+approved Header → Progress → stage details → Current Step → real action/waiting
+state → Cancel/Exit policy → bounded stage navigation structure. The later
+[stage-page composition](ORDER_STAGE_FLOW_UI.md) supersedes the earlier tabs.
+See [implementation and qualification](ORDER_MASTER_FLOW_REWORK.md).
+
+Real provider execution and QR rendering remain deferred. No production rollout,
+Demo/Nike/manual/D1 changes, commit or push are included in this pass.
+
 ## Current checkpoint policy (2026-10-13)
 
 Scope: `western-marketplace-staging` / `pcaqxezdfxofysghssyo`; no production rollout.

@@ -10,6 +10,7 @@ import type { Listing } from '@/types/listing'
 import { formatListingPrice } from '@/utils/format-listing-price'
 
 import detailStyles from './homepage-listing-demo.module.css'
+import actionStyles from './listing-action-availability.module.css'
 import { ListingMedia } from './listing-media'
 import { useMarketplaceSession } from './marketplace-session'
 import { useListingOfferContext } from './use-listing-offer-context'
@@ -133,7 +134,7 @@ export function PublishedListingCard({
         ) : undefined
       }
       primaryAction={
-        !own && (listing.status === 'available' || offerContext.orderId) ? (
+        !own ? (
           <>
             <ShiningButton
               variant="green"
@@ -144,14 +145,19 @@ export function PublishedListingCard({
               Message Seller
             </ShiningButton>
             {offerContext.enabled && (
-              <ShiningButton
-                variant="green"
-                desktopAppearance={true}
-                disabled={offerContext.busy || Boolean(offerContext.error)}
-                onClick={() => offerContext.open()}
-              >
-                {offerContext.label}
-              </ShiningButton>
+              <div className={actionStyles.offerAction}>
+                <ShiningButton
+                  variant="green"
+                  desktopAppearance={true}
+                  disabled={offerContext.busy || offerContext.disabled}
+                  onClick={() => offerContext.open()}
+                >
+                  {offerContext.label}
+                </ShiningButton>
+                {offerContext.reason && (
+                  <p className={actionStyles.reason}>{offerContext.reason}</p>
+                )}
+              </div>
             )}
           </>
         ) : undefined

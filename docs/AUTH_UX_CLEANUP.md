@@ -535,3 +535,8 @@ PHASE 1/2/3 PRESERVED. NO commit. NO push.**
 
 **NO EMAILS SENT. SMTP NOT CONFIGURED. PAYMENTS NOT STARTED.
 PHASE 1/2/3 PRESERVED. NO commit. NO push.**
+
+2026-10-14: [historical Signup UI/interaction restoration](AUTH_UI_RESTORATION.md)
+restores Send code, visible code entry and Hold to create account while retaining
+the later security/session fixes. Its new read-only resumability RPC is deployed
+to staging only; production rollout of that addition is not performed.

@@ -1,19 +1,64 @@
-import { CardAction } from '@/components/listings/card-actions'
-import { ListingMedia } from '@/components/listings/listing-media'
-import { offerAmount } from '@/lib/offer-amount'
+import { ChevronLeft } from 'lucide-react'
+import { useEffect, useState } from 'react'
+
+import { DynamicAction } from '@/components/ui/dynamic-action'
+import { useOrderFlow } from '@/hooks/use-order-flow'
+import { currentOrderProgress } from '@/lib/order-current-step'
+import { orderPageAction, orderPresentation } from '@/lib/order-presentation'
 import type { OrderWorkspace } from '@/lib/order-workspaces'
 import { orderWorkspaceLabels } from '@/lib/order-workspaces'
 import type { FormalOrder } from '@/types/order'
 
-import { OfferTermsSummary } from './offer-ui'
-import { OrderCampusPayment } from './order-campus-payment'
-import { OrderCancellation } from './order-cancellation'
+import { OrderCurrentStep } from './order-current-step'
 import styles from './order-detail-preview.module.css'
-import { OrderMeetup } from './order-meetup'
+import { OrderFlowCancellation } from './order-flow-cancellation'
+import { OrderProgress } from './order-progress'
+import { OrderStageDetails } from './order-stage-details'
+import pageStyles from './order-stage-page.module.css'
 import profile from './profile.module.css'
 
-// V2 foundation, D1 scheduling and D2A On Campus payment; V1 and Delivery actions stay isolated.
-export function FormalV2OrderDetail({
+function OrderPageNavigation({
+  mobile,
+  index,
+  maximum,
+  disabled,
+  onNavigate,
+}: {
+  mobile: boolean
+  index: number
+  maximum: number
+  disabled: boolean
+  onNavigate: (index: number) => void
+}) {
+  if (mobile && index >= maximum) return null
+  return (
+    <nav className={pageStyles.navigation} aria-label="Order page navigation">
+      {!mobile &&
+        (index > 0 ? (
+          <DynamicAction
+            variant="blue"
+            direction="back"
+            onClick={() => onNavigate(index - 1)}
+          >
+            Back
+          </DynamicAction>
+        ) : (
+          <span />
+        ))}
+      {index < maximum && (
+        <DynamicAction
+          variant="green"
+          disabled={disabled}
+          onClick={() => onNavigate(Math.min(index + 1, maximum))}
+        >
+          Next
+        </DynamicAction>
+      )}
+    </nav>
+  )
+}
+
+function V2OrderPresentation({
   order,
   role,
   mode,
@@ -32,86 +77,148 @@ export function FormalV2OrderDetail({
   onCancelled: (order: FormalOrder, serverTime: string) => void
   onUpdated?: (order: FormalOrder, serverTime: string) => void
 }) {
-  if (!order.v2)
-    return <p role="alert">Order snapshot unavailable. Retry refresh.</p>
-  const { listing } = order.snapshot
-  const terms = order.v2.terms
+  const [mobile, setMobile] = useState(false)
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 1023px)')
+    const update = () => setMobile(query.matches)
+    update()
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
+  const flow = useOrderFlow(order, role)
+  const progress = currentOrderProgress(order, flow.data)
+  const presentation = orderPresentation(order, flow.data)
+  const signature = JSON.stringify([
+    order.id,
+    order.lifecycle,
+    order.paymentStatus,
+    flow.data?.fulfillment.deliveryStartedAt,
+    flow.data?.fulfillment.protectionStartedAt,
+    flow.data?.fulfillment.cancellation?.state,
+    flow.data?.courier?.state,
+  ])
+  const [selection, setSelection] = useState<{
+    signature: string
+    index: number
+  }>()
+  const index =
+    selection?.signature === signature
+      ? Math.min(selection.index, presentation.maximum)
+      : presentation.current
+  const page = presentation.pages[index]
+  const stage = orderPageAction(order, flow.data, page)
+  const displayedStage =
+    !flow.data && order.lifecycle === 'open' ? 'loading' : stage
+  const readOnly = index < presentation.current || order.lifecycle !== 'open'
+  const status = {
+    open: 'Agreement reached',
+    cancelled: 'Order cancelled',
+    expired: 'Order expired',
+    completed: 'Completed',
+  }[order.lifecycle]
+  const terms = order.v2!.terms
+  const confirmed = [...(order.meetup?.revisions || [])]
+    .reverse()
+    .find((r) => r.status === 'confirmed')
+  const currentTerms =
+    terms.fulfillment === 'on_campus' && confirmed
+      ? {
+          ...terms,
+          meetupLocation: confirmed.location,
+          scheduledAt: confirmed.scheduledAt,
+        }
+      : terms
+  let stageTitle: string | undefined
+  if (page === 'fulfillment' && terms.fulfillment === 'on_campus')
+    stageTitle = 'Meet / Inspect'
+  if (
+    page === 'handoff' &&
+    (terms.fulfillment === 'on_campus' || terms.deliveryMethod !== 'courier')
+  )
+    stageTitle = 'Handoff'
   return (
     <section
-      className={styles.detail}
+      className={`${styles.detail} ${
+        order.lifecycle !== 'open' ? styles.history : ''
+      }`}
       aria-label="Order Detail"
       data-formal-order={order.id}
       data-order-protocol="2"
       data-order-role={role}
+      data-order-page={page}
     >
-      <CardAction onClick={onBack}>{orderWorkspaceLabels[mode]}</CardAction>
-      <h3 className={styles.snapshotTitle}>{listing.title}</h3>
-      <p>
-        {
-          {
-            cancelled: 'Order cancelled',
-            completed: 'Order completed',
-            expired: 'Order expired',
-            open: 'Pending transaction',
-          }[order.lifecycle]
-        }
-      </p>
-      <section className={profile.panel} aria-label="Overview">
-        <h4>Overview</h4>
-        {listing.photoUrls.length > 0 && (
-          <div className={styles.item}>
-            <ListingMedia images={listing.photoUrls} alt={listing.title} />
-          </div>
-        )}
-        <dl className={styles.amounts}>
-          <dt>Condition</dt>
-          <dd>{order.v2.condition}</dd>
-          <dt>Category</dt>
-          <dd>
-            {listing.category} {'\u00b7'} {order.v2.subcategory}
-          </dd>
-          <dt>Public asking price at acceptance</dt>
-          <dd>{offerAmount(order.v2.askingPriceCents)}</dd>
-          <dt>Buyer</dt>
-          <dd>{order.snapshot.buyer}</dd>
-          <dt>Seller</dt>
-          <dd>{order.snapshot.seller}</dd>
-        </dl>
-        <p>{order.v2.description}</p>
-      </section>
-      <section className={profile.panel} aria-label="Accepted offer terms">
-        <h4>Accepted offer</h4>
-        <OfferTermsSummary terms={terms} />
-      </section>
-      {terms.fulfillment === 'on_campus' && (
-        <OrderMeetup
-          order={order}
-          role={role}
-          offset={offset}
-          onRefresh={onRefresh}
-          onUpdated={onUpdated || (() => {})}
-        />
-      )}
-      {terms.fulfillment === 'on_campus' ? (
-        <OrderCampusPayment
-          order={order}
-          role={role}
-          onRefresh={onRefresh}
-          onUpdated={onUpdated || (() => {})}
-        />
-      ) : (
-        <section className={profile.panel} aria-label="Payment">
-          <h4>Payment pending</h4>
-          <p>Payment is required before delivery.</p>
-        </section>
-      )}
-      <OrderCancellation
+      <button
+        type="button"
+        className={styles.back}
+        aria-label={`Back to ${orderWorkspaceLabels[mode]}`}
+        onClick={onBack}
+      >
+        <ChevronLeft size={16} aria-hidden={true} />
+        Back to {orderWorkspaceLabels[mode]}
+      </button>
+      <header className={styles.header}>
+        <div>
+          <p className={styles.eyebrow}>Order Detail</p>
+          <h3>{order.snapshot.listing.title}</h3>
+        </div>
+        <span
+          className={
+            order.lifecycle === 'open'
+              ? profile.verified
+              : styles.historicalStatus
+          }
+        >
+          {status}
+        </span>
+      </header>
+      <OrderProgress {...progress} terminalLabel={status} />
+      <OrderStageDetails
         order={order}
         role={role}
+        terms={currentTerms}
+        flow={flow}
+        page={page}
         offset={offset}
-        onRefresh={onRefresh}
-        onCancelled={onCancelled}
+        status={status}
       />
+      <OrderCurrentStep
+        order={order}
+        role={role}
+        flow={flow}
+        stage={displayedStage}
+        readOnly={readOnly}
+        stageTitle={stageTitle}
+        onRefresh={onRefresh}
+        onUpdated={onUpdated || (() => {})}
+      />
+      {!['protection', 'completed'].includes(page) && (
+        <OrderFlowCancellation
+          order={order}
+          role={role}
+          flow={flow}
+          onUpdated={onUpdated || (() => {})}
+          onRefresh={onRefresh}
+          onCancelled={onCancelled}
+        />
+      )}
+      {order.lifecycle === 'open' && (
+        <OrderPageNavigation
+          mobile={mobile}
+          index={index}
+          maximum={presentation.maximum}
+          disabled={!flow.data || !order.economics}
+          onNavigate={(target) => setSelection({ signature, index: target })}
+        />
+      )}
     </section>
+  )
+}
+export function FormalV2OrderDetail(
+  props: Parameters<typeof V2OrderPresentation>[0]
+) {
+  if (!props.order.v2)
+    return <p role="alert">Order snapshot unavailable. Retry refresh.</p>
+  return (
+    <V2OrderPresentation key={`${props.order.id}:${props.role}`} {...props} />
   )
 }

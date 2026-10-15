@@ -26,12 +26,14 @@ export function OrderProgress({
   steps,
   terminal = false,
   completed,
+  terminalLabel = 'Reservation expired',
 }: {
   shipping?: boolean
   current: number | null
   steps?: readonly string[]
   terminal?: boolean
   completed?: number
+  terminalLabel?: string
 }) {
   return (
     <section
@@ -39,7 +41,7 @@ export function OrderProgress({
       aria-label="Order Progress"
     >
       <h4>Order Progress</h4>
-      {terminal && <p role="status">Reservation expired</p>}
+      {terminal && <p role="status">{terminalLabel}</p>}
       <Stepper
         steps={steps || (shipping ? shippingSteps : pickupSteps)}
         current={current}

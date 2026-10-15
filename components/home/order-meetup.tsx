@@ -78,6 +78,7 @@ export function OrderMeetup({
   const [receiptBlocked, setReceiptBlocked] = useState(false)
   const [now, setNow] = useState(Date.now() + offset)
   const lock = useRef(false)
+  const needsReconciliation = useRef(false)
   const command = useRef<{ digest: string; key: string }>()
   useEffect(() => {
     const update = () => setNow(Date.now() + offset)
@@ -120,6 +121,21 @@ export function OrderMeetup({
     action: 'confirm' | 'decline' | 'propose' | 'withdraw'
   ) => {
     if (lock.current || !eligible) return
+    if (needsReconciliation.current) {
+      lock.current = true
+      setBusy(true)
+      try {
+        await onRefresh()
+        needsReconciliation.current = false
+        setError('')
+      } catch {
+        setError('Unable to refresh. Please retry.')
+      } finally {
+        lock.current = false
+        setBusy(false)
+      }
+      return
+    }
     const validation = validateNewOrderSchedule(schedule, new Date(now))
     if (action === 'propose' && (!validation.valid || !location.trim())) {
       setError(
@@ -154,6 +170,13 @@ export function OrderMeetup({
       await onRefresh()
       setReceiptBlocked(false)
     } catch (failure) {
+      needsReconciliation.current = true
+      try {
+        await onRefresh()
+        needsReconciliation.current = false
+      } catch {
+        // Retry reconciles before writing if the receipt is still uncertain.
+      }
       setError(
         failure instanceof Error
           ? failure.message
@@ -162,6 +185,7 @@ export function OrderMeetup({
     } finally {
       lock.current = false
       setBusy(false)
+      setReceiptBlocked(false)
     }
   }
   return (
@@ -226,6 +250,7 @@ export function OrderMeetup({
             onClick={async () => {
               try {
                 await onRefresh()
+                needsReconciliation.current = false
                 setReceiptBlocked(false)
                 setError('')
               } catch {

@@ -73,6 +73,43 @@
 .overview {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
+section.compactSummary.compactSummary {
+  width: 100%;
+  min-width: 0;
+  max-height: none;
+  padding: 20px;
+}
+.compactSummary > div > div:first-child {
+  aspect-ratio: 4 / 3;
+}
+.compactSummary > div > div > p:first-child {
+  font-size: 14px;
+  line-height: 20px;
+}
+.compactSummary h3 {
+  font-size: 16px;
+  line-height: 1.1;
+  margin: 12px 0;
+}
+.compactSummary .amounts {
+  gap: 8px 16px;
+  margin: 12px 0 0;
+}
+.compactSummary .amounts dt {
+  font-size: 12px;
+}
+.compactSummary .amounts dd {
+  font-size: 14px;
+}
+.currentStepTitle {
+  font-size: 20px;
+  line-height: 1.1;
+}
+@media (min-width: 768px) {
+  .compactSummary.compactSummary > div {
+    grid-template-columns: minmax(160px, 260px) minmax(0, 1fr);
+  }
+}
 .item {
   width: 100%;
   aspect-ratio: 4 / 3;
@@ -213,6 +250,14 @@
   padding: 16px;
   width: fit-content;
   border-radius: 8px;
+}
+.qrReserved {
+  composes: qrPlaceholder;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  width: 160px;
+  aspect-ratio: 1;
 }
 .orderList {
   display: grid;
@@ -379,4 +424,17 @@
 /* Immutable V2 listing titles may contain long unbroken words. */
 .snapshotTitle {
   overflow-wrap: anywhere;
+}
+
+/* History end space is local; the Home scroll container already owns safe-area padding. */
+.history,
+.detail[data-order-terminal] {
+  padding-bottom: 24px;
+}
+
+/* Formal desktop detail fills Home's existing widened content boundary. */
+@media (min-width: 1024px) {
+  .detail[data-formal-order] {
+    max-width: none;
+  }
 }

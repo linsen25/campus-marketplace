@@ -12,6 +12,40 @@ import { requireMessagesEnvironment } from '@/lib/server/messages-environment'
 const cookieName = 'marketplace-pending-signup'
 export const newSignupTicket = () => randomBytes(32).toString('hex')
 
+// Read-only recovery proof. This staging-first RPC is deliberately unavailable
+// on production until a separately authorized production rollout.
+export async function isPendingSignupResumable(req: NextApiRequest) {
+  const ticket = parseCookieHeader(req.headers.cookie || '').find(
+    ({ name }) => name === cookieName
+  )?.value
+  if (!ticket || !/^[0-9a-f]{64}$/.test(ticket)) return false
+  try {
+    const ref = requireMessagesEnvironment()
+    if (ref !== 'pcaqxezdfxofysghssyo') return false
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const claims = JSON.parse(
+      Buffer.from(key.split('.')[1], 'base64url').toString()
+    )
+    if (claims.role !== 'service_role' || claims.ref !== ref) return false
+    const admin = createClient(`https://${ref}.supabase.co`, key, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    })
+    const { data, error } = await admin.rpc(
+      'marketplace_pending_signup_resumable',
+      {
+        p_ticket: ticket,
+      }
+    )
+    return !error && data === true
+  } catch {
+    return false
+  }
+}
+
 export function setSignupTicket(
   req: NextApiRequest,
   res: NextApiResponse,

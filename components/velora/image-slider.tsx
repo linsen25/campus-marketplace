@@ -37,8 +37,37 @@ interface ImageSliderProps extends HTMLAttributes<HTMLElement> {
   scrim?: boolean
   label?: string
   playbackControls?: boolean
+  imageTransition?: 'default' | 'fade'
   activeIndex?: number
   onIndexChange?: (index: number) => void
+}
+
+function slidePresentation(fade: boolean, reduced: boolean) {
+  if (fade)
+    return {
+      initial: { opacity: reduced ? 1 : 0 },
+      exit: {
+        opacity: 0,
+        zIndex: 0,
+        transition: { duration: reduced ? 0 : 0.14, ease: 'easeOut' as const },
+      },
+      transition: { duration: reduced ? 0 : 0.14, ease: 'easeOut' as const },
+    }
+  return {
+    initial: { opacity: 0, scale: 1.08 },
+    exit: {
+      opacity: 0,
+      zIndex: 0,
+      transition: { duration: 0, delay: reduced ? 0 : 0.9 },
+    },
+    transition: reduced
+      ? { duration: 0 }
+      : {
+          duration: 0.9,
+          ease: 'easeOut' as const,
+          scale: { duration: 1.8, ease: [0.2, 0.7, 0.2, 1] },
+        },
+  }
 }
 
 /** Supplied Velora Image Slider, ported to CSS Modules. Shared index preserves.
@@ -52,6 +81,7 @@ export function ImageSlider({
   label = 'Image slider',
   className,
   playbackControls = true,
+  imageTransition = 'default',
   activeIndex,
   onIndexChange,
   ...props
@@ -107,6 +137,7 @@ export function ImageSlider({
     if (n > 1) new Image().src = images[(index + 1) % n].src
   }, [index, images, n])
   const image = images[index]
+  const presentation = slidePresentation(imageTransition === 'fade', reduced)
   return (
     <section
       {...props}
@@ -193,22 +224,10 @@ export function ImageSlider({
                 role="group"
                 aria-roledescription="slide"
                 aria-label={`${index + 1} of ${n}`}
-                initial={{ opacity: 0, scale: 1.08 }}
+                initial={presentation.initial}
                 animate={{ opacity: 1, scale: 1, zIndex: 1 }}
-                exit={{
-                  opacity: 0,
-                  zIndex: 0,
-                  transition: { duration: 0, delay: reduced ? 0 : 0.9 },
-                }}
-                transition={
-                  reduced
-                    ? { duration: 0 }
-                    : {
-                        duration: 0.9,
-                        ease: 'easeOut',
-                        scale: { duration: 1.8, ease: [0.2, 0.7, 0.2, 1] },
-                      }
-                }
+                exit={presentation.exit}
+                transition={presentation.transition}
                 className={styles.slide}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- Local object URLs and immutable listing photos. */}

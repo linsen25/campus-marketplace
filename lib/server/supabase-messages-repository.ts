@@ -328,10 +328,21 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
       }
     },
     async findOrCreate(listingId: unknown) {
-      await actor()
+      const user = await actor()
+      const id = messageUuid(listingId)
+      // Resume only this authenticated Buyer's existing, RLS-visible thread.
+      // New threads still use the RPC's published/available Listing checks.
+      const existing = await client
+        .from('conversations')
+        .select('*')
+        .eq('listing_origin_id', id)
+        .eq('buyer_id', user.id)
+        .maybeSingle()
+      checked(existing.error)
+      if (existing.data) return dto(existing.data as Row)
       const { data, error } = await client.rpc(
         'marketplace_find_or_create_conversation',
-        { p_listing_id: messageUuid(listingId) }
+        { p_listing_id: id }
       )
       checked(error)
       return dto(data as Row)

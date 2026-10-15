@@ -1,3 +1,4 @@
+/* global Navigator, getComputedStyle */
 const assert = require('node:assert/strict')
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
 ;(async () => {
@@ -166,8 +167,17 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
         'rgb(255, 255, 255)'
       )
       assert.equal(
-        await sent.first().evaluate((el) => getComputedStyle(el).maxWidth),
+        await sent
+          .first()
+          .evaluate(
+            (el) =>
+              getComputedStyle(el.closest('[class*="messagePayload"]')).maxWidth
+          ),
         mobile ? '82%' : '65%'
+      )
+      assert.equal(
+        await sent.first().evaluate((el) => getComputedStyle(el).maxWidth),
+        'none'
       )
       const groups = history.locator('[data-message-group]')
       assert.equal(await groups.count(), 12)
@@ -225,7 +235,9 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
       )
       assert(await history.evaluate((el) => el.scrollWidth <= el.clientWidth))
       await shot('buying-long-wrap')
-      await input.fill('Unsent draft used only to verify conversation switching')
+      await input.fill(
+        'Unsent draft used only to verify conversation switching'
+      )
       assert.equal(await rows.count(), 24)
       await choose('buying-conversation-0')
       assert.equal(

@@ -70,3 +70,13 @@
 .mobileList [data-conversation-id] {
   padding-right: 16px;
 }
+@media (max-width: 1023px) {
+  .mobileSurface.mobileSurface[data-mobile-message-detail='true'] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .mobileSurface[data-mobile-message-detail='true'] .mobileBack {
+    padding-inline: 0;
+  }
+}

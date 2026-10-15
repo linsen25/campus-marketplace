@@ -485,6 +485,11 @@ export function MessagesChat({
             renderOffer={(offer) => (
               <OfferCard
                 offer={offer}
+                linkedAgreement={offers.history?.agreements?.find(
+                  (agreement) =>
+                    agreement.id === offer.linkedOrderId &&
+                    agreement.offerId === offer.id
+                )}
                 listing={listing}
                 viewerId={currentUserId}
                 participantName={name}
@@ -930,7 +935,6 @@ export function MessagesChat({
             )
             offers.markSucceeded(result)
             offerIntent.current = undefined
-            setOfferEditor(null)
             await offers.refresh()
           }}
         />

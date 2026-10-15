@@ -191,6 +191,10 @@
 }
 
 @media (max-width: 1023px) {
+  .page:has([data-mobile-message-detail='true']),
+  .page:has([data-formal-order]) {
+    --home-section-bottom-inset: max(12px, env(safe-area-inset-bottom, 0px));
+  }
   /* Let the open global menu reach above body-portaled local overlays. */
   .mobileHeader:has([data-smooth-dropdown] > button[aria-expanded="true"]) {
     z-index: 80;
@@ -249,12 +253,14 @@
     padding-block: 48px;
     background: #160d23;
     padding-inline:
-      max(
-        var(--desktop-app-inset),
-        calc(
-          (100vw - var(--desktop-app-content-width)) / 2 +
-          var(--desktop-app-inset)
-        )
+      calc(
+        max(
+          var(--desktop-app-inset),
+          calc(
+            (100vw - var(--desktop-app-content-width)) / 2 +
+            var(--desktop-app-inset)
+          )
+        ) / 2
       );
   }
 

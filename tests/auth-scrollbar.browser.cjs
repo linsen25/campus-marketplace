@@ -9,7 +9,7 @@ const assert = require('node:assert/strict')
     args: ['--enable-unsafe-swiftshader'],
   })
   try {
-    for (const width of [1280, 1536, 390, 768, 834]) {
+    for (const width of [1280, 1536, 390, 430, 768, 834]) {
       // Above the old 700px height cutoff, so desktop exercises the regression.
       const page = await browser.newPage({
         viewport: { width, height: 720 }, serviceWorkers: 'block',
@@ -30,6 +30,7 @@ const assert = require('node:assert/strict')
       }))
       const hidden = async () => {
         await page.waitForFunction(() => !document.querySelector('dialog[aria-labelledby="auth-title"]').hasAttribute('data-scrolling'))
+        await page.waitForFunction(() => getComputedStyle(document.querySelector('dialog[aria-labelledby="auth-title"]')).scrollbarColor === 'rgba(0, 0, 0, 0) rgba(0, 0, 0, 0)')
         const state = await inspect()
         assert.equal(state.color, 'rgba(0, 0, 0, 0) rgba(0, 0, 0, 0)')
         assert.equal(state.thumb, 'rgba(0, 0, 0, 0)')
@@ -55,6 +56,7 @@ const assert = require('node:assert/strict')
         await auth.hover()
         await page.mouse.wheel(0, cycle % 2 ? -100 : 100)
         await page.waitForFunction(() => document.querySelector('dialog[aria-labelledby="auth-title"]').hasAttribute('data-scrolling'))
+        await page.waitForFunction(() => getComputedStyle(document.querySelector('dialog[aria-labelledby="auth-title"]')).scrollbarColor === 'rgb(245, 245, 245) rgba(0, 0, 0, 0)')
         const active = await inspect()
         assert.equal(active.color, 'rgb(245, 245, 245) rgba(0, 0, 0, 0)')
         assert.equal(active.thumb, 'rgb(245, 245, 245)')

@@ -3,3 +3,5 @@
 supabase/migrations/2026101*.sql -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 # This already-applied legacy archive includes an extra terminal newline; keep it.
 supabase/migrations/202610110003_order_cancellation.sql whitespace=blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
+# Preserve this applied migration's terminal newline and recorded SHA-256 too.
+supabase/migrations/202610140002_order_cancellation_settlement.sql whitespace=blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof

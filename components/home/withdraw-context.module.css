@@ -1,0 +1,12 @@
+﻿/* Visual panel/option contract comes directly from Sort; only anchoring is local. */
+.menu.menu {
+  --panel-width: calc(100vw - 16px);
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  max-width: calc(100vw - 16px);
+}
+.menu p {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}

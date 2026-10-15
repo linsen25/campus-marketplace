@@ -15,6 +15,9 @@ export default function ShiningButton({
   disabled = false,
   desktopAppearance = false,
   loading = false,
+  showArrow = true,
+  type = 'button',
+  form,
 }: {
   children?: ReactNode
   href?: string
@@ -22,6 +25,9 @@ export default function ShiningButton({
   variant?: 'blue' | 'dark-blue' | 'green' | 'purple' | 'red'
   disabled?: boolean
   loading?: boolean
+  showArrow?: boolean
+  type?: 'button' | 'submit'
+  form?: string
   desktopAppearance?: boolean
 }) {
   const { openAuth } = useAuthModal()
@@ -38,18 +44,21 @@ export default function ShiningButton({
   const content = (
     <span className="shining-button__body">
       {children}
-      <ArrowRight
-        className="shining-button__arrow"
-        aria-hidden="true"
-        size={24}
-      />
+      {showArrow && (
+        <ArrowRight
+          className="shining-button__arrow"
+          aria-hidden="true"
+          size={24}
+        />
+      )}
       <span className="shining-button__highlight" aria-hidden="true" />
     </span>
   )
   const shiningAction =
     onClick || !href ? (
       <button
-        type="button"
+        type={type === 'submit' ? 'submit' : 'button'}
+        form={form}
         className={className}
         disabled={disabled}
         aria-busy={loading || undefined}

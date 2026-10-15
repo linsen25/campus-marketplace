@@ -29,3 +29,9 @@ Browse/Search polish and general frontend polish. Delivery editor wiring must
 collect the accepted coarse area; it must not invent a default area.
 
 See [backend qualification and migration hashes](BACKEND_COMPLETION_STAGING.md).
+
+Deferred handoff UI: **Add real local QR rendering for the existing authoritative
+handoff QR payload.** No QR package or scanning is introduced in the current UI
+pass. The reserved neutral QR area and real six-digit fallback appear only for
+the Buyer at the authoritative Paid handoff stage, never for Courier. The area
+does not contain a fake QR pattern or visible raw QR token.

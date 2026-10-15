@@ -1,6 +1,9 @@
 // Provider-independent staging operations. Never imported by browser components.
 import { ListingApiError } from '@/lib/listing-validation'
-import { requireFinancialEnvironment } from '@/lib/server/financial-capabilities-service'
+import {
+  createTrustedFinancialClient,
+  requireFinancialEnvironment,
+} from '@/lib/server/financial-capabilities-service'
 import { requireMarketplaceUser } from '@/lib/server/marketplace-auth'
 import { messageUuid } from '@/lib/server/messages-environment'
 import { createMarketplaceClient } from '@/lib/supabase/server'
@@ -35,14 +38,27 @@ export function createOrderDomainService(context: MarketplaceContext) {
         fulfillment: 'marketplace_order_fulfillment',
         credential: 'marketplace_handoff_credential',
         courier: 'marketplace_courier_state',
+        cancellation: 'marketplace_order_cancellation_state',
       }
       if (!names[resource]) throw new ListingApiError('Not found.', 404)
       return call(names[resource], { p_order_id: messageUuid(id) })
     },
-    write(id: unknown, action: string, body: Record<string, unknown>) {
+    async write(id: unknown, action: string, body: Record<string, unknown>) {
       const orderId = messageUuid(id)
       const definitions: Record<string, { name: string; fields: string[] }> = {
         checkout: { name: 'marketplace_start_delivery_checkout', fields: [] },
+        'start-delivery': {
+          name: 'marketplace_start_seller_delivery',
+          fields: ['clientActionId'],
+        },
+        'request-cancellation': {
+          name: 'marketplace_request_delivery_full_refund',
+          fields: ['reason', 'note', 'clientActionId'],
+        },
+        'respond-cancellation': {
+          name: 'marketplace_respond_delivery_cancellation',
+          fields: ['response', 'clientActionId'],
+        },
         address: {
           name: 'marketplace_save_delivery_address',
           fields: ['address'],
@@ -79,15 +95,37 @@ export function createOrderDomainService(context: MarketplaceContext) {
         channel: 'p_channel',
         credential: 'p_credential',
         reason: 'p_reason',
+        note: 'p_note',
+        response: 'p_response',
         carrierLabel: 'p_carrier_label',
         trackingReference: 'p_tracking_reference',
       }
       for (const field of definition.fields)
         params[mapping[field]] =
           field === 'clientActionId' ? messageUuid(body[field]) : body[field]
-      // Payment remains Processing until separate trusted staging/provider resolution.
-      // No privileged resolver or caller-supplied economics is exposed here.
-      return call(definition.name, params)
+      // Reuse the existing staging simulator's server-selected outcome. A browser
+      // supplies neither financial amounts nor a Paid/Failed outcome or resolver.
+      const trusted =
+        action === 'payment' ? createTrustedFinancialClient() : null
+      const data = await call(definition.name, params)
+      if (data?.errorCode)
+        throw new ListingApiError(
+          'Review your payment method and current Order state before retrying.',
+          409
+        )
+      if (trusted && data.status === 'processing') {
+        const result = await trusted.rpc('marketplace_resolve_campus_payment', {
+          p_attempt_id: data.attemptId,
+          p_success: true,
+        })
+        if (result.error)
+          throw new ListingApiError(
+            'Payment is still being confirmed. Refresh the Order to review its authoritative state.',
+            503
+          )
+        return { attemptId: data.attemptId, status: result.data.status }
+      }
+      return data
     },
   }
 }

@@ -48,6 +48,7 @@
   align-items: start;
 }
 .media {
+  width: 100%;
   height: clamp(180px, 30vh, 320px);
   overflow: hidden;
   border-radius: 12px;
@@ -56,7 +57,7 @@
   height: 100%;
 }
 .media img {
-  object-fit: contain !important;
+  object-fit: cover;
 }
 .terms {
   display: grid;
@@ -82,31 +83,255 @@
 .conditional {
   min-height: 190px;
   display: grid;
-  gap: 10px;
+  gap: 20px;
   align-content: start;
 }
+.scheduleGroups > div {
+  display: contents;
+}
 .timelineCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   min-width: 0;
   max-width: 100%;
+}
+@media (max-width: 1023px) {
+  /* Focused mobile chat has no inner horizontal gutter: reserve only this
+     incoming Offer's painted boundary, without moving other timeline items. */
+  :global([data-mobile-message-detail='true'])
+    :global([data-sent='false']):has(.timelineCard[data-offer-own='false']) {
+    padding-left: 4px;
+  }
+}
+.timelineCard .offerButton {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #6d28d9;
+  border: 0;
+  color: #fff;
+  /* Keep the original 1px border's space without drawing a border. */
+  padding: 1px;
+  gap: 0;
+}
+.offerButton::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+      circle at 20% 15%,
+      rgba(192, 132, 252, 0.9) 0%,
+      rgba(147, 51, 234, 0.55) 32%,
+      transparent 62%
+    ),
+    radial-gradient(
+      circle at 85% 85%,
+      rgba(91, 33, 182, 0.95) 0%,
+      rgba(109, 40, 217, 0.45) 38%,
+      transparent 68%
+    );
+  filter: blur(18px);
+  pointer-events: none;
+  z-index: 0;
+}
+.offerButton > button {
+  position: relative;
+  z-index: 1;
+}
+.offerBody {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 0 12px 16px;
+  text-align: left;
+  color: inherit;
+}
+.offerBody > span {
+  display: grid;
+  gap: 4px;
+}
+.detailArrow {
+  align-self: stretch;
+  padding: 12px 16px;
+  color: inherit;
+}
+.offerBody:focus-visible,
+.detailArrow:focus-visible {
+  outline: 2px solid #b88cfa;
+  outline-offset: -3px;
+  border-radius: 16px;
+}
+.timelineCard[data-offer-own='true'] .offerButton {
+  background: #2563eb;
+}
+.timelineCard[data-offer-own='true'] .offerButton::before {
+  background: radial-gradient(
+      circle at 20% 15%,
+      rgba(96, 165, 250, 0.95) 0%,
+      rgba(37, 99, 235, 0.6) 32%,
+      transparent 62%
+    ),
+    radial-gradient(
+      circle at 85% 85%,
+      rgba(30, 64, 175, 0.95) 0%,
+      rgba(29, 78, 216, 0.45) 38%,
+      transparent 68%
+    );
+}
+/* Reuse the existing terminal surface for non-active negotiation evidence. */
+.timelineCard:not([data-offer-status='Active']) .offerButton {
+  background: #211e28;
+  /* Exact ordinary incoming Message bubble background. */
+  outline: 1px solid #775497;
+  outline-offset: -1px;
+}
+.timelineCard[data-offer-own='true']:not([data-offer-status='Active'])
+  .offerButton {
+  /* Solid blue already present in the own Offer gradient's light-blue layer. */
+  outline-color: #60a5fa;
+}
+.timelineCard:not([data-offer-status='Active']) .offerButton::before {
+  display: none;
+}
+.offerStatus {
+  order: -1;
+  align-self: flex-end;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #166534;
+  color: #fff;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.timelineCard[data-offer-own='true'] .offerStatus {
+  align-self: flex-start;
+}
+.offerStatusClosed {
+  background: #b91c1c;
 }
 .tombstone {
   color: #bdb4c5;
   font-size: 12px;
+  display: block;
+  padding-block: 10px;
+  line-height: 20px;
   opacity: 0.75;
+}
+.agreementItem {
+  width: min(400px, 100%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.cancelledEvent {
+  /* Existing tombstone typography, without its interaction-wrapper padding. */
+  color: #bdb4c5;
+  font-size: 12px;
+  line-height: 20px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+}
+.agreementStatus {
+  align-self: center;
 }
 .agreement {
   width: min(400px, 100%);
-  margin: 12px auto;
-  padding: 16px;
-  border: 1px solid #8e819466;
+  margin: 0 auto;
   border-radius: 16px;
-  background: #211e28;
+  overflow: hidden;
+  background: white;
+  color: #161616;
   text-align: center;
   font-size: 13px;
 }
-.agreement button {
-  color: #b5edc6;
-  margin-top: 8px;
+.agreementInfo {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 16px;
+  background: #43347a;
+  color: #fff;
+}
+.agreementInfo::before {
+  content: '';
+  position: absolute;
+  inset: -18px;
+  background: radial-gradient(
+      circle at 10% 40%,
+      rgba(147, 51, 234, 0.9) 0%,
+      rgba(109, 40, 217, 0.65) 40%,
+      transparent 75%
+    ),
+    radial-gradient(
+      circle at 90% 60%,
+      rgba(37, 99, 235, 0.95) 0%,
+      rgba(30, 64, 175, 0.6) 42%,
+      transparent 75%
+    );
+  filter: blur(18px);
+  pointer-events: none;
+  z-index: 0;
+}
+.agreementInfo > * {
+  position: relative;
+  z-index: 1;
+}
+.agreementItem[data-agreement-status='cancelled'] .agreementInfo,
+.agreementItem[data-agreement-status='expired'] .agreementInfo {
+  background: #211e28;
+}
+.agreementItem[data-agreement-status='cancelled'] .agreementInfo::before,
+.agreementItem[data-agreement-status='expired'] .agreementInfo::before {
+  display: none;
+}
+.agreementItem[data-agreement-status='open'] .agreement,
+.agreementItem[data-agreement-status='cancelled'] .agreement,
+.agreementItem[data-agreement-status='expired'] .agreement {
+  position: relative;
+}
+.agreementItem[data-agreement-status='open'] .agreement::after,
+.agreementItem[data-agreement-status='cancelled'] .agreement::after,
+.agreementItem[data-agreement-status='expired'] .agreement::after {
+  /* Existing .terminal neutral RGB; paint above child backgrounds, not behind them. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid #8e8194;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 30;
+}
+.agreementCta {
+  display: block;
+  width: 100%;
+  border-top: 1px solid #b995dc29;
+  background: #fff;
+  color: #161616;
+}
+.agreementCta.agreementCta :global(.shining-button) {
+  --shine-color: #fff;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+.agreementCta.agreementCta :global(.shining-button__body) {
+  height: auto;
+  padding: 12px 16px;
+  color: #161616;
+  justify-content: space-between;
+  border-radius: 0;
+}
+.agreementCta :global(.shining-button):focus-visible {
+  outline: 2px solid #161616;
+  outline-offset: -3px;
 }
 .terminal {
   border-color: #8e819466 !important;
@@ -114,6 +339,9 @@
   color: #bdb4c5 !important;
 }
 @media (max-width: 767px) {
+  .media {
+    height: 180px;
+  }
   .dialog,
   .confirm {
     padding: 16px;
@@ -125,9 +353,6 @@
   }
   .context {
     display: none;
-  }
-  .media {
-    height: 180px;
   }
   .terms {
     grid-template-columns: 1fr;
@@ -147,4 +372,14 @@
     animation: none !important;
     transition: none !important;
   }
+}
+
+.sendLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.sendLabel svg {
+  flex-shrink: 0;
 }

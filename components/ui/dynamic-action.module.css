@@ -30,6 +30,14 @@
   height: 18px;
 }
 
+.back :global(.shining-button__body) {
+  flex-direction: row-reverse;
+}
+
+.back :global(.shining-button__arrow) {
+  rotate: 180deg;
+}
+
 .pending :global(.shining-button__arrow) {
   animation: action-pulse 600ms ease-in-out infinite alternate;
 }

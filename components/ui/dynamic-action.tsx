@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 
 import ShiningButton from '@/components/animata/button/shining-button'
 
@@ -11,6 +11,10 @@ export function DynamicAction({
   disabled,
   footer = false,
   className = '',
+  direction = 'forward',
+  showArrow = true,
+  type = 'button',
+  form,
   onClick,
 }: {
   children: ReactNode
@@ -18,6 +22,10 @@ export function DynamicAction({
   disabled?: boolean
   footer?: boolean
   className?: string
+  direction?: 'back' | 'forward'
+  showArrow?: boolean
+  type?: 'button' | 'submit'
+  form?: string
   onClick: () => Promise<void> | void
 }) {
   const [pending, setPending] = useState(false)
@@ -31,7 +39,10 @@ export function DynamicAction({
       clearTimeout(timer.current)
     }
   }, [])
-  const activate = () => {
+  const activate = (event: MouseEvent<HTMLButtonElement>) => {
+    // Keep native form association/Enter, while the existing action animation
+    // delegates the actual validated submission to onClick.
+    if (type === 'submit') event.preventDefault()
     if (disabled || locked.current) return
     locked.current = true
     setPending(true)
@@ -48,11 +59,17 @@ export function DynamicAction({
     <span
       className={`${className} ${styles.action} ${
         footer ? styles.footer : ''
-      } ${pending ? styles.pending : ''}`}
+      } ${pending ? styles.pending : ''} ${
+        direction === 'back' ? styles.back : ''
+      }`}
+      data-action-direction={direction}
       data-action-pending={pending || undefined}
     >
       <ShiningButton
         variant={variant}
+        showArrow={showArrow}
+        type={type}
+        form={form}
         desktopAppearance={true}
         disabled={disabled}
         loading={pending}

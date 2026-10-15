@@ -7,21 +7,13 @@ import type { Listing } from '@/types/listing'
 
 import { CardAction } from './card-actions'
 import { ContentStateError } from './content-state-error'
-import { ListingSortFilter } from './listing-sort-filter'
+import favoritesStyles from './favorites.module.css'
 import styles from './listing-workspace.module.css'
-import type { MarketFilterValues } from './market-filter'
 import { PublishedListingCard } from './published-listing-card'
 import { WorkspaceEmpty } from './workspace-empty'
 
 export function Favorites() {
   const [items, setItems] = useState<Listing[]>([])
-  const [applied, setApplied] = useState<MarketFilterValues>({
-    category: '',
-    subcategory: '',
-    place: '',
-    condition: '',
-  })
-  const [sort, setSort] = useState('newest')
   const [page, setPage] = useState(1)
   const [hasNext, setHasNext] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -33,17 +25,7 @@ export function Favorites() {
     setError('')
     try {
       const result = await getFavoriteListings({
-        ...(applied.category
-          ? { category: applied.category as Listing['category'] }
-          : {}),
-        ...(applied.subcategory
-          ? { subcategory: applied.subcategory as Listing['subcategory'] }
-          : {}),
-        ...(applied.condition
-          ? { condition: applied.condition as Listing['condition'] }
-          : {}),
-        ...(applied.place ? { place: applied.place } : {}),
-        sort: sort as 'newest' | 'price-asc' | 'price-desc',
+        sort: 'newest',
         page,
         pageSize: 20,
       })
@@ -61,7 +43,7 @@ export function Favorites() {
     } finally {
       if (request === version.current) setLoading(false)
     }
-  }, [applied, sort, page])
+  }, [page])
   useEffect(() => {
     setLoading(true)
     setItems([])
@@ -87,22 +69,11 @@ export function Favorites() {
       aria-label="Favorites"
       className={`${styles.workspace} ${styles.favoritesWorkspace}`}
     >
-      <div className={`${styles.toolbar} ${styles.favoritesToolbar}`}>
-        <ListingSortFilter
-          mobileLabels={true}
-          applied={applied}
-          sort={sort}
-          onSort={(value) => {
-            setSort(value)
-            setPage(1)
-          }}
-          onFilter={(values) => {
-            setApplied(values)
-            setPage(1)
-          }}
+      {loading && (
+        <ListingSkeletonGrid
+          className={`${styles.grid} ${favoritesStyles.grid}`}
         />
-      </div>
-      {loading && <ListingSkeletonGrid />}
+      )}
       {!loading && error && (
         <ContentStateError
           className={reveal}
@@ -115,20 +86,10 @@ export function Favorites() {
         </ContentStateError>
       )}
       {!loading && !error && !items.length && (
-        <WorkspaceEmpty className={reveal}>
-          {Object.values(applied).some(Boolean) ? (
-            <span>
-              No listings match your filters.
-              <br />
-              Try another search or clear the filters.
-            </span>
-          ) : (
-            'No favorites yet.'
-          )}
-        </WorkspaceEmpty>
+        <WorkspaceEmpty className={reveal}>No favorites yet.</WorkspaceEmpty>
       )}
       <div
-        className={`${styles.grid} ${reveal}`}
+        className={`${styles.grid} ${favoritesStyles.grid} ${reveal}`}
         hidden={loading || !items.length}
       >
         {items.map((listing) => (

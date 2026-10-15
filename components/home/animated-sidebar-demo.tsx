@@ -102,7 +102,6 @@ const mobileGroups = groups.map((group) =>
         children: [
           ...group.children,
           { id: 'analytics', label: 'Analytics', heading: 'Analytics' },
-          { id: 'payment', label: 'Payment', heading: 'Payment' },
         ],
       }
     : {
@@ -353,7 +352,6 @@ export function AnimatedSidebarDemo() {
                   replayHistory={chartReplayHistory}
                 />
               )}
-              {selected.profile === 'payment' && <p>Coming later</p>}
             </LocalTabContent>
           )}
           {!desktop && active === 'messages' && (

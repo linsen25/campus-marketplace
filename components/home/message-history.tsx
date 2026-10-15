@@ -73,6 +73,11 @@ export function MessageRow({
 }
 
 const emptyEvents: readonly PreviewConversationEvent[] = []
+/** Ordinary message width belongs to the row's direct payload, not its actions. */
+export function MessagePayload({ children }: { children: React.ReactNode }) {
+  return <div className={styles.messagePayload}>{children}</div>
+}
+
 const emptyRequests: readonly PreviewRequest[] = []
 const requestEventTitles = {
   'request-cancelled': 'Order Request cancelled',
@@ -151,7 +156,7 @@ export function MessageHistory({
   const painted = useRef<ReturnType<typeof requestAnimationFrame>>()
   const observe = useCallback(() => {
     const viewport = body.current
-    if (!viewport) return
+    if (!viewport || viewport.dataset.galleryRestoring) return
     following.current =
       viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80
     const bounds = viewport.getBoundingClientRect()
@@ -239,6 +244,8 @@ export function MessageHistory({
     viewport.addEventListener('scroll', observe)
     document.addEventListener('visibilitychange', observe)
     const resize = new ResizeObserver(() => {
+      // Gallery owns restoration only during its closing layout animation.
+      if (viewport.dataset.galleryRestoring) return
       if (following.current && active)
         viewport.scrollTop = viewport.scrollHeight
       else {
@@ -291,15 +298,14 @@ export function MessageHistory({
             <section
               key={item.id}
               className={styles.messageGroup}
+              data-time-group={item.showTimestamp}
               data-timeline-agreement={item.agreement.id}
             >
               <TimelineTimestamp
                 createdAt={item.createdAt}
                 show={item.showTimestamp}
               />
-              <div className={styles.systemEvent}>
-                {renderAgreement?.(item.agreement)}
-              </div>
+              {renderAgreement?.(item.agreement)}
             </section>
           )
         if (item.kind === 'offer')
@@ -307,6 +313,7 @@ export function MessageHistory({
             <section
               key={item.id}
               className={styles.messageGroup}
+              data-time-group={item.showTimestamp}
               data-timeline-offer={item.offer.id}
               data-timeline-created-at={item.createdAt}
             >
@@ -328,6 +335,7 @@ export function MessageHistory({
             <section
               key={item.id}
               className={styles.messageGroup}
+              data-time-group={item.showTimestamp}
               data-timeline-event={item.event.id}
               data-timeline-created-at={item.createdAt}
             >
@@ -361,6 +369,7 @@ export function MessageHistory({
             <section
               key={item.id}
               className={styles.messageGroup}
+              data-time-group={item.showTimestamp}
               data-timeline-event={item.event.id}
               data-timeline-created-at={item.createdAt}
             >
@@ -392,6 +401,7 @@ export function MessageHistory({
             <section
               key={item.id}
               className={styles.messageGroup}
+              data-time-group={item.showTimestamp}
               data-timeline-request={item.request.id}
               data-timeline-created-at={item.createdAt}
             >
@@ -413,6 +423,7 @@ export function MessageHistory({
           return (
             <section
               className={styles.messageGroup}
+              data-time-group={item.showTimestamp}
               key={group[0].id}
               data-message-group="true"
               data-timeline-created-at={group[0].createdAt}
@@ -443,32 +454,40 @@ export function MessageHistory({
                       </div>
                     )}
                     {message.withdrawnAt ? (
-                      <small>{sent ? 'You' : name} withdrew a message.</small>
+                      <small className={styles.withdrawn}>
+                        {sent ? 'You' : name} withdrew a message.
+                      </small>
                     ) : (
-                      <WithdrawContext
-                        enabled={sent && Boolean(message.canWithdraw)}
-                        createdAt={message.createdAt}
-                        onWithdraw={async () => {
-                          const receipt = await withdrawMessage(message.id)
-                          setWithdrawalReceipts((receipts) => ({
-                            ...receipts,
-                            [message.id]: receipt,
-                          }))
-                          window.dispatchEvent(
-                            new CustomEvent(
-                              'marketplace-messages-invalidated',
-                              { detail: { conversationId } }
+                      <MessagePayload>
+                        <WithdrawContext
+                          enabled={
+                            sent &&
+                            message.type === 'TEXT' &&
+                            Boolean(message.canWithdraw)
+                          }
+                          createdAt={message.createdAt}
+                          onWithdraw={async () => {
+                            const receipt = await withdrawMessage(message.id)
+                            setWithdrawalReceipts((receipts) => ({
+                              ...receipts,
+                              [message.id]: receipt,
+                            }))
+                            window.dispatchEvent(
+                              new CustomEvent(
+                                'marketplace-messages-invalidated',
+                                { detail: { conversationId } }
+                              )
                             )
-                          )
-                        }}
-                      >
-                        {message.type === 'TEXT' && (
-                          <p className={styles.bubble}>{message.content}</p>
-                        )}
-                        {message.type === 'IMAGE' && (
-                          <MessagePhotos message={message} />
-                        )}
-                      </WithdrawContext>
+                          }}
+                        >
+                          {message.type === 'TEXT' && (
+                            <p className={styles.bubble}>{message.content}</p>
+                          )}
+                          {message.type === 'IMAGE' && (
+                            <MessagePhotos message={message} />
+                          )}
+                        </WithdrawContext>
+                      </MessagePayload>
                     )}
                   </MessageRow>
                 )

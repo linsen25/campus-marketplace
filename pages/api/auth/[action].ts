@@ -16,6 +16,7 @@ import {
 } from '@/lib/server/marketplace-auth'
 import {
   correctPendingUsername,
+  isPendingSignupResumable,
   newSignupTicket,
   setSignupTicket,
 } from '@/lib/server/pending-signup'
@@ -95,6 +96,7 @@ export default async function handler(
   if (
     ![
       'session',
+      'pending-signup-state',
       'email',
       'verify',
       'sign-out',
@@ -109,7 +111,11 @@ export default async function handler(
     ].includes(String(action))
   )
     return res.status(404).json({ error: 'Not found.' })
-  const method = ['session', 'username-availability'].includes(String(action))
+  const method = [
+    'session',
+    'username-availability',
+    'pending-signup-state',
+  ].includes(String(action))
     ? 'GET'
     : 'POST'
   if (req.method !== method) {
@@ -129,6 +135,10 @@ export default async function handler(
         .json({ available: await usernameAvailable(client, candidate) })
     }
     requireSameOriginWrite(req)
+    if (action === 'pending-signup-state')
+      return res
+        .status(200)
+        .json({ resumable: await isPendingSignupResumable(req) })
     let signupProviderFailure: SignupProviderFailure | undefined
     const client = createMarketplaceClient(
       { req, res },

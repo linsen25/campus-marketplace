@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import ShiningButton from '@/components/animata/button/shining-button'
 import ShiftTabs from '@/components/animata/tabs/shift-tabs'
 import { useUsernameAvailability } from '@/components/auth/use-username-availability'
+import HoldButton from '@/components/react-bits/hold-button/hold-button'
 import { StatefulButton } from '@/components/velora/stateful-button'
 import {
   passwordRules as RULES,
@@ -293,26 +294,24 @@ function AuthSubmit({
   busy,
   label,
   form,
-  verifySignup,
 }: {
   mode: keyof typeof modeCopy
   disabled: boolean
   busy: string
   label: string
   form: RefObject<HTMLFormElement>
-  verifySignup: () => Promise<void>
 }) {
   if (mode === 'signup')
     return (
-      <StatefulButton
-        className={styles.send}
+      <HoldButton
+        className={styles.holdSubmit}
         disabled={disabled}
-        successText="Verified"
-        errorText="Retry"
-        onClick={verifySignup}
+        holdTime={1000}
+        doneLabel="Create account"
+        onHold={() => form.current?.requestSubmit()}
       >
-        Verify code
-      </StatefulButton>
+        Hold to create account
+      </HoldButton>
     )
   if (mode === 'signin')
     return (
@@ -405,14 +404,35 @@ export function AuthSignupCard({
   const [agreement, setAgreement] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [sentEmail, setSentEmail] = useState('')
+  const [resumable, setResumable] = useState(false)
+  const recoveryProbe = useRef(0)
+  useEffect(() => {
+    const generation = ++recoveryProbe.current
+    let cancelled = false
+    setResumable(false)
+    if (mode === 'signup')
+      marketplaceRequest<{ resumable: boolean }>(
+        '/api/auth/pending-signup-state',
+        'GET'
+      )
+        .then((result) => {
+          if (!cancelled && generation === recoveryProbe.current)
+            setResumable(result.resumable === true)
+        })
+        .catch(() => {
+          if (!cancelled && generation === recoveryProbe.current)
+            setResumable(false)
+        })
+    return () => {
+      cancelled = true
+    }
+  }, [mode])
   // Volatile only: one issued registration identity, never browser storage.
   const registration = useRef<{
     email: string
     username: string
     password?: string
   }>()
-  const [createAttempt, setCreateAttempt] = useState(0)
-  const [createdHere, setCreatedHere] = useState(false)
   const [cooldown, setCooldown] = useState(0)
   const [busy, setBusy] = useState('')
   const lookup = useUsernameAvailability(
@@ -462,6 +482,8 @@ export function AuthSignupCard({
     return () => clearTimeout(timer)
   }, [cooldown])
   function switchMode(next: typeof mode) {
+    recoveryProbe.current++
+    setResumable(false)
     setMode(next)
     setActiveHelpField(null)
     setError('')
@@ -473,8 +495,6 @@ export function AuthSignupCard({
     setShowPassword(false)
     setPasswordError(false)
     registration.current = undefined
-    setCreatedHere(false)
-    setCreateAttempt((value) => value + 1)
   }
   function validateEmail() {
     if (!isWesternEmail(email))
@@ -512,11 +532,10 @@ export function AuthSignupCard({
           ? cause.message
           : 'Authentication failed. Please try again.'
       if (message === pendingSignupUnavailableMessage) {
+        setResumable(false)
         registration.current = undefined
         setSentEmail('')
         setCode('')
-        setCreatedHere(false)
-        setCreateAttempt((value) => value + 1)
       }
       if (action === 'send') setSendError(message)
       else setError(message)
@@ -570,8 +589,9 @@ export function AuthSignupCard({
         )
         if (mode === 'signup' && !sameRegistration)
           registration.current = { email: normalizedEmail, username, password }
-        if (mode === 'signup') setCreatedHere(true)
         setSentEmail(normalizedEmail)
+        recoveryProbe.current++
+        setResumable(false)
         setCode('')
         setCooldown(60)
         setStatus(
@@ -600,7 +620,7 @@ export function AuthSignupCard({
         // This is only a draft identity. OTP + the existing username RPC prove
         // ownership before any password edit; availability is not authentication.
         registration.current = { email: normalizedEmail, username }
-        setCreatedHere(false)
+
         setSentEmail(normalizedEmail)
         setCode('')
         setCooldown(60)
@@ -663,14 +683,9 @@ export function AuthSignupCard({
     )
     setAttempted(false)
     setShowPassword(false)
-    setCreateAttempt((value) => value + 1)
   }
   const { title, subtitle, submit } = modeCopy[mode]
   const sendLabel = sendCodeLabel(sent, cooldown, busy)
-  let createLabel = 'Create'
-  if (registration.current?.email === normalizedEmail)
-    createLabel =
-      !sent && cooldown > 0 ? `Send new code in ${cooldown}s` : 'Send new code'
   return (
     <section className={styles.composition}>
       <div className={styles.header}>
@@ -689,12 +704,10 @@ export function AuthSignupCard({
           animate={phase}
           variants={contentVariants}
         >
-          {mode === 'signup' && sent ? 'Verify your email' : title}
+          {title}
         </motion.h2>
         <motion.p initial={false} animate={phase} variants={contentVariants}>
-          {mode === 'signup' && sent
-            ? 'Enter the latest code sent to your Western email.'
-            : subtitle}
+          {subtitle}
         </motion.p>
       </div>
       <div className={styles.card}>
@@ -888,38 +901,11 @@ export function AuthSignupCard({
               </>
             )}
           </div>
-          {mode === 'signup' && (!sent || createdHere) && (
-            <StatefulButton
-              key={`create-${createAttempt}`}
-              className={styles.create}
-              data-auth-create={true}
-              disabled={
-                formDisabled ||
-                (!sent &&
-                  registration.current?.email === normalizedEmail &&
-                  cooldown > 0) ||
-                (!sent &&
-                  (!isWesternEmail(email) ||
-                    !validSignupPassword(password) ||
-                    !agreement ||
-                    availability.state !== 'available'))
-              }
-              retainSuccess={true}
-              successText="Code sent"
-              errorText="Retry"
-              minLoadingMs={200}
-              onClick={() =>
-                sendCode(createLabel === 'Create' ? 'create' : 'resend')
-              }
-            >
-              {createLabel}
-            </StatefulButton>
-          )}
-          {mode === 'signup' && !sent && !registration.current && (
+          {mode === 'signup' && !sent && resumable && (
             <div>
               <p className={styles.helper}>
-                New signup? Use Create above. Resume only a signup already
-                started in this browser.
+                A verification code was requested for this signup. Resume only
+                this pending registration.
               </p>
               <StatefulButton
                 className={styles.send}
@@ -932,7 +918,7 @@ export function AuthSignupCard({
               </StatefulButton>
             </div>
           )}
-          {mode !== 'signin' && (mode !== 'signup' || sent) && (
+          {mode !== 'signin' && (
             <div className={styles.field}>
               <label htmlFor={`${id}-code`}>Verification code</label>
               <div className={styles.codeRow}>
@@ -954,7 +940,13 @@ export function AuthSignupCard({
                   successText="Sent"
                   errorText="Retry"
                   minLoadingMs={200}
-                  onClick={() => sendCode('resend')}
+                  onClick={() =>
+                    sendCode(
+                      sent || registration.current?.email === normalizedEmail
+                        ? 'resend'
+                        : 'create'
+                    )
+                  }
                 >
                   {sendLabel}
                 </StatefulButton>
@@ -972,11 +964,6 @@ export function AuthSignupCard({
                   </p>
                 )}
             </div>
-          )}
-          {mode === 'signup' && !sent && sendError && (
-            <p role="alert" className={styles.error}>
-              {sendError}
-            </p>
           )}
           {mode === 'signup' && sent && (
             <div>
@@ -1048,16 +1035,13 @@ export function AuthSignupCard({
               }
             }}
           >
-            {(mode !== 'signup' || sent) && (
-              <AuthSubmit
-                mode={mode}
-                disabled={formDisabled || (mode === 'signup' && !signupReady)}
-                busy={busy}
-                label={submit}
-                form={formRef}
-                verifySignup={() => submitForm(true)}
-              />
-            )}
+            <AuthSubmit
+              mode={mode}
+              disabled={formDisabled || (mode === 'signup' && !signupReady)}
+              busy={busy}
+              label={submit}
+              form={formRef}
+            />
           </div>
           {mode === 'signup' && !signupReady && (
             <p role="status" className={styles.helper}>

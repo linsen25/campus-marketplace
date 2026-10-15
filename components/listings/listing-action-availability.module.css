@@ -1,0 +1,27 @@
+.offerAction {
+  width: var(--action-width);
+  flex-shrink: 0;
+  min-width: 0;
+}
+.offerAction.offerAction > button {
+  width: 100%;
+  height: var(--action-height);
+  padding: var(--action-inset);
+  border-width: var(--action-inset);
+  border-radius: var(--action-radius);
+}
+.reason {
+  font-size: 12px;
+  line-height: 18px;
+  margin-top: 6px;
+  color: #c1adcf;
+  font-weight: 400;
+}
+@media (max-width: 767px) {
+  :global([role='dialog']) div:has(> .offerAction) {
+    flex-wrap: wrap;
+  }
+  .offerAction {
+    width: 100%;
+  }
+}

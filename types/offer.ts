@@ -39,6 +39,8 @@ export type Offer = {
   createdAt: string
   updatedAt: string
   terms: OfferTerms
+  /** Immutable Listing asking price captured when this Offer was created. */
+  askingPriceCents: number
   listingUpdatedAtAtOffer: string | null
   linkedOrderId: string | null
   canAccept?: boolean

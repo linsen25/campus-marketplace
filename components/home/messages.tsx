@@ -675,6 +675,7 @@ export function Messages({
             <div
               className={`${clientStyles.wrapper} ${messageStyles.mobileSurface}`}
               data-mobile-messages="true"
+              data-mobile-message-detail={showDetail}
             >
               <div
                 className={messageStyles.mobileViewport}

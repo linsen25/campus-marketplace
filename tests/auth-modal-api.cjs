@@ -56,6 +56,7 @@ async function main() {
   let failure = null
   let passwordFailure = null
   let pendingProofFailure = false
+  let resumableResult = true
   let usernameFailure = false
   const calls = []
   global.fetch = async (url, options = {}) => {
@@ -86,6 +87,8 @@ async function main() {
       return pendingProofFailure
         ? json({ code: '42501', message: 'Pending signup unavailable.' }, 403)
         : json(null)
+    if (pathname.endsWith('/rpc/marketplace_pending_signup_resumable'))
+      return json(resumableResult)
     if (pathname.endsWith('/rpc/marketplace_username_available'))
       return json(true)
     if (
@@ -147,7 +150,9 @@ async function main() {
     }
     await handler(
       {
-        method: action === 'session' ? 'GET' : 'POST',
+        method: ['session', 'pending-signup-state'].includes(action)
+          ? 'GET'
+          : 'POST',
         query: { action },
         body,
         headers: {
@@ -283,6 +288,63 @@ async function main() {
     'service_role',
     'pcaqxezdfxofysghssyo'
   )
+  const beforeProbe = calls.length
+  const missingProbe = await request('pending-signup-state')
+  assert.deepEqual(missingProbe.body, { resumable: false })
+  assert.equal(calls.length, beforeProbe)
+  assert.equal(missingProbe.getHeader('Cache-Control'), 'private, no-store')
+  assert.deepEqual(
+    (
+      await request(
+        'pending-signup-state',
+        {},
+        { cookie: 'marketplace-pending-signup=tampered' }
+      )
+    ).body,
+    { resumable: false }
+  )
+  assert.equal(calls.length, beforeProbe)
+  const validProbe = await request('pending-signup-state', {}, correctionCookie)
+  assert.deepEqual(validProbe.body, { resumable: true })
+  assert.deepEqual(Object.keys(calls.at(-1).input), ['p_ticket'])
+  resumableResult = false
+  assert.deepEqual(
+    (await request('pending-signup-state', {}, correctionCookie)).body,
+    { resumable: false }
+  )
+  resumableResult = { user: 'must-not-leak' }
+  assert.deepEqual(
+    (await request('pending-signup-state', {}, correctionCookie)).body,
+    { resumable: false }
+  )
+  const beforeOrigin = calls.length
+  assert.equal(
+    (
+      await request(
+        'pending-signup-state',
+        {},
+        { ...correctionCookie, origin: 'https://other.example' }
+      )
+    ).statusCode,
+    403
+  )
+  assert.equal(calls.length, beforeOrigin)
+  const stagingUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  process.env.APP_ENV = 'production'
+  process.env.NEXT_PUBLIC_SUPABASE_URL =
+    'https://yzvchumzyonegujucyqs.supabase.co'
+  const beforeProductionGuard = calls.length
+  assert.deepEqual(
+    (await request('pending-signup-state', {}, correctionCookie)).body,
+    { resumable: false }
+  )
+  assert.equal(
+    calls.length,
+    beforeProductionGuard,
+    'Staging-first probe must not contact production'
+  )
+  process.env.APP_ENV = 'staging'
+  process.env.NEXT_PUBLIC_SUPABASE_URL = stagingUrl
   assert.equal(
     (
       await request(

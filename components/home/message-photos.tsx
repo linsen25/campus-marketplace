@@ -1,5 +1,3 @@
-/* eslint-disable jsx-a11y/no-noninteractive-element-interactions -- Image load failures are network events, not user interactions. */
-/* eslint-disable @next/next/no-img-element -- Short-lived private URLs bypass image optimizers/caches. */
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import ExpandableGallery from '@/components/expandable-gallery'
@@ -59,16 +57,11 @@ export function MessagePhotos({ message }: { message: ImageMessage }) {
   }, [images, renew])
   return (
     <>
-      {images.length === 1 ? (
-        <img
-          className={styles.singlePhoto}
-          src={images[0].previewUrl}
-          alt={images[0].name}
-          onError={() => renew()}
-        />
-      ) : (
-        <ExpandableGallery images={images} onImageError={() => renew()} />
-      )}
+      <ExpandableGallery
+        images={images}
+        singlePhotoClassName={styles.singlePhoto}
+        onImageError={() => renew()}
+      />
       {error && (
         <button type="button" onClick={() => renew()}>
           Retry loading photos

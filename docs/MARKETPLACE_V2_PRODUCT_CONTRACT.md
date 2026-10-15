@@ -1,5 +1,10 @@
 # Marketplace V2: authoritative target product contract
 
+> **2026-10-14 authoritative flow override:** [Master Order flow rework](ORDER_MASTER_FLOW_REWORK.md)
+> supersedes conflicting payment/inspection ordering, cancellation cutoffs,
+> Seller delivery compensation/dispute, and Processing cancellation rules here.
+> Offer/Agreement negotiation and frozen economics remain unchanged.
+
 Current contract revised 2026-10-13. The complete Offer / Agreement revision is
 being implemented and qualified against staging only. See
 [V2 Offer / Agreement revision](V2_OFFER_AGREEMENT_REVISION.md) for its migration

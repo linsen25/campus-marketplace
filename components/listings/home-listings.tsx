@@ -14,6 +14,7 @@ import type { Listing } from '@/types/listing'
 
 import { ContentStateError } from './content-state-error'
 import { Favorites } from './favorites'
+import listingColumns from './favorites.module.css'
 import { ListingConfirmation } from './listing-confirmation'
 import { ListingForm } from './listing-form'
 import type { ListingLeaveGuard } from './listing-form'
@@ -186,7 +187,11 @@ export function HomeListings({
       </div>
       <LocalTabContent tab={tab}>
         {notice && <p role="status">{notice}</p>}
-        {loading && <ListingSkeletonGrid />}
+        {loading && (
+          <ListingSkeletonGrid
+            className={`${styles.grid} ${listingColumns.grid}`}
+          />
+        )}
         {!loading && error && !confirmation && (
           <ContentStateError
             className={reveal}
@@ -205,7 +210,10 @@ export function HomeListings({
               : emptyTabMessage}
           </WorkspaceEmpty>
         )}
-        <div className={`${styles.grid} ${reveal}`} hidden={!visible.length}>
+        <div
+          className={`${styles.grid} ${listingColumns.grid} ${reveal}`}
+          hidden={!visible.length}
+        >
           {visible.map((listing) => (
             <article key={listing.id} aria-label={listing.title}>
               <PublishedListingCard listing={listing} owner={true} />

@@ -1,5 +1,9 @@
 # Payment / Payout / role-specific Order product contract
 
+> **2026-10-14 flow override:** the [Master Order flow rework](ORDER_MASTER_FLOW_REWORK.md)
+> supersedes conflicting payment-before-inspection, paid cancellation, Seller delivery
+> compensation/dispute and Processing cancellation rules below. Historical V1 facts remain unchanged.
+
 > **CURRENT STAGING V1 / historical implementation reference.**
 > The approved [Marketplace V2 product contract](MARKETPLACE_V2_PRODUCT_CONTRACT.md)
 > supersedes conflicting future product rules in this document. Current V1 code,

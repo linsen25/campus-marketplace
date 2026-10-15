@@ -3,6 +3,7 @@ import Head from 'next/head'
 
 import { Container } from '@/components/container/container'
 import { BackButton } from '@/components/listings/back-button'
+import { useMarketplaceSession } from '@/components/listings/marketplace-session'
 import { useListingOfferContext } from '@/components/listings/use-listing-offer-context'
 import { useMessageSeller } from '@/components/listings/use-message-seller'
 import { ProductImage } from '@/components/product/product-image'
@@ -18,6 +19,8 @@ type ListingPageProps = {
 }
 
 export default function ListingPage({ listing, error }: ListingPageProps) {
+  const { seller } = useMarketplaceSession()
+  const own = seller?.id === listing?.seller.id
   const messaging = useMessageSeller(listing?.id || '')
   const offerContext = useListingOfferContext(
     listing?.id || '',
@@ -95,39 +98,36 @@ export default function ListingPage({ listing, error }: ListingPageProps) {
                   <p className="whitespace-pre-line">{listing.description}</p>
                 </section>
                 <div className="flex flex-col items-start gap-2">
-                  <Button
-                    type="primary"
-                    size="large"
-                    disabled={listing.status === 'sold' || messaging.busy}
-                    aria-describedby={
-                      listing.status === 'sold' ? 'listing-sold' : undefined
-                    }
-                    onClick={() => messaging.contact()}
-                  >
-                    Message Seller
-                  </Button>
-                  {offerContext.enabled &&
-                    (listing.status === 'available' ||
-                      offerContext.orderId) && (
+                  {!own && (
+                    <Button
+                      type="primary"
+                      size="large"
+                      disabled={messaging.busy}
+                      onClick={() => messaging.contact()}
+                    >
+                      Message Seller
+                    </Button>
+                  )}
+                  {!own && offerContext.enabled && (
+                    <div className="flex flex-col items-start gap-2">
                       <Button
                         type="primary"
                         size="large"
-                        disabled={
-                          offerContext.busy || Boolean(offerContext.error)
-                        }
+                        disabled={offerContext.busy || offerContext.disabled}
                         onClick={() => offerContext.open()}
                       >
                         {offerContext.label}
                       </Button>
-                    )}
+                      {offerContext.reason && (
+                        <p className="text-neutral-dark text-sm">
+                          {offerContext.reason}
+                        </p>
+                      )}
+                    </div>
+                  )}
                   {messaging.error && <p role="alert">{messaging.error}</p>}
                   {offerContext.error && (
                     <p role="alert">{offerContext.error}</p>
-                  )}
-                  {listing.status === 'sold' && (
-                    <p id="listing-sold" className="text-neutral-dark text-sm">
-                      This listing has been sold.
-                    </p>
                   )}
                 </div>
               </div>

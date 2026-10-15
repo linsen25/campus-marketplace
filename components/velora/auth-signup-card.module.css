@@ -40,6 +40,14 @@
   scrollbar-color: transparent transparent;
 }
 
+.dialog[aria-labelledby='auth-title'] {
+  transition: scrollbar-color 220ms ease-out;
+}
+
+.dialog[aria-labelledby='auth-title']::-webkit-scrollbar-thumb {
+  transition: background-color 220ms ease-out;
+}
+
 .dialog[aria-labelledby='auth-title']:not([data-scrolling])::-webkit-scrollbar-thumb {
   background: transparent;
 }
@@ -295,6 +303,10 @@
   width: 100%;
   border: 1px solid #a99bb7;
 }
+.holdSubmit.holdSubmit:not(:disabled)[data-phase='idle'] {
+  background: #fff;
+  color: #111;
+}
 .loginAction {
   composes: contract from '../animata/button/action-button-sizing.module.css';
   display: flex;
@@ -351,10 +363,6 @@
   padding: 0 12px;
   white-space: nowrap;
   font-size: 12px;
-}
-.create {
-  --surface: #2563eb;
-  align-self: flex-start;
 }
 .helper,
 .privacy {

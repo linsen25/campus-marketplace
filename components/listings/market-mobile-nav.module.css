@@ -18,6 +18,12 @@
 .transitioning {
   z-index: 100002;
 }
+@media (max-width: 1023px) {
+  :global(body):has([data-mobile-message-detail='true']) .position,
+  :global(body):has([data-formal-order]) .position {
+    display: none;
+  }
+}
 
 @media (min-width: 1024px) {
   .position {
