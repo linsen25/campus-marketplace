@@ -169,7 +169,17 @@
 }
 
 .composer .send.send {
+  flex: 0 0 var(--composer-action-size);
+  width: var(--composer-action-size);
   height: var(--composer-action-size);
+  padding: 0;
+  border-radius: 999px;
+  /* Keep StatefulButton's live success/error announcements, with icon-only layers. */
+  font-size: 0;
+}
+
+.composer .send.send > span {
+  gap: 0;
 }
 
 .messageGroup + .messageGroup {

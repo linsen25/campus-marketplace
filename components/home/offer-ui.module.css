@@ -426,6 +426,11 @@
 @media (max-width: 767px) {
   .detailDialog {
     overscroll-behavior: contain;
+    /* Keep the approved content/action inset; remove only the enclosing frame. */
+    border-color: transparent;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
   .detailDialog .expanded {
     /* The outer dialog owns touch/wheel scrolling. Keep the stable gutter and

@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { ArrowUp, Plus } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
@@ -752,13 +752,14 @@ export function MessagesChat({
               key={`${destination}-${conversationId}-${active}`}
               className={styles.send}
               data-chat-send="true"
+              aria-label="Send message"
               disabled={!draft.trim() && sendState === 'idle'}
               minLoadingMs={300}
               resetAfter={800}
               onClick={send}
               onStateChange={setSendState}
             >
-              Send
+              <ArrowUp size={20} aria-hidden="true" />
             </StatefulButton>
             <div ref={menu} className={styles.addMenu}>
               <StatefulButton
