@@ -44,6 +44,19 @@ fs.writeFileSync(
         window.writes = 0
         window.show('buyer')
       })
+      const expectUnread = async (count = 0) => {
+        await page.waitForFunction(
+          (count) =>
+            document.querySelector(
+              `button[aria-label="Notifications, ${count} unread"]`
+            ),
+          count
+        )
+        assert.equal(
+          await page.getByText(/^\d+ unread$/, { exact: true }).count(),
+          0
+        )
+      }
       const chooseStatus = async (label) => {
         await page
           .getByRole('button', { name: 'Notification status', exact: true })
@@ -161,7 +174,7 @@ fs.writeFileSync(
         await page.getByRole('button', { name: 'Delete', exact: true }).count(),
         0
       )
-      await page.getByText('1 unread', { exact: true }).waitFor()
+      await expectUnread(1)
       assert.equal(
         await dialog
           .locator('li > span')
@@ -187,7 +200,7 @@ fs.writeFileSync(
         .getByRole('button', { name: 'View New offer received', exact: true })
         .click()
       await page.getByRole('dialog').waitFor()
-      await page.getByText('0 unread', { exact: true }).waitFor()
+      await expectUnread()
       assert.equal(await dialog.locator('li').count(), 0)
       assert.equal(await page.getByRole('dialog').count(), 1)
       await page.waitForTimeout(200)
@@ -209,7 +222,7 @@ fs.writeFileSync(
       await page.waitForFunction(() =>
         window.actions.some((x) => x.includes('conversation='))
       )
-      await page.getByText('0 unread', { exact: true }).waitFor()
+      await expectUnread()
       assert.equal(await dialog.locator('li').count(), 0)
       await page.evaluate(() => {
         window.actions = []
@@ -233,7 +246,7 @@ fs.writeFileSync(
       await chooseStatus('All status')
       await dialog.locator('li').waitFor()
       await page.waitForFunction(() => window.writes === 1)
-      await page.getByText('0 unread', { exact: true }).waitFor()
+      await expectUnread()
       assert.equal(await page.locator('nav [aria-label="1 unread"]').count(), 0)
       await page.evaluate(() => (window.actions = []))
       await dialog
@@ -365,7 +378,7 @@ fs.writeFileSync(
           { exact: true }
         )
         .waitFor()
-      await page.getByText('3 unread', { exact: true }).waitFor()
+      await expectUnread(3)
       assert.equal(await page.evaluate(() => window.actions.length), 0)
       await page.keyboard.press('Escape')
       await page.getByRole('dialog').waitFor({ state: 'hidden' })
@@ -581,7 +594,7 @@ fs.writeFileSync(
         await page.getByRole('checkbox', { checked: true }).count(),
         0
       )
-      await page.getByText('0 unread', { exact: true }).waitFor()
+      await expectUnread()
       await checkbox('Saved Listing price dropped').check()
       await page.evaluate(() => {
         window.feed.notifications = window.feed.notifications.filter(
@@ -726,7 +739,7 @@ fs.writeFileSync(
       await page
         .getByRole('button', { name: 'Mark all as read', exact: true })
         .click()
-      await page.getByText('0 unread', { exact: true }).waitFor()
+      await expectUnread()
       await page
         .getByText('No notifications match these filters.', { exact: true })
         .waitFor()

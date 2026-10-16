@@ -265,9 +265,7 @@ function NotificationContent() {
           className={styles.helper}
           aria-live="polite"
         >
-          {chosen.length
-            ? `${chosen.length} selected`
-            : `${feed.unreadCount} unread`}
+          {chosen.length > 0 && `${chosen.length} selected`}
         </p>
         {selectionMode &&
           (chosen.length ? (
