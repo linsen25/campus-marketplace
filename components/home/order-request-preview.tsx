@@ -114,7 +114,7 @@ function ListingSurface({
         verified ? (
           <span
             className={styles.verified}
-            title="Official Campus Marketplace Order Request origin only. Not seller identity, item authenticity, safety or payment verification."
+            title="Official Usual & Unusual Order Request origin only. Not seller identity, item authenticity, safety or payment verification."
           >
             ✓ Verified
           </span>

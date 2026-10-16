@@ -358,7 +358,7 @@ function CommunityStandards({ onClose }: { onClose: () => void }) {
     >
       <section className={styles.standards}>
         <h2 id="community-standards-title">
-          Campus Marketplace Community Standards
+          Usual & Unusual Community Standards
         </h2>
         {standards.map(([title, copy]) => (
           <div key={title}>
@@ -510,7 +510,7 @@ export function AuthSignupCard({
       return false
     }
     if (!agreement)
-      throw new Error('Agree to the Campus Marketplace rules to continue.')
+      throw new Error('Agree to the Usual & Unusual rules to continue.')
     return true
   }
   async function run(
@@ -689,7 +689,7 @@ export function AuthSignupCard({
   return (
     <section className={styles.composition}>
       <div className={styles.header}>
-        <span className={styles.brand}>Campus Marketplace</span>
+        <span className={styles.brand}>Usual & Unusual</span>
         <button
           type="button"
           className={styles.dismiss}

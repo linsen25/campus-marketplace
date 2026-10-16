@@ -178,7 +178,7 @@ export function HomepageScene({
                   onActivate={joinTicket}
                 >
                   <div className={styles.ticketCopy}>
-                    <span>Campus Marketplace</span>
+                    <span>Usual & Unusual</span>
                     <strong>
                       Find it nearby.
                       <br />

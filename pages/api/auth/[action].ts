@@ -220,7 +220,7 @@ export default async function handler(
       requireUsername(body.username)
       if (body.agreement !== true)
         throw new ListingApiError(
-          'Agree to the Campus Marketplace rules to continue.'
+          'Agree to the Usual & Unusual rules to continue.'
         )
       if (!validSignupPassword(body.password))
         throw new ListingApiError(

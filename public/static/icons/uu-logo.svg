@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="447" height="267" viewBox="172 272 447 267" role="img" aria-label="Usual and Unusual UU logo">
+  <title>Usual &amp; Unusual — UU logo</title>
+  <defs>
+    <mask id="knockout" maskUnits="userSpaceOnUse" x="0" y="0" width="794" height="794" style="mask-type:luminance">
+      <rect x="0" y="0" width="794" height="794" fill="#FFFFFF"/>
+      <path d="M385 437 L421 437 Q434 437 434 450 L434 480 Q434 485 430 489 L380 534 Q373 540 367 533 L328 498 Q323 493 328 486 L375 441 Q380 437 385 437 Z" fill="none" stroke="#000000" stroke-width="6" stroke-linejoin="round"/>
+      <circle cx="407" cy="461" r="10" fill="#000000"/>
+    </mask>
+  </defs>
+  <g mask="url(#knockout)">
+    <!-- Left U: flat violet -->
+    <path fill="#5B2CAE" d="M185 274 H220 Q230 274 230 285 V422 C230 453 247 475 277 475 C307 475 325 454 325 422 V285 Q325 274 336 274 H371 Q382 274 382 285 V422 C382 486 338 526 277 526 C216 526 174 485 174 422 V285 Q174 274 185 274 Z"/>
+    <!-- Right U: flat electric blue -->
+    <path fill="#0D86F8" d="M422 274 H456 Q467 274 467 285 V422 C467 454 485 475 515 475 C545 475 562 454 562 422 V285 Q562 274 573 274 H606 Q617 274 617 285 V422 C617 486 576 526 515 526 C454 526 411 485 411 422 V285 Q411 274 422 274 Z"/>
+    <!-- Center price tag -->
+    <path fill="#5B2CAE" d="M385 437 L421 437 Q434 437 434 450 L434 480 Q434 485 430 489 L380 534 Q373 540 367 533 L328 498 Q323 493 328 486 L375 441 Q380 437 385 437 Z"/>
+  </g>
+</svg>

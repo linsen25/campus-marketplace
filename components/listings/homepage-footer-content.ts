@@ -11,7 +11,7 @@ export const panels: InformationPanel[] = [
     title: 'Western',
     heading: 'Made for Western. Kept within Western.',
     intro:
-      'Campus Marketplace is a private marketplace built around the Western community. Access requires a verified Western email, so browsing, listing, and connecting all happen inside the same campus network.',
+      'Usual & Unusual is a private marketplace built around the Western community. Access requires a verified Western email, so browsing, listing, and connecting all happen inside the same campus network.',
     items: [
       {
         title: 'Western access only',
@@ -19,7 +19,7 @@ export const panels: InformationPanel[] = [
       },
       {
         title: 'Made for student life',
-        copy: 'Textbooks after finals. Furniture before a move. Tech, clothes, kitchen gear, and the things that change hands every semester. Campus Marketplace is designed around how student life actually moves.',
+        copy: 'Textbooks after finals. Furniture before a move. Tech, clothes, kitchen gear, and the things that change hands every semester. Usual & Unusual is designed around how student life actually moves.',
       },
       {
         title: 'Local by default',
@@ -31,7 +31,7 @@ export const panels: InformationPanel[] = [
     title: 'Trust',
     heading: 'Built around trust, not just listings.',
     intro:
-      'Buying from someone nearby should feel clear and accountable. Campus Marketplace is being designed so both sides know what was agreed, what changed, and when an exchange is actually complete.',
+      'Buying from someone nearby should feel clear and accountable. Usual & Unusual is being designed so both sides know what was agreed, what changed, and when an exchange is actually complete.',
     statusNote:
       'Some transaction protection features below are part of the planned marketplace experience and are not yet live.',
     items: [
@@ -99,7 +99,7 @@ export const panels: InformationPanel[] = [
       },
       {
         title: 'Use the platform flow',
-        copy: 'As transaction tools are introduced, keeping the exchange inside Campus Marketplace will make protection and transaction records more useful.',
+        copy: 'As transaction tools are introduced, keeping the exchange inside Usual & Unusual will make protection and transaction records more useful.',
       },
     ],
   },

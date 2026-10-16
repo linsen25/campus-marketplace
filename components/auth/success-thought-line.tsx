@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import styles from './auth-success-reveal.module.css'
 
 const labels = [
-  'Opening Marketplace',
+  'Opening Usual & Unusual',
   'Preparing listings',
   'Loading listing cards',
   'Getting everything ready',
@@ -81,14 +81,14 @@ export function SuccessThoughtLine({
     <div className={styles.thoughtLine}>
       <div className={styles.thoughtHeader} data-thought-header="true">
         <Sparkles size={16} aria-hidden="true" />
-        <span>Loading Marketplace{destinationReady ? '' : '...'}</span>
+        <span>Loading Usual & Unusual{destinationReady ? '' : '...'}</span>
         <span className={styles.elapsed} data-loading-timer="true">
           {elapsed.toFixed(1)}s
         </span>
       </div>
       <ol
         className={styles.thoughtSteps}
-        aria-label="Marketplace loading progress"
+        aria-label="Usual & Unusual loading progress"
       >
         {labels
           .slice(0, Math.min(visibleBoundary + 1, 4))

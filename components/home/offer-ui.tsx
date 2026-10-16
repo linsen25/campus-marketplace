@@ -1,5 +1,5 @@
 import { ArrowRight, ChevronRight } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { CardAction } from '@/components/listings/card-actions'
 import successStyles from '@/components/listings/create-success.module.css'
@@ -168,6 +168,7 @@ export function OfferCard({
   onDeny,
   onViewOrder,
   linkedAgreement,
+  notificationEntry,
 }: {
   offer: Offer
   listing: ChatListing
@@ -181,8 +182,19 @@ export function OfferCard({
   onDeny?: (offer: Offer, command: string) => Promise<void>
   onViewOrder?: (offer: Offer) => void
   linkedAgreement?: Agreement
+  notificationEntry?: string
 }) {
   const [open, setOpen] = useState(false)
+  const consumedNotification = useRef<string>()
+  useEffect(() => {
+    if (
+      notificationEntry &&
+      consumedNotification.current !== notificationEntry
+    ) {
+      consumedNotification.current = notificationEntry
+      setOpen(true)
+    }
+  }, [notificationEntry])
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const busy = useRef(false)

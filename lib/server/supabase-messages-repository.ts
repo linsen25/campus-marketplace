@@ -25,6 +25,7 @@ function imagePreview(count: number) {
   return count === 1 ? 'Photo' : `${count} photos`
 }
 function messagePreview(row?: MessageRow) {
+  if (row?.origin === 'marketplace_auto_reply') return 'Automatic reply'
   if (row?.withdrawn_at) return 'Message withdrawn'
   if (row?.type === 'IMAGE') return imagePreview(row.image_count || 0)
   return row?.content || ''
@@ -98,6 +99,7 @@ type MessageRow = {
   sequence: number
   client_message_id: string
   withdrawn_at?: string | null
+  origin?: Message['origin']
 }
 function message(row: MessageRow): TextMessage {
   return {
@@ -109,6 +111,7 @@ function message(row: MessageRow): TextMessage {
     createdAt: row.created_at,
     sequence: Number(row.sequence),
     clientMessageId: row.client_message_id,
+    origin: row.origin || 'user',
   }
 }
 
@@ -178,6 +181,7 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
         .select('id', { count: 'exact', head: true })
         .eq('conversation_id', source.id)
         .gt('sequence', watermark)
+        .neq('origin', 'marketplace_auto_reply')
         .neq('sender_id', user.id),
       source.listing_id
         ? liveListing(source.listing_id)
@@ -230,6 +234,7 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
         canWithdraw:
           process.env.APP_ENV === 'staging' &&
           !item.withdrawn_at &&
+          item.origin !== 'marketplace_auto_reply' &&
           item.sender_id === user.id &&
           Date.now() < Date.parse(item.created_at) + 300000,
       }
@@ -327,7 +332,7 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
         nextBefore: rows.length > 50 ? Number(page[0].sequence) : null,
       }
     },
-    async findOrCreate(listingId: unknown) {
+    async findOrCreate(listingId: unknown, contactSeller = false) {
       const user = await actor()
       const id = messageUuid(listingId)
       // Resume only this authenticated Buyer's existing, RLS-visible thread.
@@ -341,8 +346,12 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
       checked(existing.error)
       if (existing.data) return dto(existing.data as Row)
       const { data, error } = await client.rpc(
-        'marketplace_find_or_create_conversation',
-        { p_listing_id: id }
+        contactSeller
+          ? 'marketplace_contact_seller'
+          : 'marketplace_find_or_create_conversation',
+        {
+          p_listing_id: id,
+        }
       )
       checked(error)
       return dto(data as Row)

@@ -6,6 +6,7 @@ const listingId = '11111111-1111-4111-8111-111111111111'
 let actor = 'buyer',
   status = 'sold',
   rpcCalls = 0,
+  expectedRpc = 'marketplace_find_or_create_conversation',
   authFailure = false
 const rows = [
   {
@@ -87,7 +88,7 @@ const client = {
   },
   async rpc(name) {
     rpcCalls++
-    assert.equal(name, 'marketplace_find_or_create_conversation')
+    assert.equal(name, expectedRpc)
     if (status !== 'available')
       return { error: { code: '23514', message: 'Unavailable' } }
     return {
@@ -151,6 +152,8 @@ async function run() {
     assert.equal(result.id, 'existing')
     assert.equal(result.role, 'buying')
     assert.equal(rpcCalls, before)
+    assert.equal((await repo.findOrCreate(listingId, true)).id, 'existing')
+    assert.equal(rpcCalls, before)
   }
   actor = 'other-buyer'
   status = 'sold'
@@ -165,6 +168,15 @@ async function run() {
       await moduleUnderTest.exports
         .createSupabaseMessagesRepository({})
         .findOrCreate(listingId)
+    ).id,
+    'new-own-thread'
+  )
+  expectedRpc = 'marketplace_contact_seller'
+  assert.equal(
+    (
+      await moduleUnderTest.exports
+        .createSupabaseMessagesRepository({})
+        .findOrCreate(listingId, true)
     ).id,
     'new-own-thread'
   )

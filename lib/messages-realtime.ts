@@ -30,7 +30,8 @@ export function connectMessagesRealtime(
   userId: string,
   onSignal: (signal: MessagesSignal) => void,
   recover: () => void,
-  unauthenticated: () => void
+  unauthenticated: () => void,
+  onNotifications?: () => void
 ) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -213,7 +214,7 @@ export function connectMessagesRealtime(
             client.realtime.disconnect()
             return
           }
-          client
+          const channel = client
             .channel(`marketplace:messages:${userId}`, {
               config: { private: true },
             })
@@ -222,11 +223,20 @@ export function connectMessagesRealtime(
               const signal = parseMessagesSignal(event.payload)
               if (signal) onSignal(signal)
             })
-            .subscribe((status) => {
-              if (stopped) return
-              if (status === 'SUBSCRIBED') recover()
-              else if (['CHANNEL_ERROR', 'TIMED_OUT'].includes(status)) resume()
-            })
+          if (onNotifications)
+            channel.on(
+              'broadcast',
+              { event: 'notifications_changed' },
+              (event) => {
+                if (!stopped && event.payload?.changed === true)
+                  onNotifications?.()
+              }
+            )
+          channel.subscribe((status) => {
+            if (stopped) return
+            if (status === 'SUBSCRIBED') recover()
+            else if (['CHANNEL_ERROR', 'TIMED_OUT'].includes(status)) resume()
+          })
         } catch {
           if (!stopped) {
             timer = setTimeout(() => {

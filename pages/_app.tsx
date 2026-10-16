@@ -20,6 +20,7 @@ import {
 } from '@/components/listings/marketplace-shell'
 import { Loader } from '@/components/loader/loader'
 import { DesktopRouteTransitionProvider } from '@/components/navigation/desktop-route-transition'
+import { NotificationsProvider } from '@/components/notifications/notification-state'
 import { Overlay } from '@/components/overlay/overlay'
 import { AppLayout } from '@/layouts/app-layout'
 import { gaTrackingId, isDev, isProd } from '@/utils/env'
@@ -48,7 +49,7 @@ function MarketplaceApp({ Component, pageProps, router }: AppProps) {
   return (
     <AppLayout>
       <Head>
-        <title>Campus Marketplace</title>
+        <title>Usual & Unusual</title>
         <meta
           name="viewport"
           content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"
@@ -112,7 +113,9 @@ export default function App(props: AppProps) {
       <AuthModalProvider>
         <DesktopRouteTransitionProvider>
           <ProfileLogoutProvider>
-            <MarketplaceApp {...props} />
+            <NotificationsProvider>
+              <MarketplaceApp {...props} />
+            </NotificationsProvider>
           </ProfileLogoutProvider>
         </DesktopRouteTransitionProvider>
       </AuthModalProvider>

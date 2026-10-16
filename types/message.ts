@@ -8,6 +8,7 @@ type MessageBase = {
   clientMessageId?: string
   withdrawnAt?: string | null
   canWithdraw?: boolean
+  origin?: 'buyer_interest' | 'marketplace_auto_reply' | 'user'
 }
 
 export type TextMessage = MessageBase & {

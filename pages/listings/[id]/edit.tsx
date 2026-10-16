@@ -14,7 +14,7 @@ export default function EditListingPage({ listing }: EditListingPageProps) {
   return (
     <>
       <Head>
-        <title>Edit {listing.title} | Campus Marketplace</title>
+        <title>Edit {listing.title} | Usual & Unusual</title>
       </Head>
       <main className="py-8 laptop:py-12">
         <Container>

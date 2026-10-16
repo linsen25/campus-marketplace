@@ -20,7 +20,7 @@ export default function SignInPage() {
   return (
     <>
       <Head>
-        <title>Log in | Campus Marketplace</title>
+        <title>Log in | Usual & Unusual</title>
       </Head>
       <main className="py-8">
         <Container>

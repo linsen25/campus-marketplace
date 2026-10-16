@@ -1,7 +1,7 @@
 {
-  "name": "pwa-ecom-ui-template-cli",
+  "name": "usual-and-unusual-cli",
   "version": "0.0.1",
-  "description": "PWA Ecom UI Template command line interface.",
+  "description": "Development data-import CLI for Usual & Unusual.",
   "private": true,
   "main": "index.js",
   "scripts": {

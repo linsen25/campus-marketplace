@@ -44,7 +44,7 @@ export default function ListingPage({ listing, error }: ListingPageProps) {
   return (
     <>
       <Head>
-        <title>{`${listing.title} | Campus Marketplace`}</title>
+        <title>{`${listing.title} | Usual & Unusual`}</title>
       </Head>
       <main className="py-8 laptop:py-12">
         <Container>

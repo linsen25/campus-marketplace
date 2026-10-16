@@ -34,7 +34,7 @@ export function WelcomeHero({
     <section className={styles.hero} aria-labelledby="welcome-title">
       <nav className={styles.navigation} aria-label="Welcome navigation">
         <Link href="/" className={styles.brand}>
-          Campus Marketplace
+          Usual & Unusual
         </Link>
         <div className={styles.actions}>
           <ShiningButton

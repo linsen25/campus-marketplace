@@ -38,11 +38,10 @@
 }
 
 .scroll {
-  max-height:
-    max(
-      0px,
-      calc(var(--panel-height) - env(safe-area-inset-bottom, 0px))
-    );
+  max-height: max(
+    0px,
+    calc(var(--panel-height) - env(safe-area-inset-bottom, 0px))
+  );
   overflow-y: auto;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
@@ -109,7 +108,7 @@
   border-radius: 50%;
 }
 
-.option[aria-pressed="true"] .check {
+.option[aria-pressed='true'] .check {
   background: #eee7f5;
   color: #211329;
   border-color: transparent;
@@ -161,4 +160,29 @@
   .panel:not(.sortPanel) {
     width: min(468px, var(--panel-width));
   }
+}
+
+/* Opt-in notification filters retain Sort's panel, option and fade behavior. */
+.inbox .trigger {
+  background: #201a29;
+  color: #f5f5f5;
+  padding: 0 14px;
+  width: auto;
+  font-size: 13px;
+}
+.inbox .trigger:hover:not(:disabled) {
+  background: #30263c;
+}
+.inbox .selection {
+  display: inline;
+}
+.inbox .sortPanel {
+  left: 0;
+  right: auto;
+  width: max-content;
+  min-width: 100%;
+  max-width: calc(100vw - 40px);
+}
+.inbox .option {
+  white-space: nowrap;
 }

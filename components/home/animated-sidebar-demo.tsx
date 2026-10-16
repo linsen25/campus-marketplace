@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  Bell,
   MessageCircle,
   Package,
   ClipboardList,
@@ -17,6 +18,8 @@ import {
   useDesktopRouteTransition,
   usePendingDestination,
 } from '@/components/navigation/desktop-route-transition'
+import { NotificationBell } from '@/components/notifications/notification-bell'
+import { NotificationsView } from '@/components/notifications/notifications-view'
 import MenuInteraction from '@/components/smooth-dropdown'
 import { LocalTabContent } from '@/components/ui/local-tab-content'
 import {
@@ -173,7 +176,9 @@ export function AnimatedSidebarDemo() {
     query.addEventListener('change', update)
     return () => query.removeEventListener('change', update)
   }, [])
-  const [active, setActive] = useState<Group | 'settings'>('profile')
+  const [active, setActive] = useState<Group | 'notifications' | 'settings'>(
+    'profile'
+  )
   useEffect(() => {
     if (pendingDestination === '/home') {
       arrivingFromMarket.current = true
@@ -203,6 +208,7 @@ export function AnimatedSidebarDemo() {
     const syncSection = () => {
       const section = router.query.section
       if (section === 'settings') setActive('settings')
+      if (section === 'notifications') setActive('notifications')
       if (section === 'orders') {
         setActive('orders')
         setSelected((current) => ({
@@ -237,7 +243,18 @@ export function AnimatedSidebarDemo() {
   }, [router, router.query.section, router.query.destination])
   // Primary entries classify child pages; explicit group selection starts at
   // its first child. Rail width/hover/pinning never calls this selection path.
-  const selectSection = (id: Group | 'settings', child?: string) => {
+  const selectSection = (
+    id: Group | 'notifications' | 'settings',
+    child?: string
+  ) => {
+    if (id === 'notifications') {
+      const enter = () => {
+        router.push('/home?section=notifications').catch(() => {})
+      }
+      if (listingGuard.current) listingGuard.current(enter)
+      else enter()
+      return
+    }
     const replayCharts =
       id === 'profile' && (desktop ? !child : child === 'analytics')
     const alreadySelected =
@@ -268,7 +285,7 @@ export function AnimatedSidebarDemo() {
   )
   const heading =
     group?.children.find((child) => child.id === selected[group.id])?.heading ??
-    'Settings'
+    (active === 'notifications' ? 'Notifications' : 'Settings')
   return (
     <div className={styles.page} data-slot="home-sidebar-demo">
       {desktop ? (
@@ -321,20 +338,27 @@ export function AnimatedSidebarDemo() {
       <div className={styles.mobileShell}>
         <header className={styles.mobileHeader} data-home-mobile-header="true">
           <h1 className={styles.mobileTitle}>{heading}</h1>
+          {!desktop && <NotificationBell />}
           <MenuInteraction
             compact={true}
             items={[
               ...mobileGroups,
+              {
+                id: 'notifications',
+                label: 'Notifications',
+                icon: <Bell />,
+              },
               { id: 'settings', label: 'Settings', icon: <Settings /> },
             ]}
             activeItem={active}
             selectedChild={group ? selected[group.id] : undefined}
             onSelect={(id, child) =>
-              selectSection(id as Group | 'settings', child)
+              selectSection(id as Group | 'notifications' | 'settings', child)
             }
           />
         </header>
         <main className={styles.mobileMain}>
+          {!desktop && active === 'notifications' && <NotificationsView />}
           {!desktop && active === 'profile' && (
             <LocalTabContent tab={selected.profile}>
               {selected.profile === 'overview' && (
@@ -404,16 +428,28 @@ export function AnimatedSidebarDemo() {
           }
           title="Back to Market"
           footer={
-            <SidebarLink
-              href="#settings"
-              label="Settings"
-              icon={<Settings />}
-              active={active === 'settings'}
-              onClick={(event) => {
-                event.preventDefault()
-                selectSection('settings')
-              }}
-            />
+            <>
+              <SidebarLink
+                href="/home?section=notifications"
+                label="Notifications"
+                icon={<Bell />}
+                active={active === 'notifications'}
+                onClick={(event) => {
+                  event.preventDefault()
+                  selectSection('notifications')
+                }}
+              />
+              <SidebarLink
+                href="#settings"
+                label="Settings"
+                icon={<Settings />}
+                active={active === 'settings'}
+                onClick={(event) => {
+                  event.preventDefault()
+                  selectSection('settings')
+                }}
+              />
+            </>
           }
         >
           {groups.map((item) => (
@@ -457,7 +493,10 @@ export function AnimatedSidebarDemo() {
           ))}
         </SidebarBody>
         <main ref={main} className={styles.main} data-home-main="true">
-          <SectionHeader title={active === 'profile' ? 'Profile' : heading} />
+          <SectionHeader title={active === 'profile' ? 'Profile' : heading}>
+            {desktop && <NotificationBell />}
+          </SectionHeader>
+          {desktop && active === 'notifications' && <NotificationsView />}
           {desktop && active === 'profile' && (
             <>
               <ProfileOverview

@@ -43,11 +43,10 @@ function homeReady(signal: AbortSignal): Promise<void> {
       const region = root?.querySelector(
         desktop ? '[data-slot="sidebar-body"]' : '[data-home-mobile-header]'
       )
-      const background = root?.querySelector('canvas[data-rendered="true"]')
+      // Decorative WebGL readiness must not decide whether Home can open.
       if (
         !root?.getBoundingClientRect().width ||
-        !region?.getBoundingClientRect().width ||
-        !background
+        !region?.getBoundingClientRect().width
       ) {
         frame = requestAnimationFrame(check)
         return
@@ -323,17 +322,12 @@ export function DesktopRouteTransitionProvider({
       performance.mark('page-slide:release')
       clear()
     }
-    run().catch(async () => {
+    run().catch(() => {
       if (!active) return
       controller.abort()
       clearTimeout(timeout)
-      if (location.pathname !== navigation.source)
-        await Promise.race([
-          routerRef.current.replace(navigation.source).catch(() => false),
-          new Promise((resolve) => {
-            setTimeout(resolve, 3000)
-          }),
-        ])
+      // A failed visual transition must not undo a successful router navigation.
+      // If routing itself failed, its source is already the current page.
       if (active) clear()
     })
     return () => {

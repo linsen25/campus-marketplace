@@ -70,7 +70,7 @@ export default function Lanyard({
     <div className="lanyard-wrapper" ref={wrapperRef}
       role={onJoin ? 'button' : undefined}
       tabIndex={onJoin ? 0 : undefined}
-      aria-label={onJoin ? 'Join Campus Marketplace' : undefined}
+      aria-label={onJoin ? 'Join Usual & Unusual' : undefined}
       onKeyDown={event => {
         if (onJoin && (event.key === 'Enter' || event.key === ' ')) {
           event.preventDefault();

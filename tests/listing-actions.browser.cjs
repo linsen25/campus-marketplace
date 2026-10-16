@@ -11,7 +11,7 @@ const mocks = {
   'next/router':
     'export function useRouter(){return {query:{},pathname:"/listings",push:async url=>window.routes.push(url)}}',
   '@/lib/messages-api':
-    'export async function findConversation(id){window.lookups++;return {id:"existing-thread",role:"buying"}}',
+    'export async function findConversation(id,contact){window.lastContactIntent=contact;window.lookups++;return {id:"existing-thread",role:"buying"}}',
   '@/lib/favorites-api':
     'export async function favoriteState(){return {favorited:false}}export async function setFavorite(){throw Error("Unexpected favorite mutation")}',
   '@/lib/listings-api':
@@ -146,6 +146,7 @@ async function run() {
             )
           }
           await message.click()
+          assert.equal(await p.evaluate(() => window.lastContactIntent), true)
           await message.click()
           assert.deepEqual(await p.evaluate(() => window.routes), [
             '/home?section=messages&destination=buying&conversation=existing-thread',
@@ -153,6 +154,10 @@ async function run() {
           ])
           if (v.status === 'available') {
             await offer.click()
+            assert.equal(
+              await p.evaluate(() => window.lastContactIntent),
+              false
+            )
             assert(
               (await p.evaluate(() => window.routes))
                 .at(-1)

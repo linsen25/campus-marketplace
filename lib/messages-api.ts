@@ -15,8 +15,11 @@ export const listConversations = (role: string, cursor?: string) =>
   )
 export const getConversation = (id: string) =>
   marketplaceRequest<Conversation>(`${base}/${encodeURIComponent(id)}`, 'GET')
-export const findConversation = (listingId: string) =>
-  marketplaceRequest<Conversation>(base, 'POST', { listingId })
+export const findConversation = (listingId: string, contactSeller = false) =>
+  marketplaceRequest<Conversation>(base, 'POST', {
+    listingId,
+    ...(contactSeller ? { intent: 'contact-seller' } : {}),
+  })
 export const getMessageHistory = (id: string, before?: number) =>
   marketplaceRequest<{ messages: Message[]; nextBefore: number | null }>(
     `${base}/${encodeURIComponent(id)}/messages${

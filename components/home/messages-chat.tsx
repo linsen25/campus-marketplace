@@ -485,6 +485,12 @@ export function MessagesChat({
             renderOffer={(offer) => (
               <OfferCard
                 offer={offer}
+                notificationEntry={
+                  router.query.conversation === conversationId &&
+                  router.query.offer === offer.id
+                    ? offer.id
+                    : undefined
+                }
                 linkedAgreement={offers.history?.agreements?.find(
                   (agreement) =>
                     agreement.id === offer.linkedOrderId &&

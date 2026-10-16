@@ -10,7 +10,7 @@ export default function NewListingPage() {
   return (
     <>
       <Head>
-        <title>Post listing | Campus Marketplace</title>
+        <title>Post listing | Usual & Unusual</title>
       </Head>
       <main className="py-8 laptop:py-12">
         <Container>

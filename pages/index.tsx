@@ -31,7 +31,7 @@ export default function WelcomePage({
   return (
     <>
       <Head>
-        <title>Campus Marketplace</title>
+        <title>Usual & Unusual</title>
       </Head>
       <main>
         {error && <p role="alert">{error}</p>}

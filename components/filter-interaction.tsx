@@ -1,7 +1,7 @@
 /* Focusable native scroll regions support keyboard scrolling without widget semantics. */
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */
 // Shared trigger-local shell for Market Filter/Sort; retains supplied option motion.
-import { Check, Filter, ArrowDownWideNarrow } from 'lucide-react'
+import { Check, ChevronDown, Filter, ArrowDownWideNarrow } from 'lucide-react'
 import {
   AnimatePresence,
   MotionConfig,
@@ -48,6 +48,8 @@ export default function FilterInteraction({
   isClosing = false,
   onOpenChange,
   children,
+  appearance = 'market',
+  disabled = false,
 }: {
   label: string
   mobileLabel?: string
@@ -58,8 +60,11 @@ export default function FilterInteraction({
   isClosing?: boolean
   onOpenChange: (open: boolean) => void
   children?: ReactNode
+  appearance?: 'market' | 'notification'
+  disabled?: boolean
 }) {
   const anchor = useRef<HTMLDivElement>(null)
+  const sortStyle = label === 'Sort' || appearance === 'notification'
   const normalTrigger = useRef<HTMLButtonElement>(null)
   const activeRoot = useRef<HTMLDivElement>(null)
   const idle = useRef<ReturnType<typeof setTimeout>>()
@@ -81,11 +86,11 @@ export default function FilterInteraction({
   const reduced = useReducedMotion()
   const optionControls = useAnimationControls()
   useEffect(() => {
-    if (label === 'Sort') return
+    if (sortStyle) return
     // An interrupted entrance must freeze too: only the panel opacity exits.
     if (isClosing) optionControls.stop()
     else if (isOpen) optionControls.start({ opacity: 1, y: 0 })
-  }, [isClosing, isOpen, optionControls, label])
+  }, [isClosing, isOpen, optionControls, sortStyle])
   const close = () => {
     onOpenChange(false)
     normalTrigger.current?.focus()
@@ -165,6 +170,7 @@ export default function FilterInteraction({
     <button
       ref={placeholder ? normalTrigger : activeTrigger}
       type="button"
+      disabled={disabled}
       className={styles.trigger}
       aria-label={label}
       data-mobile-label={mobileLabel ? true : undefined}
@@ -183,29 +189,40 @@ export default function FilterInteraction({
         }
       }}
     >
-      {label === 'Sort' ? (
-        <ArrowDownWideNarrow size={22} />
-      ) : (
-        <Filter size={22} />
-      )}
+      {appearance !== 'notification' &&
+        (label === 'Sort' ? (
+          <ArrowDownWideNarrow size={22} />
+        ) : (
+          <Filter size={22} />
+        ))}
       <span className={styles.selection}>
-        {label === 'Sort'
+        {sortStyle
           ? options.find((option) => option.value === value)?.label || label
           : label}
       </span>
+      {appearance === 'notification' && (
+        <ChevronDown size={16} aria-hidden={true} />
+      )}
       {mobileLabel && <span className={styles.mobileLabel}>{mobileLabel}</span>}
     </button>
   )
   return (
     <>
-      <div ref={anchor} className={styles.control}>
+      <div
+        ref={anchor}
+        className={`${styles.control} ${
+          appearance === 'notification' ? styles.inbox : ''
+        }`}
+      >
         {renderTrigger(true)}
       </div>
       {isOpen &&
         createPortal(
           <div
             ref={activeRoot}
-            className={`${styles.control} ${styles.active}`}
+            className={`${styles.control} ${styles.active} ${
+              appearance === 'notification' ? styles.inbox : ''
+            }`}
             style={
               {
                 position: 'fixed',
@@ -232,14 +249,14 @@ export default function FilterInteraction({
                   id={id}
                   aria-label={`${label} options`}
                   className={`${styles.panel} ${
-                    label === 'Sort' ? styles.sortPanel : ''
+                    sortStyle ? styles.sortPanel : ''
                   }`}
                   initial={{ opacity: 0 }}
                   animate={{
                     opacity: isClosing ? 0 : 1,
                   }}
                   transition={
-                    label === 'Sort'
+                    sortStyle
                       ? sortPanelFade
                       : {
                           duration: isClosing ? 0.18 : 0.2,
@@ -308,15 +325,13 @@ export default function FilterInteraction({
                           className={styles.option}
                           aria-pressed={option.value === value}
                           initial={
-                            label === 'Sort'
+                            sortStyle
                               ? false
                               : { opacity: 0, y: reduced ? 0 : 40 }
                           }
-                          animate={
-                            label === 'Sort' ? undefined : optionControls
-                          }
+                          animate={sortStyle ? undefined : optionControls}
                           transition={
-                            label === 'Sort'
+                            sortStyle
                               ? { type: 'tween', duration: 0 }
                               : {
                                   type: 'spring',

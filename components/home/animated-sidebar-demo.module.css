@@ -284,7 +284,7 @@
     height: var(--desktop-app-control-height);
   }
 
-  .navigation a[href^="#"] {
+  .navigation :is(a[href^="#"], a[href="/home?section=notifications"]) {
     height: var(--desktop-app-control-height);
     padding-inline: 19px;
   }
@@ -319,8 +319,8 @@
     outline-offset: -2px;
   }
 
-  .navigation a[href^="#"] > span:first-child,
-  .navigation a[href^="#"] svg {
+  .navigation :is(a[href^="#"], a[href="/home?section=notifications"]) > span:first-child,
+  .navigation :is(a[href^="#"], a[href="/home?section=notifications"]) svg {
     width: var(--desktop-app-icon-size);
     height: var(--desktop-app-icon-size);
   }

@@ -33,7 +33,7 @@ export function MarketplaceHeader() {
           className="flex items-center justify-between gap-4"
         >
           <Link href="/" className="text-xl font-bold">
-            Campus Marketplace
+            Usual & Unusual
           </Link>
           <div className={styles.desktopLinks}>
             <Link href="/listings" className="underline">
@@ -64,9 +64,7 @@ export function MarketplaceFooter() {
     >
       <Container>
         <div className="flex flex-col gap-2 text-sm text-neutral-dark">
-          <p>
-            Campus Marketplace · Second-hand finds for the Western community.
-          </p>
+          <p>Usual & Unusual · Second-hand finds for the Western community.</p>
           <p>
             Independent community marketplace. Not affiliated with Western
             University.

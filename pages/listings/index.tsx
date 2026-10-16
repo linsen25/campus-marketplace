@@ -24,7 +24,7 @@ export default function ListingsPage({
   return (
     <>
       <Head>
-        <title>Market | Campus Marketplace</title>
+        <title>Market | Usual & Unusual</title>
       </Head>
       <MarketLayout
         values={values}

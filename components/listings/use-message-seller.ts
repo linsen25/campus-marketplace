@@ -41,7 +41,7 @@ export function useMessageSeller(listingId: string) {
     setBusy(true)
     setError('')
     try {
-      const conversation = await findConversation(listingId)
+      const conversation = await findConversation(listingId, !makeOffer)
       if (mounted.current)
         await router.push(
           `/home?section=messages&destination=${

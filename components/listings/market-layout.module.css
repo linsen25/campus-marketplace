@@ -44,12 +44,16 @@
 }
 
 .brandAccent {
-  color: #b9a0d2;
-  font-size: 14px;
+  display: block;
+  flex: 0 0 auto;
+  height: 30px;
 }
 
-.brandHeading .brandAccent {
-  line-height: 20px;
+.brandAccent img {
+  display: block;
+  width: auto;
+  height: 30px;
+  max-width: none;
 }
 
 .toolbar {
@@ -128,10 +132,6 @@
 }
 
 @media (min-width: 1024px) {
-  .controls {
-    --market-control-height: 48px;
-  }
-
   /* Keep the native gutter/width: only the thumb color changes, never overflow. */
   .desktopViewport {
     background-color: #0b0b0b;
@@ -160,8 +160,6 @@
   }
 
   .toolbar {
-    --market-control-height: var(--desktop-app-control-height, 60px);
-
     padding: 20px var(--desktop-app-inset, 48px);
     gap: 20px;
   }
@@ -226,8 +224,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: var(--desktop-app-control-height, 60px);
-  height: var(--desktop-app-control-height, 60px);
+  width: var(--market-control-height, 48px);
+  height: var(--market-control-height, 48px);
   border-radius: 50%;
   background: #fff;
   color: #18181b;

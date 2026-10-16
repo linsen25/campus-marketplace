@@ -42,6 +42,14 @@ module.exports = withNextPlugins([withBundleAnalyzer, withPWA], {
     dynamicStartUrl: false,
     runtimeCaching: [
       {
+        urlPattern: ({ url }) =>
+          url.origin === self.location.origin &&
+          url.pathname === '/api/notifications',
+        handler: 'NetworkOnly',
+        method: 'GET',
+        options: {},
+      },
+      {
         // Credentials and verification must never fall back to a cached response.
         urlPattern: ({ url }) =>
           url.origin === self.location.origin &&

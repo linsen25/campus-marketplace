@@ -7,7 +7,7 @@ export default function HomePage() {
   return (
     <>
       <Head>
-        <title>Home | Campus Marketplace</title>
+        <title>Home | Usual & Unusual</title>
       </Head>
       <OrderVisualProvider>
         <AnimatedSidebarDemo />

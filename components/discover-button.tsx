@@ -1,9 +1,9 @@
 // CSS Modules adaptation of the supplied UseLayouts Discover Button (e9c4dce1).
 import {
-  FavouriteIcon,
   Fire02Icon,
   MultiplicationSignIcon,
   Search01Icon,
+  Store01Icon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { motion } from 'motion/react'
@@ -18,7 +18,7 @@ import styles from './discover-button.module.css'
 
 const tabs = [
   { id: 'popular', label: 'Popular', icon: Fire02Icon },
-  { id: 'favorites', label: 'Favorites', icon: FavouriteIcon },
+  { id: 'favorites', label: 'Store', icon: Store01Icon },
 ] as const
 const spring = {
   type: 'spring' as const,

@@ -15,7 +15,7 @@ function HomepageFooterContact() {
     <section className={styles.contact} aria-labelledby="homepage-contact">
       <h2 id="homepage-contact">Questions, ideas, or found a bug?</h2>
       <p>
-        Campus Marketplace is still growing. If you have feedback, want to
+        Usual & Unusual is still growing. If you have feedback, want to
         contribute, or just want to say hi, reach out.
       </p>
       <dl className={styles.contactLinks}>
@@ -125,9 +125,9 @@ export function HomepageFooter() {
     return () => cancelAnimationFrame(frame)
   }, [activeIndex, height, reduced, keepActivePanelVisible])
   return (
-    <footer className={styles.footer} aria-label="About Campus Marketplace">
+    <footer className={styles.footer} aria-label="About Usual & Unusual">
       <div className={styles.content}>
-        <p className={styles.brand}>Campus Marketplace</p>
+        <p className={styles.brand}>Usual & Unusual</p>
         <div
           className={styles.controls}
           role="group"
@@ -208,7 +208,7 @@ export function HomepageFooter() {
             Independent project for the Western community. Not affiliated with
             Western University.
           </p>
-          <p>&copy; 2026 Campus Marketplace</p>
+          <p>&copy; 2026 Usual & Unusual</p>
         </div>
       </div>
     </footer>

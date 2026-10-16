@@ -434,11 +434,15 @@ export function MessageHistory({
               />
               {group.map((source) => {
                 const message = withdrawalReceipts[source.id] || source
-                const sent = message.senderId === perspectiveUserId
+                const automatic = message.origin === 'marketplace_auto_reply'
+                const displayedSender = automatic
+                  ? 'marketplace'
+                  : message.senderId
+                const sent = displayedSender === perspectiveUserId
                 return (
                   <MessageRow
                     key={message.id}
-                    senderId={message.senderId}
+                    senderId={displayedSender}
                     currentUserId={perspectiveUserId}
                     data-timeline-id={`message:${message.id}`}
                     data-message-id={message.id}
@@ -447,8 +451,8 @@ export function MessageHistory({
                     {!sent && (
                       <div className={styles.messageAvatar}>
                         <UserAvatar
-                          username={name}
-                          image={image}
+                          username={automatic ? 'Usual & Unusual' : name}
+                          image={automatic ? undefined : image}
                           tone="purple"
                         />
                       </div>
@@ -481,7 +485,14 @@ export function MessageHistory({
                           }}
                         >
                           {message.type === 'TEXT' && (
-                            <p className={styles.bubble}>{message.content}</p>
+                            <p className={styles.bubble}>
+                              {automatic && (
+                                <span className={styles.automaticLabel}>
+                                  Automatic reply · Usual & Unusual
+                                </span>
+                              )}
+                              {message.content}
+                            </p>
                           )}
                           {message.type === 'IMAGE' && (
                             <MessagePhotos message={message} />

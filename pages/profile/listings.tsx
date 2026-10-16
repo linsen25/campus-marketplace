@@ -61,7 +61,7 @@ export default function MyListingsPage({
   return (
     <>
       <Head>
-        <title>My Listings | Campus Marketplace</title>
+        <title>My Listings | Usual & Unusual</title>
       </Head>
       <section aria-label="My Listings">
         <div className="flex flex-col gap-6">

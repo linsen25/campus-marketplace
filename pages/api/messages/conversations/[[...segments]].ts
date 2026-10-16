@@ -38,9 +38,17 @@ export default async function handler(
       throw new ListingApiError('A JSON object is required.')
     let result: unknown
     if (!parts.length) {
-      if (req.method === 'POST')
-        result = await repository.findOrCreate(req.body.listingId)
-      else {
+      if (req.method === 'POST') {
+        if (
+          req.body.intent !== undefined &&
+          req.body.intent !== 'contact-seller'
+        )
+          throw new ListingApiError('Invalid conversation intent.')
+        result = await repository.findOrCreate(
+          req.body.listingId,
+          req.body.intent === 'contact-seller'
+        )
+      } else {
         if (
           typeof req.query.role !== 'string' ||
           (req.query.cursor !== undefined &&

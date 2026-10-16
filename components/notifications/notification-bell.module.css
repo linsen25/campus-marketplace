@@ -1,0 +1,90 @@
+.bell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #261d30;
+  color: #fff;
+}
+.count {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  min-width: 18px;
+  padding: 1px 4px;
+  border-radius: 20px;
+  background: #c33d53;
+  color: white;
+  font-size: 10px;
+  line-height: 16px;
+}
+.center {
+  min-width: 0;
+  width: 100%;
+  color: white;
+}
+.helper,
+.empty {
+  color: #ccbfda;
+  font-size: 13px;
+  line-height: 20px;
+  margin: 12px 0;
+}
+.list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+}
+.list li {
+  border: 1px solid #4e4059;
+  border-radius: 12px;
+}
+.list li[data-unread] {
+  background: #342442;
+  border-color: #9875b7;
+}
+.list button {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  width: 100%;
+  padding: 12px;
+  overflow-wrap: anywhere;
+}
+.list strong {
+  font-size: 14px;
+  line-height: 20px;
+}
+.list span {
+  color: #e0d6e9;
+  font-size: 13px;
+  line-height: 19px;
+}
+.list small {
+  color: #bfb1cd;
+  font-size: 11px;
+  line-height: 17px;
+}
+.center button:focus-visible,
+.bell:focus-visible {
+  outline: 2px solid #c5a5e9;
+  outline-offset: 3px;
+}
+
+.list button {
+  cursor: pointer;
+}
+.list button:hover:not(:disabled) {
+  background: #ffffff08;
+}
+.list button:active:not(:disabled) {
+  background: #ffffff10;
+}
+.list button:disabled {
+  cursor: default;
+}

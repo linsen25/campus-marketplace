@@ -536,11 +536,11 @@ export function MarketLayout({
       >
         <div className={styles.mobileBrand}>
           <MarketBrandMark />
-          <span>Campus Marketplace</span>
+          <span>Usual & Unusual</span>
         </div>
         <div className={styles.toolbar}>
           <h1 className={`${welcomeStyles.brand} ${styles.brandHeading}`}>
-            <MarketBrandMark /> Campus Marketplace
+            <MarketBrandMark /> Usual & Unusual
           </h1>
           <div className={styles.discoverSpace}>
             <DiscoverButton
