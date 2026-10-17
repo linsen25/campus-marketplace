@@ -3,6 +3,7 @@ import type {
   CreateListingInput,
   Listing,
   ListingQuery,
+  OwnerListingQuery,
   UpdateListingInput,
 } from '@/types/listing'
 
@@ -114,12 +115,25 @@ export async function markListingSold(
     'POST'
   )
 }
+export function getMyListings(
+  query?: OwnerListingQuery,
+  context?: MarketplaceContext
+): Promise<Listing[]>
+/** Preserve existing server-side getMyListings(context) callers. */
+export function getMyListings(context?: MarketplaceContext): Promise<Listing[]>
 export async function getMyListings(
+  queryOrContext?: MarketplaceContext | OwnerListingQuery,
   context?: MarketplaceContext
 ): Promise<Listing[]> {
+  const input = queryOrContext ?? {}
+  const legacyContext = 'req' in input
+  const query = legacyContext ? {} : input
+  const requestContext = legacyContext ? input : context
   if (typeof window === 'undefined')
-    return (await repository(context)).getMyListings()
-  return marketplaceRequest('/api/listings?mine=true', 'GET')
+    return (await repository(requestContext)).getMyListings(query)
+  const params = new URLSearchParams({ mine: 'true' })
+  if (query.channel !== undefined) params.set('channel', query.channel)
+  return marketplaceRequest(`/api/listings?${params}`, 'GET')
 }
 
 export async function uploadListingImage(

@@ -1,26 +1,236 @@
-.section {
+﻿.section {
   margin-top: 24px;
   min-width: 0;
 }
-.testControls {
-  margin-top: 20px;
-  padding: 16px;
-  border: 1px dashed #b995dc70;
-  border-radius: 12px;
-  background: #130f19;
+.setupSection {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding-block: 20px;
+  min-width: 0;
 }
-.testControls > div {
-  margin-top: 16px;
+.setupSection + .setupSection {
+  border-top: 1px solid #ffffff0d;
+}
+.sectionHeading {
+  min-width: 0;
+}
+.sectionHeading h4 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+}
+.summary {
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.setupAction {
+  --surface: #775497;
+
+  max-width: 100%;
+  min-height: 44px;
+  width: fit-content;
+  min-width: 0;
+  justify-self: end;
+}
+.logoutAction {
+  --surface: #772d40;
+}
+.setupSection > [role='alert'] {
+  grid-column: 1 / -1;
+}
+@media (max-width: 639px) {
+  .setupSection {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .setupSection > .setupAction {
+    width: fit-content;
+    justify-self: end;
+  }
 }
 .actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr);
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
 }
-.actions button {
-  max-width: 100%;
-  font-size: 12px;
+.setupDialog {
+  color: #f3edf8;
+}
+.setupDialog > p {
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+.setupDialog.paymentDialog {
+  flex-direction: column;
+  height: min(640px, calc(100dvh - 48px));
+  overflow: hidden;
+}
+.setupDialog.paymentDialog[open] {
+  display: flex;
+}
+.paymentDialog > h3,
+.paymentDialog > p,
+.paymentDialog > .actions {
+  flex-shrink: 0;
+}
+.paymentBody {
+  /* Stripe's frame extends 4px per side for its own field focus outlines.
+     Keep that real frame inside the scrollport; this is not gutter compensation. */
+  /* Extend the scrollport into the dialog's existing right padding, preserving
+     the form width while separating controls from the native scrollbar by 24px.
+     This is content spacing, not a hard-coded browser scrollbar width. */
+  margin-inline-end: -20px;
+  padding-inline: 4px 24px;
+  min-height: 0;
+  min-width: 0;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+.paymentCountry {
+  margin-top: 16px;
+}
+.paymentCountry > p {
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.elementHost {
+  position: relative;
+  margin-block: 20px;
+  min-width: 0;
+  min-height: 420px;
+}
+.elementLoading {
+  position: absolute;
+  inset: 0;
+  background: #221a2c;
+  z-index: 1;
+  color: #b5a5c3;
+  font-size: 13px;
+}
+.loadingAnnouncement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.elementLoading[aria-busy='false'] .loadingAnnouncement {
+  position: static;
+  width: auto;
+  height: auto;
+  clip-path: none;
+}
+.paymentSkeleton {
+  display: grid;
+  min-height: 100%;
+  align-content: space-between;
+  gap: 20px;
+}
+.skeletonHeader {
+  height: 28px;
+  width: 60%;
+}
+.skeletonField {
+  display: grid;
+  gap: 8px;
+}
+.skeletonLabel {
+  height: 12px;
+  width: 42%;
+}
+.skeletonInput {
+  height: 44px;
+  border-radius: 12px;
+}
+.skeletonColumns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.skeletonLegal {
+  height: 10px;
+  width: 92%;
+}
+.skeletonLegal:last-child {
+  width: 74%;
+}
+/* Real Card-only form measurements at narrow dialog widths. */
+@media (max-width: 639px) {
+  .elementHost {
+    min-height: 420px;
+  }
+}
+@media (max-width: 399px) {
+  .elementHost {
+    min-height: 520px;
+  }
+  .skeletonColumns {
+    grid-template-columns: 1fr;
+  }
+}
+.cardPreview .countryPreview {
+  --market-control-height: 48px;
+
+  justify-content: flex-start;
+  width: 100%;
+  padding-inline: 16px;
+}
+.countryPreview .country {
+  color: inherit;
+}
+.countryPreview > svg:last-child {
+  margin-left: auto;
+}
+.cardPreview {
+  display: grid;
+  gap: 20px;
+  font-size: 13px;
+  line-height: 20px;
+}
+.previewGroup {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.previewLabel {
+  margin: 0;
+  color: #eee5f7;
+  font-weight: 500;
+}
+.previewField {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid #64526f;
+  border-radius: 12px;
+  background: #1a1222;
+  color: #b5a5c3;
+  overflow-wrap: anywhere;
+}
+.previewField svg {
+  flex-shrink: 0;
+  color: #b995dc;
+}
+.previewField > svg:last-child:not(:first-child),
+.brandHost {
+  margin-left: auto;
+}
+.cardDetailsRow {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.country {
+  color: #f3edf8;
 }
 .link {
   margin-top: 12px;
@@ -29,18 +239,17 @@
   border: 0;
   cursor: pointer;
 }
-.section button:focus-visible {
+.section button:focus-visible,
+.setupDialog button:focus-visible {
   outline: 2px solid #d1b4f6;
   outline-offset: 3px;
 }
-
 @media (max-width: 479px) {
   .section .row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     padding-block: 12px;
   }
-
   .section .row > span {
     width: auto;
     max-width: 130px;

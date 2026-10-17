@@ -357,10 +357,14 @@
 
 .settings .accountRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 200px;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
   min-height: 88px;
+}
+.settings .sessionRow {
+  margin-top: 24px;
+  border-top: 1px solid #ffffff0d;
 }
 
 .settings .accountRow > span {

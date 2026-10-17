@@ -1,18 +1,17 @@
-import { ArrowUp, UserRound } from 'lucide-react'
+import { UserRound } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import type { CSSProperties } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import ShiningButton from '@/components/animata/button/shining-button'
-import WorkButton from '@/components/animata/button/work-button'
 import { useAuthModal } from '@/components/auth/auth-modal'
 import DiscoverButton from '@/components/discover-button'
 import FilterInteraction from '@/components/filter-interaction'
-import InfiniteGrid from '@/components/infinite-grid'
 import gridStyles from '@/components/infinite-grid.module.css'
 import { useDesktopRouteTransition } from '@/components/navigation/desktop-route-transition'
 import PulseHeart from '@/components/react-bits/pulse-heart'
+import { ShopDirectory } from '@/components/shops/shop-directory'
 import { ListingSkeletonGrid } from '@/components/ui/workspace-skeletons'
 import { ExpandableCard } from '@/components/velora/expandable-card'
 import { useMarketReady } from '@/hooks/use-market-ready'
@@ -28,7 +27,9 @@ import {
 } from '@/lib/market-search'
 import type { SearchSuggestion } from '@/lib/market-search'
 import { marketSorts } from '@/lib/market-taxonomy'
+import { recordMarketplaceView } from '@/lib/record-marketplace-view'
 import type { Listing } from '@/types/listing'
+import type { ShopPreview } from '@/types/shop'
 import { formatListingPrice } from '@/utils/format-listing-price'
 import { Link } from '@ui/link/link'
 
@@ -36,9 +37,12 @@ import detailStyles from './homepage-listing-demo.module.css'
 import { ListingMedia } from './listing-media'
 import { MarketBrandMark } from './market-brand-mark'
 import { MarketControlGroup, MarketFocusBackdrop } from './market-control-group'
+import { MarketFeedViewport } from './market-feed-viewport'
+import type { MarketMode } from './market-feed-viewport'
 import MarketFilter from './market-filter'
 import type { MarketFilterValues } from './market-filter'
 import styles from './market-layout.module.css'
+import { MarketListingFeed } from './market-listing-feed'
 import { PublishedListingCard } from './published-listing-card'
 import welcomeStyles from './welcome-hero.module.css'
 import { WorkspaceEmpty } from './workspace-empty'
@@ -116,14 +120,100 @@ function MarketCard({
   )
 }
 
+function MarketBreadcrumb({
+  activeTab,
+  applied,
+  setApplied,
+}: {
+  activeTab: 'favorites' | 'popular'
+  applied: MarketFilterValues
+  setApplied: (
+    update: (previous: MarketFilterValues) => MarketFilterValues
+  ) => void
+}) {
+  const category = applied.category
+  return (
+    <nav className={styles.breadcrumb} aria-label="Listing categories">
+      <ol>
+        {activeTab === 'popular' && !category ? (
+          <li aria-current="page">Resale</li>
+        ) : (
+          <>
+            <li>
+              <button
+                type="button"
+                onClick={() =>
+                  setApplied((previous) => ({
+                    ...previous,
+                    category: '',
+                    subcategory: '',
+                  }))
+                }
+              >
+                {activeTab === 'popular' ? 'Resale' : 'Shop'}
+              </button>
+            </li>
+            <li className={styles.breadcrumbSeparator} aria-hidden="true">
+              ›
+            </li>
+            {category ? (
+              <>
+                <li className={styles.breadcrumbCategory}>
+                  {applied.subcategory ? (
+                    <button
+                      type="button"
+                      title={category}
+                      onClick={() =>
+                        setApplied((previous) => ({
+                          ...previous,
+                          subcategory: '',
+                        }))
+                      }
+                    >
+                      {category}
+                    </button>
+                  ) : (
+                    <span aria-current="page" title={category}>
+                      {category}
+                    </span>
+                  )}
+                </li>
+                {applied.subcategory && (
+                  <>
+                    <li
+                      className={styles.breadcrumbSeparator}
+                      aria-hidden="true"
+                    >
+                      ›
+                    </li>
+                    <li className={styles.breadcrumbCurrent}>
+                      <span aria-current="page" title={applied.subcategory}>
+                        {applied.subcategory}
+                      </span>
+                    </li>
+                  </>
+                )}
+              </>
+            ) : (
+              <li aria-current="page">All listings</li>
+            )}
+          </>
+        )}
+      </ol>
+    </nav>
+  )
+}
+
 export function MarketLayout({
   values,
   initialListings,
   initialError,
+  shops = [],
 }: {
   values: ListingFilterValues
   initialListings?: Listing[]
   initialError?: string | null
+  shops?: ShopPreview[]
 }) {
   const navigateHome = useDesktopRouteTransition()
   const [realListings, setRealListings] = useState(initialListings)
@@ -143,7 +233,12 @@ export function MarketLayout({
         let page = 1
         let next: Listing[]
         do {
-          next = await getListings({ page, pageSize: 100, status: 'available' })
+          next = await getListings({
+            page,
+            pageSize: 100,
+            status: 'available',
+            channel: 'resale',
+          })
           rows.push(...next)
           page += 1
           if (!active || request !== version) return
@@ -304,6 +399,8 @@ export function MarketLayout({
     subcategory: '',
     place: '',
   })
+  const [marketMode, setMarketMode] = useState<MarketMode>('resale')
+  const activeTab = marketMode === 'resale' ? 'popular' : 'favorites'
   const category = applied.category
   const location = applied.place
   const [activePanel, setActivePanel] = useState<
@@ -382,6 +479,7 @@ export function MarketLayout({
                   '--market-header-height': `${headerHeight}px`,
                 } as CSSProperties
               }
+              onIntentionalOpen={() => recordMarketplaceView(listing.id)}
               onOverlayActiveChange={cardPresence}
             />
           ) : (
@@ -404,75 +502,19 @@ export function MarketLayout({
       realListings,
     ]
   )
-  const browsing = isApp ? (
-    <InfiniteGrid
-      key={`${category}-${applied.subcategory}-${location}-${sort}-${appliedQuery}`}
+  const browsing = (
+    <MarketListingFeed
+      isApp={isApp}
       items={items}
       repeat={!realListings}
+      feedKey={`${category}-${applied.subcategory}-${location}-${sort}-${appliedQuery}`}
+      pageNumber={pageNumber}
+      onChangePage={changePage}
+      onReturnToTop={() => {
+        cancelPageScroll()
+        scrollToBrowsingTop()
+      }}
     />
-  ) : (
-    <>
-      <div
-        className={gridStyles.root}
-        data-market-grid="true"
-        data-browsing="pagination"
-      >
-        <div className={gridStyles.grid}>
-          {items.slice((pageNumber - 1) * 15, pageNumber * 15).map((item) => (
-            <div
-              key={item.id}
-              className={gridStyles.item}
-              data-market-card="true"
-            >
-              {item.customContent}
-            </div>
-          ))}
-        </div>
-      </div>
-      <nav className={styles.pagination} aria-label="Listing pages">
-        <WorkButton
-          appearance="pagination"
-          type="button"
-          disabled={pageNumber === 1}
-          onClick={() => changePage(pageNumber - 1)}
-        >
-          Previous
-        </WorkButton>
-        {Array.from({ length: Math.ceil(items.length / 15) }, (_, index) => (
-          <WorkButton
-            key={index + 1}
-            appearance="pagination"
-            aria-label={`Page ${index + 1}`}
-            aria-current={pageNumber === index + 1 ? 'page' : undefined}
-            onClick={() => changePage(index + 1)}
-          >
-            {index + 1}
-          </WorkButton>
-        ))}
-        <span aria-live="polite">
-          Page {pageNumber} of {Math.ceil(items.length / 15)}
-        </span>
-        <WorkButton
-          appearance="pagination"
-          type="button"
-          disabled={pageNumber >= Math.ceil(items.length / 15)}
-          onClick={() => changePage(pageNumber + 1)}
-        >
-          Next
-        </WorkButton>
-        <WorkButton
-          appearance="pagination"
-          aria-label="Return to top"
-          className={styles.returnTop}
-          onClick={() => {
-            cancelPageScroll()
-            scrollToBrowsingTop()
-          }}
-        >
-          <ArrowUp size={18} aria-hidden="true" />
-        </WorkButton>
-      </nav>
-    </>
   )
   return (
     <main
@@ -544,11 +586,15 @@ export function MarketLayout({
           </h1>
           <div className={styles.discoverSpace}>
             <DiscoverButton
+              activeTab={activeTab}
               query={appliedQuery}
               suggestions={suggestions}
               focusActive={activePanel === 'search'}
               focusClosing={closing}
               dismissSignal={searchDismissSignal}
+              onTabChange={(tab) =>
+                setMarketMode(tab === 'popular' ? 'resale' : 'shop')
+              }
               onDraftChange={setDraftQuery}
               onApply={(query) => {
                 setAppliedQuery(query)
@@ -627,34 +673,58 @@ export function MarketLayout({
         </div>
       </header>
       <div ref={browsingTop} className={styles.content}>
-        {listingError && (
-          <p role="alert">
-            {listingError}{' '}
-            <button
-              type="button"
-              onClick={() => setReload((current) => current + 1)}
-            >
-              Retry
-            </button>
-          </p>
-        )}
-        {listingPending && !items.length && (
-          <ListingSkeletonGrid className={gridStyles.grid} />
-        )}
-        {items.length > 0 && browsing}
-        {!listingPending && !items.length && !listingError && (
-          <WorkspaceEmpty>
-            {appliedQuery ? (
-              `No listings found for "${appliedQuery}"`
-            ) : (
-              <span>
-                No listings match your filters.
-                <br />
-                Try another search or clear the filters.
-              </span>
-            )}
-          </WorkspaceEmpty>
-        )}
+        <MarketBreadcrumb
+          activeTab={activeTab}
+          applied={applied}
+          setApplied={setApplied}
+        />
+        <MarketFeedViewport
+          mode={marketMode}
+          shop={
+            <ShopDirectory
+              shops={shops}
+              overlayClassName={styles.listingOverlay}
+              overlayStyle={
+                {
+                  '--market-header-height': `${headerHeight}px`,
+                } as CSSProperties
+              }
+              onOverlayActiveChange={cardPresence}
+            />
+          }
+          resale={
+            <>
+              {listingError && (
+                <p role="alert">
+                  {listingError}{' '}
+                  <button
+                    type="button"
+                    onClick={() => setReload((current) => current + 1)}
+                  >
+                    Retry
+                  </button>
+                </p>
+              )}
+              {listingPending && !items.length && (
+                <ListingSkeletonGrid className={gridStyles.grid} />
+              )}
+              {items.length > 0 && browsing}
+              {!listingPending && !items.length && !listingError && (
+                <WorkspaceEmpty>
+                  {appliedQuery ? (
+                    `No listings found for "${appliedQuery}"`
+                  ) : (
+                    <span>
+                      No listings match your filters.
+                      <br />
+                      Try another search or clear the filters.
+                    </span>
+                  )}
+                </WorkspaceEmpty>
+              )}
+            </>
+          }
+        />
       </div>
     </main>
   )

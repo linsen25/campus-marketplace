@@ -17,23 +17,33 @@ import { sortPanelFade } from '@/lib/sort-panel-fade'
 
 import styles from './filter-interaction.module.css'
 
-function panelBounds(r: DOMRect) {
+function panelBounds(r: DOMRect, flip = false) {
   const viewport = window.visualViewport
+  const below =
+    (viewport?.height || window.innerHeight) +
+    (viewport?.offsetTop || 0) -
+    r.bottom -
+    50
+  const above = r.top - (viewport?.offsetTop || 0) - 50
+  const opensAbove = flip && below < 144 && above > below
   return {
     x: r.x,
     y: r.y,
     width: r.width,
     height: r.height,
+    above: opensAbove,
     panelWidth: Math.max(0, r.right - 20),
     // Trigger-to-panel gap, panel padding/borders, then a safe bottom gap.
     panelHeight: Math.max(
       0,
-      (viewport?.height || window.innerHeight) +
-        (viewport?.offsetTop || 0) -
-        r.bottom -
-        8 -
-        26 -
-        16
+      opensAbove
+        ? above
+        : (viewport?.height || window.innerHeight) +
+            (viewport?.offsetTop || 0) -
+            r.bottom -
+            8 -
+            26 -
+            16
     ),
   }
 }
@@ -50,6 +60,7 @@ export default function FilterInteraction({
   children,
   appearance = 'market',
   disabled = false,
+  portalContainer,
 }: {
   label: string
   mobileLabel?: string
@@ -60,11 +71,14 @@ export default function FilterInteraction({
   isClosing?: boolean
   onOpenChange: (open: boolean) => void
   children?: ReactNode
-  appearance?: 'market' | 'notification'
+  appearance?: 'market' | 'notification' | 'select'
   disabled?: boolean
+  portalContainer?: HTMLElement | null
 }) {
   const anchor = useRef<HTMLDivElement>(null)
-  const sortStyle = label === 'Sort' || appearance === 'notification'
+  const sortStyle = label === 'Sort' || appearance !== 'market'
+  const select = appearance === 'select'
+  const keyboardOpen = useRef(false)
   const normalTrigger = useRef<HTMLButtonElement>(null)
   const activeRoot = useRef<HTMLDivElement>(null)
   const idle = useRef<ReturnType<typeof setTimeout>>()
@@ -81,6 +95,7 @@ export default function FilterInteraction({
     height: 48,
     panelWidth: 320,
     panelHeight: 340,
+    above: false,
   })
   const id = useId()
   const reduced = useReducedMotion()
@@ -106,9 +121,18 @@ export default function FilterInteraction({
     }
     wasOpen.current = true
     activeTrigger.current?.focus()
+    if (select && keyboardOpen.current) {
+      const selectedOption =
+        activeRoot.current?.querySelector<HTMLElement>(
+          '[data-sort-option][aria-pressed="true"]'
+        ) ||
+        activeRoot.current?.querySelector<HTMLElement>('[data-sort-option]')
+      selectedOption?.focus()
+      keyboardOpen.current = false
+    }
     const measure = () => {
       const r = anchor.current?.getBoundingClientRect()
-      if (r) setBounds(panelBounds(r))
+      if (r) setBounds(panelBounds(r, select))
     }
     measure()
     const dismiss = (e: PointerEvent) => {
@@ -117,6 +141,27 @@ export default function FilterInteraction({
       if (!activeRoot.current?.contains(e.target as Node)) onOpenChange(false)
     }
     const escape = (e: KeyboardEvent) => {
+      if (
+        select &&
+        ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key) &&
+        activeRoot.current?.contains(e.target as Node)
+      ) {
+        const optionNodes = Array.from(
+          activeRoot.current.querySelectorAll<HTMLElement>('[data-sort-option]')
+        )
+        if (optionNodes.length) {
+          e.preventDefault()
+          const index = optionNodes.indexOf(
+            document.activeElement as HTMLElement
+          )
+          let next =
+            (index + (e.key === 'ArrowDown' ? 1 : -1) + optionNodes.length) %
+            optionNodes.length
+          if (e.key === 'Home') next = 0
+          if (e.key === 'End') next = optionNodes.length - 1
+          optionNodes[next].focus()
+        }
+      }
       if (e.key === 'Tab') {
         const nodes = Array.from(
           activeRoot.current?.querySelectorAll<HTMLElement>(
@@ -133,6 +178,10 @@ export default function FilterInteraction({
         }
       }
       if (e.key === 'Escape') {
+        if (select) {
+          e.preventDefault()
+          e.stopPropagation()
+        }
         onOpenChange(false)
         normalTrigger.current?.focus()
       }
@@ -165,7 +214,10 @@ export default function FilterInteraction({
       clearTimeout(idle.current)
       clearTimeout(closeTimer.current)
     }
-  }, [isOpen, onOpenChange])
+  }, [isOpen, onOpenChange, select])
+  let appearanceClass = ''
+  if (appearance === 'notification') appearanceClass = styles.inbox
+  else if (select) appearanceClass = styles.select
   const renderTrigger = (placeholder = false) => (
     <button
       ref={placeholder ? normalTrigger : activeTrigger}
@@ -179,17 +231,26 @@ export default function FilterInteraction({
       aria-hidden={placeholder && isOpen ? true : undefined}
       tabIndex={placeholder && isOpen ? -1 : 0}
       style={placeholder && isOpen ? { visibility: 'hidden' } : undefined}
+      onKeyDown={(event) => {
+        if (select && !isOpen && ['ArrowDown', 'ArrowUp'].includes(event.key)) {
+          event.preventDefault()
+          keyboardOpen.current = true
+          const r = anchor.current?.getBoundingClientRect()
+          if (r) setBounds(panelBounds(r, true))
+          onOpenChange(true)
+        }
+      }}
       onClick={() => {
         if (isClosing) return
         if (isOpen) close()
         else {
           const r = anchor.current?.getBoundingClientRect()
-          if (r) setBounds(panelBounds(r))
+          if (r) setBounds(panelBounds(r, select))
           onOpenChange(true)
         }
       }}
     >
-      {appearance !== 'notification' &&
+      {appearance === 'market' &&
         (label === 'Sort' ? (
           <ArrowDownWideNarrow size={22} />
         ) : (
@@ -200,28 +261,21 @@ export default function FilterInteraction({
           ? options.find((option) => option.value === value)?.label || label
           : label}
       </span>
-      {appearance === 'notification' && (
-        <ChevronDown size={16} aria-hidden={true} />
-      )}
+      {appearance !== 'market' && <ChevronDown size={16} aria-hidden={true} />}
       {mobileLabel && <span className={styles.mobileLabel}>{mobileLabel}</span>}
     </button>
   )
   return (
     <>
-      <div
-        ref={anchor}
-        className={`${styles.control} ${
-          appearance === 'notification' ? styles.inbox : ''
-        }`}
-      >
+      <div ref={anchor} className={`${styles.control} ${appearanceClass}`}>
         {renderTrigger(true)}
       </div>
       {isOpen &&
         createPortal(
           <div
             ref={activeRoot}
-            className={`${styles.control} ${styles.active} ${
-              appearance === 'notification' ? styles.inbox : ''
+            className={`${styles.control} ${styles.active} ${appearanceClass} ${
+              select && bounds.above ? styles.above : ''
             }`}
             style={
               {
@@ -323,6 +377,7 @@ export default function FilterInteraction({
                           key={option.value}
                           type="button"
                           className={styles.option}
+                          data-sort-option={true}
                           aria-pressed={option.value === value}
                           initial={
                             sortStyle
@@ -357,7 +412,7 @@ export default function FilterInteraction({
               </AnimatePresence>
             </MotionConfig>
           </div>,
-          document.body
+          portalContainer || document.body
         )}
     </>
   )

@@ -2,7 +2,7 @@
 'use client'
 
 import type { MutableRefObject } from 'react'
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -21,24 +21,50 @@ import {
 } from '@/components/ui/chart'
 import { useContentReveal } from '@/components/ui/content-reveal'
 import { Skeleton } from '@/components/ui/skeleton'
-import { mockTrend } from '@/lib/fixtures/profile-analytics'
+import { validAccountActivity } from '@/lib/account-activity'
 import type {
-  AnalyticsMetric,
-  AnalyticsPeriod,
-} from '@/lib/fixtures/profile-analytics'
+  AccountActivity,
+  ActivityMetric,
+  ActivityPeriod,
+} from '@/lib/account-activity'
 import { marketplaceRequest } from '@/lib/listings-api'
 
 import type { ChartReplayHistory } from './profile-chart-animation'
 import { useProfileChartAnimation } from './profile-chart-animation'
 import styles from './profile.module.css'
 
-const metrics: Array<{ key: AnalyticsMetric; label: string }> = [
+const metrics: Array<{ key: ActivityMetric; label: string }> = [
   { key: 'overall', label: 'Overall' },
   { key: 'views', label: 'Views' },
   { key: 'listings', label: 'Listings' },
   { key: 'sold', label: 'Sold' },
 ]
-const periods: AnalyticsPeriod[] = ['1D', '7D', '30D']
+const periods: ActivityPeriod[] = ['1D', '7D', '30D']
+
+export function AnalyticsPeriodControl({
+  period,
+  onChange,
+  label = 'Trend period',
+}: {
+  period: ActivityPeriod
+  onChange: (period: ActivityPeriod) => void
+  label?: string
+}) {
+  return (
+    <div className={styles.segment} role="group" aria-label={label}>
+      {periods.map((item) => (
+        <button
+          key={item}
+          type="button"
+          aria-pressed={period === item}
+          onClick={() => onChange(item)}
+        >
+          {item}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 type ReplayProps = {
   replayToken: number
@@ -46,17 +72,54 @@ type ReplayProps = {
 }
 
 export function ProfileAnalytics({ replayToken, replayHistory }: ReplayProps) {
-  const [metric, setMetric] = useState<AnalyticsMetric>('overall')
-  const [period, setPeriod] = useState<AnalyticsPeriod>('7D')
+  const [metric, setMetric] = useState<ActivityMetric>('overall')
+  const [period, setPeriod] = useState<ActivityPeriod>('7D')
+  const [series, setSeries] = useState<AccountActivity | null>(null)
+  const previousPeriod = useRef<ActivityPeriod | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [attempt, setAttempt] = useState(0)
+  const [localReplay, setLocalReplay] = useState(0)
+  const [loadedToken, setLoadedToken] = useState(-1)
   const gradient = `trend-${useId().replace(/:/g, '')}`
   const metricLabel =
     metrics.find((item) => item.key === metric)?.label ?? 'Overall'
-  const data = useMemo(() => mockTrend(period), [period])
   const animation = useProfileChartAnimation(
     replayToken,
     replayHistory,
-    'activity'
+    'activity',
+    Boolean(series) && !loading && !error && loadedToken === replayToken,
+    localReplay
   )
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    setError('')
+    marketplaceRequest<AccountActivity>(
+      `/api/profile/activity?period=${period}`,
+      'GET'
+    )
+      .then((rows) => {
+        if (!validAccountActivity(rows, period))
+          throw new Error('Invalid activity')
+        if (!active) return
+        if (previousPeriod.current && previousPeriod.current !== period)
+          setLocalReplay((n) => n + 1)
+        previousPeriod.current = period
+        setSeries(rows)
+        setLoadedToken(replayToken)
+        setLoading(false)
+      })
+      .catch(() => {
+        if (active) {
+          setLoading(false)
+          setError('Activity is unavailable. Please retry.')
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [period, replayToken, attempt])
   return (
     <div className={styles.analytics} data-profile-analytics="true">
       <section
@@ -67,7 +130,6 @@ export function ProfileAnalytics({ replayToken, replayHistory }: ReplayProps) {
       >
         <header className={styles.panelHeader}>
           <h3>Your Activity</h3>
-          <span className={styles.demo}>Demo data</span>
         </header>
         <p
           className={styles.caption}
@@ -88,7 +150,8 @@ export function ProfileAnalytics({ replayToken, replayHistory }: ReplayProps) {
                 type="button"
                 aria-pressed={metric === item.key}
                 onClick={() => {
-                  animation.handleEnd()
+                  if (metric !== item.key && series)
+                    setLocalReplay((n) => n + 1)
                   setMetric(item.key)
                 }}
               >
@@ -96,79 +159,83 @@ export function ProfileAnalytics({ replayToken, replayHistory }: ReplayProps) {
               </button>
             ))}
           </div>
+          <AnalyticsPeriodControl period={period} onChange={setPeriod} />
+        </div>
+        {error && (
+          <p role="alert" className={styles.notice}>
+            {error}
+            <button type="button" onClick={() => setAttempt((n) => n + 1)}>
+              Retry
+            </button>
+          </p>
+        )}
+        {!series ? (
           <div
-            className={styles.segment}
-            role="group"
-            aria-label="Trend period"
+            style={{ height: 260 }}
+            role={loading ? 'status' : undefined}
+            aria-label={loading ? 'Loading account activity' : undefined}
           >
-            {periods.map((item) => (
-              <button
-                key={item}
-                type="button"
-                aria-pressed={period === item}
-                onClick={() => {
-                  animation.handleEnd()
-                  setPeriod(item)
-                }}
-              >
-                {item}
-              </button>
-            ))}
+            {loading && <Skeleton style={{ height: '100%' }} />}
           </div>
-        </div>
-        <div
-          data-trend-period={period}
-          data-trend-metric={metric}
-          data-trend-listing="account"
-          data-trend-points={data.length}
-        >
-          <ChartContainer
-            config={{ [metric]: { label: metricLabel, color: '#b88cfa' } }}
+        ) : (
+          <div
+            aria-busy={loading}
+            data-trend-period={series.period}
+            data-trend-metric={metric}
+            data-trend-listing="account"
+            data-trend-points={series.points.length}
           >
-            <AreaChart
-              key={animation.key}
-              accessibilityLayer={true}
-              data={data}
-              margin={{ top: 12, right: 8, left: 0, bottom: 0 }}
+            <ChartContainer
+              config={{ [metric]: { label: metricLabel, color: '#b88cfa' } }}
             >
-              <defs>
-                <linearGradient id={gradient} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#b88cfa" stopOpacity={0.6} />
-                  <stop offset="95%" stopColor="#b88cfa" stopOpacity={0.03} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid
-                vertical={false}
-                stroke="#776088"
-                strokeOpacity={0.22}
-              />
-              <XAxis
-                dataKey="label"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={10}
-                minTickGap={30}
-              />
-              <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-              <Area
-                type="monotone"
-                dataKey={metric}
-                stroke="#b88cfa"
-                strokeWidth={2}
-                fill={`url(#${gradient})`}
-                isAnimationActive={animation.active}
-                onAnimationStart={animation.handleStart}
-                onAnimationEnd={animation.handleEnd}
-              />
-            </AreaChart>
-          </ChartContainer>
-        </div>
+              <AreaChart
+                key={animation.key}
+                accessibilityLayer={true}
+                data={series.points}
+                margin={{ top: 12, right: 8, left: 0, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id={gradient} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#b88cfa" stopOpacity={0.6} />
+                    <stop offset="95%" stopColor="#b88cfa" stopOpacity={0.03} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  vertical={false}
+                  stroke="#776088"
+                  strokeOpacity={0.22}
+                />
+                <XAxis
+                  dataKey="label"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  minTickGap={30}
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent />}
+                />
+                <Area
+                  type="monotone"
+                  dataKey={metric}
+                  stroke="#b88cfa"
+                  strokeWidth={2}
+                  fill={`url(#${gradient})`}
+                  isAnimationActive={animation.active}
+                  onAnimationStart={animation.handleStart}
+                  onAnimationEnd={animation.handleEnd}
+                />
+              </AreaChart>
+            </ChartContainer>
+          </div>
+        )}
         <div className={styles.chartFooter}>
           <span>
             {metric === 'overall'
               ? 'Activity: views + listings + sold'
               : metricLabel}{' '}
-            · {period}
+            · {series?.period || period}
           </span>
         </div>
       </section>

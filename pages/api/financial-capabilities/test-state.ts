@@ -19,6 +19,11 @@ export default async function handler(
   res.setHeader('Cache-Control', 'private, no-store')
   try {
     requireFinancialEnvironment()
+    if (process.env.STRIPE_PROVIDER_ENABLED === 'true')
+      throw new ListingApiError(
+        'Staging simulation is disabled while Stripe setup is enabled.',
+        503
+      )
     if (req.method !== 'POST')
       return res.status(405).json({ error: 'Method not allowed.' })
     requireSameOriginWrite(req)

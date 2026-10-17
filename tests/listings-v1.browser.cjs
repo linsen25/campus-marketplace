@@ -20,7 +20,12 @@ const baseListing = (id, seller = 'owner') => ({
   category: 'Electronics',
   subcategory: 'Cameras',
   condition: 'good',
+  listingChannel: 'resale',
   pickupArea: 'On campus',
+  preferredFulfillment: 'ON_CAMPUS',
+  preferredPaymentMode: 'uu_pay',
+  meetingLocation: { label: 'Outside UCC front doors' },
+  estimatedDeliveryFeeCents: 0,
   description: 'Works well.',
   photoUrls: ['/demo/reading-chair.jpg'],
   seller: {
@@ -78,6 +83,7 @@ const baseListing = (id, seller = 'owner') => ({
         calls.push([method, p])
         if (p === '/api/auth/session')
           return send({ seller: { id: 'owner', displayName: 'Chris' } })
+        if (p === '/api/listings/view') return send({ recorded: true })
         if (p === '/api/profile/account')
           return send({
             username: 'Chris',
@@ -146,7 +152,10 @@ const baseListing = (id, seller = 'owner') => ({
             assert.deepEqual(Object.keys(body).sort(), [
               'condition',
               'description',
-              'pickupArea',
+              'estimatedDeliveryFeeCents',
+              'meetingLocation',
+              'preferredFulfillment',
+              'preferredPaymentMode',
               'price',
               'title',
             ])
@@ -210,15 +219,16 @@ const baseListing = (id, seller = 'owner') => ({
           },
         })
       )
-      await page.goto('http://localhost:3100/home', {
-        waitUntil: 'domcontentloaded',
-        timeout: 120000,
-      })
+      await page.goto(
+        (process.env.TEST_BASE_URL || 'http://localhost:3000') + '/home',
+        {
+          waitUntil: 'domcontentloaded',
+          timeout: 120000,
+        }
+      )
       const main =
         width < 1024
-          ? page
-              .locator('main')
-              .filter({ has: page.locator('h2', { hasText: /^Overview$/ }) })
+          ? page.locator('main:visible')
           : page.locator('[data-home-main]')
       await main.getByText('Chris', { exact: true }).waitFor()
       assert.equal(
@@ -227,9 +237,17 @@ const baseListing = (id, seller = 'owner') => ({
         'Overview is display only'
       )
       async function select(child) {
+        if (child === 'Create Resale') {
+          await select('My Resale')
+          await page
+            .getByRole('region', { name: 'My Resale', exact: true })
+            .getByRole('button', { name: 'Create Resale', exact: true })
+            .click()
+          return
+        }
         if (width < 1024) {
           await page
-            .getByRole('button', { name: 'Show more', exact: true })
+            .getByRole('button', { name: 'Open Home navigation', exact: true })
             .click()
           const menu = page.locator('[data-smooth-menu]')
           if (
@@ -264,7 +282,7 @@ const baseListing = (id, seller = 'owner') => ({
         await option.scrollIntoViewIfNeeded()
         await option.click()
       }
-      await select('My Listings')
+      await select('My Resale')
       await page
         .getByText('No active listings yet.', { exact: true })
         .last()
@@ -276,9 +294,9 @@ const baseListing = (id, seller = 'owner') => ({
         0,
         'Internal unpublished listing is never a draft card'
       )
-      await select('Create Listing')
+      await select('Create Resale')
       const form = page.getByRole('form', {
-        name: 'Create listing',
+        name: 'Create Resale',
         exact: true,
       })
       const create = () =>
@@ -300,7 +318,9 @@ const baseListing = (id, seller = 'owner') => ({
       )
       await choose(form, 'Subcategory', 'Furniture')
       await choose(form, 'Condition', 'Good')
-      await choose(form, 'Place', 'On campus')
+      await form
+        .getByRole('combobox', { name: 'Meeting location', exact: true })
+        .fill('Outside UCC front doors')
       await form
         .locator('[name="description"]')
         .fill('A clean desk for another student.')
@@ -329,7 +349,7 @@ const baseListing = (id, seller = 'owner') => ({
         )
         assert.equal(
           await dialog
-            .getByRole('button', { name: /favorites|Contact seller/ })
+            .getByRole('button', { name: /favorites|Message Seller/ })
             .count(),
           0
         )
@@ -432,7 +452,7 @@ const baseListing = (id, seller = 'owner') => ({
         exact: true,
       })
       await createdDialog
-        .getByRole('button', { name: 'Back to My Listings', exact: true })
+        .getByRole('button', { name: 'Back to My Resale', exact: true })
         .click()
       await createdDialog.waitFor({ state: 'detached' })
       await page
@@ -455,7 +475,7 @@ const baseListing = (id, seller = 'owner') => ({
       assert.equal(await article.count(), 1)
       assert.equal(
         await article
-          .getByRole('button', { name: /favorites|Contact seller/ })
+          .getByRole('button', { name: /favorites|Message Seller/ })
           .count(),
         0
       )
@@ -481,7 +501,9 @@ const baseListing = (id, seller = 'owner') => ({
       ])
         await edit.locator(`[name="${name}"]`).fill(value)
       await choose(edit, 'Condition', 'Fair')
-      await choose(edit, 'Place', 'Other')
+      await edit
+        .getByRole('combobox', { name: 'Meeting location', exact: true })
+        .fill('Outside library front doors')
       await page.screenshot({ path: path.join(output, `${width}-edit.png`) })
       assert.equal(await edit.getByRole('button', { name: /Hold/ }).count(), 0)
       await edit
@@ -539,7 +561,7 @@ const baseListing = (id, seller = 'owner') => ({
         '[data-slot="listing-overlay"] [role="dialog"]'
       )
       await realDialog
-        .getByRole('button', { name: 'Contact seller', exact: true })
+        .getByRole('button', { name: 'Message Seller', exact: true })
         .waitFor()
       await realDialog
         .getByRole('button', { name: 'Remove from favorites', exact: true })
@@ -551,41 +573,9 @@ const baseListing = (id, seller = 'owner') => ({
         window.dispatchEvent(new window.Event('marketplace-listings-changed'))
       )
       await favoriteCard.first().waitFor()
-      await page.getByRole('button', { name: 'Sort', exact: true }).click()
-      await page
-        .getByRole('button', { name: 'Price: Low to High', exact: true })
-        .click()
-      await page.keyboard.press('Escape')
-      await page.waitForTimeout(400)
-      assert(favoriteQueries.some((q) => q.sort === 'price-asc'))
-      await page.getByRole('button', { name: 'Filter', exact: true }).click()
-      await page
-        .getByRole('combobox', { name: 'Category', exact: true })
-        .click()
-      await page
-        .getByRole('option', { name: 'Electronics', exact: true })
-        .click()
-      await page
-        .getByRole('combobox', { name: 'Subcategory', exact: true })
-        .click()
-      await page.getByRole('option', { name: 'Cameras', exact: true }).click()
-      await page
-        .getByRole('combobox', { name: 'Condition', exact: true })
-        .click()
-      await page.getByRole('option', { name: 'Good', exact: true }).click()
-      await page
-        .getByRole('radio', { name: 'On campus', exact: true })
-        .check({ force: true })
-      await page.getByRole('button', { name: 'Confirm', exact: true }).click()
-      await page.waitForTimeout(450)
       assert(
-        favoriteQueries.some(
-          (q) =>
-            q.category === 'Electronics' &&
-            q.subcategory === 'Cameras' &&
-            q.condition === 'good' &&
-            q.place === 'On campus'
-        )
+        favoriteQueries.some((q) => q.sort === 'newest'),
+        'Shared Favorites retains its current newest-only query'
       )
       await page.screenshot({
         path: path.join(output, `${width}-favorites.png`),
@@ -594,11 +584,9 @@ const baseListing = (id, seller = 'owner') => ({
       await page.evaluate(() =>
         window.dispatchEvent(new window.Event('marketplace-listings-changed'))
       )
-      await page
-        .getByText('No listings match your filters.', { exact: false })
-        .waitFor()
+      await page.getByText('No favorites yet.', { exact: true }).waitFor()
       assert(favorites.has('other'), 'Sold relationship does not need deletion')
-      await select('My Listings')
+      await select('My Resale')
       await page.getByRole('tab', { name: 'Active', exact: true }).click()
       article = page.locator('article').filter({
         has: page.getByRole('button', { name: 'Delete', exact: true }),
@@ -610,19 +598,19 @@ const baseListing = (id, seller = 'owner') => ({
         .click()
       await page.getByText('Listing deleted', { exact: true }).waitFor()
       assert(!rows.some((item) => item.id === 'delete-me'))
-      await select('Create Listing')
+      await select('Create Resale')
       await page
-        .getByRole('form', { name: 'Create listing', exact: true })
+        .getByRole('form', { name: 'Create Resale', exact: true })
         .getByRole('button', { name: 'Cancel', exact: true })
         .click()
       await page.getByRole('tab', { name: 'Active', exact: true }).waitFor()
-      await select('Create Listing')
+      await select('Create Resale')
       await page
-        .getByRole('form', { name: 'Create listing', exact: true })
+        .getByRole('form', { name: 'Create Resale', exact: true })
         .locator('[name="title"]')
         .fill('Unsaved')
       await page
-        .getByRole('form', { name: 'Create listing', exact: true })
+        .getByRole('form', { name: 'Create Resale', exact: true })
         .getByRole('button', { name: 'Cancel', exact: true })
         .click()
       const discard = page.getByRole('dialog', {
@@ -632,7 +620,7 @@ const baseListing = (id, seller = 'owner') => ({
       await discard.getByRole('button', { name: 'Cancel', exact: true }).click()
       assert.equal(await page.locator('[name="title"]').inputValue(), 'Unsaved')
       await page
-        .getByRole('form', { name: 'Create listing', exact: true })
+        .getByRole('form', { name: 'Create Resale', exact: true })
         .getByRole('button', { name: 'Cancel', exact: true })
         .click()
       await discard

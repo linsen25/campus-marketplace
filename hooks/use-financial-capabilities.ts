@@ -57,6 +57,7 @@ export function useFinancialCapabilities() {
   }, [userId, refresh])
   const data = result && result.userId === userId ? result.data : null
   return {
+    userId,
     data,
     error,
     refresh,

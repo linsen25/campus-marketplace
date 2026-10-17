@@ -11,6 +11,7 @@ export function offerChangedFields(
   return [
     ['Price', 'itemAmountCents'],
     ['Fulfillment', 'fulfillment'],
+    ['Payment method', 'paymentMode'],
     ['Meeting location', 'meetupLocation'],
     ['Meetup time', 'scheduledAt'],
     ['Delivery method', 'deliveryMethod'],
@@ -18,12 +19,17 @@ export function offerChangedFields(
     ['Delivery area', 'deliveryArea'],
     ['Note', 'note'],
   ]
-    .filter(([, key]) =>
-      key === 'meetupLocation'
-        ? normalizeMeetingLabel(current[key]) !==
+    .filter(([, key]) => {
+      if (key === 'paymentMode')
+        return (current[key] ?? 'uu_pay') !== (prior[key] ?? 'uu_pay')
+      if (key === 'meetupLocation')
+        return (
+          normalizeMeetingLabel(current[key]) !==
           normalizeMeetingLabel(prior[key])
-        : JSON.stringify(current[key] ?? '') !==
-          JSON.stringify(prior[key] ?? '')
-    )
+        )
+      return (
+        JSON.stringify(current[key] ?? '') !== JSON.stringify(prior[key] ?? '')
+      )
+    })
     .map(([label]) => label)
 }

@@ -1,0 +1,98 @@
+.page {
+  min-height: 100dvh;
+  background: #0d0c10;
+  color: #f5f3f7;
+}
+.content {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 600;
+}
+.brand img {
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-block: 32px;
+}
+.identity > div {
+  min-width: 0;
+}
+.identity .avatar {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  border-radius: 50%;
+}
+.identity h1 {
+  font-size: 24px;
+  line-height: 32px;
+  overflow-wrap: anywhere;
+}
+.identity p {
+  color: #b5a5c3;
+}
+.page h2 {
+  margin-bottom: 16px;
+  font-size: 18px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 12px;
+}
+.grid li {
+  min-width: 0;
+}
+.listing {
+  display: grid;
+  gap: 8px;
+}
+.photo {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #221a2c;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+}
+.listing h3 {
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.listing p {
+  font-size: 14px;
+}
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 24px;
+}
+.page a:focus-visible {
+  outline: 2px solid #d5b4f6;
+  outline-offset: 4px;
+}
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

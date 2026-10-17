@@ -7,6 +7,7 @@ export type CurrentOrderStep =
   | 'checkout'
   | 'completed'
   | 'delivery'
+  | 'exchange'
   | 'expired'
   | 'handoff'
   | 'inspect'
@@ -23,6 +24,8 @@ export function currentOrderStep(
 ): CurrentOrderStep {
   if (order.lifecycle !== 'open') return order.lifecycle
   if (!data) return 'loading'
+  if (order.v2?.terms.paymentMode === 'external')
+    return !data.fulfillment.agreement?.complete ? 'review' : 'exchange'
   if (data.fulfillment.cancellation?.state) return 'cancellation'
   if (data.fulfillment.protectionStartedAt) return 'protection'
   if (order.paymentStatus === 'paid') {
@@ -53,6 +56,26 @@ export function currentOrderProgress(
   data: OrderFlowData | null
 ) {
   const terms = order.v2!.terms
+  if (terms.paymentMode === 'external') {
+    const steps = [
+      'Agreement',
+      'Meet / Inspect',
+      'Confirm exchange',
+      'Completed',
+    ]
+    const exchange = data?.fulfillment.externalExchange
+    let reached = data?.fulfillment.agreement?.complete ? 1 : 0
+    if (exchange && exchange.status !== 'awaiting_both') reached = 2
+    if (order.lifecycle === 'completed') reached = 4
+    const terminal =
+      order.lifecycle === 'cancelled' || order.lifecycle === 'expired'
+    return {
+      steps,
+      current: terminal || reached === 4 || !data ? null : reached,
+      completed: reached,
+      terminal,
+    }
+  }
   const campus = terms.fulfillment === 'on_campus'
   const courier = !campus && terms.deliveryMethod === 'courier'
   let steps = [

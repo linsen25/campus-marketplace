@@ -22,7 +22,12 @@ export type MeetupRevision = {
   decidedAt: string | null
 }
 export type OrderMeetup = { mutable: boolean; revisions: MeetupRevision[] }
+export type OrderListingProvenance =
+  | { channel: 'resale' }
+  | { channel: 'shop'; shopName: string }
+
 export type FormalOrder = {
+  listingProvenance?: OrderListingProvenance
   economics?: {
     itemCents: number
     deliveryCents: number

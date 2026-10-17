@@ -12,7 +12,15 @@ export const getOffers = (id: string) =>
     'GET'
   )
 export function offerPayload(terms: OfferTerms) {
-  const common = { item_amount_cents: terms.itemAmountCents, note: terms.note }
+  const common = {
+    item_amount_cents: terms.itemAmountCents,
+    note: terms.note,
+    payment_mode:
+      terms.fulfillment === 'delivery'
+        ? 'uu_pay'
+        : terms.paymentMode ?? 'uu_pay',
+    payment_mode_version: 1,
+  }
   return terms.fulfillment === 'on_campus'
     ? {
         ...common,

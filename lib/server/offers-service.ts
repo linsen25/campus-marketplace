@@ -65,6 +65,15 @@ function deliveryArea(value: unknown) {
     postalPrefix: area.postal_prefix,
   }
 }
+function validatePaymentMode(v: Record<string, unknown>) {
+  if (
+    (v.payment_mode !== undefined &&
+      !['uu_pay', 'external'].includes(String(v.payment_mode))) ||
+    (v.payment_mode_version !== undefined && v.payment_mode_version !== 1) ||
+    (v.payment_mode === 'external' && v.fulfillment !== 'on_campus')
+  )
+    throw new ListingApiError('Invalid payment mode.', 503)
+}
 export function mapTerms(
   row: Pick<Row, 'item_amount_cents' | 'offer_terms'>
 ): OfferTerms {
@@ -77,7 +86,10 @@ export function mapTerms(
     (v.note !== undefined && typeof v.note !== 'string')
   )
     throw new ListingApiError('Offer terms unavailable.', 503)
+  validatePaymentMode(v)
   const common = {
+    paymentMode: (v.payment_mode ?? 'uu_pay') as 'external' | 'uu_pay',
+    paymentModeVersion: 1 as const,
     itemAmountCents: Number(v.item_amount_cents),
     currency: 'CAD' as const,
     note: String(v.note || ''),

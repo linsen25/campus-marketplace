@@ -1,0 +1,85 @@
+.summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+}
+.name {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+.category {
+  color: #b9a9c5;
+  font-size: 13px;
+  line-height: 20px;
+}
+.excerpt {
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  min-height: 60px;
+  color: #d8cde0;
+}
+.visual {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  font-size: clamp(40px, 8vw, 88px);
+}
+.details {
+  display: grid;
+  gap: 16px;
+  font-size: 14px;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+.surface {
+  min-height: 100dvh;
+  background: #0d0c10;
+  color: #fafafa;
+}
+.page {
+  padding-top: 24px;
+  padding-bottom: 100px;
+}
+.heading {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 24px;
+  max-width: 640px;
+  font-size: 14px;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+.headingRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.headingRow h1 {
+  min-width: 0;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 30px;
+}
+.empty {
+  padding-block: 48px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 20px;
+  color: #c1adcf;
+}
+.empty h2 {
+  margin-bottom: 8px;
+  color: #f5f3f7;
+  font-size: 16px;
+  line-height: 24px;
+}

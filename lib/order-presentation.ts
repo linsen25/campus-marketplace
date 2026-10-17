@@ -6,6 +6,7 @@ import type { FormalOrder } from '@/types/order'
 export type OrderPage =
   | 'closed'
   | 'completed'
+  | 'exchange'
   | 'fulfillment'
   | 'handoff'
   | 'payment'
@@ -25,6 +26,31 @@ export function orderPresentation(
   order: FormalOrder,
   data: OrderFlowData | null
 ) {
+  if (order.v2?.terms.paymentMode === 'external') {
+    const pages: OrderPage[] = [
+      'review',
+      'fulfillment',
+      'exchange',
+      'completed',
+    ]
+    if (order.lifecycle === 'cancelled' || order.lifecycle === 'expired') {
+      const history: OrderPage[] = data?.fulfillment.agreement?.complete
+        ? ['review', 'fulfillment', 'closed']
+        : ['review', 'closed']
+      return {
+        pages: history,
+        current: history.length - 1,
+        maximum: history.length - 1,
+      }
+    }
+    if (order.lifecycle === 'completed')
+      return { pages, current: 3, maximum: 3 }
+    if (!data?.fulfillment.agreement?.complete)
+      return { pages, current: 0, maximum: 0 }
+    const started =
+      data.fulfillment.externalExchange?.status !== 'awaiting_both'
+    return { pages, current: started ? 2 : 1, maximum: 2 }
+  }
   const pages: OrderPage[] = [
     'review',
     'payment',
@@ -66,6 +92,10 @@ export function orderPageAction(
   data: OrderFlowData | null,
   page: OrderPage
 ): CurrentOrderStep {
+  if (order.v2?.terms.paymentMode === 'external' && page === 'exchange')
+    return 'exchange'
+  if (order.v2?.terms.paymentMode === 'external' && page === 'fulfillment')
+    return 'inspect'
   if (page === 'closed')
     return order.lifecycle === 'expired' ? 'expired' : 'cancelled'
   if (page === 'completed') return 'completed'

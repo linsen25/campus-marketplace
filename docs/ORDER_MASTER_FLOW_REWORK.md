@@ -1,3 +1,5 @@
+> Current payment-mode authority: [Dual payment paths](DUAL_PAYMENT_PATH.md). Meeting supports negotiated UU or independent payment; Delivery remains UU-only. Existing frozen Orders retain UU semantics. This addendum supersedes conflicting older payment/fee wording.
+
 # Master Order flow rework — staging
 
 The 2026-10-14 Master Order contract and its two resolved cancellation decisions supersede conflicting older V2 flow descriptions. Scope is `western-marketplace-staging` / `pcaqxezdfxofysghssyo`. This is provider-independent authority, not real money movement.

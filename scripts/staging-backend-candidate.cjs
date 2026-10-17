@@ -79,10 +79,22 @@ function fingerprint() {
         'public.listings': ['preferred_fulfillment'],
         'public.order_requests': ['declined_at'],
         'public.messages': ['withdrawn_at'],
-        'marketplace_private.offer_commands': ['comparison_offer_id', 'mutation_kind', 'comparison_terms'],
+        'marketplace_private.offer_commands': [
+          'comparison_offer_id',
+          'mutation_kind',
+          'comparison_terms',
+        ],
       }
-      const omit = revisionPlan.includes(filename) ? additiveColumns[name] || [] : []
-      const value = omit.length ? `(to_jsonb(t)-array[${omit.map(quote).join(',')}])` : 'to_jsonb(t)'
+      const omit =
+        filename === '202610160007_listing_channel_authority.sql' &&
+        name === 'public.listings'
+          ? ['listing_channel']
+          : revisionPlan.includes(filename)
+          ? additiveColumns[name] || []
+          : []
+      const value = omit.length
+        ? `(to_jsonb(t)-array[${omit.map(quote).join(',')}])`
+        : 'to_jsonb(t)'
       return `select '${name}' name,count(*) count,md5(coalesce(string_agg(${value}::text,'' order by ${value}::text),'')) hash from ${name} t`
     })
     .join(' union all ')
@@ -127,10 +139,16 @@ if (mode === 'verify') {
 }
 assert.deepEqual(
   pending,
-  revisionPlan.includes(filename) ? revisionPlan.filter(f => !applied.has(f.slice(0, 12))) : [filename],
+  revisionPlan.includes(filename)
+    ? revisionPlan.filter((f) => !applied.has(f.slice(0, 12)))
+    : [filename],
   'Apply requires exactly one pending candidate'
 )
-assert.equal(pending[0], filename, 'Apply only the next exact candidate in reviewed order')
+assert.equal(
+  pending[0],
+  filename,
+  'Apply only the next exact candidate in reviewed order'
+)
 assert(!applied.has(version), 'Never rewrite an applied migration')
 assert(/commit;\s*$/.test(sql))
 assert(!sql.includes('$candidate_archive$'))

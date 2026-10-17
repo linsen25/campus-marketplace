@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 
 import actionStyles from '@/components/animata/button/action-button-sizing.module.css'
-import { CardAction } from '@/components/listings/card-actions'
 import { ActionRow } from '@/components/ui/action-row'
 import { DynamicAction } from '@/components/ui/dynamic-action'
 import { FadingDialog } from '@/components/ui/fading-dialog'
@@ -100,7 +99,14 @@ export function AvatarDialog({
         </p>
       )}
       <ActionRow>
-        <CardAction onClick={onClose}>Cancel</CardAction>
+        <DynamicAction
+          variant="red"
+          footer={true}
+          showArrow={false}
+          onClick={onClose}
+        >
+          Cancel
+        </DynamicAction>
         <DynamicAction
           variant="green"
           footer={true}

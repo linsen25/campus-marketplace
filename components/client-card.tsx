@@ -10,6 +10,7 @@ import { UserAvatar } from '@/components/ui/user-avatar'
 import type { Conversation } from '@/types/conversation'
 
 import styles from './client-card.module.css'
+import { ConversationListingProvenance } from './conversation-listing-provenance'
 
 export type { Conversation } from '@/types/conversation'
 
@@ -71,6 +72,9 @@ export function ConversationList({
           <span className={styles.rowText}>
             <strong>{conversation.person.name}</strong>
             <span>{conversation.listing.title}</span>
+            <ConversationListingProvenance
+              provenance={conversation.listing.provenance}
+            />
             <small>{conversation.lastMessage}</small>
           </span>
           {dynamicArrow && (

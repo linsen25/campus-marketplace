@@ -23,6 +23,7 @@ import workspace from '../listings/listing-workspace.module.css'
 import { FormalOrderDetail } from './formal-order-detail'
 import { OrderCountdown } from './order-countdown'
 import styles from './order-detail-preview.module.css'
+import { OrderListingProvenance } from './order-listing-provenance'
 import {
   OrderListSkeleton,
   OrderDetailSkeleton,
@@ -63,7 +64,9 @@ function OrderState({ order, offset }: { order: FormalOrder; offset: number }) {
         )}
       {!outcome && (
         <p className={workspace.hint}>
-          Payment integration is not enabled yet.
+          {order.v2?.terms.paymentMode === 'external'
+            ? 'Paid outside UU \u00b7 No UU payment protection'
+            : 'Payment integration is not enabled yet.'}
         </p>
       )}
     </div>
@@ -187,6 +190,9 @@ export function FormalOrders({ mode }: { mode: OrderWorkspace }) {
               >
                 <div>
                   <h4>{value.snapshot.listing.title}</h4>
+                  <OrderListingProvenance
+                    provenance={value.listingProvenance}
+                  />
                   <p>
                     {formatOrderVisualAmount(value.itemAmount)} &middot;{' '}
                     {orderFulfillmentLabel(value)}

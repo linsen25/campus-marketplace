@@ -1,4 +1,5 @@
 import ShiningButton from '@/components/animata/button/shining-button'
+import { ConversationListingProvenance } from '@/components/conversation-listing-provenance'
 import { ListingMedia } from '@/components/listings/listing-media'
 import { ListingDetails } from '@/components/listings/published-listing-card'
 import { ExpandedCardPreview } from '@/components/velora/expandable-card'
@@ -55,6 +56,7 @@ export function MessagesListingPreview({
         </div>
       }
     >
+      <ConversationListingProvenance provenance={listing.provenance} />
       {listing.availability === 'pending' && <p>Pending transaction</p>}
       {listing.live ? (
         <ListingDetails listing={listing.live} />

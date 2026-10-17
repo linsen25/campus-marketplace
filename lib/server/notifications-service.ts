@@ -28,6 +28,75 @@ export function createNotificationsService(context: MarketplaceContext) {
     }
     return data
   }
+  async function provenanceRows(
+    table: 'conversations' | 'orders',
+    ids: string[]
+  ) {
+    if (!ids.length) return []
+    const columns =
+      table === 'conversations'
+        ? 'id,channel:listing_channel_snapshot,shopName:shop_name_snapshot'
+        : 'id,channel:listing_snapshot->>listingChannel,shopName:listing_snapshot->>shopName'
+    const { data, error } = await client
+      .from(table)
+      .select(columns)
+      .in('id', ids)
+    // Participant RLS normally omits inaccessible rows. Explicit permission denial
+    // also makes supplemental context unavailable; other backend failures surface.
+    if (error?.code === '42501') return []
+    if (error)
+      throw new ListingApiError('Unable to load notification context.', 503)
+    return (data || []) as unknown as Array<{
+      id: string
+      channel: string | null
+      shopName: string | null
+    }>
+  }
+  // Notification Center only. Realtime signals/popups and email intentionally stay generic.
+  async function enrich<T extends { notifications: NotificationItem[] }>(
+    page: T
+  ): Promise<T> {
+    const uuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const ids = (section: string, key: string) =>
+      Array.from(
+        new Set(
+          page.notifications.flatMap((item) => {
+            const id = item.destination[key]
+            return item.destination.section === section &&
+              typeof id === 'string' &&
+              uuid.test(id)
+              ? [id]
+              : []
+          })
+        )
+      )
+    const [conversations, orders] = await Promise.all([
+      provenanceRows('conversations', ids('messages', 'conversationId')),
+      provenanceRows('orders', ids('orders', 'orderId')),
+    ])
+    const conversationMap = new Map(conversations.map((row) => [row.id, row]))
+    const orderMap = new Map(orders.map((row) => [row.id, row]))
+    return {
+      ...page,
+      notifications: page.notifications.map((item) => {
+        const d = item.destination
+        const source = d.section === 'messages' ? conversationMap : orderMap
+        const id = d.section === 'messages' ? d.conversationId : d.orderId
+        const row = ['messages', 'orders'].includes(String(d.section))
+          ? source.get(String(id))
+          : undefined
+        if (row?.channel !== 'shop' || !row.shopName?.trim()) return item
+        return {
+          ...item,
+          listingProvenance: {
+            channel: 'shop' as const,
+            shopName: row.shopName,
+          },
+        }
+      }),
+    }
+  }
   return {
     // eslint-disable-next-line complexity -- Cursor validation and two independent filters retain the existing recipient-scoped paging contract.
     async list(
@@ -59,7 +128,7 @@ export function createNotificationsService(context: MarketplaceContext) {
         p_before_id: missingId ? null : messageUuid(beforeId),
       }
       if (category === undefined && status === undefined)
-        return call('marketplace_notifications', cursor)
+        return enrich(await call('marketplace_notifications', cursor))
       // Scan authoritative recipient-scoped pages, not just the visible page.
       const notifications: NotificationItem[] = []
       let unreadCount = 0
@@ -90,9 +159,9 @@ export function createNotificationsService(context: MarketplaceContext) {
             notifications.push(item)
           // One matching lookahead avoids a misleading Load more for a tail
           // containing only other categories. Resume at the 50th match.
-          if (notifications.length === 51) return result()
+          if (notifications.length === 51) return enrich(result())
         }
-        if (page.notifications.length < 50) return result()
+        if (page.notifications.length < 50) return enrich(result())
       }
     },
     markRead(id: unknown) {

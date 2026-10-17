@@ -101,6 +101,28 @@ async function request(method, query = {}, body = {}) {
   return response.code
 }
 async function main() {
+  for (const [operation, name] of [
+    ['confirm-exchange', 'marketplace_confirm_external_exchange'],
+    ['dispute-exchange', 'marketplace_dispute_external_exchange'],
+  ]) {
+    const body = {
+      clientActionId: id,
+      ...(operation === 'dispute-exchange'
+        ? { reason: 'Exchange did not occur' }
+        : {}),
+    }
+    assert.equal(await request('POST', { id, operation }, body), 200)
+    assert.equal(calls[0].name, name)
+    assert.equal(
+      await request(
+        'POST',
+        { id, operation },
+        { ...body, userId: id, paymentStatus: 'paid' }
+      ),
+      400
+    )
+    assert.equal(calls.length, 0)
+  }
   const query = { id, operation: 'economics' }
   assert.equal(await request('GET', query), 200)
   assert.deepEqual(calls[0], {

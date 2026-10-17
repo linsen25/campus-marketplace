@@ -199,7 +199,7 @@ export function FormalOrderPayment({
                 ],
               ]}
             />
-            <p>Your earnings exclude the buyer service fee.</p>
+            <p>Your earnings exclude the Buyer Protection fee.</p>
             <dl className={styles.amounts}>
               <dt>Payout status</dt>
               <dd>{payoutLabels[order.payoutStatus]}</dd>

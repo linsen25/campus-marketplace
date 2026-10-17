@@ -68,6 +68,12 @@ async function run() {
           reference: true,
           defaultLocation: true,
         })
+        await p
+          .getByRole('combobox', { name: 'Payment method', exact: true })
+          .click()
+        await p
+          .getByRole('option', { name: 'Pay independently', exact: true })
+          .click()
         const input = p.getByLabel('Meetup location', { exact: true })
         assert.equal(await input.inputValue(), 'Historical entrance')
         await p
@@ -78,10 +84,22 @@ async function run() {
           (await p.getByText('Meeting', { exact: true }).count()) > 0,
           true
         )
+        assert(
+          (await p.getByText('Pay independently', { exact: false }).count()) > 0
+        )
+        assert((await p.getByText(/Payment method/).count()) > 0)
         const send =
           viewer === 'seller' ? 'Send Revised Offer' : 'Send Counter Offer'
         await p.getByRole('button', { name: send, exact: true }).click()
         await p.waitForFunction(() => window.sends === 1)
+        assert.equal(
+          await p.evaluate(() => window.sentTerms.paymentMode),
+          'external'
+        )
+        assert.equal(
+          await p.evaluate(() => window.sentTerms.paymentModeVersion),
+          1
+        )
         assert.equal(
           await p.evaluate(() => window.sentTerms.meetupPlaceId),
           'historic_place'

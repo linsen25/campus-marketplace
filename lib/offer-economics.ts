@@ -10,7 +10,8 @@ export function buyerServiceFeeDisplay(item: number) {
 export function offerEconomics(terms: OfferTerms) {
   const item = terms.itemAmountCents
   const delivery = terms.fulfillment === 'delivery' ? terms.deliveryFeeCents : 0
-  const fee = buyerServiceFeeDisplay(item)
+  const fee =
+    terms.paymentMode === 'external' ? 0 : buyerServiceFeeDisplay(item)
   return {
     item,
     delivery,

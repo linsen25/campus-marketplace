@@ -59,6 +59,9 @@ export function AgreementCard({
             {offerAmount(terms.itemAmountCents)} · {fulfillment}
           </p>
           <p>{summary}</p>
+          {terms.paymentMode === 'external' && (
+            <p>Paid outside UU · No UU payment protection</p>
+          )}
         </div>
         <DynamicAction
           variant="blue"

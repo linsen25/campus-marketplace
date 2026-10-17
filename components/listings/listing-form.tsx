@@ -52,6 +52,7 @@ import { ListingDetails } from './published-listing-card'
 
 export type ListingLeaveGuard = (leave: () => void) => void
 export type ListingFormProps = {
+  createLabel?: string
   listing?: Listing
   onCancel?: () => void
   onSaved?: (listing: Listing) => void
@@ -62,6 +63,7 @@ const message = (reason: unknown) =>
 
 // eslint-disable-next-line complexity -- Create/edit share the same controlled form and publication boundary.
 export function ListingForm({
+  createLabel = 'Create listing',
   listing,
   onCancel,
   onSaved,
@@ -180,6 +182,7 @@ export function ListingForm({
   }
   const preview: Listing = {
     ...(listing ?? {
+      listingChannel: 'resale',
       id: 'local-preview',
       createdAt: '',
       updatedAt: '',
@@ -215,6 +218,7 @@ export function ListingForm({
           price: input.price,
           description: input.description,
           condition: input.condition ?? null,
+          preferredPaymentMode: input.preferredPaymentMode,
           preferredFulfillment: input.preferredFulfillment,
           meetingLocation: input.meetingLocation,
           estimatedDeliveryFeeCents: input.estimatedDeliveryFeeCents,
@@ -326,7 +330,7 @@ export function ListingForm({
       <form
         className={styles.form}
         data-photo-count={files.length}
-        aria-label={listing ? 'Edit listing' : 'Create listing'}
+        aria-label={listing ? 'Edit listing' : createLabel}
         aria-busy={busy}
         onSubmit={(event) => {
           event.preventDefault()
@@ -507,6 +511,30 @@ export function ListingForm({
                 }}
               />
               <small>Buyers may propose another fulfillment mode.</small>
+              {fields.preferredFulfillment === 'ON_CAMPUS' && (
+                <label className={styles.field}>
+                  Preferred payment
+                  <GlideSelect
+                    ariaLabel="Payment method"
+                    value={fields.preferredPaymentMode}
+                    disabled={busy || Boolean(pending)}
+                    options={[
+                      { value: 'uu_pay', label: 'Pay by UU (recommended)' },
+                      { value: 'external', label: 'Pay independently' },
+                    ]}
+                    onChange={(value: string) =>
+                      change(
+                        'preferredPaymentMode',
+                        value as 'external' | 'uu_pay'
+                      )
+                    }
+                  />
+                  <small>
+                    A default preference. Buyers may propose the other payment
+                    method.
+                  </small>
+                </label>
+              )}
               <MeetingLocationInput
                 required={true}
                 value={fields.meetingLocation?.label || ''}

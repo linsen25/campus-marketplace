@@ -7,6 +7,7 @@ export type ListingSubcategory = MarketSubcategory
 export type ListingCondition = 'fair' | 'good' | 'like-new' | 'new'
 
 export type ListingStatus = 'available' | 'pending' | 'reserved' | 'sold'
+export type ListingChannel = 'resale' | 'shop'
 
 export type SellerSummary = {
   id: string
@@ -15,6 +16,7 @@ export type SellerSummary = {
 
 export type Listing = {
   id: string
+  listingChannel: ListingChannel
   title: string
   description: string
   /** Non-negative integer cents; zero means free. */
@@ -24,6 +26,7 @@ export type Listing = {
   subcategory: ListingSubcategory
   condition?: ListingCondition
   pickupArea?: string
+  preferredPaymentMode?: 'external' | 'uu_pay'
   preferredFulfillment?: 'DELIVERY' | 'ON_CAMPUS'
   meetingLocation?: MeetingLocation | null
   estimatedDeliveryFeeCents?: number
@@ -41,6 +44,8 @@ export type Listing = {
 export type ListingSort = 'newest' | 'price-high' | 'price-low'
 
 export type ListingQuery = {
+  /** No implicit scope: Favorites and owner compatibility reads may span channels. */
+  channel?: ListingChannel
   search?: string
   pickupArea?: string
   category?: ListingCategory
@@ -61,8 +66,16 @@ export type ListingQuery = {
 // IDs, status, timestamps, and seller identity will be assigned by the backend.
 export type CreateListingInput = Omit<
   Listing,
-  'createdAt' | 'id' | 'publishedAt' | 'seller' | 'status' | 'updatedAt'
+  | 'createdAt'
+  | 'id'
+  | 'listingChannel'
+  | 'publishedAt'
+  | 'seller'
+  | 'status'
+  | 'updatedAt'
 >
+
+export type OwnerListingQuery = Pick<ListingQuery, 'channel'>
 
 export type UpdateListingInput = Partial<
   Omit<

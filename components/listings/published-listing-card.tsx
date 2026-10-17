@@ -56,6 +56,7 @@ export function PublishedListingCard({
   initiallyFavorited = false,
   onUnfavorite,
   onOverlayActiveChange,
+  onIntentionalOpen,
   overlayClassName,
   overlayStyle,
 }: {
@@ -64,6 +65,7 @@ export function PublishedListingCard({
   initiallyFavorited?: boolean
   onUnfavorite?: (id: string) => void
   onOverlayActiveChange?: (active: boolean) => void
+  onIntentionalOpen?: () => void
   overlayClassName?: string
   overlayStyle?: React.CSSProperties
 }) {
@@ -171,6 +173,7 @@ export function PublishedListingCard({
         ) : undefined
       }
       onOverlayActiveChange={onOverlayActiveChange}
+      onIntentionalOpen={own ? undefined : onIntentionalOpen}
     >
       <ListingDetails listing={listing} />
       {messaging.error && <p role="alert">{messaging.error}</p>}

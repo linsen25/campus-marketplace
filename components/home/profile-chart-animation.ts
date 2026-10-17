@@ -1,5 +1,11 @@
 import type { MutableRefObject } from 'react'
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 
 export type ChartReplayHistory = { activity: number; marketplace: number }
 
@@ -16,19 +22,29 @@ export function useProfileChartAnimation(
   token: number,
   history: MutableRefObject<ChartReplayHistory>,
   chart: keyof ChartReplayHistory,
-  ready = true
+  ready = true,
+  localToken = 0
 ) {
   const reduced = useSyncExternalStore(subscribeMotion, readMotion, () => true)
   const [animation, setAnimation] = useState({
-    key: -1,
+    key: 'initial',
     phase: 'idle',
   })
+  const localHistory = useRef(0)
   useEffect(() => {
-    if (!ready || token <= history.current[chart]) return
+    if (
+      !ready ||
+      (token <= history.current[chart] && localToken <= localHistory.current)
+    )
+      return
     const consumed = history.current
-    consumed[chart] = token
-    setAnimation({ key: token, phase: reduced ? 'idle' : 'pending' })
-  }, [chart, history, ready, reduced, token])
+    consumed[chart] = Math.max(token, consumed[chart])
+    localHistory.current = localToken
+    setAnimation({
+      key: `${token}:${localToken}`,
+      phase: reduced ? 'idle' : 'pending',
+    })
+  }, [chart, history, ready, reduced, token, localToken])
   const finish = useCallback(() => {
     setAnimation((current) =>
       current.phase === 'idle' ? current : { ...current, phase: 'idle' }

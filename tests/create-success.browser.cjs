@@ -21,6 +21,10 @@ const baseListing = (id, seller = 'owner') => ({
   subcategory: 'Cameras',
   condition: 'good',
   pickupArea: 'On campus',
+  preferredFulfillment: 'ON_CAMPUS',
+  preferredPaymentMode: 'uu_pay',
+  meetingLocation: { label: 'Outside UCC front doors' },
+  estimatedDeliveryFeeCents: 0,
   description: 'Works well.',
   photoUrls: ['/demo/reading-chair.jpg'],
   seller: {
@@ -146,7 +150,10 @@ const baseListing = (id, seller = 'owner') => ({
             assert.deepEqual(Object.keys(body).sort(), [
               'condition',
               'description',
-              'pickupArea',
+              'estimatedDeliveryFeeCents',
+              'meetingLocation',
+              'preferredFulfillment',
+              'preferredPaymentMode',
               'price',
               'title',
             ])
@@ -210,15 +217,16 @@ const baseListing = (id, seller = 'owner') => ({
           },
         })
       )
-      await page.goto('http://localhost:3100/home', {
-        waitUntil: 'domcontentloaded',
-        timeout: 120000,
-      })
+      await page.goto(
+        (process.env.TEST_BASE_URL || 'http://localhost:3000') + '/home',
+        {
+          waitUntil: 'domcontentloaded',
+          timeout: 120000,
+        }
+      )
       const main =
         width < 1024
-          ? page
-              .locator('main')
-              .filter({ has: page.locator('h2', { hasText: /^Overview$/ }) })
+          ? page.locator('main:visible')
           : page.locator('[data-home-main]')
       await main.getByText('Chris', { exact: true }).waitFor()
       assert.equal(
@@ -227,9 +235,17 @@ const baseListing = (id, seller = 'owner') => ({
         'Overview is display only'
       )
       async function select(child) {
+        if (child === 'Create Resale') {
+          await select('My Resale')
+          await page
+            .getByRole('region', { name: 'My Resale', exact: true })
+            .getByRole('button', { name: 'Create Resale', exact: true })
+            .click()
+          return
+        }
         if (width < 1024) {
           await page
-            .getByRole('button', { name: 'Show more', exact: true })
+            .getByRole('button', { name: 'Open Home navigation', exact: true })
             .click()
           const menu = page.locator('[data-smooth-menu]')
           if (
@@ -265,9 +281,9 @@ const baseListing = (id, seller = 'owner') => ({
         await option.click()
       }
 
-      await select('Create Listing')
+      await select('Create Resale')
       const form = page.getByRole('form', {
-        name: 'Create listing',
+        name: 'Create Resale',
         exact: true,
         includeHidden: true,
       })
@@ -284,7 +300,9 @@ const baseListing = (id, seller = 'owner') => ({
         await choose(form, 'Category', 'Home & Dorm')
         await choose(form, 'Subcategory', 'Furniture')
         await choose(form, 'Condition', 'Good')
-        await choose(form, 'Place', 'On campus')
+        await form
+          .getByRole('combobox', { name: 'Meeting location', exact: true })
+          .fill('Outside UCC front doors')
         await form
           .locator('[name=description]')
           .fill('A clean desk for another student.')
@@ -396,8 +414,22 @@ const baseListing = (id, seller = 'owner') => ({
       await page.waitForTimeout(100)
       const canvas = await page.locator('[data-create-confetti]').boundingBox()
       assert(canvas.width > 0 && canvas.height > 0)
+      const contentCenter = await form.evaluate((el) => {
+        const main = el.closest('main'),
+          style = getComputedStyle(main),
+          bounds = main.getBoundingClientRect()
+        return (
+          bounds.left +
+          parseFloat(style.paddingLeft) +
+          (main.clientWidth -
+            parseFloat(style.paddingLeft) -
+            parseFloat(style.paddingRight)) /
+            2
+        )
+      })
       assert(
-        Math.abs(canvas.x + canvas.width / 2 - width / 2) < 2 || width >= 1024
+        Math.abs(canvas.x + canvas.width / 2 - contentCenter) < 2,
+        'Celebration stays centered in the actual content viewport, excluding its reserved scrollbar gutter'
       )
       if (width >= 1024)
         assert(canvas.x > 100, 'Sidebar excluded from celebration area')
@@ -492,7 +524,7 @@ const baseListing = (id, seller = 'owner') => ({
       await dialog.waitFor()
       await page.waitForTimeout(220)
       await dialog
-        .getByRole('button', { name: 'Back to My Listings', exact: true })
+        .getByRole('button', { name: 'Back to My Resale', exact: true })
         .click()
       await page.waitForFunction(
         () =>
@@ -519,7 +551,7 @@ const baseListing = (id, seller = 'owner') => ({
         .waitFor()
       await shot('back-active')
       if (width === 390) {
-        await select('Create Listing')
+        await select('Create Resale')
         await page.emulateMedia({ reducedMotion: 'reduce' })
         await fill('Reduced-motion desk')
         await observe()

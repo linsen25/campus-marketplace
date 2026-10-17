@@ -156,7 +156,7 @@ async function main() {
             window.searchBefore === document.querySelector('[data-discover]')
         )
       )
-      await page.getByRole('button', { name: 'Store', exact: true }).waitFor()
+      await page.getByRole('button', { name: 'Shop', exact: true }).waitFor()
       await home()
       assert(
         !(await page.evaluate(() => window.navCalls)).some(

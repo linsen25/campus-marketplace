@@ -84,8 +84,15 @@ async function run() {
         })
         if (!edit) {
           assert.equal(await fee.count(), 0)
+          await choose('Payment method', 'Pay independently')
           await choose('Preferred fulfillment', 'Delivery')
         }
+        assert.equal(
+          await p
+            .getByRole('combobox', { name: 'Payment method', exact: true })
+            .count(),
+          0
+        )
         await fee.waitFor()
         assert.equal(await fee.inputValue(), '0.00')
         await fee.fill('10.50')
@@ -93,6 +100,9 @@ async function run() {
         await meeting.press('Tab')
         await choose('Preferred fulfillment', 'Meeting')
         assert.equal(await fee.count(), 0)
+        await p
+          .getByRole('combobox', { name: 'Payment method', exact: true })
+          .waitFor()
         assert.equal(await meeting.inputValue(), 'Outside front entrance')
         assert.equal(await meeting.getAttribute('required'), '')
         await choose('Preferred fulfillment', 'Delivery')

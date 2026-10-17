@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import ShiningButton from '@/components/animata/button/shining-button'
+import { ConversationListingProvenance } from '@/components/conversation-listing-provenance'
 import { UserAvatar } from '@/components/ui/user-avatar'
 import { RequestTimelineSkeleton } from '@/components/ui/workspace-skeletons'
 import { StatefulButton } from '@/components/velora/stateful-button'
@@ -117,15 +118,14 @@ export function MessagesChat({
   const legacyActive = requests.history?.requests.some(
     (item) => item.status === 'active'
   )
-  const offerReady =
+  const offerContextReady =
     formal &&
     Boolean(requests.history) &&
     Boolean(offers.history) &&
     !requests.error &&
     !offers.error &&
     !offers.blocked &&
-    !legacyActive &&
-    listing.availability === 'available'
+    !legacyActive
   const ownActiveOffer = offers.history?.offers.find(
     (item) => item.status === 'Active' && item.senderId === currentUserId
   )
@@ -133,6 +133,21 @@ export function MessagesChat({
     (item) => item.status === 'Active' && item.recipientId === currentUserId
   )
   const activeOffer = ownActiveOffer || otherActiveOffer
+  // Public visibility gates new proposals, not an existing Active chain.
+  // Future entitlement belongs in mutate_offer_revision after basis validation.
+  const canStartNewOffer =
+    offerContextReady && listing.availability === 'available'
+  const canContinueExistingOffer = offerContextReady && Boolean(activeOffer)
+  const offerReady = canStartNewOffer || canContinueExistingOffer
+  const canEditOffer = (initial?: Offer) =>
+    initial
+      ? canContinueExistingOffer &&
+        Boolean(
+          offers.history?.offers.some(
+            (item) => item.id === initial.id && item.status === 'Active'
+          )
+        )
+      : canStartNewOffer
   const realSeller = requests.history?.sellerId === currentUserId
   const initialOfferLabel = realSeller ? 'Send Offer' : 'Make Offer'
   const responseOfferLabel =
@@ -267,31 +282,10 @@ export function MessagesChat({
       payoutChecking.current = false
     }
   }
-  const openOfferEditor = async (initial?: Offer) => {
+  const openOfferEditor = (initial?: Offer) => {
     setPayoutArtifact('Offer')
     setAddMenu(false)
-    if (!offerReady || offers.isBlocked()) return
-    if (realSeller) {
-      if (payoutChecking.current) return
-      payoutChecking.current = true
-      const version = contextVersion.current
-      try {
-        const capabilities = await marketplaceRequest<FinancialCapabilities>(
-          '/api/financial-capabilities',
-          'GET'
-        )
-        if (version !== contextVersion.current) return
-        if (capabilities.payoutAccount.status !== 'ready') {
-          setPayoutBlocked(capabilities.payoutAccount.status)
-          return
-        }
-      } catch {
-        setSendError('Unable to check payout readiness. Please retry.')
-        return
-      } finally {
-        payoutChecking.current = false
-      }
-    }
+    if (!canEditOffer(initial) || offers.isBlocked()) return
     setOfferEditor({ initial })
   }
   const offerEntryKey = `${currentUserId}:${conversationId}:${String(
@@ -438,6 +432,7 @@ export function MessagesChat({
           </div>
           <div className={styles.identityText}>
             <h3>{name}</h3>
+            <ConversationListingProvenance provenance={listing.provenance} />
             {time && <span>{time}</span>}
           </div>
         </div>
@@ -919,7 +914,7 @@ export function MessagesChat({
           newRound={Boolean(offers.history?.offers.length)}
           onClose={() => setOfferEditor(null)}
           onSend={async (terms) => {
-            if (!offerReady || offers.isBlocked())
+            if (!canEditOffer(offerEditor.initial) || offers.isBlocked())
               throw new Error(
                 'Refresh and review the current Offer before sending.'
               )

@@ -49,6 +49,14 @@ export function createOrderDomainService(context: MarketplaceContext) {
     async write(id: unknown, action: string, body: Record<string, unknown>) {
       const orderId = messageUuid(id)
       const definitions: Record<string, { name: string; fields: string[] }> = {
+        'confirm-exchange': {
+          name: 'marketplace_confirm_external_exchange',
+          fields: ['clientActionId'],
+        },
+        'dispute-exchange': {
+          name: 'marketplace_dispute_external_exchange',
+          fields: ['reason', 'clientActionId'],
+        },
         'confirm-agreement': {
           name: 'marketplace_confirm_order_agreement',
           fields: [],
@@ -95,6 +103,14 @@ export function createOrderDomainService(context: MarketplaceContext) {
           fields: ['clientActionId'],
         },
       }
+      if (
+        action === 'payment' &&
+        process.env.STRIPE_PROVIDER_ENABLED === 'true'
+      )
+        throw new ListingApiError(
+          'Order payments are not enabled in this Stripe setup phase.',
+          503
+        )
       const definition = definitions[action]
       if (!definition) throw new ListingApiError('Not found.', 404)
       if (Object.keys(body).some((key) => !definition.fields.includes(key)))

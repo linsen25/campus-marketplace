@@ -5,6 +5,7 @@ import { CardAction } from '@/components/listings/card-actions'
 import successStyles from '@/components/listings/create-success.module.css'
 import { ListingMedia } from '@/components/listings/listing-media'
 import { MeetingLocationInput } from '@/components/listings/meeting-location-input'
+import GlideSelect from '@/components/ui/GlideSelect'
 import { ActionRow } from '@/components/ui/action-row'
 import { DynamicAction } from '@/components/ui/dynamic-action'
 import { FadingDialog } from '@/components/ui/fading-dialog'
@@ -65,6 +66,12 @@ export function OfferTermsSummary({
       )}
       <dt>Fulfillment</dt>
       <dd>{terms.fulfillment === 'on_campus' ? 'Meeting' : 'Delivery'}</dd>
+      <dt>Payment method</dt>
+      <dd>
+        {terms.paymentMode === 'external'
+          ? 'Pay independently · No UU payment protection'
+          : 'Pay by UU'}
+      </dd>
       {terms.fulfillment === 'on_campus' ? (
         <>
           <dt>Meeting location</dt>
@@ -148,7 +155,7 @@ export function OfferEconomicsSummary({
           <dd>{offerAmount(money.delivery)}</dd>
         </>
       )}
-      <dt>{buyer ? 'Buyer service fee' : 'Seller platform fee'}</dt>
+      <dt>{buyer ? 'Buyer Protection fee' : 'Seller platform fee'}</dt>
       <dd>{offerAmount(buyer ? money.fee : money.sellerFee)}</dd>
       <dt>{buyer ? 'Total' : 'Seller transaction amount'}</dt>
       <dd>{offerAmount(buyer ? money.total : money.sellerGross)}</dd>
@@ -497,6 +504,11 @@ export function OfferEditor({
   const [postalPrefix, setPostalPrefix] = useState(
     originalArea?.postalPrefix ?? ''
   )
+  const [paymentMode, setPaymentMode] = useState<'external' | 'uu_pay'>(
+    original
+      ? original.paymentMode ?? 'uu_pay'
+      : listing.live?.preferredPaymentMode ?? 'uu_pay'
+  )
   const [confirmation, setConfirmation] = useState<OfferTerms | null>(null)
   const [discard, setDiscard] = useState(false)
   const [error, setError] = useState('')
@@ -544,6 +556,8 @@ export function OfferEditor({
       itemAmountCents: amount,
       currency: 'CAD' as const,
       note: note.trim(),
+      paymentMode: mode === 'delivery' ? ('uu_pay' as const) : paymentMode,
+      paymentModeVersion: 1 as const,
     }
     if (mode === 'on_campus') {
       const valid = validateNewOrderSchedule(schedule)
@@ -655,6 +669,25 @@ export function OfferEditor({
                   ))}
                 </div>
               </fieldset>
+              {mode === 'on_campus' && (
+                <label>
+                  Payment method
+                  <GlideSelect
+                    ariaLabel="Payment method"
+                    value={paymentMode}
+                    options={[
+                      { value: 'uu_pay', label: 'Pay by UU (recommended)' },
+                      { value: 'external', label: 'Pay independently' },
+                    ]}
+                    onChange={(value: string) =>
+                      setPaymentMode(value as 'external' | 'uu_pay')
+                    }
+                  />
+                  {paymentMode === 'external' && (
+                    <small>Paid outside UU · No UU payment protection</small>
+                  )}
+                </label>
+              )}
               <div className={styles.conditional}>
                 {mode === 'on_campus' && (
                   <>
@@ -846,6 +879,7 @@ export function OfferEditor({
               confirmation,
               original ?? {
                 itemAmountCents: askingPrice,
+                paymentMode: listing.live?.preferredPaymentMode ?? 'uu_pay',
                 fulfillment:
                   listing.live?.preferredFulfillment === 'DELIVERY'
                     ? 'delivery'

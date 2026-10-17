@@ -162,7 +162,7 @@ export function CreateSuccess({
                 footer={true}
                 onClick={() => choose('back')}
               >
-                Back to My Listings
+                Back to My Resale
               </DynamicAction>
               <DynamicAction
                 variant="green"

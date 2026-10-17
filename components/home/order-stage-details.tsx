@@ -22,6 +22,10 @@ function ConfirmedFulfillment({ terms }: { terms: OfferTerms }) {
   const mode = terms.fulfillment === 'on_campus' ? 'Meeting' : 'Delivery'
   return (
     <dl className={styles.amounts}>
+      <dt>Payment method</dt>
+      <dd>
+        {terms.paymentMode === 'external' ? 'Pay independently' : 'Pay by UU'}
+      </dd>
       <dt>Fulfillment</dt>
       <dd>{mode}</dd>
       {terms.fulfillment === 'delivery' && (
@@ -88,7 +92,7 @@ function OrderEconomics({
         )}
         {role === 'buyer' ? (
           <>
-            <dt>Buyer service fee</dt>
+            <dt>Buyer Protection fee</dt>
             <dd>{offerAmount(money.buyerServiceFeeCents)}</dd>
             <dt>Total</dt>
             <dd>{offerAmount(money.buyerTotalCents)}</dd>
@@ -102,7 +106,8 @@ function OrderEconomics({
           </>
         )}
       </dl>
-      {order.lifecycle === 'cancelled' &&
+      {order.v2.terms.paymentMode !== 'external' &&
+        order.lifecycle === 'cancelled' &&
         ['pending', 'failed'].includes(order.paymentStatus) &&
         !order.paymentPaidAt && (
           <p>Payment not completed. No payment was charged.</p>
@@ -254,7 +259,20 @@ function PaymentDetails({ order, role, flow, offset }: StageProps) {
     <>
       {' '}
       <OrderEconomics order={order} role={role} />
-      <p>Payment: {order.paymentStatus.replaceAll('_', ' ')}</p>
+      {order.v2?.terms.paymentMode === 'external' ? (
+        <>
+          <p>Paid outside UU · No UU payment protection</p>
+          <p>
+            External exchange:{' '}
+            {flow.data?.fulfillment.externalExchange?.status.replaceAll(
+              '_',
+              ' '
+            ) ?? 'Unavailable'}
+          </p>
+        </>
+      ) : (
+        <p>Payment: {order.paymentStatus.replaceAll('_', ' ')}</p>
+      )}
       {deadline &&
         order.lifecycle === 'open' &&
         ['pending', 'failed'].includes(order.paymentStatus) && (
@@ -300,12 +318,45 @@ function ProtectionDetails({ flow, offset }: StageProps) {
     </>
   )
 }
-function CompletionDetails({ order, status, page }: StageProps) {
+function CompletionDetails({ order, status, page, flow }: StageProps) {
   return (
     <>
       {' '}
       <p>{status}</p>
-      <p>Payment: {order.paymentStatus.replaceAll('_', ' ')}</p>
+      {order.v2?.terms.paymentMode === 'external' ? (
+        <>
+          <p>Paid outside UU · No UU payment protection</p>
+          <p>
+            External exchange:{' '}
+            {flow.data?.fulfillment.externalExchange?.status.replaceAll(
+              '_',
+              ' '
+            ) ?? 'Unavailable'}
+          </p>
+        </>
+      ) : (
+        <p>Payment: {order.paymentStatus.replaceAll('_', ' ')}</p>
+      )}
+      {order.v2?.terms.paymentMode === 'external' && (
+        <>
+          {flow.data?.fulfillment.externalExchange?.buyerConfirmedAt && (
+            <p>
+              Buyer confirmed:{' '}
+              {new Date(
+                flow.data.fulfillment.externalExchange.buyerConfirmedAt
+              ).toLocaleString()}
+            </p>
+          )}
+          {flow.data?.fulfillment.externalExchange?.sellerConfirmedAt && (
+            <p>
+              Seller confirmed:{' '}
+              {new Date(
+                flow.data.fulfillment.externalExchange.sellerConfirmedAt
+              ).toLocaleString()}
+            </p>
+          )}
+        </>
+      )}
       {order.cancellation && (
         <p>
           {order.cancellation.reason} ·{' '}
@@ -315,7 +366,7 @@ function CompletionDetails({ order, status, page }: StageProps) {
       {order.expiredAt && (
         <p>Expired: {new Date(order.expiredAt).toLocaleString()}</p>
       )}
-      {page === 'completed' && (
+      {page === 'completed' && order.v2?.terms.paymentMode !== 'external' && (
         <p>Payout status: {order.payoutStatus.replaceAll('_', ' ')}</p>
       )}
     </>

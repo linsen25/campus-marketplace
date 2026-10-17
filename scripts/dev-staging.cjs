@@ -22,7 +22,10 @@ const values = Object.fromEntries(
 )
 const url = values.NEXT_PUBLIC_SUPABASE_URL
 const key = values.NEXT_PUBLIC_SUPABASE_ANON_KEY
-const storageKey = values.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const storageKey =
+  values.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  ''
 if (url !== `https://${ref}.supabase.co`)
   throw new Error(
     'Refusing to start: expected western-marketplace-staging URL.'
@@ -38,10 +41,15 @@ if (!key.startsWith('sb_publishable_')) {
 if (storageKey) {
   let valid = false
   try {
-    const claims = JSON.parse(Buffer.from(storageKey.split('.')[1] || '', 'base64url').toString())
+    const claims = JSON.parse(
+      Buffer.from(storageKey.split('.')[1] || '', 'base64url').toString()
+    )
     valid = claims.role === 'service_role' && claims.ref === ref
-  } catch { valid = false }
-  if (!valid) throw new Error('Refusing a mismatched staging Storage credential.')
+  } catch {
+    valid = false
+  }
+  if (!valid)
+    throw new Error('Refusing a mismatched staging Storage credential.')
 }
 console.log(
   'Starting western-marketplace-staging. Production .env.local is unchanged.'
@@ -63,6 +71,22 @@ const child = spawn(
       SUPABASE_SERVICE_ROLE_KEY: storageKey,
       // Explicit server-only value; never inherit a production Google key.
       GOOGLE_PLACES_API_KEY: values.GOOGLE_PLACES_API_KEY || '',
+      // Explicit staging-only allowlist, including empty values, prevents Next's
+      // dotenv loading from supplying another environment's Stripe credentials.
+      ...Object.fromEntries(
+        [
+          'STRIPE_SECRET_KEY',
+          'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
+          'STRIPE_WEBHOOK_SECRET',
+          'STRIPE_CONNECT_WEBHOOK_SECRET',
+          'STRIPE_ACCOUNT_WEBHOOK_SECRET',
+          'STRIPE_WORKER_SECRET',
+          'STRIPE_PLATFORM_ACCOUNT_ID',
+          'STRIPE_APPLICATION_ORIGIN',
+          'STRIPE_API_VERSION',
+          'STRIPE_PROVIDER_ENABLED',
+        ].map((name) => [name, values[name] || ''])
+      ),
     },
   }
 )

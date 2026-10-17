@@ -1,0 +1,269 @@
+.stages {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 40px;
+}
+.stages button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #c1adcf;
+  font-size: 15px;
+  line-height: 22px;
+  cursor: pointer;
+}
+.stages button:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 30px;
+  left: calc(50% + 26px);
+  width: calc(100% - 52px);
+  border-top: 1px solid #544161;
+}
+.number {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #775497;
+  border-radius: 50%;
+  font-size: 12px;
+}
+.stages button[aria-selected='true'] {
+  color: #fafafa;
+  font-weight: 600;
+}
+.stages button[aria-selected='true'] .number {
+  background: #775497;
+  color: #fff;
+  border-color: #b88cfa;
+}
+.stages button:hover {
+  background: #ffffff08;
+}
+.stages button:focus-visible,
+.panel:focus-visible {
+  outline: 2px solid #b88cfa;
+  outline-offset: 4px;
+}
+.flow {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: clamp(28px, 4vw, 64px);
+  align-items: center;
+}
+.explanation h3 {
+  margin: 12px 0 18px;
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 600;
+}
+.explanation > p:not(.eyebrow) {
+  color: #c8becf;
+  font-size: 16px;
+  line-height: 26px;
+}
+.explanation .exampleNote {
+  margin-top: 24px;
+  font-size: 12px;
+  color: #a999b4;
+  line-height: 20px;
+}
+.eyebrow {
+  margin: 0;
+  color: #c1adcf;
+  font-size: 12px;
+  line-height: 20px;
+}
+.preview {
+  min-width: 0;
+  min-height: 360px;
+  padding: 24px;
+  border: 1px solid #544161;
+  border-radius: 20px;
+  background: #1b1523;
+  color: #fafafa;
+}
+.listing {
+  margin: 0;
+}
+.media {
+  margin: 12px 0 18px;
+  height: 220px;
+  overflow: hidden;
+  border-radius: 12px;
+}
+.listing figcaption {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 16px;
+  line-height: 24px;
+}
+.listing figcaption strong {
+  font-weight: 600;
+}
+.conversation {
+  display: grid;
+  gap: 16px;
+  font-size: 14px;
+  line-height: 22px;
+}
+.context {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #544161;
+}
+.context span {
+  color: #c1adcf;
+  font-size: 12px;
+}
+.buyer {
+  justify-self: end;
+  max-width: 90%;
+}
+.seller {
+  justify-self: start;
+  max-width: 90%;
+}
+.conversation small {
+  display: block;
+  margin-bottom: 4px;
+  color: #c1adcf;
+  font-size: 12px;
+}
+.buyer p,
+.seller p {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 20px;
+  color: #fff;
+}
+.buyer p {
+  background: #007aff;
+}
+.seller p {
+  background: #775497;
+}
+.offer {
+  justify-self: end;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 24px;
+  width: min(240px, 100%);
+  padding: 16px;
+  border: 1px solid #775497;
+  border-radius: 14px;
+  background: #263b70;
+}
+.offer strong {
+  grid-row: 2;
+  font-size: 24px;
+  line-height: 30px;
+}
+.offer > span:last-child {
+  color: #d8c4e6;
+  font-size: 12px;
+}
+.agreement h4 {
+  margin: 12px 0 24px;
+  font-size: 22px;
+  line-height: 30px;
+  font-weight: 600;
+}
+.agreement dl {
+  display: grid;
+  gap: 18px;
+}
+.agreement dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 14px;
+  line-height: 22px;
+}
+.agreement dt {
+  color: #c1adcf;
+}
+.agreement dd {
+  margin: 0;
+  text-align: right;
+}
+.exchange {
+  display: grid;
+  gap: 24px;
+}
+.exchange > p:last-child {
+  color: #c8becf;
+  font-size: 13px;
+  line-height: 22px;
+}
+.sellingPoints {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sellingPoints li {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 24px;
+  padding: 32px 0;
+  border-top: 1px solid #544161;
+}
+.sellingPoints li > span {
+  color: #a999b4;
+  font-size: 13px;
+  line-height: 30px;
+}
+.sellingPoints h3 {
+  margin: 0 0 12px;
+  font-size: clamp(20px, 2vw, 26px);
+  line-height: 1.4;
+  font-weight: 600;
+}
+.sellingPoints p {
+  margin: 0;
+  max-width: 760px;
+  color: #c8becf;
+  font-size: 16px;
+  line-height: 26px;
+}
+@media (max-width: 767px) {
+  .flow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .preview {
+    padding: 20px;
+  }
+  .sellingPoints li {
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+@media (max-width: 639px) {
+  .stages {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .stages button {
+    flex-direction: row;
+    gap: 10px;
+    border: 1px solid #544161;
+  }
+  .stages button[aria-selected='true'] {
+    border-color: #b88cfa;
+  }
+  .stages button::after {
+    display: none;
+  }
+}

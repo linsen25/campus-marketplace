@@ -1,3 +1,21 @@
+.select {
+  --market-control-height: 48px;
+
+  width: 100%;
+}
+.select .trigger {
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 16px;
+}
+.select .selection {
+  display: inline;
+}
+.select.above .panel {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+
 .control {
   position: relative;
   display: flex;

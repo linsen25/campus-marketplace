@@ -1,3 +1,5 @@
+> Current payment-mode authority: [Dual payment paths](DUAL_PAYMENT_PATH.md). Meeting supports negotiated UU or independent payment; Delivery remains UU-only. Existing frozen Orders retain UU semantics. This addendum supersedes conflicting older payment/fee wording.
+
 # Marketplace V2: authoritative target product contract
 
 > **2026-10-14 authoritative flow override:** [Master Order flow rework](ORDER_MASTER_FLOW_REWORK.md)
@@ -246,15 +248,15 @@ starts checkout. Accept itself never charges Buyer.
 ## 6. Immutable money and separate financial lifecycles
 
 Offer snapshots agreed item price and, for Delivery, known Delivery fee. Marketplace
-calculates Buyer service fee from accepted terms and versioned platform pricing;
+calculates Buyer Protection fee from accepted terms and versioned platform pricing;
 Seller cannot enter that fee. New V2 Orders use 1% of accepted item price only,
 no minimum and a CA$5 cap, with integer-cent half-up rounding. Delivery is
 excluded from the percentage base. Historical rule-tagged amounts are immutable.
 
 Seller platform fee = **CA$0**. Item earnings = agreed item price. Delivery fee is
 separate Seller reimbursement. Example: CA$80 item + CA$10 Delivery -> CA$90
-expected Seller payout. Buyer service fee is not Seller revenue; Buyer total is
-item + Delivery fee + Buyer service fee. Processing costs are platform economics
+expected Seller payout. Buyer Protection fee is not Seller revenue; Buyer total is
+item + Delivery fee + Buyer Protection fee. Processing costs are platform economics
 and are not silently deducted from displayed Seller earnings/reimbursement.
 
 Buyer Payment: Pending, Processing, Paid, Failed, Refunded.

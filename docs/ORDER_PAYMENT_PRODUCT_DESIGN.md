@@ -1,3 +1,5 @@
+> Current payment-mode authority: [Dual payment paths](DUAL_PAYMENT_PATH.md). Meeting supports negotiated UU or independent payment; Delivery remains UU-only. Existing frozen Orders retain UU semantics. This addendum supersedes conflicting older payment/fee wording.
+
 # Payment / Payout / role-specific Order product contract
 
 > **2026-10-14 flow override:** the [Master Order flow rework](ORDER_MASTER_FLOW_REWORK.md)
@@ -435,7 +437,7 @@ not be silently deducted from that displayed amount.
 | Example | Amount |
 | --- | --- |
 | Item price | CA$80.00 |
-| Buyer service fee | CA$3.20 |
+| Buyer Protection fee | CA$3.20 |
 | Buyer total | CA$83.20 |
 | Seller earnings | CA$80.00 |
 
@@ -449,7 +451,7 @@ Seller displayed earnings or reimbursement.
 | --- | --- |
 | Item price | CA$80.00 |
 | Shipping | CA$10.00 |
-| Buyer service fee | CA$3.60 |
+| Buyer Protection fee | CA$3.60 |
 | Buyer total | CA$93.60 |
 | Seller item earnings | CA$80.00 |
 | Shipping reimbursement | CA$10.00 |

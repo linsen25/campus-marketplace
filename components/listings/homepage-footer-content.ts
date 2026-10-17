@@ -1,119 +1,86 @@
-type InformationPanel = {
-  title: string
-  heading: string
-  intro: string
-  statusNote?: string
-  items: Array<{ title: string; copy: string }>
-}
-
-export const panels: InformationPanel[] = [
+/** Public product copy only; no links, account data or transaction authority. */
+export const footerSections = [
   {
-    title: 'Western',
-    heading: 'Made for Western. Kept within Western.',
-    intro:
-      'Usual & Unusual is a private marketplace built around the Western community. Access requires a verified Western email, so browsing, listing, and connecting all happen inside the same campus network.',
+    id: 'features',
+    title: 'Features',
     items: [
       {
-        title: 'Western access only',
-        copy: 'A verified Western email is required before entering the marketplace. Listings are not publicly browsable outside the Western community.',
+        title: 'Resale Marketplace',
+        copy: 'Buy and sell everyday items within the Western community.',
       },
       {
-        title: 'Made for student life',
-        copy: 'Textbooks after finals. Furniture before a move. Tech, clothes, kitchen gear, and the things that change hands every semester. Usual & Unusual is designed around how student life actually moves.',
+        title: 'Shop',
+        copy: 'Build your own storefront, organize Shop listings, and grow beyond casual Resale.',
       },
       {
-        title: 'Local by default',
-        copy: 'Find things nearby, connect with people in the same university community, and make exchanges without turning every listing into a cross-city transaction.',
+        title: 'Messages & Offers',
+        copy: 'Contact sellers, negotiate offers, counter, revise, and keep the conversation in one place.',
+      },
+      {
+        title: 'Orders',
+        copy: 'Move from agreement through payment and fulfillment in one connected transaction flow.',
+      },
+      {
+        title: 'Favorites & Notifications',
+        copy: 'Save listings and stay up to date on the activity that matters to you.',
       },
     ],
   },
   {
-    title: 'Trust',
-    heading: 'Built around trust, not just listings.',
-    intro:
-      'Buying from someone nearby should feel clear and accountable. Usual & Unusual is being designed so both sides know what was agreed, what changed, and when an exchange is actually complete.',
-    statusNote:
-      'Some transaction protection features below are part of the planned marketplace experience and are not yet live.',
+    id: 'why-uu',
+    title: 'Why UU',
     items: [
       {
-        title: 'Verified access',
-        copy: 'Every person entering the marketplace starts with a verified Western email, creating a clearer boundary than an anonymous public marketplace.',
+        title: 'Built for Western students',
+        copy: 'Usual & Unusual is designed around the way students buy, sell, move, and exchange items throughout university life.',
       },
       {
-        title: 'Protected payments',
-        copy: 'In the planned flow, buyer payment comes before fulfillment. Marketplace Protection follows confirmed handoff or receipt; completing protection without a blocking issue makes the seller payout eligible for release.',
+        title: 'Resale + Shop',
+        copy: 'Sell casually through Resale or build your own storefront with Shop.',
       },
       {
-        title: 'Both sides confirm',
-        copy: 'A transaction is not complete because one person says it is. Buyers and sellers both confirm the handoff or delivery before the exchange moves forward.',
+        title: 'One connected experience',
+        copy: 'Listings, conversations, offers, orders, payments, and notifications stay connected instead of living in separate systems.',
       },
       {
-        title: 'A record to return to',
-        copy: 'Listing details, transaction updates, timestamps, condition information, and supporting photos can stay connected to the exchange so both sides have something concrete to refer back to.',
+        title: 'Designed for mobile and desktop',
+        copy: 'Use the same marketplace naturally across desktop and mobile.',
       },
     ],
   },
   {
-    title: 'Exchange',
-    heading: 'From listing to handoff, keep it simple.',
-    intro:
-      'Finding something is only the beginning. The marketplace is being designed around the full exchange — from the first message to the moment the item changes hands.',
-    statusNote:
-      'Messaging, shipping, meetup recommendations, and shared condition-photo records are planned and not yet live.',
+    id: 'safety-trust',
+    title: 'Safety & Trust',
     items: [
       {
-        title: 'Find it nearby',
-        copy: 'Browse items listed by people in the Western community and quickly see the price, condition, and details that matter.',
+        title: 'Verified Western access',
+        copy: 'Marketplace access requires a verified Western email.',
       },
       {
-        title: 'Connect directly',
-        copy: 'Ask questions, confirm details, and decide whether the item is right for you before arranging the exchange.',
+        title: 'A student-focused community',
+        copy: 'The marketplace is built around the Western student community rather than anonymous public browsing.',
       },
       {
-        title: 'Choose how to exchange',
-        copy: 'Meet at a recommended public campus location, agree on another location together, or use shipping when meeting in person is not practical.',
+        title: 'Private marketplace access',
+        copy: 'Marketplace listings and transaction activity stay inside the verified marketplace experience.',
       },
       {
-        title: 'Capture the condition',
-        copy: 'Before a handoff or shipment, condition photos can help establish what is being exchanged and reduce ambiguity afterward.',
+        title: 'Participant-only conversations',
+        copy: 'Messages and transaction details are scoped to the people involved in the exchange.',
+      },
+      {
+        title: 'Structured transactions',
+        copy: 'Offers, agreements, orders, fulfillment, and completion use explicit transaction states instead of relying only on informal chat.',
+      },
+      {
+        title: 'Stripe-powered payment setup',
+        copy: 'Payment method setup and seller payout onboarding are handled through Stripe.',
+      },
+      {
+        title: 'Historical transaction context',
+        copy: 'Important listing, Shop, conversation, and order context is preserved so later changes do not rewrite transaction history.',
       },
     ],
   },
-  {
-    title: 'Safety',
-    heading: 'A safer exchange starts before the meetup.',
-    intro:
-      'Good marketplace safety is not one warning at checkout. It comes from knowing who has access, keeping important details attached to the transaction, and giving both sides clearer ways to exchange.',
-    items: [
-      {
-        title: 'Meet somewhere public',
-        copy: 'When exchanging in person, use a busy public location when possible. Recommended campus meetup locations can make that choice easier.',
-      },
-      {
-        title: 'Keep the agreement clear',
-        copy: 'Confirm the item, price, condition, and exchange method before meeting or shipping so both sides are working from the same expectations.',
-      },
-      {
-        title: 'Keep useful records',
-        copy: 'Messages, listing details, timestamps, and transaction evidence can provide context if something needs to be reviewed later.',
-      },
-      {
-        title: 'Use the platform flow',
-        copy: 'As transaction tools are introduced, keeping the exchange inside Usual & Unusual will make protection and transaction records more useful.',
-      },
-    ],
-  },
-]
-
-export const contactLinks: {
-  email: string | null
-  discord: string | null
-  github: string | null
-} = {
-  // Configure here: insert the real public contact email.
-  email: null,
-  // Configure here: insert the real Discord username or https invite URL.
-  discord: null,
-  // Configure here: insert the personal GitHub profile URL (not the repository URL).
-  github: null,
-}
+  { id: 'contact', title: 'Contact', items: [] },
+] as const

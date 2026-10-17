@@ -13,7 +13,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
   const output = path.join(process.env.TEMP, 'profile-chart-replay')
   fs.mkdirSync(output, { recursive: true })
   try {
-    for (const width of (process.env.REPLAY_WIDTHS || '390,430,1280,1536')
+    for (const width of (process.env.REPLAY_WIDTHS || '390,430,820,1280,1536')
       .split(',')
       .map(Number)) {
       const page = await browser.newPage({
@@ -21,10 +21,16 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
         serviceWorkers: 'block',
       })
       const errors = [],
-        writes = []
+        writes = [],
+        reconciliations = []
       page.on('pageerror', (error) => errors.push(error.message))
       page.on('request', (request) => {
-        if (request.url().includes('/api/') && request.method() !== 'GET')
+        if (new URL(request.url()).pathname === '/api/stripe/reconcile')
+          reconciliations.push({
+            method: request.method(),
+            kind: request.postDataJSON()?.kind,
+          })
+        else if (request.url().includes('/api/') && request.method() !== 'GET')
           writes.push(request.url())
       })
       await page.route('**/api/**', (route) =>
@@ -41,6 +47,11 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
         route.fulfill({
           json: { seller: { id: 'fixture', displayName: 'CampusMember' } },
         })
+      )
+      // Settings already reconciles financial setup when entered. Keep this
+      // existing call isolated; this chart/navigation test never reaches Stripe.
+      await page.route('**/api/stripe/reconcile', (route) =>
+        route.fulfill({ json: { ok: true } })
       )
       await page.route('**/api/profile/account', (route) =>
         route.fulfill({
@@ -70,11 +81,56 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
       await page.route('**/api/listings*', (route) =>
         route.fulfill({ json: [] })
       )
-      await page.goto('http://localhost:3100/home', {
-        waitUntil: 'domcontentloaded',
-        timeout: 120000,
+      let releasePeriod = null,
+        holdPeriod = false,
+        requests = 0,
+        failPeriod = false,
+        zero = false
+      await page.route('**/api/profile/activity?*', async (route) => {
+        requests++
+        const period = new URL(route.request().url()).searchParams.get('period')
+        if (failPeriod) {
+          failPeriod = false
+          return route.fulfill({
+            status: 503,
+            json: { error: 'Controlled activity failure' },
+          })
+        }
+        if (holdPeriod)
+          await new Promise((resolve) => {
+            releasePeriod = resolve
+          })
+        await route.fulfill({
+          json: {
+            period,
+            points: Array.from(
+              { length: period === '1D' ? 24 : parseInt(period) },
+              (_, i) => ({
+                timestamp: new Date(Date.UTC(2026, 9, i + 1)).toISOString(),
+                label: String(i),
+                views: zero ? 0 : i + 1,
+                listings: zero ? 0 : i % 2,
+                sold: zero ? 0 : i % 3,
+                overall: zero ? 0 : i + 1 + (i % 2) + (i % 3),
+              })
+            ),
+          },
+        })
       })
+      await page.goto(
+        (process.env.TEST_BASE_URL || 'http://localhost:3000') + '/home',
+        {
+          waitUntil: 'domcontentloaded',
+          timeout: 120000,
+        }
+      )
       await page.getByText('member@uwo.ca', { exact: true }).waitFor()
+      assert.equal(
+        await page.locator('[data-chart]').count(),
+        0,
+        'Profile has information only'
+      )
+      await page.locator('[data-shop-surface=profile]').waitFor()
       await page.evaluate(() => {
         window.chartStarts = []
         const phases = new WeakMap()
@@ -99,12 +155,31 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
       const mobileSelect = async (name) => {
         const menu = page.locator('[data-smooth-dropdown]')
         await menu
-          .getByRole('button', { name: 'Show more', exact: true })
+          .getByRole('button', { name: 'Open Home navigation', exact: true })
           .click()
+        if (
+          name === 'Analysis' &&
+          !(await menu.getByRole('button', { name, exact: true }).count())
+        )
+          await menu
+            .getByRole('button', { name: 'Profile', exact: true })
+            .click()
         await menu.getByRole('button', { name, exact: true }).click()
       }
       const select = async (name) => {
-        if (desktop) await nav.getByRole('link', { name, exact: true }).click()
+        if (desktop && name === 'Analysis') {
+          if (
+            (await nav
+              .getByRole('link', { name: 'Profile', exact: true })
+              .getAttribute('aria-expanded')) !== 'true'
+          )
+            await nav
+              .getByRole('link', { name: 'Profile', exact: true })
+              .click()
+          await nav.hover()
+          await nav.getByRole('button', { name, exact: true }).click()
+        } else if (desktop)
+          await nav.getByRole('link', { name, exact: true }).click()
         else await mobileSelect(name)
       }
       const activity = page.getByRole('region', {
@@ -117,10 +192,21 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
       })
       const replay = async (label) => {
         const before = await page.evaluate(() => window.chartStarts.length)
-        await select(desktop ? 'Profile' : 'Analytics')
+        await select('Analysis')
         await page.waitForFunction(
           (count) => window.chartStarts.length === count + 2,
           before
+        )
+        assert.equal(
+          await page.locator('[data-shop-surface=profile]').count(),
+          0
+        )
+        assert.equal(
+          await page
+            .locator('[data-shop-surface=analysis] [data-chart]')
+            .count(),
+          0,
+          'Inactive Shop has no fabricated metrics'
         )
         const token = await activity.getAttribute('data-chart-replay')
         assert.equal(await market.getAttribute('data-chart-replay'), token)
@@ -170,14 +256,13 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
         curve,
         'Settled chart data and geometry unchanged'
       )
-      await select(desktop ? 'Settings' : 'Payment')
+      await select('Settings')
       await replay('return')
       assert.notEqual(
         await activity.getAttribute('data-chart-replay'),
         sameDestinationToken
       )
       const starts = await page.evaluate(() => window.chartStarts.length)
-      const token = await activity.getAttribute('data-chart-replay')
       if (desktop) {
         await nav.hover()
         await nav
@@ -192,17 +277,122 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
         await page.waitForTimeout(450)
       }
       await activity.getByRole('button', { name: 'Views', exact: true }).click()
+      await page.waitForTimeout(1800)
+      assert.equal(
+        await page.evaluate(() => window.chartStarts.length),
+        starts + 1,
+        'metric replays only Activity once'
+      )
+      const controlsNode = await activity
+        .getByRole('button', { name: 'Views', exact: true })
+        .elementHandle()
+      const panelNode = await activity.elementHandle()
+      holdPeriod = true
       await activity.getByRole('button', { name: '1D', exact: true }).click()
+      await page.waitForTimeout(250)
+      assert(releasePeriod)
+      assert.equal(
+        await activity
+          .locator('[data-trend-period]')
+          .getAttribute('data-trend-period'),
+        '7D'
+      )
+      assert.equal(
+        await activity.getByRole('status').count(),
+        0,
+        'existing chart stays visible without skeleton'
+      )
+      assert.equal(
+        await page.evaluate(() => window.chartStarts.length),
+        starts + 1,
+        'no premature period animation'
+      )
+      holdPeriod = false
+      releasePeriod()
+      releasePeriod = null
+      await page.waitForTimeout(1800)
+      assert.equal(
+        await activity
+          .locator('[data-trend-period]')
+          .getAttribute('data-trend-period'),
+        '1D'
+      )
+      assert.equal(
+        await page.evaluate(() => window.chartStarts.length),
+        starts + 2
+      )
+      await activity.getByRole('button', { name: '30D', exact: true }).click()
+      await page.waitForTimeout(1800)
+      assert.equal(
+        await page.evaluate(() => window.chartStarts.length),
+        starts + 3
+      )
+      assert.equal(
+        await activity
+          .locator('[data-trend-points]')
+          .getAttribute('data-trend-points'),
+        '30'
+      )
+      const requestsBefore = requests
+      await activity.getByRole('button', { name: '30D', exact: true }).click()
+      await page.waitForTimeout(200)
+      assert.equal(requests, requestsBefore, 'same period does not refetch')
+      failPeriod = true
+      await activity.getByRole('button', { name: '7D', exact: true }).click()
+      await activity.getByRole('alert').waitFor()
+      assert.equal(
+        await activity
+          .locator('[data-trend-period]')
+          .getAttribute('data-trend-period'),
+        '30D'
+      )
+      assert.equal(await activity.getByRole('status').count(), 0)
+      assert.equal(
+        await page.evaluate(() => window.chartStarts.length),
+        starts + 3
+      )
+      zero = true
+      await activity.getByRole('button', { name: 'Retry', exact: true }).click()
+      await page.waitForTimeout(1800)
+      assert.equal(
+        await activity
+          .locator('[data-trend-period]')
+          .getAttribute('data-trend-period'),
+        '7D'
+      )
+      assert.equal(
+        await activity.locator('.recharts-area-curve').count(),
+        1,
+        'zero series stays rendered'
+      )
+      assert.equal(
+        await page.evaluate(() => window.chartStarts.length),
+        starts + 4
+      )
+      zero = false
+      assert(await controlsNode.evaluate((node) => node.isConnected))
+      assert(await panelNode.evaluate((node) => node.isConnected))
+      assert.equal(
+        await page.evaluate(
+          () =>
+            window.chartStarts.filter((x) => x.chart === 'Marketplace Trends')
+              .length
+        ),
+        Math.floor(starts / 2),
+        'Activity changes never replay Trends'
+      )
+      const localStarts = starts + 4
+      const localToken = await activity.getAttribute('data-chart-replay')
       await activity.getByRole('button', { name: '1D', exact: true }).focus()
       await activity.hover()
       await page.setViewportSize({ width: width + 20, height: 860 })
       await page.waitForTimeout(1800)
       assert.equal(
         await page.evaluate(() => window.chartStarts.length),
-        starts,
-        'Sidebar, resize, focus, hover and ordinary data/control updates do not replay'
+        localStarts,
+        'Sidebar, resize, focus and hover do not replay'
       )
-      assert.equal(await activity.getAttribute('data-chart-replay'), token)
+      assert.equal(await activity.getAttribute('data-chart-replay'), localToken)
       // Cross the real project breakpoint; consumed clicks must stay consumed.
       await page.setViewportSize({ width: desktop ? 430 : 1280, height: 900 })
       await page.waitForTimeout(500)
@@ -211,28 +401,45 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
       await page.waitForTimeout(1800)
       assert.equal(
         await page.evaluate(() => window.chartStarts.length),
-        starts,
+        localStarts,
         'Responsive remounts do not replay'
       )
       await page.emulateMedia({ reducedMotion: 'reduce' })
-      await select(desktop ? 'Profile' : 'Analytics')
+      await select('Analysis')
       await page.waitForTimeout(300)
       assert.equal(await activity.getAttribute('data-chart-animation'), 'idle')
       assert.equal(await market.getAttribute('data-chart-animation'), 'idle')
       assert.equal(await market.locator('.recharts-bar-rectangle').count(), 8)
-      assert.equal(await page.evaluate(() => window.chartStarts.length), starts)
-      await select(desktop ? 'Profile' : 'Analytics')
+      assert.equal(
+        await page.evaluate(() => window.chartStarts.length),
+        localStarts
+      )
+      const consumedReducedKey = await activity.getAttribute(
+        'data-chart-replay'
+      )
+      await select('Analysis')
+      // Await the actual consumed click: Activity refetches on replay. Switching
+      // media before that response arrives tests a pending request, not whether
+      // changing motion preference replays an already-consumed navigation.
+      await page.waitForFunction(
+        (key) =>
+          document
+            .querySelector('[aria-label="Your Activity"]')
+            .getAttribute('data-chart-replay') !== key,
+        consumedReducedKey
+      )
       await page.emulateMedia({ reducedMotion: 'no-preference' })
       await page.waitForTimeout(1800)
       assert.equal(
         await page.evaluate(() => window.chartStarts.length),
-        starts,
-        'Changing motion preference does not replay a consumed click'
+        localStarts,
+        'Changing motion preference does not replay a consumed click: ' +
+          JSON.stringify(await page.evaluate(() => window.chartStarts))
       )
-      await select(desktop ? 'Profile' : 'Analytics')
+      await select('Analysis')
       await page.waitForFunction(
         (count) => window.chartStarts.length === count + 2,
-        starts
+        localStarts
       )
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await page.waitForTimeout(100)
@@ -241,7 +448,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
       await page.waitForTimeout(1800)
       assert.equal(
         await page.evaluate(() => window.chartStarts.length),
-        starts + 2,
+        localStarts + 2,
         'Reduced motion cancels an active entrance without replay on re-enable'
       )
       await page.mouse.move(width - 30, 30)
@@ -256,6 +463,13 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
         )
       )
       assert.deepEqual(writes, [])
+      assert(
+        reconciliations.every(
+          (r) =>
+            r.method === 'POST' &&
+            ['payment_method', 'payout_account'].includes(r.kind)
+        )
+      )
       assert.deepEqual(errors, [])
       console.log(
         `PASS ${width}: entry, active repeat, return, chart-only remount, sidebar/resize/breakpoint/data exclusions, reduced motion, no writes/errors/overflow`

@@ -176,6 +176,35 @@ async function main() {
     'buyer'
   )
   assert(!('private_financial_token' in dto))
+  assert.equal(dto.terms.paymentMode, 'uu_pay')
+  const externalRow = {
+    ...row,
+    offer_terms: {
+      item_amount_cents: 7000,
+      fulfillment: 'on_campus',
+      meetup_location: 'Weldon',
+      scheduled_at: '2026-10-20T18:00:00Z',
+      payment_mode: 'external',
+      payment_mode_version: 1,
+    },
+  }
+  assert.equal(
+    service.mapOffer(externalRow, 'buyer').terms.paymentMode,
+    'external'
+  )
+  assert.throws(() =>
+    service.mapOffer(
+      {
+        ...row,
+        offer_terms: {
+          ...row.offer_terms,
+          payment_mode: 'external',
+          payment_mode_version: 1,
+        },
+      },
+      'buyer'
+    )
+  )
   assert.equal(dto.canAccept, false)
   assert.equal(
     service.mapOffer({ ...row, accept_block_reason: null }, 'seller').canAccept,

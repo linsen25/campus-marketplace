@@ -10,7 +10,12 @@ import type { Listing } from '@/types/listing'
 
 import { HomepageFooter } from './homepage-footer'
 import { HomepageListingDemo } from './homepage-listing-demo'
+import {
+  HomepageTransactionDemo,
+  HomepageStudentSelling,
+} from './homepage-marketplace-story'
 import styles from './homepage-scene.module.css'
+import { HomepageShopDemo } from './homepage-shop-demo'
 import { useHomeReducedMotion } from './use-home-reduced-motion'
 import { WelcomeHero } from './welcome-hero'
 
@@ -209,6 +214,9 @@ export function HomepageScene({
         <p className={styles.empty}>No listing photos are available yet.</p>
       )}
       <HomepageListingDemo />
+      <HomepageShopDemo />
+      <HomepageTransactionDemo />
+      <HomepageStudentSelling />
       <HomepageFooter />
     </div>
   )

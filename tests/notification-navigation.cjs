@@ -88,6 +88,17 @@ for (const destination of ['purchases', 'sales'])
       `/home?section=orders&destination=${destination}&order=${orderId}`
     )
   }
+assert.equal(
+  target({ section: 'listing', listingId: orderId }, 'price_drop'),
+  `/listings/${orderId}`
+)
+assert.equal(
+  target(
+    { section: 'listing', listingId: 'invalid?token=private' },
+    'price_drop'
+  ),
+  null
+)
 for (const invalid of [
   null,
   {},

@@ -31,7 +31,7 @@ export function connectMessagesRealtime(
   onSignal: (signal: MessagesSignal) => void,
   recover: () => void,
   unauthenticated: () => void,
-  onNotifications?: () => void
+  onNotifications?: (signal: unknown) => void
 ) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -229,7 +229,7 @@ export function connectMessagesRealtime(
               { event: 'notifications_changed' },
               (event) => {
                 if (!stopped && event.payload?.changed === true)
-                  onNotifications?.()
+                  onNotifications?.(event.payload)
               }
             )
           channel.subscribe((status) => {

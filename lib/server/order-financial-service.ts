@@ -17,6 +17,11 @@ export async function simulateOrderPaymentSuccess(
   body: Record<string, unknown>
 ) {
   requireFinancialEnvironment()
+  if (process.env.STRIPE_PROVIDER_ENABLED === 'true')
+    throw new ListingApiError(
+      'Staging simulation is disabled while Stripe setup is enabled.',
+      503
+    )
   const user = await requireMarketplaceUser(createMarketplaceClient(context))
   const client = createTrustedFinancialClient()
   // All identities/readiness/provenance are server-derived; only action UUID is input.

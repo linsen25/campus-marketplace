@@ -28,8 +28,13 @@ interface ExpandableCardProps {
   overlayClassName?: string
   overlayStyle?: CSSProperties
   onOverlayActiveChange?: (active: boolean) => void
+  onIntentionalOpen?: () => void
   openOnMount?: boolean
   interactiveMedia?: boolean
+  /** Optional non-product content; the shared geometry/motion stays unchanged. */
+  collapsedContent?: ReactNode
+  expandedEyebrow?: ReactNode
+  triggerLabel?: string
 }
 
 /** The actual expanded shell in a builder: no portal, mutations, or shared IDs. */
@@ -161,8 +166,12 @@ export function ExpandableCard({
   overlayClassName,
   overlayStyle,
   onOverlayActiveChange,
+  onIntentionalOpen,
   openOnMount = false,
   interactiveMedia = false,
+  collapsedContent = title,
+  expandedEyebrow = title,
+  triggerLabel = `Open example listing: ${expandedTitle}, ${title}`,
 }: ExpandableCardProps) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(false)
@@ -347,7 +356,7 @@ export function ExpandableCard({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? `dialog-${id}` : undefined}
-        aria-label={`Open example listing: ${expandedTitle}, ${title}`}
+        aria-label={triggerLabel}
         data-slot="expandable-card"
         data-source-hidden={!sourceVisible ? 'true' : undefined}
         style={{ visibility: !sourceVisible ? 'hidden' : undefined }}
@@ -363,6 +372,7 @@ export function ExpandableCard({
           }
         }}
         onClick={() => {
+          if (open) return
           setPhase('opening')
           setSourceVisible(false)
           onOverlayActiveChange?.(true)
@@ -375,6 +385,7 @@ export function ExpandableCard({
           )
           setActive(true)
           setOpen(true)
+          onIntentionalOpen?.()
         }}
       >
         {media && (
@@ -396,7 +407,7 @@ export function ExpandableCard({
           visible={sourceVisible}
           reducedMotion={reducedMotion}
         >
-          {title}
+          {collapsedContent}
         </SourcePrice>
       </Trigger>
       {mounted &&
@@ -498,9 +509,14 @@ export function ExpandableCard({
                         reducedMotion={reducedMotion}
                         entrance={true}
                       >
-                        <p className={styles.price} data-slot="expanded-price">
-                          {title}
-                        </p>
+                        {expandedEyebrow !== null && (
+                          <p
+                            className={styles.price}
+                            data-slot="expanded-price"
+                          >
+                            {expandedEyebrow}
+                          </p>
+                        )}
                         <h3 id={`title-${id}`} className={styles.title}>
                           {expandedTitle}
                         </h3>

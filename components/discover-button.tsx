@@ -17,8 +17,8 @@ import type { SearchSuggestion } from '@/lib/market-search'
 import styles from './discover-button.module.css'
 
 const tabs = [
-  { id: 'popular', label: 'Popular', icon: Fire02Icon },
-  { id: 'favorites', label: 'Store', icon: Store01Icon },
+  { id: 'popular', label: 'Resale', icon: Fire02Icon },
+  { id: 'favorites', label: 'Shop', icon: Store01Icon },
 ] as const
 const spring = {
   type: 'spring' as const,
@@ -56,6 +56,8 @@ function capsuleAnimation(expanded: boolean) {
 }
 
 export default function DiscoverButton({
+  activeTab,
+  onTabChange,
   query,
   suggestions,
   focusActive,
@@ -67,6 +69,8 @@ export default function DiscoverButton({
   onFocusChange,
   onDismiss,
 }: {
+  activeTab: typeof tabs[number]['id']
+  onTabChange: (tab: typeof tabs[number]['id']) => void
   query: string
   suggestions: SearchSuggestion[]
   focusActive: boolean
@@ -78,8 +82,6 @@ export default function DiscoverButton({
   onFocusChange: (open: boolean) => void
   onDismiss: () => void
 }) {
-  const [activeTab, setActiveTab] =
-    useState<typeof tabs[number]['id']>('popular')
   const [isSearchExpanded, setIsSearchExpanded] = useState(Boolean(query))
   const [draftQuery, setDraftQuery] = useState(query)
   const [highlighted, setHighlighted] = useState(-1)
@@ -314,7 +316,7 @@ export default function DiscoverButton({
                 className={`${styles.tab} ${
                   activeTab === tab.id ? styles[tab.id] : ''
                 }`}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => onTabChange(tab.id)}
               >
                 {activeTab === tab.id && (
                   <motion.span

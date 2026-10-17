@@ -23,6 +23,8 @@ import type { FormalOrder, FormalOrders, MeetupRevision } from '@/types/order'
 type OrderRow = {
   order_protocol_version?: 1 | 2
   listing_snapshot?: {
+    listingChannel?: 'resale' | 'shop'
+    shopName?: string
     title: string
     category: string
     subcategory: string
@@ -64,8 +66,22 @@ type OrderRow = {
   cancel_reason_label_snapshot?: string
   cancel_note?: string
 }
+function mapListingProvenance(
+  row: OrderRow
+): NonNullable<FormalOrder['listingProvenance']> {
+  if (
+    row.order_protocol_version !== 2 ||
+    row.listing_snapshot?.listingChannel !== 'shop'
+  )
+    return { channel: 'resale' }
+  const shopName = row.listing_snapshot.shopName
+  if (!shopName?.trim())
+    throw new ListingApiError('Order provenance unavailable.', 503)
+  return { channel: 'shop', shopName }
+}
 export function mapOrder(row: OrderRow): FormalOrder {
   return {
+    listingProvenance: mapListingProvenance(row),
     id: row.id,
     requestId: row.request_id,
     conversationId: row.conversation_id,
@@ -245,6 +261,14 @@ export function createOrdersService(context: MarketplaceContext) {
       body: Record<string, unknown>
     ) {
       requireFinancialEnvironment()
+      if (
+        action === 'payment' &&
+        process.env.STRIPE_PROVIDER_ENABLED === 'true'
+      )
+        throw new ListingApiError(
+          'Order payments are not enabled in this Stripe setup phase.',
+          503
+        )
       if (Object.keys(body).some((key) => key !== 'clientActionId'))
         throw new ListingApiError('Unexpected payment fields.')
       const orderId = messageUuid(id)

@@ -1,7 +1,12 @@
 import type { Listing } from './listing'
 
+export type ConversationListingProvenance =
+  | { channel: 'resale' }
+  | { channel: 'shop'; shopName: string }
+
 /** Historical context is deliberately smaller than a live Marketplace Listing. */
 export type ChatListing = {
+  provenance?: ConversationListingProvenance
   id: string
   liveId: string | null
   title: string

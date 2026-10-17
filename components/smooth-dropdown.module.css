@@ -7,12 +7,14 @@
 }
 
 .surface {
+  max-height: calc(100dvh - 100px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
   width: 220px;
   border-radius: 14px;
-  overflow: hidden;
   border: 1px solid #ffffff20;
   background: #19161e;
   box-shadow: 0 8px 24px #0005;
@@ -38,6 +40,14 @@
 
 .content {
   padding: 8px;
+}
+
+.childBadge {
+  display: inline-flex;
+  align-items: center;
+  height: 0;
+  margin-left: 8px;
+  vertical-align: middle;
 }
 
 .list,
@@ -134,7 +144,7 @@
   transition: transform 180ms ease-out;
 }
 
-.trigger[aria-expanded="true"] svg {
+.trigger[aria-expanded='true'] svg {
   transform: rotate(180deg);
 }
 
@@ -160,7 +170,7 @@
 }
 
 .compact .trigger svg,
-.compact .trigger[aria-expanded="true"] svg {
+.compact .trigger[aria-expanded='true'] svg {
   transform: none;
   transition: none;
 }

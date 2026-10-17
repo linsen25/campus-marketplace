@@ -1,0 +1,48 @@
+/** Presentation only: no billing, entitlement or promotion authority. */
+export const SHOP_PRO_PLANS = [
+  {
+    id: '1-month',
+    label: '1 Month',
+    positioning: 'Flexible',
+    priceCents: 990,
+    displayPrice: 'CA$9.90',
+    monthlyPrice: 'CA$9.90 / month',
+    savings: '',
+    badge: '',
+    description: 'A simple way to start your shop.',
+    features: [
+      'Your own storefront',
+      'Shop listings',
+      'Shop discovery',
+      'Shop management tools',
+    ],
+    featureNote: '',
+  },
+  {
+    id: '3-month',
+    label: '3 Months',
+    positioning: '',
+    priceCents: 2090,
+    displayPrice: 'CA$20.90',
+    monthlyPrice: 'CA$6.97 / month',
+    savings: 'Save CA$8.80',
+    badge: 'Popular',
+    description: 'More time to grow with deeper insights.',
+    features: ['Everything in 1 Month', 'Shop Analytics'],
+    featureNote: 'Understand Shop views and top-performing listings.',
+  },
+  {
+    id: '6-month',
+    label: '6 Months',
+    positioning: '',
+    priceCents: 3290,
+    displayPrice: 'CA$32.90',
+    monthlyPrice: 'CA$5.48 / month',
+    savings: 'Save CA$26.50',
+    badge: 'Best value',
+    description: 'The strongest value for long-term selling.',
+    features: ['Everything in 3 Months', 'Optimized Promotion'],
+    featureNote:
+      'Eligible Shop listings receive additional exposure in Shop discovery.',
+  },
+] as const

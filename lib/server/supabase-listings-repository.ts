@@ -15,6 +15,7 @@ import type {
   CreateListingInput,
   Listing,
   ListingQuery,
+  OwnerListingQuery,
   UpdateListingInput,
 } from '@/types/listing'
 
@@ -53,6 +54,10 @@ function fields(input: CreateListingInput) {
     condition: input.condition || null,
     pickup_area: input.pickupArea ?? null,
     ...(listingFulfillmentEnabled() && {
+      preferred_payment_mode:
+        input.preferredFulfillment === 'DELIVERY'
+          ? 'uu_pay'
+          : input.preferredPaymentMode ?? 'uu_pay',
       preferred_fulfillment: input.preferredFulfillment ?? 'ON_CAMPUS',
       meeting_location: input.meetingLocation?.label ?? null,
       meeting_location_provider: input.meetingLocation?.provider ?? null,
@@ -64,6 +69,7 @@ function fields(input: CreateListingInput) {
 }
 
 function validateQuery(query: ListingQuery) {
+  validateChannel(query.channel)
   const { page = 1, pageSize = 20 } = query
   if (
     !Number.isSafeInteger(page) ||
@@ -154,6 +160,7 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
       request = request
         .eq('listing_favorites.user_id', favoriteUserId)
         .eq('status', 'available')
+    if (query.channel) request = request.eq('listing_channel', query.channel)
     if (query.pickupArea) request = request.eq('pickup_area', query.pickupArea)
     if (query.category) request = request.eq('category', query.category)
     if (query.subcategory)
@@ -275,14 +282,18 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
           )
       }
     },
-    async getMyListings() {
+    async getMyListings(query: OwnerListingQuery = {}) {
+      validateChannel(query.channel)
       const user = await requireMarketplaceUser(client)
-      const { data, error } = await client
+      let request = client
         .from('listings')
         .select<string, ListingRow>(selection)
         .eq('seller_id', user.id)
         .filter('published_at', 'not.is', 'null')
-        .order('created_at', { ascending: false })
+      if (query.channel) request = request.eq('listing_channel', query.channel)
+      const { data, error } = await request.order('created_at', {
+        ascending: false,
+      })
       databaseError(error)
       return (data || []).map(toListing)
     },
@@ -308,7 +319,9 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
       const patch = validateListingPatch(input)
       const merged = { ...listing, ...patch, photoUrls: [] }
       if (patch.condition === null) delete merged.condition
-      const validated = validateListingInput(merged)
+      const editable: Record<string, unknown> = { ...merged }
+      delete editable.listingChannel
+      const validated = validateListingInput(editable)
       const { data, error } = await client
         .from('listings')
         .update({
@@ -318,6 +331,7 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
           condition: validated.condition || null,
           pickup_area: validated.pickupArea ?? null,
           ...(listingFulfillmentEnabled() && {
+            preferred_payment_mode: validated.preferredPaymentMode,
             preferred_fulfillment: validated.preferredFulfillment,
             meeting_location: validated.meetingLocation?.label ?? null,
             meeting_location_provider:
@@ -391,4 +405,9 @@ function validatePlace(pickupArea: unknown) {
       pickupArea.length > 120)
   )
     throw new ListingApiError('Choose a valid pickup area/place.')
+}
+
+function validateChannel(channel: unknown) {
+  if (channel !== undefined && channel !== 'resale' && channel !== 'shop')
+    throw new ListingApiError('Choose a valid Listing channel.')
 }

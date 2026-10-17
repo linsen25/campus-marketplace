@@ -1,3 +1,4 @@
+import { ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useRef, useState } from 'react'
 
@@ -177,7 +178,10 @@ export function OrderCurrentStep({
       !data ||
       Boolean(data?.fulfillment.cancellation?.state) ||
       order.lifecycle !== 'open' ||
-      (action !== 'confirm-agreement' && sellerAction === buyer) ||
+      (!['confirm-agreement', 'confirm-exchange', 'dispute-exchange'].includes(
+        action
+      ) &&
+        sellerAction === buyer) ||
       (paidAction && order.paymentStatus !== 'paid')
     )
       return
@@ -257,6 +261,7 @@ export function OrderCurrentStep({
       : 'Waiting for Buyer checkout / payment',
     completed: 'Completed',
     expired: 'Order expired',
+    exchange: 'Confirm exchange',
     handoff: buyer ? 'Inspect / Handoff' : 'Fulfillment / Verify Buyer handoff',
     inspect: buyer ? 'Meet / Inspect item' : 'Waiting for Buyer inspection',
     loading: 'Loading current step…',
@@ -266,6 +271,8 @@ export function OrderCurrentStep({
     shipment: buyer ? 'Waiting for shipment / receipt' : 'Courier fulfillment',
   }
   const instructions: Record<CurrentOrderStep, string> = {
+    exchange:
+      'Confirm only after you have personally completed the direct exchange.',
     review:
       'Review your agreement. Check the confirmed transaction terms before proceeding.',
     payment: buyer
@@ -294,6 +301,9 @@ export function OrderCurrentStep({
     loading: '',
     cancellation: '',
   }
+  if (terms.paymentMode === 'external' && stage === 'inspect')
+    instructions.inspect =
+      'Meet at the agreed location and time. Inspect the item before confirming the direct exchange.'
   if (stage === 'shipment' && data?.courier?.state === 'shipped') {
     titles.shipment = buyer
       ? 'Confirm receipt'
@@ -318,6 +328,99 @@ export function OrderCurrentStep({
             ? 'Review this recorded stage. Completed transaction facts are read-only.'
             : instructions[stage]}
         </p>
+        {order.v2?.terms.paymentMode === 'external' && stage !== 'review' && (
+          <>
+            <p>Paid outside UU · No UU payment protection</p>
+            <p>
+              Payments made outside UU are arranged directly between buyer and
+              seller. UU cannot verify, reverse, refund, or provide payment
+              protection for external payments.
+            </p>
+            {stage === 'inspect' && (
+              <p>
+                Meet at the agreed location and time. Inspect the item before
+                proceeding to Confirm exchange.
+              </p>
+            )}
+            {stage === 'exchange' &&
+              data?.fulfillment.externalExchange &&
+              (() => {
+                const exchange = data.fulfillment.externalExchange
+                const own = buyer
+                  ? exchange.buyerConfirmedAt
+                  : exchange.sellerConfirmedAt
+                const other = buyer
+                  ? exchange.sellerConfirmedAt
+                  : exchange.buyerConfirmedAt
+                if (exchange.status === 'disputed')
+                  return (
+                    <p role="status">
+                      External exchange disputed. The Listing remains held. This
+                      report does not create UU payment protection or a
+                      financial settlement.
+                    </p>
+                  )
+                return (
+                  <>
+                    {own ? (
+                      <p role="status">
+                        You confirmed the exchange. Waiting for the{' '}
+                        {buyer ? 'seller' : 'buyer'} to confirm.
+                      </p>
+                    ) : (
+                      <>
+                        {other && (
+                          <p>
+                            The {buyer ? 'seller' : 'buyer'} confirmed the
+                            exchange. Confirm only if you completed your part of
+                            the exchange.
+                          </p>
+                        )}
+                        <p>
+                          {buyer
+                            ? 'I paid the seller directly and received the item.'
+                            : 'I received payment directly and handed over the item.'}
+                        </p>
+                        {!readOnly && (
+                          <StatefulButton
+                            className={workspace.statefulForward}
+                            disabled={blocked}
+                            onClick={() => act('confirm-exchange')}
+                          >
+                            Confirm exchange{' '}
+                            <ArrowRight size={16} aria-hidden={true} />
+                          </StatefulButton>
+                        )}
+                        {other && !readOnly && (
+                          <label>
+                            Exchange did not occur
+                            <input
+                              value={reason}
+                              maxLength={1000}
+                              placeholder="Describe the disagreement"
+                              onChange={(event) =>
+                                setReason(event.target.value)
+                              }
+                            />
+                            <StatefulButton
+                              disabled={blocked || !reason.trim()}
+                              onClick={() =>
+                                act('dispute-exchange', {
+                                  reason: reason.trim(),
+                                })
+                              }
+                            >
+                              Report disagreement
+                            </StatefulButton>
+                          </label>
+                        )}
+                      </>
+                    )}
+                  </>
+                )
+              })()}
+          </>
+        )}
         {stage === 'review' && !readOnly && data?.fulfillment.agreement && (
           <>
             {data.fulfillment.agreement.complete ? (
@@ -378,6 +481,8 @@ export function OrderCurrentStep({
           'expired',
           'loading',
           'cancellation',
+          'exchange',
+          'inspect',
         ].includes(stage) && (
           <section className={profile.panel} aria-label="Current-stage actions">
             {stage === 'payment' &&

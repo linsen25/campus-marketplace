@@ -8,6 +8,9 @@ export type OfferStatus =
   | 'Replaced'
   | 'Withdrawn'
 export type OfferTerms = {
+  /** Missing only on legacy records; always resolves to uu_pay. */
+  paymentMode?: 'external' | 'uu_pay'
+  paymentModeVersion?: 1
   itemAmountCents: number
   currency: 'CAD'
   note: string
@@ -78,6 +81,11 @@ export type OfferEvent = {
   actorRole: 'buyer' | 'seller' | 'system'
   type:
     | 'buyer_inspection_confirmed'
+    | 'external_exchange_buyer_confirmed'
+    | 'external_exchange_cancelled'
+    | 'external_exchange_completed'
+    | 'external_exchange_disputed'
+    | 'external_exchange_seller_confirmed'
     | 'listing_pending'
     | 'meetup_closed'
     | 'meetup_confirmed'

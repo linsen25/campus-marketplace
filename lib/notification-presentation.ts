@@ -18,13 +18,33 @@ export function notificationTarget(value: unknown): string | null {
   )
     return `/home?section=messages&destination=${d.destination}&conversation=${d.conversationId}`
   if (d.section === 'listing' && id('listingId'))
-    return '/home?section=favorites'
+    return `/listings/${d.listingId}`
   if (d.section === 'settings' && d.panel === 'payments-payouts')
     return '/home?section=settings'
   return null
 }
 
 const copy: Record<string, [string, string]> = {
+  external_exchange_buyer_confirmed: [
+    'Buyer confirmed the exchange',
+    'The Buyer reports a direct exchange. Confirm only if you received payment and handed over the item. No UU payment protection.',
+  ],
+  external_exchange_seller_confirmed: [
+    'Seller confirmed the exchange',
+    'The Seller reports a direct exchange. Confirm only if you paid directly and received the item. No UU payment protection.',
+  ],
+  external_exchange_completed: [
+    'External exchange completed',
+    'Both participants confirmed the direct exchange. UU did not process or protect the payment.',
+  ],
+  external_exchange_disputed: [
+    'External exchange disputed',
+    'The Listing remains held. UU cannot verify, reverse, refund or financially adjudicate external payments.',
+  ],
+  external_exchange_cancelled: [
+    'External exchange cancelled',
+    'The Order was cancelled before either participant confirmed an exchange. No UU refund or payout applies.',
+  ],
   notification_test: [
     'Staging email test',
     'This is a controlled Campus Marketplace notification delivery test. No marketplace transaction was changed.',
@@ -55,15 +75,15 @@ const copy: Record<string, [string, string]> = {
   ],
   agreement_confirmation_required: [
     'Agreement needs your confirmation',
-    'Review and confirm the frozen Order terms. Both participants must confirm before payment.',
+    'Review and confirm the frozen Order terms. Both participants must confirm before the Order can continue.',
   ],
   agreement_other_confirmed: [
     'The other party confirmed',
-    'Your Agreement confirmation is still needed before payment can begin.',
+    'Your Agreement confirmation is still needed before the Order can continue.',
   ],
   agreement_complete: [
     'Agreement confirmed',
-    'Both participants confirmed the Agreement. Payment is now available to the Buyer.',
+    'Both participants confirmed the Agreement. Open the Order for the next step.',
   ],
   payment_required: [
     'Payment is ready',

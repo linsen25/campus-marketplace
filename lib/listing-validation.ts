@@ -30,6 +30,7 @@ export function listingInputRecord(input: unknown): Record<string, unknown> {
 
 export function validateListingInput(input: unknown): CreateListingInput {
   const data = listingInputRecord(input)
+  rejectClientChannel(data)
   const title = typeof data.title === 'string' ? data.title.trim() : ''
   const description =
     typeof data.description === 'string' ? data.description.trim() : ''
@@ -37,6 +38,15 @@ export function validateListingInput(input: unknown): CreateListingInput {
   const preferredFulfillment = validatePreferredFulfillment(
     data.preferredFulfillment
   )
+  if (
+    data.preferredPaymentMode !== undefined &&
+    !['uu_pay', 'external'].includes(String(data.preferredPaymentMode))
+  )
+    throw new ListingApiError('Choose a valid payment preference.')
+  const preferredPaymentMode =
+    preferredFulfillment === 'DELIVERY'
+      ? 'uu_pay'
+      : ((data.preferredPaymentMode ?? 'uu_pay') as 'external' | 'uu_pay')
   const meetingLocation = requireMeetingLocation(data.meetingLocation)
   const estimatedDeliveryFeeCents = validateDeliveryEstimate(
     data.estimatedDeliveryFeeCents
@@ -98,10 +108,18 @@ export function validateListingInput(input: unknown): CreateListingInput {
     pickupArea,
     meetingLocation,
     estimatedDeliveryFeeCents,
+    preferredPaymentMode,
     preferredFulfillment: preferredFulfillment as 'DELIVERY' | 'ON_CAMPUS',
     photoUrls: Array.from(new Set(photoUrls)),
   }
 }
+function rejectClientChannel(data: Record<string, unknown>) {
+  if ('listingChannel' in data || 'listing_channel' in data)
+    throw new ListingApiError(
+      'Listing channel cannot be supplied by the client.'
+    )
+}
+
 function requireMeetingLocation(value: unknown) {
   let location
   try {
@@ -150,6 +168,7 @@ export function validateListingPatch(input: unknown): Record<string, unknown> {
     'condition',
     'pickupArea',
     'preferredFulfillment',
+    'preferredPaymentMode',
     'meetingLocation',
     'estimatedDeliveryFeeCents',
   ]

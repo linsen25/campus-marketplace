@@ -2,6 +2,7 @@ import { AnimatePresence } from 'framer-motion'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import FluidTabs from '@/components/animata/tabs/fluid-tabs'
+import { ShopListingWorkspace } from '@/components/shops/shop-listing-workspace'
 import { useContentReveal } from '@/components/ui/content-reveal'
 import { LocalTabContent } from '@/components/ui/local-tab-content'
 import { ListingSkeletonGrid } from '@/components/ui/workspace-skeletons'
@@ -12,6 +13,7 @@ import {
 } from '@/lib/listings-api'
 import type { Listing } from '@/types/listing'
 
+import { CardAction } from './card-actions'
 import { ContentStateError } from './content-state-error'
 import { Favorites } from './favorites'
 import listingColumns from './favorites.module.css'
@@ -20,9 +22,18 @@ import { ListingForm } from './listing-form'
 import type { ListingLeaveGuard } from './listing-form'
 import { ListingSortFilter } from './listing-sort-filter'
 import styles from './listing-workspace.module.css'
+import { ManagedListingCard } from './managed-listing-card'
 import type { MarketFilterValues } from './market-filter'
-import { PublishedListingCard } from './published-listing-card'
 import { WorkspaceEmpty } from './workspace-empty'
+
+const auxiliaryPages = new Map([
+  ['favorites', <Favorites key="favorites" />],
+  ['my-shop', <ShopListingWorkspace key="my-shop" />],
+  [
+    'create-shop-listing',
+    <ShopListingWorkspace key="create-shop-listing" create={true} />,
+  ],
+])
 
 export function HomeListings({
   page,
@@ -54,10 +65,11 @@ export function HomeListings({
   const [notice, setNotice] = useState('')
   const pending = useRef(false)
   const version = useRef(0)
+  const shopPage = ['my-shop', 'create-shop-listing'].includes(page)
   const load = useCallback(async () => {
     const request = ++version.current
     try {
-      const result = await getMyListings()
+      const result = await getMyListings({ channel: 'resale' })
       if (request === version.current) {
         setItems(result.filter((item) => item.publishedAt))
         setError('')
@@ -74,6 +86,7 @@ export function HomeListings({
     }
   }, [])
   useEffect(() => {
+    if (shopPage) return undefined
     load()
     const refresh = () => {
       if (document.visibilityState === 'visible') load()
@@ -86,7 +99,7 @@ export function HomeListings({
       window.removeEventListener('focus', refresh)
       window.removeEventListener('marketplace-listings-changed', refresh)
     }
-  }, [load])
+  }, [load, shopPage])
   useEffect(() => {
     setEdit(null)
     setConfirmation(null)
@@ -131,10 +144,12 @@ export function HomeListings({
     setTab(0)
     onSelect('my-listings')
   }
-  if (page === 'favorites') return <Favorites />
+  const auxiliary = auxiliaryPages.get(page)
+  if (auxiliary) return auxiliary
   if (page === 'create-listing' || edit)
     return (
       <ListingForm
+        createLabel="Create Resale"
         key={edit?.id ?? 'create'}
         listing={edit ?? undefined}
         onCancel={() => {
@@ -166,7 +181,12 @@ export function HomeListings({
   const emptyTabMessage =
     tab === 0 ? 'No active listings yet.' : 'No sold listings yet.'
   return (
-    <section className={styles.workspace} aria-label="My Listings">
+    <section className={styles.workspace} aria-label="My Resale">
+      <div className={styles.createAction}>
+        <CardAction variant="blue" onClick={() => onSelect('create-listing')}>
+          Create Resale
+        </CardAction>
+      </div>
       <div className={styles.toolbar}>
         <FluidTabs activeIndex={tab} onActiveIndexChange={setTab}>
           <FluidTabs.List aria-label="Listing status">
@@ -215,46 +235,19 @@ export function HomeListings({
           hidden={!visible.length}
         >
           {visible.map((listing) => (
-            <article key={listing.id} aria-label={listing.title}>
-              <PublishedListingCard listing={listing} owner={true} />
-              {listing.status === 'available' ? (
-                <div className={styles.sellerActions}>
-                  <button type="button" onClick={() => setEdit(listing)}>
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setError('')
-                      setConfirmation({ listing, action: 'sold' })
-                    }}
-                  >
-                    Mark as sold
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setError('')
-                      setConfirmation({ listing, action: 'delete' })
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              ) : (
-                <p>
-                  {
-                    {
-                      pending: 'Pending transaction',
-                      reserved: 'Reserved',
-                      sold: 'Sold',
-                      available: 'Available',
-                    }[listing.status]
-                  }{' '}
-                  · Read-only
-                </p>
-              )}
-            </article>
+            <ManagedListingCard
+              key={listing.id}
+              listing={listing}
+              onEdit={() => setEdit(listing)}
+              onMarkSold={() => {
+                setError('')
+                setConfirmation({ listing, action: 'sold' })
+              }}
+              onDelete={() => {
+                setError('')
+                setConfirmation({ listing, action: 'delete' })
+              }}
+            />
           ))}
         </div>
       </LocalTabContent>

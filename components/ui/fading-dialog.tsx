@@ -4,6 +4,8 @@ import { useEffect, useRef } from 'react'
 import type { DialogHTMLAttributes } from 'react'
 import { createPortal } from 'react-dom'
 
+import { acquireDialogScrollLock } from '@/utils/dialog-scroll-lock'
+
 import styles from './fading-dialog.module.css'
 
 export const dialogExitDuration = 180
@@ -28,7 +30,13 @@ export function FadingDialog({
   useEffect(() => {
     const dialog = ref.current
     const opener = document.activeElement
-    dialog?.showModal()
+    const releaseScroll = acquireDialogScrollLock()
+    try {
+      dialog?.showModal()
+    } catch (error) {
+      releaseScroll()
+      throw error
+    }
     // Opt-in dialog focus runs synchronously with showModal, before its first
     // painted frame. Native focus otherwise scrolls to the first bottom action.
     if (focusAtTop && dialog) {
@@ -37,6 +45,7 @@ export function FadingDialog({
     }
     return () => {
       dialog?.close()
+      releaseScroll()
       if (opener instanceof HTMLElement && opener.isConnected)
         opener.focus({ preventScroll: true })
     }

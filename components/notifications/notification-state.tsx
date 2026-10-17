@@ -16,6 +16,10 @@ import type {
   NotificationItem,
 } from '@/lib/notification-category'
 
+import { NotificationPopups } from './notification-popups'
+import { useNotificationPopups } from './use-notification-popups'
+import { useNotificationPreferences } from './use-notification-preferences'
+
 export type Feed = {
   notifications: NotificationItem[]
   unreadCount: number
@@ -30,6 +34,14 @@ export function useNotifications() {
   return useContext(Context)
 }
 function useNotificationState(userId: string | undefined) {
+  const preferences = useNotificationPreferences(userId)
+  const popups = useNotificationPopups(
+    userId,
+    preferences.data?.inApp === true,
+    preferences.data?.sounds === true
+  )
+  const { hydrate, receive, logout: clearPopups } = popups
+  const preferenceRefresh = preferences.refresh
   const ownerRef = useRef(userId)
   ownerRef.current = userId
   const [owner, setOwner] = useState(userId)
@@ -74,6 +86,7 @@ function useNotificationState(userId: string | undefined) {
       }
       data = { ...data, notifications }
       if (mounted.current && request === version.current) {
+        hydrate(data.notifications)
         setFeed(data)
         setMore(hasMore)
         setError('')
@@ -87,7 +100,11 @@ function useNotificationState(userId: string | undefined) {
         setRefreshing(false)
       }
     }
-  }, [])
+  }, [hydrate])
+  const recover = useCallback(async () => {
+    await preferenceRefresh()
+    await refresh()
+  }, [preferenceRefresh, refresh])
   const setCategory = (value: NotificationCategory | '') => {
     if (categoryRef.current === value) return
     categoryRef.current = value
@@ -134,6 +151,7 @@ function useNotificationState(userId: string | undefined) {
     mounted.current = Boolean(userId)
     if (!userId) return undefined
     const ended = () => {
+      clearPopups()
       mounted.current = false
       invalidate()
       setOwner(undefined)
@@ -145,9 +163,17 @@ function useNotificationState(userId: string | undefined) {
     const stop = connectMessagesRealtime(
       userId,
       () => {},
-      refresh,
+      recover,
       ended,
-      refresh
+      (signal) => {
+        if (
+          signal &&
+          typeof signal === 'object' &&
+          (signal as Record<string, unknown>).preferencesChanged === true
+        )
+          preferenceRefresh()
+        receive(signal, refresh)
+      }
     )
     return () => {
       mounted.current = false
@@ -155,9 +181,49 @@ function useNotificationState(userId: string | undefined) {
       stop()
       window.removeEventListener('marketplace-session-ended', ended)
     }
-  }, [userId, refresh, invalidate])
+  }, [
+    userId,
+    refresh,
+    recover,
+    invalidate,
+    receive,
+    clearPopups,
+    preferenceRefresh,
+  ])
 
+  async function markRead(item: NotificationItem) {
+    const actor = ownerRef.current
+    const known = feed.notifications.find((n) => n.id === item.id)
+    let readItem = known?.read_at ? known : item
+    if (!readItem.read_at) {
+      const result = await marketplaceRequest<{ readAt: string }>(
+        '/api/notifications',
+        'POST',
+        { id: item.id }
+      )
+      if (!mounted.current || ownerRef.current !== actor) return item
+      readItem = { ...item, read_at: result.readAt }
+      setFeed((current) => ({
+        ...current,
+        unreadCount: Math.max(
+          0,
+          current.unreadCount -
+            Number(
+              current.notifications.some((n) => n.id === item.id && !n.read_at)
+            )
+        ),
+        notifications: current.notifications.map((n) =>
+          n.id === item.id ? { ...n, read_at: result.readAt } : n
+        ),
+      }))
+    }
+    await refresh()
+    return readItem
+  }
   return {
+    preferences,
+    popups,
+    markRead,
     owner,
     ownerRef,
     feed,
@@ -186,6 +252,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       value={seller && state.owner === seller.id ? state : null}
     >
       {children}
+      <NotificationPopups />
     </Context.Provider>
   )
 }

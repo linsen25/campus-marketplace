@@ -1,4 +1,4 @@
-﻿import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
 import { ArrowUpRight, Bell, MessageCircle, Package, Tag } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
@@ -20,6 +20,7 @@ import { notificationUiTarget } from '@/lib/notification-navigation'
 import { notificationCopy } from '@/lib/notification-presentation'
 
 import { NotificationFilter } from './notification-filter'
+import { NotificationListingProvenance } from './notification-listing-provenance'
 import { useNotifications } from './notification-state'
 import type { Feed } from './notification-state'
 import styles from './notifications-view.module.css'
@@ -58,6 +59,7 @@ function NotificationContent() {
   }, [])
   const {
     feed,
+    markRead,
     loading,
     refreshing,
     error,
@@ -147,34 +149,7 @@ function NotificationContent() {
     setOpening(true)
     try {
       if (!navigate) {
-        let readItem = item
-        if (!item.read_at) {
-          const result = await marketplaceRequest<{ readAt: string }>(
-            '/api/notifications',
-            'POST',
-            { id: item.id }
-          )
-          if (!mounted.current || ownerRef.current !== actor) return
-          readItem = { ...item, read_at: result.readAt }
-          // Apply the server-confirmed read timestamp once, then reconcile the
-          // global count with the existing authoritative refresh/retry path.
-          setFeed((current) => ({
-            ...current,
-            unreadCount: Math.max(
-              0,
-              current.unreadCount -
-                Number(
-                  current.notifications.some(
-                    (n) => n.id === item.id && !n.read_at
-                  )
-                )
-            ),
-            notifications: current.notifications.map((n) =>
-              n.id === item.id ? { ...n, read_at: result.readAt } : n
-            ),
-          }))
-        }
-        await refresh()
+        const readItem = await markRead(item)
         if (mounted.current && ownerRef.current === actor) setSelected(readItem)
         return
       }
@@ -397,6 +372,9 @@ function NotificationContent() {
               </span>
               <strong className={styles.summary} title={title}>
                 {title}
+                <NotificationListingProvenance
+                  provenance={item.listingProvenance}
+                />
               </strong>
               <div className={styles.actions}>
                 <time
@@ -490,6 +468,9 @@ function NotificationContent() {
             <h3 id="notification-report-title">
               {notificationCopy(report.event_type).title}
             </h3>
+            <NotificationListingProvenance
+              provenance={report.listingProvenance}
+            />
             <p>{notificationCopy(report.event_type).body}</p>
             <dl>
               <dt>Received</dt>

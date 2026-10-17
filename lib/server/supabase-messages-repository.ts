@@ -1,3 +1,4 @@
+import { conversationProvenance } from '@/lib/conversation-provenance'
 import { ListingApiError } from '@/lib/listing-validation'
 import { imageSendingEnabled } from '@/lib/server/chat-image-storage'
 import { requireMarketplaceUser } from '@/lib/server/marketplace-auth'
@@ -72,6 +73,8 @@ export function conversationCursor(cursor: string): { at: string; id: string } {
 }
 
 type Row = {
+  listing_channel_snapshot?: string | null
+  shop_name_snapshot?: string | null
   id: string
   buyer_id: string | null
   seller_id: string | null
@@ -198,6 +201,10 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
         name: profile.data?.display_name || 'Former member',
       },
       listing: {
+        provenance: conversationProvenance(
+          source.listing_channel_snapshot,
+          source.shop_name_snapshot
+        ),
         id: source.listing_origin_id,
         liveId: source.listing_id,
         title: source.listing_title_snapshot,

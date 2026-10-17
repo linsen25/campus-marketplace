@@ -64,7 +64,7 @@
   gap: 10px;
   max-width: var(--desktop-app-content-width, 1536px);
   margin: 0 auto;
-  padding: 0 20px 14px;
+  padding: 0 20px 10px;
 }
 
 .discoverSpace {
@@ -90,12 +90,85 @@
   width: 100%;
   max-width: var(--desktop-app-content-width, 1536px);
   margin: 0 auto;
-  padding: 22px 20px 0;
+  padding: 0 20px;
 }
 
 .desktopNav,
 .brandHeading {
   display: none;
+}
+
+.breadcrumb {
+  min-width: 0;
+  height: 24px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  line-height: 20px;
+  color: #999;
+}
+
+.breadcrumb ol {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  white-space: nowrap;
+}
+
+.breadcrumb li {
+  min-width: 0;
+}
+
+.breadcrumb button {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.breadcrumb button:hover {
+  color: #eee;
+}
+
+.breadcrumb button:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 2px;
+}
+
+.breadcrumb span,
+.breadcrumb button {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breadcrumb span {
+  display: block;
+}
+
+.breadcrumb [aria-current='page'] {
+  color: #d6d6d6;
+  font-weight: 500;
+}
+
+.breadcrumbCategory {
+  flex: 0 1 auto;
+}
+
+.breadcrumbCurrent {
+  flex: 0 1 auto;
+}
+
+.breadcrumb li:first-child,
+.breadcrumbSeparator {
+  flex-shrink: 0;
 }
 
 .brandHeading {
@@ -160,12 +233,12 @@
   }
 
   .toolbar {
-    padding: 20px var(--desktop-app-inset, 48px);
+    padding: 20px var(--desktop-app-inset, 48px) 10px;
     gap: 20px;
   }
 
   .content {
-    padding: 28px var(--desktop-app-inset, 48px) 0;
+    padding: 0 var(--desktop-app-inset, 48px);
   }
 
   .page {

@@ -6,7 +6,9 @@ import type { ListingFilterValues } from '@/lib/listing-filters'
 import { parseListingFilters } from '@/lib/listing-filters'
 import { ListingApiError } from '@/lib/listing-validation'
 import { getListings } from '@/lib/listings-api'
+import { getPublicShops } from '@/lib/server/public-shop'
 import type { Listing } from '@/types/listing'
+import type { ShopPreview } from '@/types/shop'
 
 type ListingsPageProps = {
   listings: Listing[]
@@ -14,12 +16,14 @@ type ListingsPageProps = {
   error: string | null
   page: number
   hasNextPage: boolean
+  shops: ShopPreview[]
 }
 
 export default function ListingsPage({
   values,
   listings,
   error,
+  shops,
 }: ListingsPageProps) {
   return (
     <>
@@ -30,6 +34,7 @@ export default function ListingsPage({
         values={values}
         initialListings={listings}
         initialError={error}
+        shops={shops}
       />
     </>
   )
@@ -46,10 +51,14 @@ export const getServerSideProps: GetServerSideProps<
   try {
     const listings = error
       ? []
-      : await getListings({ ...query, page, pageSize }, { req, res })
+      : await getListings(
+          { ...query, page, pageSize, channel: 'resale', status: 'available' },
+          { req, res }
+        )
     return {
       props: {
         listings,
+        shops: getPublicShops(),
         values,
         error,
         page,
@@ -62,6 +71,7 @@ export const getServerSideProps: GetServerSideProps<
     return {
       props: {
         listings: [],
+        shops: getPublicShops(),
         values,
         page,
         hasNextPage: false,

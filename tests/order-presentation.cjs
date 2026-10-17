@@ -84,3 +84,29 @@ for (const mode of ['campus', 'seller_delivery', 'courier']) {
 console.log(
   'PASS Order view bounds: deterministic UUID reference, unpaid/processing block fulfillment, paid/started/shipped/protection/completed bounds, no data mutation.'
 )
+
+const independent = {
+  id: 'external',
+  lifecycle: 'open',
+  paymentStatus: 'pending',
+  v2: { terms: { fulfillment: 'on_campus', paymentMode: 'external' } },
+}
+const independentData = {
+  fulfillment: {
+    agreement: { complete: true },
+    externalExchange: { status: 'awaiting_both' },
+  },
+}
+assert.deepEqual(orderPresentation(independent, independentData), {
+  pages: ['review', 'fulfillment', 'exchange', 'completed'],
+  current: 1,
+  maximum: 2,
+})
+independentData.fulfillment.externalExchange.status = 'seller_confirmed'
+assert.equal(orderPresentation(independent, independentData).current, 2)
+assert.equal(
+  orderPresentation({ ...independent, lifecycle: 'completed' }, independentData)
+    .current,
+  3
+)
+console.log('PASS external presentation bounds and exact four-page flow')

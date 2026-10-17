@@ -6,16 +6,23 @@ import { useEffect, useState } from 'react'
 
 import actionStyles from '@/components/animata/button/action-button-sizing.module.css'
 import { CardAction } from '@/components/listings/card-actions'
+import { NotificationSettings } from '@/components/notifications/notification-settings'
+import { ShopProfile } from '@/components/shops/shop-profile'
+import { ShopSettings } from '@/components/shops/shop-settings'
 import { ActionRow } from '@/components/ui/action-row'
 import { useContentReveal } from '@/components/ui/content-reveal'
 import { DynamicAction } from '@/components/ui/dynamic-action'
 import { FadingDialog } from '@/components/ui/fading-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import { StatefulButton } from '@/components/velora/stateful-button'
 import { passwordRules } from '@/lib/auth-password'
 import { reservedUsername, validUsername } from '@/lib/auth-username'
 import { marketplaceRequest } from '@/lib/listings-api'
+import type { ShopIdentity } from '@/lib/shop-presentation'
+import type { ShopPreview } from '@/types/shop'
 
 import { FinancialSettings } from './financial-settings'
+import financialStyles from './financial-settings.module.css'
 import { AvatarDialog, ProfileAvatar } from './profile-avatar'
 import styles from './profile.module.css'
 
@@ -45,14 +52,13 @@ function SettingsChange({
   children: ReactNode
 }) {
   return (
-    <DynamicAction
-      footer={true}
-      variant="red"
+    <StatefulButton
+      className={financialStyles.setupAction}
       disabled={disabled}
       onClick={onClick}
     >
       {children}
-    </DynamicAction>
+    </StatefulButton>
   )
 }
 
@@ -229,9 +235,15 @@ function ChangeDialog({
         </p>
       )}
       <ActionRow>
-        <ProfileAction disabled={saving} onClick={onClose}>
+        <DynamicAction
+          variant="red"
+          footer={true}
+          showArrow={false}
+          disabled={saving}
+          onClick={onClose}
+        >
           Cancel
-        </ProfileAction>
+        </DynamicAction>
         <DynamicAction
           variant="green"
           footer={true}
@@ -262,7 +274,11 @@ export function ProfileOverview({
   avatarImage,
   onAvatarSave,
   onFinancialSettings,
+  shopPreview,
+  onShopSave,
 }: {
+  shopPreview?: ShopPreview
+  onShopSave?: (patch: Partial<ShopIdentity>) => Promise<void>
   settings?: boolean
   sessionAction?: ReactNode
   avatarImage?: string
@@ -313,138 +329,158 @@ export function ProfileOverview({
     }
   }, [onUsername])
   return (
-    <section
-      className={`${reveal} ${styles.panel} ${styles.overview} ${
-        settings ? styles.settings : ''
-      } ${actionStyles.contract}`}
-      aria-label={settings ? 'Account & Security' : 'Overview'}
-      aria-busy={loading}
-      data-profile-account="true"
-    >
-      {showHeading && (
-        <header className={styles.panelHeader}>
-          <h3>{settings ? 'Account & Security' : 'Overview'}</h3>
-        </header>
-      )}
-      {error && (
-        <p className={styles.error} role="alert">
-          {error}
-        </p>
-      )}
-      <div className={styles.accountRow} data-profile-avatar-row="true">
-        <div className={styles.avatarIdentity}>
-          {!settings && <span className={styles.fieldLabel}>Avatar</span>}
-          {loading ? (
-            <Skeleton
-              style={{ width: 72, height: 72, borderRadius: '50%' }}
-              aria-label="Loading profile avatar"
-            />
-          ) : (
-            <ProfileAvatar
-              username={account?.username ?? 'User'}
-              image={avatarImage}
-            />
+    <>
+      <section
+        className={`${reveal} ${styles.panel} ${styles.overview} ${
+          settings ? styles.settings : ''
+        } ${actionStyles.contract}`}
+        aria-label={settings ? 'Settings' : 'Overview'}
+        aria-busy={loading}
+        data-profile-account="true"
+      >
+        <section aria-label={settings ? 'Account & Security' : undefined}>
+          {showHeading && (
+            <header className={styles.panelHeader}>
+              <h3>{settings ? 'Account & Security' : 'Overview'}</h3>
+            </header>
           )}
-        </div>
-        {settings ? (
-          <SettingsChange
-            disabled={loading || !account}
-            onClick={() => setDialog('avatar')}
-          >
-            Set avatar
-          </SettingsChange>
-        ) : (
-          <span
-            className={`${styles.verified} ${
-              avatarImage ? '' : styles.avatarUnset
-            }`}
-          >
-            {avatarImage ? 'Set' : 'Unset'}
-          </span>
-        )}
-      </div>
-      <div className={styles.accountRow}>
-        <div>
-          <span className={styles.fieldLabel}>Username</span>
-          {loading ? (
-            <Skeleton className={styles.identitySkeleton} />
-          ) : (
-            <p>{account ? account.username ?? 'Not claimed' : unavailable}</p>
+          {error && (
+            <p className={styles.error} role="alert">
+              {error}
+            </p>
           )}
-        </div>
-        {settings &&
-          (loading ? (
-            <Skeleton className={styles.actionSkeleton} />
-          ) : (
-            <SettingsChange
-              disabled={!account}
-              onClick={() => setDialog('username')}
-            >
-              Change username
-            </SettingsChange>
-          ))}
-      </div>
-      {!settings && (
-        <>
-          <div className={styles.accountRow}>
-            <div>
-              <span className={styles.fieldLabel}>Western Email</span>
+          <div className={styles.accountRow} data-profile-avatar-row="true">
+            <div className={styles.avatarIdentity}>
+              {!settings && <span className={styles.fieldLabel}>Avatar</span>}
               {loading ? (
-                <Skeleton className={styles.emailSkeleton} />
+                <Skeleton
+                  style={{ width: 72, height: 72, borderRadius: '50%' }}
+                  aria-label="Loading profile avatar"
+                />
               ) : (
-                <p>{account?.email ?? unavailable}</p>
+                <ProfileAvatar
+                  username={account?.username ?? 'User'}
+                  image={avatarImage}
+                />
               )}
             </div>
-            {loading ? (
-              <Skeleton className={styles.badgeSkeleton} />
+            {settings ? (
+              <SettingsChange
+                disabled={loading || !account}
+                onClick={() => setDialog('avatar')}
+              >
+                Set avatar
+              </SettingsChange>
             ) : (
               <span
-                className={
-                  account?.emailVerified ? styles.verified : styles.readOnly
-                }
+                className={`${styles.verified} ${
+                  avatarImage ? '' : styles.avatarUnset
+                }`}
               >
-                {account?.emailVerified ? 'Verified' : 'Read-only'}
+                {avatarImage ? 'Set' : 'Unset'}
               </span>
             )}
           </div>
           <div className={styles.accountRow}>
             <div>
-              <span className={styles.fieldLabel}>Member since</span>
+              <span className={styles.fieldLabel}>Username</span>
               {loading ? (
                 <Skeleton className={styles.identitySkeleton} />
               ) : (
                 <p>
-                  {account?.createdAt
-                    ? new Date(account.createdAt).toLocaleDateString('en-US', {
-                        month: 'long',
-                        year: 'numeric',
-                      })
-                    : unavailable}
+                  {account ? account.username ?? 'Not claimed' : unavailable}
                 </p>
               )}
             </div>
+            {settings &&
+              (loading ? (
+                <Skeleton className={styles.actionSkeleton} />
+              ) : (
+                <SettingsChange
+                  disabled={!account}
+                  onClick={() => setDialog('username')}
+                >
+                  Change username
+                </SettingsChange>
+              ))}
           </div>
-        </>
-      )}
-      {settings && (
-        <>
-          <div className={styles.accountRow}>
-            <div>
-              <span className={styles.fieldLabel}>Password</span>
-              <p aria-label="Password hidden">{'\u2022'.repeat(8)}</p>
-            </div>
-            {loading ? (
-              <Skeleton className={styles.actionSkeleton} />
-            ) : (
-              <SettingsChange
-                disabled={!account}
-                onClick={() => setDialog('password')}
-              >
-                Change password
-              </SettingsChange>
-            )}
-          </div>
-          <div className={styles.accountRow}>
+          {!settings && (
+            <>
+              <div className={styles.accountRow}>
+                <div>
+                  <span className={styles.fieldLabel}>Western Email</span>
+                  {loading ? (
+                    <Skeleton className={styles.emailSkeleton} />
+                  ) : (
+                    <p>{account?.email ?? unavailable}</p>
+                  )}
+                </div>
+                {loading ? (
+                  <Skeleton className={styles.badgeSkeleton} />
+                ) : (
+                  <span
+                    className={
+                      account?.emailVerified ? styles.verified : styles.readOnly
+                    }
+                  >
+                    {account?.emailVerified ? 'Verified' : 'Read-only'}
+                  </span>
+                )}
+              </div>
+              <div className={styles.accountRow}>
+                <div>
+                  <span className={styles.fieldLabel}>Member since</span>
+                  {loading ? (
+                    <Skeleton className={styles.identitySkeleton} />
+                  ) : (
+                    <p>
+                      {account?.createdAt
+                        ? new Date(account.createdAt).toLocaleDateString(
+                            'en-US',
+                            {
+                              month: 'long',
+                              year: 'numeric',
+                            }
+                          )
+                        : unavailable}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+          {settings && (
+            <>
+              <div className={styles.accountRow}>
+                <div>
+                  <span className={styles.fieldLabel}>Password</span>
+                  <p aria-label="Password hidden">{'\u2022'.repeat(8)}</p>
+                </div>
+                {loading ? (
+                  <Skeleton className={styles.actionSkeleton} />
+                ) : (
+                  <SettingsChange
+                    disabled={!account}
+                    onClick={() => setDialog('password')}
+                  >
+                    Change password
+                  </SettingsChange>
+                )}
+              </div>
+            </>
+          )}
+        </section>
+        <FinancialSettings settings={settings} onManage={onFinancialSettings} />
+        {settings && (
+          <ShopSettings
+            shop={shopPreview}
+            username={account?.username ?? null}
+            onSave={onShopSave}
+          />
+        )}
+        {settings && <NotificationSettings />}
+        {settings && (
+          <div className={`${styles.accountRow} ${styles.sessionRow}`}>
             <div>
               <span className={styles.fieldLabel}>Session</span>
             </div>
@@ -454,34 +490,36 @@ export function ProfileOverview({
               sessionAction
             )}
           </div>
-        </>
+        )}
+        <AnimatePresence>
+          {dialog === 'avatar' && (
+            <AvatarDialog
+              username={account?.username ?? 'User'}
+              onClose={() => setDialog(null)}
+              onSave={onAvatarSave}
+            />
+          )}
+          {dialog && dialog !== 'avatar' && (
+            <ChangeDialog
+              kind={dialog}
+              nextAllowedAt={account?.nextUsernameChangeAt ?? null}
+              username={account?.username ?? ''}
+              onClose={() => setDialog(null)}
+              onSaved={(name, next) => {
+                setAccount((current) =>
+                  current
+                    ? { ...current, username: name, nextUsernameChangeAt: next }
+                    : current
+                )
+                onUsername?.(name)
+              }}
+            />
+          )}
+        </AnimatePresence>
+      </section>
+      {!settings && (
+        <ShopProfile shop={shopPreview} username={account?.username ?? null} />
       )}
-      <FinancialSettings settings={settings} onManage={onFinancialSettings} />
-      <AnimatePresence>
-        {dialog === 'avatar' && (
-          <AvatarDialog
-            username={account?.username ?? 'User'}
-            onClose={() => setDialog(null)}
-            onSave={onAvatarSave}
-          />
-        )}
-        {dialog && dialog !== 'avatar' && (
-          <ChangeDialog
-            kind={dialog}
-            nextAllowedAt={account?.nextUsernameChangeAt ?? null}
-            username={account?.username ?? ''}
-            onClose={() => setDialog(null)}
-            onSaved={(name, next) => {
-              setAccount((current) =>
-                current
-                  ? { ...current, username: name, nextUsernameChangeAt: next }
-                  : current
-              )
-              onUsername?.(name)
-            }}
-          />
-        )}
-      </AnimatePresence>
-    </section>
+    </>
   )
 }

@@ -1,4 +1,6 @@
-﻿export const notificationCategories = [
+import type { ConversationListingProvenance } from '@/types/conversation'
+
+export const notificationCategories = [
   'message',
   'order',
   'listing',
@@ -7,6 +9,7 @@
 export type NotificationCategory = typeof notificationCategories[number]
 
 export type NotificationItem = {
+  listingProvenance?: ConversationListingProvenance
   id: string
   event_type: string
   created_at: string

@@ -14,6 +14,7 @@ export type ListingFields = {
   subcategory: string
   condition: string
   estimatedDeliveryFee: string
+  preferredPaymentMode: 'external' | 'uu_pay'
   preferredFulfillment: 'DELIVERY' | 'ON_CAMPUS'
   meetingLocation: MeetingLocation | null
   description: string
@@ -30,6 +31,7 @@ export function initialListingFields(listing?: Listing): ListingFields {
     estimatedDeliveryFee: `${Math.floor(estimate / 100)}.${String(
       estimate % 100
     ).padStart(2, '0')}`,
+    preferredPaymentMode: listing?.preferredPaymentMode ?? 'uu_pay',
     preferredFulfillment: listing?.preferredFulfillment ?? 'ON_CAMPUS',
     meetingLocation: listing?.meetingLocation ?? null,
     description: listing?.description ?? '',

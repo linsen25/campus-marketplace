@@ -36,7 +36,7 @@ const listing = (
     args: ['--enable-unsafe-swiftshader'],
   })
   try {
-    for (const width of [390, 430, 1280, 1536]) {
+    for (const width of [390, 430, 820, 1280, 1536]) {
       const page = await browser.newPage({
         viewport: { width, height: 900 },
         serviceWorkers: 'block',
@@ -207,7 +207,7 @@ const listing = (
         }
       )
       const workspace = page.getByRole('region', {
-        name: 'My Listings',
+        name: 'My Resale',
         exact: true,
       })
       await workspace
@@ -312,44 +312,22 @@ const listing = (
         exact: true,
       })
       await favorite.locator('article').first().waitFor()
-      const favoriteStyles = await inspect('favorites')
-      if (width >= 1024) assert.deepEqual(favoriteStyles, market)
-      else {
-        assert.deepEqual(favoriteStyles.surface, market.surface)
-        assert.deepEqual(favoriteStyles.panel, market.panel)
-        const favoriteBoxes = await Promise.all(
-          ['Sort', 'Filter'].map((name) =>
-            favorite.getByRole('button', { name, exact: true }).boundingBox()
-          )
-        )
-        assert.equal(favoriteBoxes[0].width, favoriteBoxes[1].width)
-        assert.equal(favoriteBoxes[0].y, favoriteBoxes[1].y)
-      }
-      const heading = await page
-        .getByRole('heading', { name: 'Favorites', exact: true })
-        .boundingBox()
-      const button = await page
-        .getByRole('button', { name: 'Sort', exact: true })
-        .boundingBox()
-      assert(heading.y + heading.height <= button.y)
       assert.equal(
         await favorite.locator('article').count(),
         2,
-        'Sold favorite excluded; no unrelated own listings added'
+        'Shared Favorites excludes Sold without adding unrelated owner inventory'
       )
-      await page.getByRole('button', { name: 'Sort', exact: true }).click()
-      await page
-        .getByRole('button', { name: 'Price: Low to High', exact: true })
-        .click()
-      assert(favoriteQueries.some((query) => query.includes('sort=price-asc')))
-      await page.keyboard.press('Escape')
-      await page
-        .locator('[data-market-focus-backdrop]')
-        .waitFor({ state: 'detached' })
+      assert.equal(
+        await favorite
+          .getByRole('button', { name: 'Sort', exact: true })
+          .count(),
+        0,
+        'Preserve current Favorites surface'
+      )
       assert.deepEqual(writes, [])
       assert.deepEqual(errors, [])
       console.log(
-        `PASS ${width}: rendered Market/Favorites/My Listings controls and focus surface match, one-row geometry, separate Active/Sold filtering and sorting, Favorites subset unchanged, no overflow/errors/writes`
+        `PASS ${width}: rendered Market/My Resale controls and focus surface match, one-row geometry, separate Active/Sold filtering and sorting, current Favorites subset unchanged, no overflow/errors/writes`
       )
       await page.close()
     }

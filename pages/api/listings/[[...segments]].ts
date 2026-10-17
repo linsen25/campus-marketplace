@@ -30,6 +30,7 @@ export function queryFromRequest(req: NextApiRequest): ListingQuery {
     'maxPrice',
     'page',
     'pageSize',
+    'channel',
   ]) {
     const value = req.query[key]
     if (value !== undefined) {
@@ -87,7 +88,10 @@ export default async function handler(
         .status(200)
         .json(
           req.query.mine === 'true'
-            ? await getMyListings(context)
+            ? await getMyListings(
+                { channel: queryFromRequest(req).channel },
+                context
+              )
             : await getListings(queryFromRequest(req), context)
         )
     }

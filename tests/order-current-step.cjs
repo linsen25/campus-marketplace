@@ -145,3 +145,34 @@ assert.equal(
   ).current,
   null
 )
+
+const external = {
+  ...order,
+  v2: { terms: { fulfillment: 'on_campus', paymentMode: 'external' } },
+}
+const externalData = {
+  fulfillment: {
+    agreement: { complete: true },
+    externalExchange: { status: 'awaiting_both' },
+  },
+}
+assert.equal(currentOrderStep(external, externalData), 'exchange')
+assert.deepEqual(currentOrderProgress(external, externalData).steps, [
+  'Agreement',
+  'Meet / Inspect',
+  'Confirm exchange',
+  'Completed',
+])
+assert.equal(currentOrderProgress(external, externalData).completed, 1)
+externalData.fulfillment.externalExchange.status = 'buyer_confirmed'
+assert.equal(currentOrderProgress(external, externalData).current, 2)
+externalData.fulfillment.externalExchange.status = 'disputed'
+assert.equal(currentOrderProgress(external, externalData).current, 2)
+assert.equal(
+  currentOrderProgress({ ...external, lifecycle: 'completed' }, externalData)
+    .completed,
+  4
+)
+console.log(
+  'PASS external progress has no Payment/Handoff/Protection stages; one confirmation does not complete'
+)

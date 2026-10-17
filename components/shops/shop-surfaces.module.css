@@ -1,0 +1,116 @@
+.area {
+  margin-top: 20px;
+  min-width: 0;
+}
+.area[data-shop-active='false'] {
+  color: #aaa3af;
+}
+.identity {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  margin-top: 16px;
+}
+.identity h4 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 26px;
+}
+.identity .description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.description,
+.url {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  line-height: 22px;
+}
+.url {
+  color: #c1adcf;
+  font-size: 12px;
+}
+.inactive {
+  margin-top: 16px;
+  color: #aaa3af;
+}
+.action {
+  width: fit-content;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  color: #fff;
+  justify-self: end;
+}
+.action:not([data-state='error']) {
+  --surface: #166534;
+}
+.viewAction :global(.shining-button) {
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+}
+.viewAction :global(.shining-button__body) {
+  height: 100%;
+  padding: 0 20px;
+  gap: 8px;
+  border-radius: inherit;
+  font-size: 14px;
+  font-weight: 500;
+}
+.action.cancel {
+  --surface: #762e3c;
+}
+.editorActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+.field {
+  composes: field from '../home/profile.module.css';
+}
+.field textarea {
+  width: 100%;
+  min-height: 120px;
+  max-height: 240px;
+  resize: vertical;
+  padding: 10px 12px;
+  border: 1px solid #766183;
+  border-radius: 8px;
+  background: #160f1d;
+  color: #fff;
+  font: inherit;
+}
+.field textarea:focus-visible {
+  outline: 2px solid #b88cfa;
+  outline-offset: 2px;
+}
+.charts {
+  display: grid;
+  gap: 24px;
+  margin-top: 16px;
+  min-width: 0;
+}
+.charts h4 {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+.chartBody {
+  min-width: 0;
+}
+.barChart.barChart {
+  height: 300px;
+}
+.fixture {
+  margin-top: 8px;
+  color: #bdb0c8;
+  font-size: 12px;
+  line-height: 20px;
+}

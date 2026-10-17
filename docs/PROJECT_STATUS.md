@@ -1,3 +1,5 @@
+> Current payment-mode authority: [Dual payment paths](DUAL_PAYMENT_PATH.md). Meeting supports negotiated UU or independent payment; Delivery remains UU-only. Existing frozen Orders retain UU semantics. This addendum supersedes conflicting older payment/fee wording.
+
 # Campus Marketplace — Project Status
 
 ## Master Order flow rework (2026-10-14)

@@ -1,0 +1,24 @@
+.viewport {
+  min-width: 0;
+  min-height: 120px;
+  flex: 1;
+  overflow-x: clip;
+}
+.panel {
+  width: 100%;
+  min-width: 0;
+  min-height: 120px;
+}
+.shopEmpty {
+  padding-block: 48px;
+  text-align: center;
+  color: #c1adcf;
+  font-size: 13px;
+  line-height: 20px;
+}
+.shopEmpty h2 {
+  margin-bottom: 8px;
+  color: #f5f3f7;
+  font-size: 16px;
+  line-height: 24px;
+}

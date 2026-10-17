@@ -1,3 +1,7 @@
+.fade {
+  overscroll-behavior: contain;
+}
+
 .fade[open],
 .fade::backdrop {
   animation: enter 160ms ease-out both;

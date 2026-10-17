@@ -14,6 +14,7 @@ import type { FormalOrder } from '@/types/order'
 import { OrderCurrentStep } from './order-current-step'
 import styles from './order-detail-preview.module.css'
 import { OrderFlowCancellation } from './order-flow-cancellation'
+import { OrderListingProvenance } from './order-listing-provenance'
 import { OrderProgress } from './order-progress'
 import { OrderStageDetails } from './order-stage-details'
 import pageStyles from './order-stage-page.module.css'
@@ -102,6 +103,7 @@ function V2OrderPresentation({
     flow.data?.fulfillment.cancellation?.state,
     flow.data?.fulfillment.agreement?.complete,
     flow.data?.courier?.state,
+    flow.data?.fulfillment.externalExchange?.status,
   ])
   const [selection, setSelection] = useState<{
     signature: string
@@ -168,6 +170,7 @@ function V2OrderPresentation({
         <div>
           <p className={styles.eyebrow}>Order Detail</p>
           <h3>{order.snapshot.listing.title}</h3>
+          <OrderListingProvenance provenance={order.listingProvenance} />
         </div>
         <span
           className={
@@ -179,6 +182,9 @@ function V2OrderPresentation({
           {status}
         </span>
       </header>
+      {terms.paymentMode === 'external' && (
+        <p>Paid outside UU · No UU payment protection</p>
+      )}
       <OrderProgress {...progress} terminalLabel={status} />
       <motion.div
         className={pageStyles.stageContent}

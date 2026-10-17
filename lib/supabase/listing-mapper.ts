@@ -2,6 +2,7 @@ import type { Listing } from '@/types/listing'
 
 export type ListingRow = {
   id: string
+  listing_channel: Listing['listingChannel']
   seller_id: string
   title: string
   description: string
@@ -12,6 +13,7 @@ export type ListingRow = {
   condition: Listing['condition'] | null
   pickup_area: string | null
   estimated_delivery_fee_cents?: number | null
+  preferred_payment_mode?: 'external' | 'uu_pay'
   preferred_fulfillment?: 'DELIVERY' | 'ON_CAMPUS'
   meeting_location?: string | null
   meeting_location_provider?: 'google' | null
@@ -31,6 +33,7 @@ export function mapListing(
 ): Listing {
   return {
     id: row.id,
+    listingChannel: row.listing_channel,
     title: row.title,
     description: row.description,
     price: row.price_cents,
@@ -40,6 +43,7 @@ export function mapListing(
     ...(row.condition ? { condition: row.condition } : {}),
     pickupArea: row.pickup_area ?? undefined,
     estimatedDeliveryFeeCents: row.estimated_delivery_fee_cents ?? 0,
+    preferredPaymentMode: row.preferred_payment_mode ?? 'uu_pay',
     preferredFulfillment: row.preferred_fulfillment ?? 'ON_CAMPUS',
     meetingLocation: row.meeting_location
       ? {

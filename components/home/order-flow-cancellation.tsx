@@ -116,16 +116,16 @@ export function OrderFlowCancellation({
     }
   }
   let explanation =
-    'You can cancel until handoff is verified. A paid cancellation releases the item amount and Buyer service fee in full. No monetary cancellation penalty applies.'
+    'You can cancel until handoff is verified. A paid cancellation releases the item amount and Buyer Protection fee in full. No monetary cancellation penalty applies.'
   if (courier)
     explanation =
-      'You can cancel before authoritative shipment. A paid cancellation releases the item amount, Delivery fee and Buyer service fee in full. After shipment, ordinary cancellation is closed.'
+      'You can cancel before authoritative shipment. A paid cancellation releases the item amount, Delivery fee and Buyer Protection fee in full. After shipment, ordinary cancellation is closed.'
   else if (!campus && !started)
     explanation =
-      'You can cancel before handoff. Before the Seller starts delivery, a paid cancellation releases the item amount, Delivery fee and Buyer service fee in full. No delivery compensation applies.'
+      'You can cancel before handoff. Before the Seller starts delivery, a paid cancellation releases the item amount, Delivery fee and Buyer Protection fee in full. No delivery compensation applies.'
   else if (!campus && role === 'buyer')
     explanation =
-      'You can request cancellation before handoff. After delivery starts, an ordinary Buyer cancellation releases the item amount and Buyer service fee; the Delivery fee compensates the Seller. You may request a full refund for a Seller issue or mutual cancellation. Seller agreement resolves it; disagreement holds settlement for Case review.'
+      'You can request cancellation before handoff. After delivery starts, an ordinary Buyer cancellation releases the item amount and Buyer Protection fee; the Delivery fee compensates the Seller. You may request a full refund for a Seller issue or mutual cancellation. Seller agreement resolves it; disagreement holds settlement for Case review.'
   else if (!campus)
     explanation =
       'You can cancel before handoff. If you cancel, the Buyer receives a full release including the Delivery fee; no delivery compensation applies. You may agree to a Buyer full-refund request or dispute it. Disputed settlement remains held for Case review.'
@@ -141,6 +141,12 @@ export function OrderFlowCancellation({
   else if (courier && flow.data?.courier?.shippedAt)
     explanation =
       'Shipment has been recorded. Normal cancellation is no longer available. Problems follow the shipment / Protection / Case flow.'
+  if (order.v2?.terms.paymentMode === 'external' && order.lifecycle === 'open')
+    explanation =
+      flow.data?.fulfillment.externalExchange?.status &&
+      flow.data.fulfillment.externalExchange.status !== 'awaiting_both'
+        ? 'An external exchange has been attested. Ordinary cancellation and automatic inventory release are no longer available. UU cannot verify, reverse, refund, or protect external payments.'
+        : 'You may cancel before either participant confirms the external exchange. UU did not process a payment and cannot issue a refund.'
   const options =
     role === 'buyer'
       ? [
@@ -176,10 +182,12 @@ export function OrderFlowCancellation({
     <section className={profile.panel} aria-label="Cancel Order">
       <h4>Cancel order</h4>
       <p>{explanation}</p>
-      <p>
-        After the cancellation cutoff, use the applicable Protection / Case
-        path.
-      </p>
+      {order.v2?.terms.paymentMode !== 'external' && (
+        <p>
+          After the cancellation cutoff, use the applicable Protection / Case
+          path.
+        </p>
+      )}
       {order.lifecycle !== 'open' && (
         <p>This Order is closed. No normal cancellation action remains.</p>
       )}
@@ -223,7 +231,7 @@ export function OrderFlowCancellation({
                 state.settlement.sellerDeliveryCompensationCents
               )}`
             : ''}
-          . Platform retains no service fee. Provider execution is not
+          . Platform retains no Buyer Protection fee. Provider execution is not
           integrated.
         </p>
       )}
@@ -242,8 +250,8 @@ export function OrderFlowCancellation({
       )}
       {acknowledged && !state?.state && (
         <p>
-          Cancellation request acknowledged. Refreshing authoritative
-          settlement.
+          Cancellation request acknowledged. Refreshing authoritative Order
+          state.
         </p>
       )}
       {!state && order.lifecycle === 'open' && (

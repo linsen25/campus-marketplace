@@ -4,6 +4,18 @@ import { marketplaceRequest } from '@/lib/listings-api'
 
 /** Existing participant-scoped /api/order-domain projections. No new server contract. */
 export type OrderFulfillmentState = {
+  externalExchange?: {
+    orderId: string
+    status:
+      | 'awaiting_both'
+      | 'buyer_confirmed'
+      | 'confirmed'
+      | 'disputed'
+      | 'seller_confirmed'
+    buyerConfirmedAt: string | null
+    sellerConfirmedAt: string | null
+    disputedAt: string | null
+  } | null
   agreement: OrderAgreementState
   orderId: string
   handoffReady: boolean
@@ -115,6 +127,8 @@ export const actOnOrderFlow = (
     | 'case'
     | 'checkout'
     | 'confirm-agreement'
+    | 'confirm-exchange'
+    | 'dispute-exchange'
     | 'handoff'
     | 'payment'
     | 'received'

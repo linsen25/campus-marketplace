@@ -7,6 +7,10 @@ import {
   requireMessagesEnvironment,
   messageUuid,
 } from '@/lib/server/messages-environment'
+import {
+  stripeConfiguration,
+  stripeRequested,
+} from '@/lib/server/stripe-environment'
 import { createMarketplaceClient } from '@/lib/supabase/server'
 import type { MarketplaceContext } from '@/lib/supabase/server'
 import type { FinancialCapabilities } from '@/types/financial-capabilities'
@@ -65,7 +69,8 @@ export function projectFinancialCapabilities(
 export async function getOwnFinancialCapabilities(context: MarketplaceContext) {
   requireFinancialEnvironment()
   const client = createMarketplaceClient(context)
-  await requireMarketplaceUser(client)
+  const user = await requireMarketplaceUser(client)
+  if (stripeRequested()) return getFinancialCapabilities(user.id)
   const { data, error } = await client.rpc('marketplace_financial_capabilities')
   if (error)
     throw new ListingApiError('Unable to load financial capabilities.', 503)
@@ -103,9 +108,14 @@ export function createTrustedFinancialClient() {
 
 export async function getFinancialCapabilities(userId: string) {
   const client = createTrustedFinancialClient()
+  const stripe = stripeRequested() ? stripeConfiguration() : null
   const { data, error } = await client.rpc(
-    'marketplace_financial_capabilities_for_user',
-    { p_user_id: messageUuid(userId) }
+    stripe
+      ? 'marketplace_stripe_capabilities'
+      : 'marketplace_financial_capabilities_for_user',
+    stripe
+      ? { p_user: messageUuid(userId), p_platform: stripe.platform }
+      : { p_user_id: messageUuid(userId) }
   )
   if (error)
     throw new ListingApiError('Unable to load financial capabilities.', 503)

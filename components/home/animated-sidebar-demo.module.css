@@ -137,6 +137,12 @@
   color: #fff;
 }
 
+.childBadge {
+  display: inline-flex;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
 .child:focus-visible {
   outline: 2px solid #bba1d5;
   outline-offset: -2px;
@@ -264,10 +270,17 @@
       );
   }
 
-  .navigation {
+  /* One 64px rail axis for the logo, links, active surface and pin.
+     Outrank Sidebar's base .panel padding regardless of CSS chunk order.
+     The right inset accounts for the existing 1px divider. */
+  .navigation.navigation {
+    --home-rail-control-width: 60px;
+    --home-rail-inset: 2px;
+    --home-rail-icon-inset: calc((var(--home-rail-control-width) - var(--desktop-app-icon-size)) / 2);
+
     background: #131017;
     border-right-color: #c2a2e63d;
-    padding-inline: 1.5px;
+    padding-inline: var(--home-rail-inset) calc(var(--home-rail-inset) - 1px);
   }
 
   .child {
@@ -280,13 +293,21 @@
   }
 
   .navigation > div:first-child > span:first-child {
-    width: var(--desktop-app-control-height);
+    width: var(--home-rail-control-width);
     height: var(--desktop-app-control-height);
   }
 
   .navigation :is(a[href^="#"], a[href="/home?section=notifications"]) {
     height: var(--desktop-app-control-height);
-    padding-inline: 19px;
+    padding-inline: var(--home-rail-icon-inset);
+  }
+
+  .navigation button[aria-pressed] {
+    padding-inline: var(--home-rail-icon-inset);
+  }
+
+  .navigation button[aria-pressed] > span:first-child {
+    width: var(--desktop-app-icon-size);
   }
 
   .mark {
@@ -367,4 +388,12 @@
       (100% - var(--home-section-bottom-inset) - var(--home-empty-origin)) *
       0.275
     );
+}
+
+/* Only the inner pricing workspace is capped. Page headings keep the same
+   full-width Home header geometry in every destination. */
+.main:has([data-shop-pro-pricing]) > [data-shop-listing-workspace] {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
 }
