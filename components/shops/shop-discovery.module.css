@@ -1,0 +1,78 @@
+.recommended {
+  min-width: 0;
+  margin-bottom: 32px;
+}
+.heading {
+  margin-bottom: 8px;
+}
+.heading h2,
+.allTitle {
+  margin: 0 0 6px;
+  color: #fafafa;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+}
+.heading p {
+  margin: 0;
+  color: #c8becf;
+  font-size: 13px;
+  line-height: 20px;
+}
+.heading small {
+  display: block;
+  margin-top: 4px;
+  color: #aa9cb6;
+  font-size: 11px;
+  line-height: 16px;
+}
+.allTitle {
+  margin-bottom: 16px;
+}
+.directory {
+  min-width: 0;
+}
+
+.sectionLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0;
+  min-height: 24px;
+  border: 0;
+  background: transparent;
+  color: #d8c5e7;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.sectionLink:hover {
+  color: #fafafa;
+}
+.sectionLink:focus-visible {
+  outline: 2px solid #b88cfa;
+  outline-offset: 3px;
+}
+.products {
+  min-width: 0;
+  margin-top: 40px;
+}
+.previewNote {
+  margin: 0 0 16px;
+  color: #aa9cb6;
+  font-size: 12px;
+  line-height: 20px;
+}
+.productGrid > div {
+  min-width: 0;
+}
+.sectionPagination.sectionPagination {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (min-width: 1024px) {
+  .productGrid.productGrid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}

@@ -1,8 +1,18 @@
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
-import { ArrowUpRight, Bell, MessageCircle, Package, Tag } from 'lucide-react'
+import {
+  Bell,
+  ChevronRight,
+  Clock3,
+  Filter,
+  MessageCircle,
+  Package,
+  Tag,
+  X,
+} from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
 
+import FilterInteraction from '@/components/filter-interaction'
 import { WorkspaceEmpty } from '@/components/listings/workspace-empty'
 import { FadingDialog } from '@/components/ui/fading-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -19,7 +29,6 @@ import type {
 import { notificationUiTarget } from '@/lib/notification-navigation'
 import { notificationCopy } from '@/lib/notification-presentation'
 
-import { NotificationFilter } from './notification-filter'
 import { NotificationListingProvenance } from './notification-listing-provenance'
 import { useNotifications } from './notification-state'
 import type { Feed } from './notification-state'
@@ -30,6 +39,95 @@ const categories = {
   order: { label: 'ORDER', icon: Package },
   listing: { label: 'LISTING', icon: Tag },
   system: { label: 'SYSTEM', icon: Bell },
+}
+function NotificationType({ item }: { item: NotificationItem }) {
+  const type = notificationCategory(item)
+  const { label, icon: Icon } = categories[type]
+  return (
+    <span className={`${styles.category} ${styles[type]}`}>
+      <Icon size={16} aria-hidden={true} />
+      <span>{label}</span>
+    </span>
+  )
+}
+function NotificationsFilter({
+  category,
+  status,
+  disabled,
+  onCategory,
+  onStatus,
+}: {
+  category: string
+  status: string
+  disabled: boolean
+  onCategory: (value: NotificationCategory | '') => void
+  onStatus: (value: '' | 'read' | 'unread') => void
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <FilterInteraction
+      label="Filter"
+      appearance="select"
+      topLayer={true}
+      isOpen={open}
+      disabled={disabled}
+      triggerClassName={styles.filterTrigger}
+      panelClassName={styles.filterPanel}
+      triggerContent={
+        <>
+          <Filter size={16} aria-hidden={true} />
+          Filter
+        </>
+      }
+      onOpenChange={setOpen}
+    >
+      <div className={styles.filterOptions}>
+        <fieldset>
+          <legend>Notification category</legend>
+          {[
+            ['', 'All notifications'],
+            ['message', 'Messages'],
+            ['order', 'Orders'],
+            ['listing', 'Listings'],
+            ['system', 'System'],
+          ].map(([value, label]) => (
+            <label key={value}>
+              <input
+                type="radio"
+                name="notification-category"
+                checked={category === value}
+                disabled={disabled}
+                onChange={() => onCategory(value as NotificationCategory | '')}
+              />
+              {label}
+            </label>
+          ))}
+        </fieldset>
+        <fieldset>
+          <legend>Notification status</legend>
+          {[
+            ['', 'All status'],
+            ['unread', 'Unread'],
+            ['read', 'Read'],
+          ].map(([value, label]) => (
+            <label key={value}>
+              <input
+                type="radio"
+                name="notification-status"
+                checked={status === value}
+                disabled={disabled}
+                onChange={() => onStatus(value as '' | 'read' | 'unread')}
+              />
+              {label}
+            </label>
+          ))}
+        </fieldset>
+        <button type="button" onClick={() => setOpen(false)}>
+          Close filters
+        </button>
+      </div>
+    </FilterInteraction>
+  )
 }
 export function NotificationsView() {
   const state = useNotifications()
@@ -176,64 +274,72 @@ function NotificationContent() {
   return (
     <section className={styles.center} aria-label="Notifications feed">
       <div className={styles.toolbar}>
-        <NotificationFilter
-          label="Notification category"
-          value={category}
-          disabled={managing}
-          options={[
-            { value: '', label: 'All notifications' },
-            { value: 'message', label: 'Messages' },
-            { value: 'order', label: 'Orders' },
-            { value: 'listing', label: 'Listings' },
-            { value: 'system', label: 'System' },
-          ]}
-          onChange={(value) => {
-            resetSelection()
-            setCategory(value as NotificationCategory | '')
-          }}
-        />
-        <NotificationFilter
-          label="Notification status"
-          value={status}
-          disabled={managing}
-          options={[
-            { value: '', label: 'All status' },
-            { value: 'unread', label: 'Unread' },
-            { value: 'read', label: 'Read' },
-          ]}
-          onChange={(value) => {
-            resetSelection()
-            setStatus(value as '' | 'read' | 'unread')
-          }}
-        />
-        <button
-          type="button"
-          className={styles.selectMode}
-          disabled={managing}
-          aria-pressed={selectionMode}
-          aria-label={selectionMode ? 'Done' : 'Select'}
-          onClick={() => {
-            resetSelection()
-            setSelectionMode((value) => !value)
-          }}
+        <div
+          className={styles.statusTabs}
+          role="group"
+          aria-label="Notification status"
         >
-          <span className={styles.selectionLabels} aria-hidden="true">
-            <m.span
-              initial={false}
-              animate={{ opacity: selectionMode ? 0 : 1 }}
-              transition={{ duration: reducedMotion ? 0 : 0.16 }}
+          {[
+            ['', 'All'],
+            ['unread', 'Unread'],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={status === value}
+              disabled={managing}
+              onClick={() => {
+                resetSelection()
+                setStatus(value as '' | 'unread')
+              }}
             >
-              Select
-            </m.span>
-            <m.span
-              initial={false}
-              animate={{ opacity: selectionMode ? 1 : 0 }}
-              transition={{ duration: reducedMotion ? 0 : 0.16 }}
-            >
-              Done
-            </m.span>
-          </span>
-        </button>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className={styles.toolbarRight}>
+          <NotificationsFilter
+            category={category}
+            status={status}
+            disabled={managing}
+            onCategory={(value) => {
+              resetSelection()
+              setCategory(value)
+            }}
+            onStatus={(value) => {
+              resetSelection()
+              setStatus(value)
+            }}
+          />
+          <button
+            type="button"
+            className={styles.selectMode}
+            disabled={managing}
+            aria-pressed={selectionMode}
+            aria-label={selectionMode ? 'Done' : 'Select'}
+            onClick={() => {
+              resetSelection()
+              setSelectionMode((value) => !value)
+            }}
+          >
+            <span className={styles.selectionLabels} aria-hidden="true">
+              <m.span
+                initial={false}
+                animate={{ opacity: selectionMode ? 0 : 1 }}
+                transition={{ duration: reducedMotion ? 0 : 0.16 }}
+              >
+                Select
+              </m.span>
+              <m.span
+                initial={false}
+                animate={{ opacity: selectionMode ? 1 : 0 }}
+                transition={{ duration: reducedMotion ? 0 : 0.16 }}
+              >
+                Done
+              </m.span>
+            </span>
+          </button>
+        </div>
         <p
           ref={selectionSummary}
           tabIndex={-1}
@@ -242,42 +348,44 @@ function NotificationContent() {
         >
           {chosen.length > 0 && `${chosen.length} selected`}
         </p>
-        {selectionMode &&
-          (chosen.length ? (
-            <div className={styles.batchActions}>
+        <div className={styles.selectionTools}>
+          {selectionMode &&
+            (chosen.length ? (
+              <div className={styles.batchActions}>
+                <StatefulButton
+                  disabled={managing || !chosen.some((n) => !n.read_at)}
+                  onClick={() => batch('markRead')}
+                >
+                  Mark as read
+                </StatefulButton>
+                <button
+                  type="button"
+                  className={styles.delete}
+                  disabled={managing}
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  Delete
+                </button>
+              </div>
+            ) : (
               <StatefulButton
-                disabled={managing || !chosen.some((n) => !n.read_at)}
-                onClick={() => batch('markRead')}
+                disabled={loading || managing || feed.unreadCount === 0}
+                onClick={async () => {
+                  try {
+                    await marketplaceRequest('/api/notifications', 'POST', {
+                      action: 'markAllRead',
+                    })
+                    await refresh()
+                  } catch (e) {
+                    setError('Unable to mark notifications read. Please retry.')
+                    throw e
+                  }
+                }}
               >
-                Mark as read
+                Mark all as read
               </StatefulButton>
-              <button
-                type="button"
-                className={styles.delete}
-                disabled={managing}
-                onClick={() => setConfirmDelete(true)}
-              >
-                Delete
-              </button>
-            </div>
-          ) : (
-            <StatefulButton
-              disabled={loading || managing || feed.unreadCount === 0}
-              onClick={async () => {
-                try {
-                  await marketplaceRequest('/api/notifications', 'POST', {
-                    action: 'markAllRead',
-                  })
-                  await refresh()
-                } catch (e) {
-                  setError('Unable to mark notifications read. Please retry.')
-                  throw e
-                }
-              }}
-            >
-              Mark all as read
-            </StatefulButton>
-          ))}
+            ))}
+        </div>
       </div>
       {confirmDelete && chosen.length > 0 && (
         <div
@@ -336,10 +444,7 @@ function NotificationContent() {
       )}
       <ul className={styles.list} data-selection={selectionMode || undefined}>
         {feed.notifications.map((item) => {
-          const { title } = notificationCopy(item.event_type)
-          const type = notificationCategory(item)
-          const { label, icon: Icon } = categories[type]
-          const target = notificationUiTarget(item.destination, item.event_type)
+          const { title, body } = notificationCopy(item.event_type)
           return (
             <li
               key={item.id}
@@ -366,45 +471,36 @@ function NotificationContent() {
                   }}
                 />
               )}
-              <span className={`${styles.category} ${styles[type]}`}>
-                <Icon size={16} aria-hidden={true} />
-                <span>{label}</span>
-              </span>
-              <strong className={styles.summary} title={title}>
-                {title}
-                <NotificationListingProvenance
-                  provenance={item.listingProvenance}
-                />
-              </strong>
-              <div className={styles.actions}>
+              <button
+                type="button"
+                className={styles.rowOpen}
+                disabled={managing}
+                aria-disabled={opening || managing}
+                aria-label={`Open notification: ${title}`}
+                onClick={() => open(item, false)}
+              >
+                <NotificationType item={item} />
+                <strong className={styles.summary}>
+                  {title}
+                  <NotificationListingProvenance
+                    provenance={item.listingProvenance}
+                  />
+                </strong>
+                <span className={styles.bodySummary}>{body}</span>
                 <time
                   dateTime={item.created_at}
                   title={new Date(item.created_at).toLocaleString()}
                 >
-                  {notificationTime(item.created_at, now)}
+                  {notificationTime(item.created_at, now) === 'now'
+                    ? 'now'
+                    : `${notificationTime(item.created_at, now)} ago`}
                 </time>
-                <button
-                  type="button"
-                  disabled={managing}
-                  aria-disabled={opening || managing}
-                  aria-label={`View ${title}`}
-                  onClick={() => open(item, false)}
-                >
-                  View
-                </button>
-                {target ? (
-                  <button
-                    type="button"
-                    disabled={opening || managing}
-                    aria-label={`Open destination: ${title}`}
-                    onClick={() => open(item, true)}
-                  >
-                    <ArrowUpRight size={18} aria-hidden={true} />
-                  </button>
-                ) : (
-                  <span className={styles.noDestination} />
-                )}
-              </div>
+                <ChevronRight
+                  className={styles.chevron}
+                  size={18}
+                  aria-hidden={true}
+                />
+              </button>
             </li>
           )
         })}
@@ -458,59 +554,79 @@ function NotificationContent() {
             aria-labelledby="notification-report-title"
             onRequestClose={() => setSelected(null)}
           >
-            <p
-              className={`${styles.category} ${
-                styles[notificationCategory(report)]
-              }`}
-            >
-              {categories[notificationCategory(report)].label}
-            </p>
-            <h3 id="notification-report-title">
-              {notificationCopy(report.event_type).title}
-            </h3>
-            <NotificationListingProvenance
-              provenance={report.listingProvenance}
-            />
-            <p>{notificationCopy(report.event_type).body}</p>
-            <dl>
-              <dt>Received</dt>
-              <dd>
-                <time dateTime={report.created_at}>
-                  {new Date(report.created_at).toLocaleString()}
-                </time>
-              </dd>
-              {typeof report.original_price_cents === 'number' && (
-                <>
-                  <dt>Original asking price</dt>
-                  <dd>{money(report.original_price_cents)}</dd>
-                </>
+            <header className={styles.reportHeader}>
+              <NotificationType item={report} />
+              <button
+                type="button"
+                aria-label="Close notification detail"
+                onClick={() => setSelected(null)}
+              >
+                <X size={20} aria-hidden={true} />
+              </button>
+            </header>
+            <div className={styles.reportContent}>
+              <h3 id="notification-report-title">
+                {notificationCopy(report.event_type).title}
+              </h3>
+              <NotificationListingProvenance
+                provenance={report.listingProvenance}
+              />
+              <p>{notificationCopy(report.event_type).body}</p>
+              <div className={styles.received}>
+                <Clock3 size={17} aria-hidden={true} />
+                <dl>
+                  <dt>Received</dt>
+                  <dd>
+                    <time dateTime={report.created_at}>
+                      {new Date(report.created_at).toLocaleString()}
+                    </time>
+                  </dd>
+                  {typeof report.original_price_cents === 'number' && (
+                    <>
+                      <dt>Original asking price</dt>
+                      <dd>{money(report.original_price_cents)}</dd>
+                    </>
+                  )}
+                  {typeof report.latest_price_cents === 'number' && (
+                    <>
+                      <dt>Updated asking price</dt>
+                      <dd>{money(report.latest_price_cents)}</dd>
+                    </>
+                  )}
+                </dl>
+              </div>
+              {error && (
+                <p role="alert">
+                  {error}
+                  <button
+                    type="button"
+                    disabled={opening || managing}
+                    onClick={() => open(report, false)}
+                  >
+                    Retry
+                  </button>
+                </p>
               )}
-              {typeof report.latest_price_cents === 'number' && (
-                <>
-                  <dt>Updated asking price</dt>
-                  <dd>{money(report.latest_price_cents)}</dd>
-                </>
-              )}
-            </dl>
-            {error && (
-              <p role="alert">
-                {error}
+            </div>
+            <footer className={styles.reportActions}>
+              {notificationUiTarget(report.destination, report.event_type) && (
                 <button
                   type="button"
+                  className={styles.openInApp}
                   disabled={opening || managing}
-                  onClick={() => open(report, false)}
+                  onClick={() => open(report, true)}
                 >
-                  Retry
+                  Open in app
                 </button>
-              </p>
-            )}
-            <button
-              type="button"
-              className={styles.close}
-              onClick={() => setSelected(null)}
-            >
-              Close
-            </button>
+              )}
+              <button
+                type="button"
+                className={styles.close}
+                onClick={() => setSelected(null)}
+              >
+                Close
+              </button>
+            </footer>
           </FadingDialog>
         )}
       </AnimatePresence>

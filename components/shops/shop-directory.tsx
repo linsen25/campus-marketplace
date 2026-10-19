@@ -1,50 +1,39 @@
 import type { CSSProperties } from 'react'
 
-import InfiniteGrid from '@/components/infinite-grid'
+import { defaultShopDirectoryQuery } from '@/lib/shop-directory'
+import type { ShopDirectoryQuery } from '@/lib/shop-directory'
 import type { ShopPreview } from '@/types/shop'
 
-import { ShopCard } from './shop-card'
+import { ShopDirectoryWorkspace } from './shop-directory-workspace'
+import discovery from './shop-discovery.module.css'
 import { ShopProPromoBanner } from './shop-pro-promo-banner'
-import styles from './shop.module.css'
 
 export function ShopDirectory({
   shops = [],
+  query = defaultShopDirectoryQuery,
+  onDetailActiveChange,
   onOverlayActiveChange,
   overlayClassName,
   overlayStyle,
 }: {
   shops?: readonly ShopPreview[]
+  query?: ShopDirectoryQuery
+  onDetailActiveChange?: (active: boolean) => void
   onOverlayActiveChange?: (active: boolean) => void
   overlayClassName?: string
   overlayStyle?: CSSProperties
 }) {
   return (
-    <>
-      <ShopProPromoBanner />
-      {!shops.length ? (
-        <section className={styles.empty} aria-label="Shop directory">
-          <h2>No shops yet</h2>
-          <p>Shops will appear here when sellers open their storefronts.</p>
-        </section>
-      ) : (
-        <section aria-label="Shop directory">
-          <InfiniteGrid
-            repeat={false}
-            items={shops.map((shop) => ({
-              id: shop.sellerProfileId,
-              title: shop.shopName,
-              customContent: (
-                <ShopCard
-                  shop={shop}
-                  overlayClassName={overlayClassName}
-                  overlayStyle={overlayStyle}
-                  onOverlayActiveChange={onOverlayActiveChange}
-                />
-              ),
-            }))}
-          />
-        </section>
-      )}
-    </>
+    <div className={discovery.directory} style={{ overflowAnchor: 'none' }}>
+      <ShopDirectoryWorkspace
+        query={query}
+        shops={shops}
+        directoryHeader={<ShopProPromoBanner />}
+        overlayClassName={overlayClassName}
+        overlayStyle={overlayStyle}
+        onDetailActiveChange={onDetailActiveChange}
+        onOverlayActiveChange={onOverlayActiveChange}
+      />
+    </div>
   )
 }

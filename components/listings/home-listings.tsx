@@ -1,8 +1,10 @@
 import { AnimatePresence } from 'framer-motion'
+import { Plus, Search } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 
 import FluidTabs from '@/components/animata/tabs/fluid-tabs'
-import { ShopListingWorkspace } from '@/components/shops/shop-listing-workspace'
+import { demoShopProducts } from '@/components/shops/shop-demo-data'
 import { useContentReveal } from '@/components/ui/content-reveal'
 import { LocalTabContent } from '@/components/ui/local-tab-content'
 import { ListingSkeletonGrid } from '@/components/ui/workspace-skeletons'
@@ -13,28 +15,210 @@ import {
 } from '@/lib/listings-api'
 import type { Listing } from '@/types/listing'
 
-import { CardAction } from './card-actions'
 import { ContentStateError } from './content-state-error'
 import { Favorites } from './favorites'
 import listingColumns from './favorites.module.css'
 import { ListingConfirmation } from './listing-confirmation'
-import { ListingForm } from './listing-form'
+import { ListingCreationSheet } from './listing-creation-sheet'
 import type { ListingLeaveGuard } from './listing-form'
 import { ListingSortFilter } from './listing-sort-filter'
 import styles from './listing-workspace.module.css'
-import { ManagedListingCard } from './managed-listing-card'
 import type { MarketFilterValues } from './market-filter'
+import { ResaleManagementCard } from './resale-management-card'
+import resaleStyles from './resale-management.module.css'
+import shopStyles from './shop-management.module.css'
 import { WorkspaceEmpty } from './workspace-empty'
 
 const auxiliaryPages = new Map([
-  ['favorites', <Favorites key="favorites" />],
-  ['my-shop', <ShopListingWorkspace key="my-shop" />],
-  [
-    'create-shop-listing',
-    <ShopListingWorkspace key="create-shop-listing" create={true} />,
-  ],
+  ['favorites', <Favorites key="favorites" channel="resale" />],
+  ['shop-favorites', <Favorites key="shop-favorites" channel="shop" />],
 ])
 
+const scopes = {
+  resale: {
+    channel: 'resale',
+    destination: 'my-listings',
+    label: 'Manage Resale',
+    createLabel: 'Create Resale',
+  },
+  shop: {
+    channel: 'shop',
+    destination: 'my-shop',
+    label: 'Manage Products',
+    createLabel: 'Add Product',
+  },
+} as const
+
+function listingScope(page: string) {
+  return scopes[
+    ['my-shop', 'create-shop-listing', 'shop-favorites'].includes(page)
+      ? 'shop'
+      : 'resale'
+  ]
+}
+
+function managementEmptyMessage(
+  channel: string,
+  tab: number,
+  applied: MarketFilterValues,
+  search: string
+) {
+  if (channel === 'shop' && search.trim())
+    return 'No products match your search.'
+  if (Object.values(applied).some(Boolean))
+    return 'No listings match your filters.'
+  if (channel === 'shop')
+    return tab === 0 ? 'No active products yet.' : 'No sold products yet.'
+  return tab === 0 ? 'No active listings yet.' : 'No sold listings yet.'
+}
+
+/** Temporary local preview only after a successful empty Shop inventory read. */
+function shouldShowShopDemo(
+  channel: string,
+  loading: boolean,
+  error: string,
+  items: Listing[]
+) {
+  return channel === 'shop' && !loading && !error && items.length === 0
+}
+
+function ProductSearch({
+  value,
+  onChange,
+  desktop = false,
+}: {
+  value: string
+  onChange: (value: string) => void
+  desktop?: boolean
+}) {
+  return (
+    <label
+      className={`${styles.field} ${shopStyles.search} ${
+        desktop ? shopStyles.desktopSearch : shopStyles.mobileSearch
+      }`}
+    >
+      <Search size={17} aria-hidden="true" />
+      <input
+        type="search"
+        aria-label="Search your products"
+        placeholder="Search your products..."
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  )
+}
+
+function ManagementTools({
+  channel,
+  applied,
+  sort,
+  onSort,
+  onFilter,
+  onCreate,
+  search,
+  onSearch,
+}: {
+  search: string
+  onSearch: (value: string) => void
+  channel: string
+  applied: MarketFilterValues
+  sort: string
+  onSort: (sort: string) => void
+  onFilter: (values: MarketFilterValues) => void
+  onCreate: () => void
+}) {
+  return (
+    <div
+      className={resaleStyles.managementControls}
+      data-resale-toolbar={channel === 'resale' || undefined}
+      data-shop-toolbar={channel === 'shop' || undefined}
+    >
+      {channel === 'shop' && (
+        <ProductSearch value={search} desktop={true} onChange={onSearch} />
+      )}
+      <button
+        type="button"
+        className={resaleStyles.createButton}
+        onClick={onCreate}
+      >
+        <Plus size={16} aria-hidden={true} />
+        <span className={resaleStyles.fullCreateLabel}>
+          {channel === 'shop' ? 'Add Product' : 'Create Resale'}
+        </span>
+        <span className={resaleStyles.compactCreateLabel}>
+          {channel === 'shop' ? 'Add' : 'Create'}
+        </span>
+      </button>
+      <ListingSortFilter
+        applied={applied}
+        sort={sort}
+        showSort={false}
+        overlaySelects={true}
+        panelClassName={resaleStyles.filterPanel}
+        triggerClassName={resaleStyles.darkControl}
+        onSort={onSort}
+        onFilter={onFilter}
+      />
+    </div>
+  )
+}
+function managementGrid() {
+  return `${styles.grid} ${listingColumns.grid} ${resaleStyles.grid}`
+}
+function ManagementStatus({
+  tab,
+  onTab,
+  children,
+}: {
+  tab: number
+  onTab: (tab: number) => void
+  children: ReactNode
+}) {
+  return (
+    <div className={`${styles.toolbar} ${resaleStyles.statusToolbar}`}>
+      <FluidTabs activeIndex={tab} onActiveIndexChange={onTab}>
+        <FluidTabs.List aria-label="Listing status">
+          <FluidTabs.Tab>
+            <FluidTabs.Label>Active</FluidTabs.Label>
+          </FluidTabs.Tab>
+          <FluidTabs.Tab>
+            <FluidTabs.Label>Sold</FluidTabs.Label>
+          </FluidTabs.Tab>
+        </FluidTabs.List>
+      </FluidTabs>
+      {children}
+    </div>
+  )
+}
+
+function ManagementEditSheet({
+  channel,
+  listing,
+  onClose,
+  onSaved,
+  onGuardChange,
+}: {
+  channel: 'resale' | 'shop'
+  listing: Listing | null
+  onClose: () => void
+  onSaved: (listing: Listing) => void
+  onGuardChange: (guard: ListingLeaveGuard | null) => void
+}) {
+  return (
+    <AnimatePresence>
+      {listing && listing.listingChannel === channel && (
+        <ListingCreationSheet
+          mode={channel}
+          listing={listing}
+          onClose={onClose}
+          onSaved={onSaved}
+          onGuardChange={onGuardChange}
+        />
+      )}
+    </AnimatePresence>
+  )
+}
 export function HomeListings({
   page,
   onSelect,
@@ -65,13 +249,35 @@ export function HomeListings({
   const [notice, setNotice] = useState('')
   const pending = useRef(false)
   const version = useRef(0)
-  const shopPage = ['my-shop', 'create-shop-listing'].includes(page)
+  const scope = listingScope(page)
+  const { channel, destination: managementDestination } = scope
+  const editing = Boolean(edit)
+  const [search, setSearch] = useState('')
+  const creationPage = ['create-listing', 'create-shop-listing'].includes(page)
+  const managementPage = [
+    'my-listings',
+    'my-shop',
+    'create-listing',
+    'create-shop-listing',
+  ].includes(page)
+  const [creationOpen, setCreationOpen] = useState(creationPage)
+  useEffect(() => {
+    setCreationOpen(creationPage)
+  }, [creationPage, page])
+  const closeCreation = () => {
+    setCreationOpen(false)
+    if (creationPage) onSelect(managementDestination)
+  }
   const load = useCallback(async () => {
     const request = ++version.current
     try {
-      const result = await getMyListings({ channel: 'resale' })
+      const result = await getMyListings({ channel })
       if (request === version.current) {
-        setItems(result.filter((item) => item.publishedAt))
+        setItems(
+          result.filter(
+            (item) => item.publishedAt && item.listingChannel === channel
+          )
+        )
         setError('')
       }
     } catch (reason) {
@@ -84,9 +290,10 @@ export function HomeListings({
     } finally {
       if (request === version.current) setLoading(false)
     }
-  }, [])
+  }, [channel])
   useEffect(() => {
-    if (shopPage) return undefined
+    if (!managementPage) return undefined
+    setLoading(true)
     load()
     const refresh = () => {
       if (document.visibilityState === 'visible') load()
@@ -99,7 +306,7 @@ export function HomeListings({
       window.removeEventListener('focus', refresh)
       window.removeEventListener('marketplace-listings-changed', refresh)
     }
-  }, [load, shopPage])
+  }, [load, managementPage])
   useEffect(() => {
     setEdit(null)
     setConfirmation(null)
@@ -134,35 +341,34 @@ export function HomeListings({
     }
   }
   const saved = (listing: Listing) => {
+    if (listing.listingChannel !== channel) return
     ++version.current
-    setItems((current) => [
-      listing,
-      ...current.filter((item) => item.id !== listing.id),
-    ])
+    setItems((current) =>
+      editing
+        ? current.map((item) => (item.id === listing.id ? listing : item))
+        : [listing, ...current.filter((item) => item.id !== listing.id)]
+    )
     setNotice(edit ? 'Changes saved' : 'Listing created')
+    setCreationOpen(false)
     setEdit(null)
+    if (editing) return
     setTab(0)
-    onSelect('my-listings')
+    onSelect(managementDestination)
   }
   const auxiliary = auxiliaryPages.get(page)
   if (auxiliary) return auxiliary
-  if (page === 'create-listing' || edit)
-    return (
-      <ListingForm
-        createLabel="Create Resale"
-        key={edit?.id ?? 'create'}
-        listing={edit ?? undefined}
-        onCancel={() => {
-          setEdit(null)
-          onSelect('my-listings')
-        }}
-        onSaved={saved}
-        onGuardChange={onGuardChange}
-      />
-    )
-  const visible = items
+  const showShopDemo = shouldShowShopDemo(channel, loading, error, items)
+  const managementItems = showShopDemo
+    ? demoShopProducts.slice(0, 6).map((product) => product.listing)
+    : items
+  const visible = managementItems
     .filter(
       (item) =>
+        item.listingChannel === channel &&
+        (channel !== 'shop' ||
+          item.title
+            .toLocaleLowerCase()
+            .includes(search.trim().toLocaleLowerCase())) &&
         (tab === 0
           ? item.status === 'available' ||
             item.status === 'reserved' ||
@@ -178,40 +384,39 @@ export function HomeListings({
       if (sort === 'price-desc') return b.price - a.price
       return b.createdAt.localeCompare(a.createdAt)
     })
-  const emptyTabMessage =
-    tab === 0 ? 'No active listings yet.' : 'No sold listings yet.'
+  const gridClass = managementGrid()
   return (
-    <section className={styles.workspace} aria-label="My Resale">
-      <div className={styles.createAction}>
-        <CardAction variant="blue" onClick={() => onSelect('create-listing')}>
-          Create Resale
-        </CardAction>
-      </div>
-      <div className={styles.toolbar}>
-        <FluidTabs activeIndex={tab} onActiveIndexChange={setTab}>
-          <FluidTabs.List aria-label="Listing status">
-            <FluidTabs.Tab>
-              <FluidTabs.Label>Active</FluidTabs.Label>
-            </FluidTabs.Tab>
-            <FluidTabs.Tab>
-              <FluidTabs.Label>Sold</FluidTabs.Label>
-            </FluidTabs.Tab>
-          </FluidTabs.List>
-        </FluidTabs>
-        <ListingSortFilter
+    <section
+      className={`${styles.workspace} ${
+        channel === 'shop' ? shopStyles.workspace : ''
+      }`}
+      aria-label={scope.label}
+      data-management-channel={channel}
+    >
+      <ManagementStatus tab={tab} onTab={setTab}>
+        <ManagementTools
+          channel={channel}
           applied={applied}
           sort={sort}
+          search={search}
           onSort={setSort}
           onFilter={setApplied}
+          onCreate={() => setCreationOpen(true)}
+          onSearch={setSearch}
         />
-      </div>
+      </ManagementStatus>
+      {channel === 'shop' && (
+        <ProductSearch value={search} onChange={setSearch} />
+      )}
       <LocalTabContent tab={tab}>
-        {notice && <p role="status">{notice}</p>}
-        {loading && (
-          <ListingSkeletonGrid
-            className={`${styles.grid} ${listingColumns.grid}`}
-          />
+        {showShopDemo && (
+          <p className={shopStyles.demoNotice} data-shop-management-demo={true}>
+            Demo products - Preview only. These are sample products, not your
+            inventory.
+          </p>
         )}
+        {notice && <p role="status">{notice}</p>}
+        {loading && <ListingSkeletonGrid className={gridClass} />}
         {!loading && error && !confirmation && (
           <ContentStateError
             className={reveal}
@@ -225,25 +430,21 @@ export function HomeListings({
         )}
         {!loading && !error && !visible.length && (
           <WorkspaceEmpty className={reveal}>
-            {Object.values(applied).some(Boolean)
-              ? 'No listings match your filters.'
-              : emptyTabMessage}
+            {managementEmptyMessage(channel, tab, applied, search)}
           </WorkspaceEmpty>
         )}
-        <div
-          className={`${styles.grid} ${listingColumns.grid} ${reveal}`}
-          hidden={!visible.length}
-        >
+        <div className={`${gridClass} ${reveal}`} hidden={!visible.length}>
           {visible.map((listing) => (
-            <ManagedListingCard
+            <ResaleManagementCard
               key={listing.id}
               listing={listing}
-              onEdit={() => setEdit(listing)}
-              onMarkSold={() => {
-                setError('')
-                setConfirmation({ listing, action: 'sold' })
+              channel={channel}
+              demo={showShopDemo}
+              onEdit={() => {
+                if (!showShopDemo) setEdit(listing)
               }}
               onDelete={() => {
+                if (showShopDemo) return
                 setError('')
                 setConfirmation({ listing, action: 'delete' })
               }}
@@ -251,6 +452,23 @@ export function HomeListings({
           ))}
         </div>
       </LocalTabContent>
+      <ManagementEditSheet
+        channel={channel}
+        listing={edit}
+        onClose={() => setEdit(null)}
+        onSaved={saved}
+        onGuardChange={onGuardChange}
+      />
+      <AnimatePresence>
+        {creationOpen && (
+          <ListingCreationSheet
+            mode={channel}
+            onClose={closeCreation}
+            onSaved={saved}
+            onGuardChange={onGuardChange}
+          />
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {confirmation && (
           <ListingConfirmation

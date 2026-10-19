@@ -166,14 +166,14 @@ let html = renderToStaticMarkup(
   React.createElement(FormalOrders, { mode: 'purchases' })
 )
 assert(!html.includes('data-order-list-card="cancelled"'))
-assert.equal((html.match(/View Order/g) || []).length, 1)
+assert.equal((html.match(/>View Order</g) || []).length, 1)
 orderView = 'history'
 html = renderToStaticMarkup(
   React.createElement(FormalOrders, { mode: 'purchases' })
 )
 assert(html.includes('data-order-list-card="cancelled"'))
-assert.equal((html.match(/View details/g) || []).length, 2)
-assert.equal((html.match(/View Order/g) || []).length, 0)
+assert.equal((html.match(/>View details</g) || []).length, 2)
+assert.equal((html.match(/>View Order</g) || []).length, 0)
 const requestSource = fs.readFileSync(
   'components/home/order-request-preview.tsx',
   'utf8'

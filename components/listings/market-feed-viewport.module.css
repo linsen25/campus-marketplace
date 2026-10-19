@@ -22,3 +22,9 @@
   font-size: 16px;
   line-height: 24px;
 }
+
+/* Allow only the bounded Shop discovery bleed past the feed transition clip. */
+.viewport:has([data-overlapping-slider]) {
+  overflow: clip;
+  overflow-clip-margin: 48px;
+}

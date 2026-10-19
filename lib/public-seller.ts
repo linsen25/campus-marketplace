@@ -1,3 +1,5 @@
+import type { Listing } from '@/types/listing'
+
 // UUID routes stay stable; username aliases follow the existing username rules.
 import { validUsername } from './auth-username'
 
@@ -13,12 +15,7 @@ export function publicSellerPath(identifier: string) {
   return `/seller/${identifier.toLowerCase()}`
 }
 
-export type PublicSellerListing = {
-  id: string
-  title: string
-  priceCents: number
-  imageUrl: string | null
-}
+export type PublicSellerListing = Listing
 
 export type PublicSeller = {
   identifier: string

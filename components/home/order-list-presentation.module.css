@@ -1,0 +1,231 @@
+.tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  max-width: 100%;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 20px;
+  border: 1px solid #b995dc29;
+  border-radius: 999px;
+  background: #18121f;
+}
+.tabs button {
+  position: relative;
+  min-width: 100px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 16px;
+  background: transparent;
+  color: #bfb0cc;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.tabs button[aria-pressed='true'] {
+  color: #fff;
+}
+.indicator {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #7c3aed;
+}
+.tabLabel {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding-inline: 5px;
+  border-radius: 999px;
+  background: #f5efff;
+  color: #57317a;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.list {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding-bottom: 16px;
+}
+.card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #b995dc29;
+  border-radius: 16px;
+  background: #221a2cec;
+  color: #f5f3f7;
+}
+.card:hover {
+  background: #282030;
+  border-color: #b995dc45;
+}
+.media {
+  width: 96px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #302638;
+  color: #b9a9c5;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  text-align: center;
+}
+.info {
+  min-width: 0;
+}
+.info h4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.amount {
+  margin: 5px 0 8px;
+  color: #c7bad3;
+  font-size: 13px;
+  line-height: 20px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 3px 9px;
+  border: 1px solid #68b88955;
+  border-radius: 999px;
+  background: #235a3938;
+  color: #9bd6b1;
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+.badge[data-outcome='Cancelled'],
+.badge[data-outcome='Expired'] {
+  border-color: #8f82974d;
+  background: #71617e20;
+  color: #c4b8cc;
+}
+.badge[data-outcome='Refunded'] {
+  border-color: #60a5fa44;
+  background: #60a5fa14;
+  color: #93c5fd;
+}
+.state p {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  margin: 6px 0 0;
+  color: #b9adc7;
+  font-size: 12px;
+  line-height: 18px;
+}
+.desktopOpen {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #68b88955;
+  border-radius: 10px;
+  background: #235a3938;
+  color: #9bd6b1;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.desktopOpen[data-terminal] {
+  background: transparent;
+  border-color: #695477;
+  color: #d6c9df;
+}
+.desktopOpen:hover {
+  background: #ffffff0a;
+}
+.mobileOpen {
+  display: none;
+}
+.tabs button:focus-visible,
+.desktopOpen:focus-visible,
+.mobileOpen:focus-visible {
+  outline: 2px solid #c5a5e9;
+  outline-offset: 3px;
+}
+@media (max-width: 1023px) {
+  .card {
+    grid-template-columns: 88px minmax(0, 1fr) auto;
+    gap: 14px;
+  }
+  .media {
+    width: 88px;
+  }
+}
+@media (max-width: 767px) {
+  .tabs {
+    width: min(248px, 100%);
+  }
+  .tabs button {
+    flex: 1;
+    min-width: 0;
+  }
+  .card {
+    grid-template-columns: 80px minmax(0, 1fr) 19px;
+    align-items: start;
+    gap: 12px;
+    padding: 16px;
+  }
+  .media {
+    width: 80px;
+  }
+  .info h4 {
+    font-size: 15px;
+    line-height: 21px;
+  }
+  .desktopOpen {
+    display: none;
+  }
+  .mobileOpen {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 16px;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    color: #bfb0cc;
+    cursor: pointer;
+  }
+  .mobileOpen:focus-visible {
+    outline-offset: -3px;
+  }
+  .mobileOpen svg {
+    flex-shrink: 0;
+  }
+}

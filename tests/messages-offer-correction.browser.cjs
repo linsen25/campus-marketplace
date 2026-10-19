@@ -1,3 +1,4 @@
+const { testPictureDataUrl } = require('../scripts/lib/test-pictures.cjs')
 /* global window, document, getComputedStyle */
 // Offline real-component qualification. All mutations are controlled local callbacks.
 const fs = require('node:fs')
@@ -28,7 +29,7 @@ if(v.minuteBoundary){offer.createdAt=new Date(Date.now()+60000).toISOString();ag
 window.agreementFixtures=agreements;window.agreementBefore=JSON.stringify(agreements);
 if(v.kind==='rhythm'){
 const base=Math.floor(Date.now()/60000)*60000,at=i=>new Date(base+i*1000).toISOString();
-const image='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="purple"/></svg>');
+const image=${JSON.stringify(testPictureDataUrl('monitor'))};
 const messages=[0,1,2,4,6,7].map(i=>({id:'rhythm-'+i,type:i===2?'IMAGE':'TEXT',content:i===6?'':'new message',senderId:'seller',createdAt:at(i),sequence:i+1,canWithdraw:false,withdrawnAt:i===6?at(i):null,images:i===2?[{id:'photo',previewUrl:image,name:'Fixture image',position:0}]:[]}));
 const rich={...offer,createdAt:at(3)},agreement={...agreements[0],createdAt:at(5)};
 flushSync(()=>root.render(<LazyMotion features={domAnimation}><section className={chat.panel} style={{height:3000,width:'100%'}}><div className={chat.contentViewport}><div className={chat.normalChat}><MessageHistory conversationId={'rhythm-'+v.viewer} currentUserId={v.viewer} name="Other" active={false} messages={messages} offers={[rich]} agreements={[agreement]} renderOffer={()=><OfferCard offer={rich} listing={listing} viewerId={v.viewer} participantName="Other" blocked={false}/>} renderAgreement={a=><AgreementCard agreement={a} onView={()=>{}}/>}/></div></div></section></LazyMotion>));return;}
@@ -251,7 +252,7 @@ async function run() {
             assert.equal(
               geometry.badgeBackground,
               ['Active', 'Accepted'].includes(status)
-                ? 'rgb(22, 101, 52)'
+                ? 'rgb(22, 163, 74)'
                 : 'rgb(185, 28, 28)'
             )
             assert.equal(geometry.badgeColor, 'rgb(255, 255, 255)')
@@ -441,7 +442,7 @@ async function run() {
           assert(badgeGeometry.inItem && badgeGeometry.timestampClear)
           assert.equal(
             badgeGeometry.badgeColor,
-            historical ? 'rgb(185, 28, 28)' : 'rgb(22, 101, 52)'
+            historical ? 'rgb(185, 28, 28)' : 'rgb(22, 163, 74)'
           )
           assert.equal(badgeGeometry.padding, '16px')
           assert(badgeGeometry.width <= 400)

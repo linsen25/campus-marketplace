@@ -1,34 +1,27 @@
 import profile from '@/components/home/profile.module.css'
 
 import { ShopProBadge } from './shop-pro-badge'
-import { ShopProPricing } from './shop-pro-pricing'
-import pricing from './shop-pro-pricing.module.css'
 import styles from './shop-surfaces.module.css'
 
-/** No Shop-scoped inventory/creation provider exists. Never fall back to resale
- * reads or writes. Later authority can supply the existing ListingForm and
- * owner-management primitives here, using the same Listing IDs.
- */
+/** Shop creation remains fail-closed until publication entitlement is available. */
 export function ShopListingWorkspace({ create = false }: { create?: boolean }) {
   return (
     <section
-      className={create ? profile.panel : pricing.workspace}
-      aria-label={create ? 'Create Shop Listing' : 'My Shop'}
-      data-shop-listing-workspace="inactive"
+      className={create ? profile.panel : undefined}
+      aria-label={create ? 'Add Product' : 'My Shop'}
+      data-shop-listing-workspace={create ? 'inactive' : 'empty'}
     >
       {create && (
         <header className={profile.panelHeader}>
-          <h3>Create Shop Listing</h3>
-          <ShopProBadge />
+          <h3>Add Product</h3>
+          <ShopProBadge tier="plus" />
         </header>
       )}
-      {create ? (
+      {create && (
         <>
           <p className={styles.inactive}>Your Shop isn&apos;t active yet.</p>
-          <p className={profile.caption}>Available with Shop Pro</p>
+          <p className={profile.caption}>Available with Shop Plus or Pro</p>
         </>
-      ) : (
-        <ShopProPricing />
       )}
     </section>
   )

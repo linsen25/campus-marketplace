@@ -1,3 +1,4 @@
+const { TEST_PICTURES } = require('../scripts/lib/test-pictures.cjs')
 /* global window, document, getComputedStyle, Element, MutationObserver, Navigator */
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
@@ -30,7 +31,7 @@ fs.mkdirSync(output, { recursive: true })
         condition: 'good',
         pickupArea: 'On campus',
         description: 'Fixture only',
-        photoUrls: ['/demo/reading-chair.jpg'],
+        photoUrls: [TEST_PICTURES.camera],
         seller: { id: 'other', displayName: 'Seller' },
         status: 'available',
         publishedAt: '2026-10-05',

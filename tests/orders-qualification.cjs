@@ -129,11 +129,23 @@ assert.equal(
 )
 assert.equal(
   presentation.formatOrderCountdown(now + 86382000, now, true),
-  '23:59:42'
+  '23h 59m 42s'
 )
 assert.equal(
   presentation.formatOrderCountdown(now - 1000, now, true),
-  '00:00:00'
+  '0h 00m 00s'
+)
+assert.equal(
+  presentation.formatOrderCountdown(now + 86344000, now, true),
+  '23h 59m 04s'
+)
+assert.equal(
+  presentation.formatOrderCountdown(now + 26 * 3600000, now, true),
+  '26h 00m 00s'
+)
+assert.equal(
+  presentation.formatOrderCountdown(now + 1000, now, true),
+  '0h 00m 01s'
 )
 const copy = JSON.stringify(order)
 for (let i = 0; i < 60; i++)

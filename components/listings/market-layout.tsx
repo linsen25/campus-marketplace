@@ -1,5 +1,4 @@
 import { UserRound } from 'lucide-react'
-import dynamic from 'next/dynamic'
 import type { CSSProperties } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -12,6 +11,7 @@ import gridStyles from '@/components/infinite-grid.module.css'
 import { useDesktopRouteTransition } from '@/components/navigation/desktop-route-transition'
 import PulseHeart from '@/components/react-bits/pulse-heart'
 import { ShopDirectory } from '@/components/shops/shop-directory'
+import { ShopDirectoryControls } from '@/components/shops/shop-directory-controls'
 import { ListingSkeletonGrid } from '@/components/ui/workspace-skeletons'
 import { ExpandableCard } from '@/components/velora/expandable-card'
 import { useMarketReady } from '@/hooks/use-market-ready'
@@ -28,6 +28,7 @@ import {
 import type { SearchSuggestion } from '@/lib/market-search'
 import { marketSorts } from '@/lib/market-taxonomy'
 import { recordMarketplaceView } from '@/lib/record-marketplace-view'
+import { defaultShopDirectoryQuery } from '@/lib/shop-directory'
 import type { Listing } from '@/types/listing'
 import type { ShopPreview } from '@/types/shop'
 import { formatListingPrice } from '@/utils/format-listing-price'
@@ -35,6 +36,7 @@ import { Link } from '@ui/link/link'
 
 import detailStyles from './homepage-listing-demo.module.css'
 import { ListingMedia } from './listing-media'
+import { MarketBackground } from './market-background'
 import { MarketBrandMark } from './market-brand-mark'
 import { MarketControlGroup, MarketFocusBackdrop } from './market-control-group'
 import { MarketFeedViewport } from './market-feed-viewport'
@@ -47,15 +49,6 @@ import { PublishedListingCard } from './published-listing-card'
 import welcomeStyles from './welcome-hero.module.css'
 import { WorkspaceEmpty } from './workspace-empty'
 
-const GradientWaves = dynamic(
-  () =>
-    import(
-      /* webpackChunkName: 'market-gradient-waves' */ '@/components/ui/GradientWaves'
-    ),
-  {
-    ssr: false,
-  }
-)
 // Thin fixture adapter: the accepted Welcome card owns all expansion behavior.
 function MarketCard({
   listing,
@@ -328,6 +321,8 @@ export function MarketLayout({
   const [headerHeight, setHeaderHeight] = useState(0)
   const [headerWidth, setHeaderWidth] = useState(0)
   const [cardActive, setCardActive] = useState(false)
+  const [shopDetailActive, setShopDetailActive] = useState(false)
+  const [shopQuery, setShopQuery] = useState(defaultShopDirectoryQuery)
   const cardPresence = useCallback((active: boolean) => {
     // Fixed descendants bypass the body's scrollbar compensation. Preserve
     // the real unlocked header width before changing its positioning.
@@ -538,34 +533,7 @@ export function MarketLayout({
           />,
           document.body
         )}
-      <div
-        className={styles.background}
-        aria-hidden="true"
-        data-market-background="lowered"
-      >
-        <GradientWaves
-          horizonColor="#9000ff"
-          waveColor="#ff9ffc"
-          crestColor="#ffb3b3"
-          speed={0.4}
-          amplitude={2.5}
-          waveScale={0.6}
-          waveRatio={0.9}
-          swell={35}
-          turbulence={20}
-          tilt={1.11}
-          zoom={1}
-          height={-12}
-          fogDepth={15}
-          detail="medium"
-          brightness={1}
-          opacity={1}
-          mouseInteraction={true}
-          parallaxStrength={0.5}
-          grain={true}
-          grainIntensity={0.05}
-        />
-      </div>
+      <MarketBackground mode={marketMode} />
       {cardActive && (
         <div aria-hidden="true" style={{ height: headerHeight }} />
       )}
@@ -631,34 +599,38 @@ export function MarketLayout({
               }}
             />
           </div>
-          <MarketControlGroup>
-            <div id="listing-sort-label">
+          {marketMode === 'shop' ? (
+            <ShopDirectoryControls query={shopQuery} onChange={setShopQuery} />
+          ) : (
+            <MarketControlGroup>
+              <div id="listing-sort-label">
+                <FilterInteraction
+                  label="Sort"
+                  isOpen={activePanel === 'sort'}
+                  isClosing={closing}
+                  options={[...marketSorts]}
+                  value={sort}
+                  onOpenChange={openSort}
+                  onChange={setSort}
+                />
+              </div>
               <FilterInteraction
-                label="Sort"
-                isOpen={activePanel === 'sort'}
+                label="Filter"
+                isOpen={activePanel === 'filter'}
                 isClosing={closing}
-                options={[...marketSorts]}
-                value={sort}
-                onOpenChange={openSort}
-                onChange={setSort}
-              />
-            </div>
-            <FilterInteraction
-              label="Filter"
-              isOpen={activePanel === 'filter'}
-              isClosing={closing}
-              onOpenChange={openFilter}
-            >
-              <MarketFilter
-                applied={applied}
-                onCancel={() => openFilter(false)}
-                onConfirm={(draft) => {
-                  setApplied(draft)
-                  openFilter(false)
-                }}
-              />
-            </FilterInteraction>
-          </MarketControlGroup>
+                onOpenChange={openFilter}
+              >
+                <MarketFilter
+                  applied={applied}
+                  onCancel={() => openFilter(false)}
+                  onConfirm={(draft) => {
+                    setApplied(draft)
+                    openFilter(false)
+                  }}
+                />
+              </FilterInteraction>
+            </MarketControlGroup>
+          )}
           <nav className={styles.desktopNav} aria-label="Market navigation">
             <Link
               href="/home"
@@ -673,22 +645,26 @@ export function MarketLayout({
         </div>
       </header>
       <div ref={browsingTop} className={styles.content}>
-        <MarketBreadcrumb
-          activeTab={activeTab}
-          applied={applied}
-          setApplied={setApplied}
-        />
+        {!shopDetailActive && (
+          <MarketBreadcrumb
+            activeTab={activeTab}
+            applied={applied}
+            setApplied={setApplied}
+          />
+        )}
         <MarketFeedViewport
           mode={marketMode}
           shop={
             <ShopDirectory
               shops={shops}
+              query={shopQuery}
               overlayClassName={styles.listingOverlay}
               overlayStyle={
                 {
                   '--market-header-height': `${headerHeight}px`,
                 } as CSSProperties
               }
+              onDetailActiveChange={setShopDetailActive}
               onOverlayActiveChange={cardPresence}
             />
           }
@@ -706,7 +682,9 @@ export function MarketLayout({
                 </p>
               )}
               {listingPending && !items.length && (
-                <ListingSkeletonGrid className={gridStyles.grid} />
+                <ListingSkeletonGrid
+                  className={`${gridStyles.grid} ${styles.resaleGrid}`}
+                />
               )}
               {items.length > 0 && browsing}
               {!listingPending && !items.length && !listingError && (

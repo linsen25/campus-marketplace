@@ -31,6 +31,7 @@ interface PulseHeartProps {
   rollDuration?: number
   disabled?: boolean
   label?: string
+  appearance?: 'default' | 'image-overlay'
   className?: string
 }
 
@@ -72,6 +73,7 @@ export default function PulseHeart({
   rollDuration = 350,
   disabled = false,
   label = 'Like',
+  appearance = 'default',
   className = '',
 }: PulseHeartProps) {
   const controlled = likedProp !== undefined
@@ -244,6 +246,7 @@ export default function PulseHeart({
       type="button"
       aria-pressed={liked}
       disabled={disabled}
+      data-appearance={appearance}
       data-liked={String(shown.liked)}
       data-solid={idleOutline ? undefined : ''}
       data-no-count={showCount ? undefined : ''}

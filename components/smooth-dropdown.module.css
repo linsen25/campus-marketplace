@@ -165,7 +165,7 @@
 
 .compact .surface {
   right: 0;
-  width: min(220px, calc(100vw - 48px));
+  width: min(256px, calc(100vw - 48px));
   transform-origin: top right;
 }
 

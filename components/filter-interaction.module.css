@@ -204,3 +204,14 @@
 .inbox .option {
   white-space: nowrap;
 }
+
+/* Opt-in native top layer clears the app capsule without changing global layers. */
+.active[popover] {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  right: auto;
+  bottom: auto;
+  overflow: visible;
+  background: transparent;
+}

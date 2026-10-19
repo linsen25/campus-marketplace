@@ -221,6 +221,7 @@ async function main() {
     category: 'Electronics',
     subcategory: 'Cameras',
     pickupArea: 'Near campus',
+    meetingLocation: { label: 'Outside library' },
     photoUrls: [],
     expectedImageCount: 2,
   })
@@ -375,6 +376,7 @@ async function main() {
     category: 'Other',
     subcategory: 'Other',
     pickupArea: 'On campus',
+    meetingLocation: { label: 'Outside library' },
     photoUrls: [],
   }
   for (const count of [0, 7, -1, undefined])

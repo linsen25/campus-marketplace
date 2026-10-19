@@ -262,7 +262,6 @@ function LegacyFormalOrderDetail({
       </button>
       <header className={styles.header}>
         <div>
-          <p className={styles.eyebrow}>Order Detail</p>
           <h3>{listing.title}</h3>
         </div>
         <span className={terminal ? styles.historicalStatus : profile.verified}>

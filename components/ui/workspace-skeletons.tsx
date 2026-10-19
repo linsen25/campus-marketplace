@@ -5,8 +5,10 @@ import styles from './workspace-skeletons.module.css'
 
 export function ListingSkeletonGrid({
   className = '',
+  count = 6,
 }: {
   className?: string
+  count?: number
 }) {
   return (
     <div
@@ -14,9 +16,9 @@ export function ListingSkeletonGrid({
       role="status"
       aria-label="Loading listings"
     >
-      {[0, 1, 2, 3, 4, 5].map((id) => (
+      {Array.from({ length: count }, (_, id) => (
         <article key={id} className={`${styles.card} ${styles.stack}`}>
-          <Skeleton className={styles.media} />
+          <Skeleton className={`${styles.media} ${styles.listingMedia}`} />
           <Skeleton className={styles.line} />
           <Skeleton className={styles.short} />
           <Skeleton className={styles.action} />

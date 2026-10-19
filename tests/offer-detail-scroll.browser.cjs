@@ -1,3 +1,4 @@
+const { testPictureDataUrl } = require('../scripts/lib/test-pictures.cjs')
 // Real Messages history + OfferCard + native FadingDialog, offline only.
 /* global window, document, getComputedStyle, requestAnimationFrame, HTMLDialogElement, innerWidth */
 const fs = require('node:fs'),
@@ -17,7 +18,9 @@ fs.writeFileSync(
   path.join(root, 'entry.tsx'),
   `
 import 'tailwindcss/src/css/preflight.css';import React from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {LazyMotion,domAnimation} from 'framer-motion';import {MessageHistory} from '@/components/home/message-history';import {OfferCard} from '@/components/home/offer-ui';import chat from '@/components/home/messages-chat.module.css';
-const root=createRoot(document.getElementById('root'));const image='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500"><rect width="400" height="500" fill="purple"/></svg>');let messages=[],offers=[],view='seller',tall=false;
+const root=createRoot(document.getElementById('root'));const image=${JSON.stringify(
+    testPictureDataUrl('monitor')
+  )};let messages=[],offers=[],view='seller',tall=false;
 const render=()=>flushSync(()=>root.render(<LazyMotion features={domAnimation}><section className={chat.panel} style={{height:650,width:'100%'}}><header>Chat header</header><div className={chat.contentViewport}><div className={chat.normalChat}><MessageHistory conversationId="scroll-fixture" currentUserId={view} name="Other" active={true} messages={messages} offers={offers} renderOffer={o=><OfferCard offer={o} listing={{title:'Fixture item',price:8000,photoUrls:[image]}} viewerId={view} participantName="Other" blocked={false} canEdit={true} onEdit={()=>{}} onWithdraw={async()=>{}} onAccept={async()=>{}} onDeny={async()=>{}}/>}/></div></div><footer>Composer</footer></section></LazyMotion>));
 window.showScrollCase=v=>{view=v.viewer;tall=v.tall;const base=Date.now()-600000;messages=Array.from({length:24},(_,i)=>({id:'msg'+i,type:'TEXT',content:'Normal chat message '+i,senderId:'buyer',sequence:i+1,createdAt:new Date(base+i*1000).toISOString(),canWithdraw:false}));offers=['A','B'].map((key,i)=>({id:'offer-'+key,protocolVersion:2,conversationId:'scroll-fixture',listingId:'listing',buyerId:'buyer',sellerId:'seller',senderId:'seller',recipientId:'buyer',status:v.status,createdAt:new Date(base+24000+i*1000).toISOString(),updatedAt:new Date(base).toISOString(),terms:{itemAmountCents:8000,currency:'CAD',fulfillment:'on_campus',meetupLocation:'Front entrance',scheduledAt:new Date(base+86400000).toISOString(),note:tall?'Long seller note with ordinary readable words. '.repeat(25):''},changedFields:['Price'],canAccept:true,canWithdraw:false}));render()};window.append=()=>{messages=[...messages,{id:'newest',type:'TEXT',content:'New message after closing Offer',senderId:view,sequence:30,createdAt:new Date().toISOString(),canWithdraw:false}];render()};
 `

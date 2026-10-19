@@ -1,4 +1,5 @@
-﻿/* global document, window, getComputedStyle, Navigator */
+const { TEST_PICTURES } = require('../scripts/lib/test-pictures.cjs')
+/* global document, window, getComputedStyle, Navigator */
 const assert = require('node:assert/strict')
 const fs = require('node:fs'),
   path = require('node:path')
@@ -15,7 +16,7 @@ const item = {
   condition: 'good',
   pickupArea: 'On campus',
   description: 'Fixture only',
-  photoUrls: ['/demo/reading-chair.jpg'],
+  photoUrls: [TEST_PICTURES.camera],
   seller: { id: 'owner', displayName: 'Fixture' },
   status: 'available',
   publishedAt: '2026-10-05',

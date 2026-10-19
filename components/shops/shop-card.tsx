@@ -1,68 +1,61 @@
-import ShiningButton from '@/components/animata/button/shining-button'
-import { UserAvatar } from '@/components/ui/user-avatar'
-import { ExpandableCard } from '@/components/velora/expandable-card'
+import { ArrowRight } from 'lucide-react'
+import { useRouter } from 'next/router'
+
+import card from '@/components/listings/welcome-demo-cards.module.css'
+import { StatefulButton } from '@/components/velora/stateful-button'
 import type { ShopPreview } from '@/types/shop'
 
-import { ShopProBadge } from './shop-pro-badge'
-import styles from './shop.module.css'
+import { ShopCardPresentation } from './shop-card-presentation'
+import styles from './shop-card.module.css'
 
 export function ShopCard({
   shop,
   preview = false,
-  onOverlayActiveChange,
-  overlayClassName,
-  overlayStyle,
 }: {
   shop: ShopPreview
-  /** Local landing demo only: do not navigate to a fictional public Shop. */
   preview?: boolean
-  onOverlayActiveChange?: (active: boolean) => void
-  overlayClassName?: string
-  overlayStyle?: React.CSSProperties
 }) {
-  const visual = (
-    <UserAvatar
-      username={shop.shopName}
-      userId={shop.sellerProfileId}
-      image={shop.imageUrl || shop.avatarUrl}
-      className={styles.visual}
-    />
-  )
+  const router = useRouter()
   return (
-    <ExpandableCard
-      title={shop.shopName}
-      expandedTitle={shop.shopName}
-      triggerLabel={`Open shop: ${shop.shopName}`}
-      media={visual}
-      expandedEyebrow={null}
-      collapsedContent={
-        <span className={styles.summary}>
-          <span className={styles.name}>{shop.shopName}</span>
-          <span className={styles.category}>{shop.category}</span>
-          <span className={styles.excerpt}>{shop.description}</span>
-          <ShopProBadge />
-        </span>
-      }
-      primaryAction={
-        preview ? null : (
-          <ShiningButton
-            variant="green"
-            desktopAppearance={true}
-            href={`/shop/${encodeURIComponent(shop.username)}`}
+    <ShopCardPresentation
+      shop={{
+        name: shop.shopName,
+        tagline: shop.category,
+        image: shop.imageUrl || shop.avatarUrl,
+      }}
+      action={
+        preview ? (
+          <button
+            type="button"
+            className={card.shopAction}
+            onClick={() => undefined}
           >
-            View Shop
-          </ShiningButton>
+            Go to shop <ArrowRight size={18} aria-hidden="true" />
+          </button>
+        ) : (
+          <StatefulButton
+            className={`${card.shopAction} ${styles.loadingAction}`}
+            minLoadingMs={300}
+            resetAfter={800}
+            successText="Go to shop"
+            errorText="Try again"
+            onClick={() =>
+              router
+                .push(`/shop/${encodeURIComponent(shop.username)}`, undefined, {
+                  scroll: false,
+                })
+                .then((navigated) => {
+                  if (navigated === false)
+                    throw new Error('Shop navigation cancelled')
+                })
+            }
+          >
+            <span className={styles.label}>
+              Go to shop <ArrowRight size={18} aria-hidden="true" />
+            </span>
+          </StatefulButton>
         )
       }
-      overlayClassName={overlayClassName}
-      overlayStyle={overlayStyle}
-      onOverlayActiveChange={onOverlayActiveChange}
-    >
-      <div className={styles.details}>
-        <p className={styles.category}>{shop.category}</p>
-        <p>{shop.description}</p>
-        <ShopProBadge />
-      </div>
-    </ExpandableCard>
+    />
   )
 }

@@ -1,4 +1,4 @@
-/* global window, document */
+/* global window, document, getComputedStyle */
 const fs = require('node:fs'),
   path = require('node:path'),
   assert = require('node:assert/strict')
@@ -39,6 +39,25 @@ fs.writeFileSync(
       await p.evaluate(() => window.answer(1))
       await a.locator('.recharts-area-curve').waitFor({ state: 'attached' })
       assert.equal(await a.getByText('Demo data', { exact: true }).count(), 0)
+      for (const name of ['Views', 'Listings', 'Sold', 'Overall']) {
+        await button(name).click()
+        assert.equal(await button(name).getAttribute('aria-pressed'), 'true')
+        assert.equal(
+          await button(name).evaluate(
+            (n) => getComputedStyle(n).backgroundColor
+          ),
+          'rgb(124, 58, 237)'
+        )
+        assert.equal(
+          await a.locator('.recharts-area-curve').getAttribute('stroke'),
+          '#7C3AED'
+        )
+        assert.equal(await a.getByRole('status').count(), 0)
+      }
+      assert.equal(
+        await button('7D').evaluate((n) => getComputedStyle(n).backgroundColor),
+        'rgb(124, 58, 237)'
+      )
       await p.waitForTimeout(1600)
       const key = await a.getAttribute('data-chart-replay')
       await button('1D').click()
@@ -70,6 +89,62 @@ fs.writeFileSync(
       )
       assert(await control.evaluate((n) => n.isConnected))
       assert(await panel.evaluate((n) => n.isConnected))
+      assert.equal(
+        await button('30D').evaluate(
+          (n) => getComputedStyle(n).backgroundColor
+        ),
+        'rgb(124, 58, 237)'
+      )
+      for (const [period, index] of [
+        ['1D', 4],
+        ['7D', 5],
+      ]) {
+        await button(period).click()
+        await p.waitForFunction((n) => window.pending.length === n, index + 1)
+        await p.evaluate((n) => window.answer(n), index)
+        await p.waitForFunction(
+          (value) =>
+            document
+              .querySelector('[data-trend-period]')
+              ?.getAttribute('data-trend-period') === value,
+          period
+        )
+        assert.equal(
+          await button(period).evaluate(
+            (n) => getComputedStyle(n).backgroundColor
+          ),
+          'rgb(124, 58, 237)'
+        )
+        assert.equal(await a.getByRole('status').count(), 0)
+      }
+      const trends = p.getByRole('region', {
+        name: 'Marketplace Trends',
+        exact: true,
+      })
+      await trends
+        .locator('.recharts-bar-rectangle path')
+        .first()
+        .waitFor({ state: 'attached' })
+      assert.equal(
+        await trends
+          .locator('.recharts-bar-rectangle path')
+          .first()
+          .getAttribute('fill'),
+        'var(--color-count)'
+      )
+      assert.equal(
+        await trends
+          .locator('[data-chart]')
+          .first()
+          .evaluate((n) =>
+            getComputedStyle(n).getPropertyValue('--color-count').trim()
+          ),
+        '#7C3AED'
+      )
+      await p.screenshot({
+        path: path.join(root, 'profile-primary-purple-' + width + '.png'),
+        fullPage: true,
+      })
       const box = await a.locator('[data-chart]').boundingBox()
       assert.equal(box.height, 260)
       assert(

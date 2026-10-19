@@ -2,6 +2,7 @@ import { useRouter } from 'next/router'
 
 import { CardAction } from '@/components/listings/card-actions'
 import { WorkspaceEmpty } from '@/components/listings/workspace-empty'
+import { LocalTabContent } from '@/components/ui/local-tab-content'
 import { useFormalOrders } from '@/hooks/use-formal-orders'
 import {
   deriveOrderListBucket,
@@ -22,19 +23,27 @@ import workspace from '../listings/listing-workspace.module.css'
 
 import { FormalOrderDetail } from './formal-order-detail'
 import { OrderCountdown } from './order-countdown'
-import styles from './order-detail-preview.module.css'
+import {
+  OrderListBadge,
+  OrderListCard,
+  OrderStatusTabs,
+} from './order-list-presentation'
+import listStyles from './order-list-presentation.module.css'
 import { OrderListingProvenance } from './order-listing-provenance'
 import {
   OrderListSkeleton,
   OrderDetailSkeleton,
   OrderLoadError,
 } from './order-loading'
-import profile from './profile.module.css'
 
 function orderFulfillmentLabel(order: FormalOrder) {
   if (order.protocolVersion !== 2)
-    return fulfillmentLabels[order.snapshot.draft.fulfillment]
-  return order.v2?.terms.fulfillment === 'on_campus' ? 'Meeting' : 'Delivery'
+    return order.snapshot.draft.fulfillment === 'meet'
+      ? 'Meeting'
+      : fulfillmentLabels[order.snapshot.draft.fulfillment]
+  const fulfillment = order.v2?.terms.fulfillment
+  if (fulfillment === 'on_campus') return 'Meeting'
+  return fulfillment === 'delivery' ? 'Delivery' : undefined
 }
 function OrderState({ order, offset }: { order: FormalOrder; offset: number }) {
   const outcome = orderListOutcome(order)
@@ -44,13 +53,8 @@ function OrderState({ order, offset }: { order: FormalOrder; offset: number }) {
       : orderStatusLabel(order)
   return (
     <div>
-      <span
-        className={
-          orderListOutcome(order) ? styles.historicalStatus : profile.verified
-        }
-      >
-        {label}
-      </span>
+      <OrderListBadge label={label} outcome={outcome} />
+      {outcome && <p>{outcome} order.</p>}
       {!outcome &&
         order.paymentStatus !== 'paid' &&
         order.reservationExpiresAt && (
@@ -106,7 +110,10 @@ export function FormalOrders({ mode }: { mode: OrderWorkspace }) {
           },
         },
         undefined,
-        { shallow: true }
+        {
+          shallow: true,
+          ...(!id && nextBucket !== bucket ? { scroll: false } : {}),
+        }
       )
       .catch(() => {})
   }
@@ -149,81 +156,54 @@ export function FormalOrders({ mode }: { mode: OrderWorkspace }) {
     )
   return (
     <section className={workspace.workspace} aria-label="Orders">
-      <div
-        className={`${profile.segment} ${styles.listFilter}`}
-        role="group"
-        aria-label="Order list view"
-      >
-        {(['active', 'history'] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={bucket === value}
-            onClick={() => navigate(undefined, value)}
-          >
-            {value === 'active' ? 'Active' : 'History'}
-          </button>
-        ))}
-      </div>
-      {query.error && (
-        <div role="alert">
-          <p>{query.error}</p>
-          <CardAction variant="green" onClick={() => query.refresh()}>
-            Retry Orders
-          </CardAction>
-        </div>
-      )}
-      <section
-        aria-label={orderWorkspaceLabels[mode]}
-        data-order-workspace={mode}
-      >
-        {visibleOrders.length ? (
-          <div className={styles.orderList}>
-            {visibleOrders.map((value) => (
-              <article
-                key={value.id}
-                className={`${profile.panel} ${styles.orderCard} ${
-                  orderListOutcome(value) ? styles.historicalCard : ''
-                }`}
-                data-order-terminal={orderListOutcome(value) || undefined}
-                data-order-list-card={value.id}
-              >
-                <div>
-                  <h4>{value.snapshot.listing.title}</h4>
-                  <OrderListingProvenance
-                    provenance={value.listingProvenance}
-                  />
-                  <p>
-                    {formatOrderVisualAmount(value.itemAmount)} &middot;{' '}
-                    {orderFulfillmentLabel(value)}
-                  </p>
-                  <OrderState order={value} offset={query.offset} />
-                </div>
-                {orderListOutcome(value) ? (
-                  <button
-                    type="button"
-                    className={styles.historyAction}
-                    onClick={() => navigate(value.id)}
-                  >
-                    View details
-                  </button>
-                ) : (
-                  <CardAction
-                    variant="green"
-                    onClick={() => navigate(value.id)}
-                  >
-                    View Order
-                  </CardAction>
-                )}
-              </article>
-            ))}
+      <OrderStatusTabs
+        bucket={bucket}
+        activeCount={filterOrderList(orders, 'active').length}
+        onChange={(value) => navigate(undefined, value)}
+      />
+      <LocalTabContent tab={bucket}>
+        {query.error && (
+          <div role="alert">
+            <p>{query.error}</p>
+            <CardAction variant="green" onClick={() => query.refresh()}>
+              Retry Orders
+            </CardAction>
           </div>
-        ) : (
-          <WorkspaceEmpty>
-            {bucket === 'active' ? 'No active orders' : 'No order history yet.'}
-          </WorkspaceEmpty>
         )}
-      </section>
+        <section
+          aria-label={orderWorkspaceLabels[mode]}
+          data-order-workspace={mode}
+        >
+          {visibleOrders.length ? (
+            <div className={listStyles.list}>
+              {visibleOrders.map((value) => (
+                <OrderListCard
+                  key={value.id}
+                  id={value.id}
+                  title={value.snapshot.listing.title}
+                  images={value.snapshot.listing.photoUrls}
+                  amount={formatOrderVisualAmount(value.itemAmount)}
+                  fulfillment={orderFulfillmentLabel(value)}
+                  outcome={orderListOutcome(value)}
+                  provenance={
+                    <OrderListingProvenance
+                      provenance={value.listingProvenance}
+                    />
+                  }
+                  state={<OrderState order={value} offset={query.offset} />}
+                  onOpen={() => navigate(value.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <WorkspaceEmpty>
+              {bucket === 'active'
+                ? 'No active orders'
+                : 'No order history yet.'}
+            </WorkspaceEmpty>
+          )}
+        </section>
+      </LocalTabContent>
     </section>
   )
 }

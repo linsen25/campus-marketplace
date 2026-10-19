@@ -1,14 +1,14 @@
 import { useId, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 
+import { OfferTimelineCard } from '@/components/home/offer-timeline-card'
 import { OrderProgress } from '@/components/home/order-progress'
 import { LocalTabContent } from '@/components/ui/local-tab-content'
 import { homepageListingDemo as listing } from '@/lib/fixtures/homepage-listing-demo'
-import { formatListingPrice } from '@/utils/format-listing-price'
 
 import layout from './homepage-listing-demo.module.css'
 import styles from './homepage-marketplace-story.module.css'
-import { ListingMedia } from './listing-media'
+import { ListingCardPreview } from './listing-card-presentation'
 
 const stages = [
   {
@@ -42,21 +42,16 @@ const exchangeSteps = [
 ]
 
 function FlowPreview({ stage }: { stage: typeof stages[number]['id'] }) {
+  const [favorite, setFavorite] = useState(false)
   if (stage === 'find')
     return (
-      <figure className={styles.listing}>
-        <p className={styles.eyebrow}>Resale &middot; Listing preview</p>
-        <div className={styles.media}>
-          <ListingMedia
-            images={listing.photoUrls}
-            alt="Woven accent chair beside a planter"
-          />
-        </div>
-        <figcaption>
-          <strong>{listing.title}</strong>
-          <span>{formatListingPrice(listing.price)}</span>
-        </figcaption>
-      </figure>
+      <div className={styles.findCard}>
+        <ListingCardPreview
+          listing={{ ...listing, category: 'Home & Living' }}
+          favorite={favorite}
+          onFavorite={setFavorite}
+        />
+      </div>
     )
   if (stage === 'connect')
     return (
@@ -69,10 +64,16 @@ function FlowPreview({ stage }: { stage: typeof stages[number]['id'] }) {
           <small>Buyer</small>
           <p>Would you take CA$40?</p>
         </div>
-        <div className={styles.offer}>
-          <span>Offer</span>
-          <strong>CA$40</strong>
-          <span>Pending</span>
+        <div className={styles.offerDemo}>
+          <OfferTimelineCard
+            id="welcome-offer"
+            own={true}
+            direction="Buyer"
+            status="Active"
+            positive={true}
+            amountCents={4000}
+            fields={[]}
+          />
         </div>
         <div className={styles.seller}>
           <small>Seller</small>

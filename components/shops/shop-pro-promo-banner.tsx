@@ -1,10 +1,10 @@
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useState } from 'react'
 
 import ShiningButton from '@/components/animata/button/shining-button'
 
-import { ShopProPricingSheet } from './shop-pro-pricing-sheet'
+import { ShopPricingDialog } from './shop-pricing-dialog'
 import styles from './shop-pro-pricing.module.css'
 
 /** Local decorative artwork; no external assets or runtime illustration dependency. */
@@ -103,32 +103,52 @@ function ShopEntrepreneur() {
 }
 
 export function ShopProPromoBanner() {
+  const reduced = useReducedMotion()
   const [dismissed, setDismissed] = useState(false)
   const [open, setOpen] = useState(false)
   return (
     <>
-      {!dismissed && (
-        <aside className={styles.banner} aria-label="Shop Pro promotion">
-          <ShopEntrepreneur />
-          <div className={styles.bannerCopy}>
-            <h2>Want your own shop?</h2>
-            <p>Subscribe to Shop Pro and create your own storefront.</p>
-          </div>
-          <ShiningButton variant="green" onClick={() => setOpen(true)}>
-            Explore Shop Pro
-          </ShiningButton>
-          <button
-            type="button"
-            className={styles.dismiss}
-            aria-label="Dismiss Shop Pro promotion"
-            onClick={() => setDismissed(true)}
+      <AnimatePresence initial={false}>
+        {!dismissed && (
+          <m.div
+            data-shop-promo-collapse={true}
+            key="promo"
+            initial={false}
+            animate={{ height: 'auto', opacity: 1, marginBottom: 20 }}
+            exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+            transition={{
+              duration: reduced ? 0 : 0.26,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            style={{ overflow: 'hidden', overflowAnchor: 'none' }}
           >
-            <X size={18} aria-hidden="true" />
-          </button>
-        </aside>
-      )}
+            <aside
+              style={{ marginBottom: 0 }}
+              className={styles.banner}
+              aria-label="Shop Pro promotion"
+            >
+              <ShopEntrepreneur />
+              <div className={styles.bannerCopy}>
+                <h2>Want your own shop?</h2>
+                <p>Subscribe to Shop Pro and create your own storefront.</p>
+              </div>
+              <ShiningButton variant="green" onClick={() => setOpen(true)}>
+                Explore Shop Pro
+              </ShiningButton>
+              <button
+                type="button"
+                className={styles.dismiss}
+                aria-label="Dismiss Shop Pro promotion"
+                onClick={() => setDismissed(true)}
+              >
+                <X size={18} aria-hidden="true" />
+              </button>
+            </aside>
+          </m.div>
+        )}
+      </AnimatePresence>
       <AnimatePresence>
-        {open && <ShopProPricingSheet onClose={() => setOpen(false)} />}
+        {open && <ShopPricingDialog onClose={() => setOpen(false)} />}
       </AnimatePresence>
     </>
   )

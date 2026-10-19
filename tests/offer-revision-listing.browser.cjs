@@ -1,7 +1,7 @@
+const { readTestPictureJpeg } = require('../scripts/lib/test-pictures.cjs')
 /* global document */
 // Disposable staging listing + real UI. Never uses canonical listings for mutations.
 const assert = require('node:assert/strict')
-const fs = require('node:fs')
 const crypto = require('node:crypto')
 const h = require('./order-meetup-fixtures.cjs')
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
@@ -105,7 +105,7 @@ async function run() {
         await seller.locator('input[type="file"]').setInputFiles({
           name: 'synthetic-listing.jpg',
           mimeType: 'image/jpeg',
-          buffer: fs.readFileSync('public/demo/reading-chair.jpg'),
+          buffer: readTestPictureJpeg('chair'),
         })
         const creating = seller.waitForResponse(
           (r) =>

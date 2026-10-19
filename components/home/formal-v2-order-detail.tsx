@@ -2,9 +2,11 @@ import { ChevronLeft } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState } from 'react'
 
+import { ListingMedia } from '@/components/listings/listing-media'
 import { DynamicAction } from '@/components/ui/dynamic-action'
 import { useOrderFlow } from '@/hooks/use-order-flow'
 import { listingLayoutTransition } from '@/lib/listing-layout-motion'
+import { offerAmount } from '@/lib/offer-amount'
 import { currentOrderProgress } from '@/lib/order-current-step'
 import { orderPageAction, orderPresentation } from '@/lib/order-presentation'
 import type { OrderWorkspace } from '@/lib/order-workspaces'
@@ -40,7 +42,8 @@ function OrderPageNavigation({
       {(!mobile || showMobileBack) &&
         (index > 0 ? (
           <DynamicAction
-            variant="blue"
+            variant="dark-blue"
+            className={pageStyles.backAction}
             direction="back"
             onClick={() => onNavigate(index - 1)}
           >
@@ -51,7 +54,8 @@ function OrderPageNavigation({
         ))}
       {index < 5 && (
         <DynamicAction
-          variant="green"
+          variant="dark-blue"
+          className={pageStyles.nextAction}
           disabled={disabled || index >= maximum}
           onClick={() => onNavigate(Math.min(index + 1, maximum))}
         >
@@ -138,6 +142,9 @@ function V2OrderPresentation({
           scheduledAt: confirmed.scheduledAt,
         }
       : terms
+  let fulfillmentLabel = 'Delivery'
+  if (terms.fulfillment === 'on_campus') fulfillmentLabel = 'Meeting'
+  else if (terms.deliveryMethod === 'courier') fulfillmentLabel = 'Shipping'
   let stageTitle: string | undefined
   if (page === 'fulfillment' && terms.fulfillment === 'on_campus')
     stageTitle = 'Meet / Inspect'
@@ -148,7 +155,7 @@ function V2OrderPresentation({
     stageTitle = 'Handoff'
   return (
     <section
-      className={`${styles.detail} ${
+      className={`${styles.detail} ${pageStyles.detail} ${
         order.lifecycle !== 'open' ? styles.history : ''
       }`}
       aria-label="Order Detail"
@@ -166,26 +173,74 @@ function V2OrderPresentation({
         <ChevronLeft size={16} aria-hidden={true} />
         Back to {orderWorkspaceLabels[mode]}
       </button>
-      <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Order Detail</p>
-          <h3>{order.snapshot.listing.title}</h3>
-          <OrderListingProvenance provenance={order.listingProvenance} />
+      <header className={pageStyles.header}>
+        <div className={pageStyles.summary}>
+          <div className={pageStyles.thumbnail}>
+            {order.snapshot.listing.photoUrls.length ? (
+              <ListingMedia
+                images={order.snapshot.listing.photoUrls.slice(0, 1)}
+                alt={order.snapshot.listing.title}
+              />
+            ) : (
+              <span>No photo available</span>
+            )}
+          </div>
+          <div className={pageStyles.summaryText}>
+            <h4>{order.snapshot.listing.title}</h4>
+            <p>
+              {offerAmount(terms.itemAmountCents)} &middot; {fulfillmentLabel}
+            </p>
+            <OrderListingProvenance provenance={order.listingProvenance} />
+          </div>
+          <span
+            className={
+              order.lifecycle === 'open'
+                ? profile.verified
+                : styles.historicalStatus
+            }
+          >
+            {status}
+          </span>
         </div>
-        <span
-          className={
-            order.lifecycle === 'open'
-              ? profile.verified
-              : styles.historicalStatus
-          }
-        >
-          {status}
-        </span>
       </header>
       {terms.paymentMode === 'external' && (
         <p>Paid outside UU · No UU payment protection</p>
       )}
-      <OrderProgress {...progress} terminalLabel={status} />
+      <OrderProgress
+        {...progress}
+        terminalLabel={status}
+        dates={progress.steps.map((label) => {
+          const data = flow.data
+          if (label === 'Agreement') {
+            const agreement = data?.fulfillment.agreement
+            return agreement?.complete &&
+              agreement.buyerConfirmedAt &&
+              agreement.sellerConfirmedAt
+              ? [agreement.buyerConfirmedAt, agreement.sellerConfirmedAt]
+                  .sort((a, b) => Date.parse(a) - Date.parse(b))
+                  .at(-1)
+              : null
+          }
+          if (label === 'Payment') return order.paymentPaidAt
+          if (label === 'Shipped') return data?.courier?.shippedAt
+          if (label === 'Delivered / Received')
+            return data?.courier?.deliveredAt
+          if (label === 'Handoff') return data?.fulfillment.handoffConfirmedAt
+          if (label === 'Protection' || label === 'Completed')
+            return data?.fulfillment.protectionCompletedAt
+          if (label === 'Confirm exchange') {
+            const exchange = data?.fulfillment.externalExchange
+            return exchange?.status === 'confirmed' &&
+              exchange.buyerConfirmedAt &&
+              exchange.sellerConfirmedAt
+              ? [exchange.buyerConfirmedAt, exchange.sellerConfirmedAt]
+                  .sort((a, b) => Date.parse(a) - Date.parse(b))
+                  .at(-1)
+              : null
+          }
+          return null
+        })}
+      />
       <motion.div
         className={pageStyles.stageContent}
         layout={true}

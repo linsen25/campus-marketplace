@@ -1,3 +1,4 @@
+const { readTestPictureJpeg } = require('../scripts/lib/test-pictures.cjs')
 /* eslint-disable no-inner-declarations -- Workflow helpers share the isolated staging fixture session. */
 /* global document, Navigator, innerWidth, CompositionEvent, KeyboardEvent, getComputedStyle */
 // Opt-in real HTTP + GoTrue + PostgreSQL verification on the pinned hosted staging.
@@ -379,7 +380,7 @@ async function main() {
       await form.locator('input[type=file]').setInputFiles({
         name: `phase1d-${n}.jpg`,
         mimeType: 'image/jpeg',
-        buffer: fs.readFileSync('public/demo/reading-chair.jpg'),
+        buffer: readTestPictureJpeg('chair'),
       })
       const published = a.page.waitForResponse(
         (response) =>
@@ -803,7 +804,7 @@ async function main() {
       await panel.locator('input[type=file]').setInputFiles({
         name: 'not-uploaded.jpg',
         mimeType: 'image/jpeg',
-        buffer: fs.readFileSync('public/demo/reading-chair.jpg'),
+        buffer: readTestPictureJpeg('chair'),
       })
       assert(
         await panel

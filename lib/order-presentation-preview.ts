@@ -9,9 +9,9 @@ export function formatOrderCountdown(
   const seconds = Math.max(0, Math.ceil((expiresAt - now) / 1000))
   const part = (value: number) => String(value).padStart(2, '0')
   return hours
-    ? `${part(Math.floor(seconds / 3600))}:${part(
+    ? `${Math.floor(seconds / 3600)}h ${part(
         Math.floor(seconds / 60) % 60
-      )}:${part(seconds % 60)}`
+      )}m ${part(seconds % 60)}s`
     : `${part(Math.floor(seconds / 60))}:${part(seconds % 60)}`
 }
 /** Shared objective order, role-specific purpose. No business transitions or payment assertions. */

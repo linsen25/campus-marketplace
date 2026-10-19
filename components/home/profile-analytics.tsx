@@ -186,7 +186,7 @@ export function ProfileAnalytics({ replayToken, replayHistory }: ReplayProps) {
             data-trend-points={series.points.length}
           >
             <ChartContainer
-              config={{ [metric]: { label: metricLabel, color: '#b88cfa' } }}
+              config={{ [metric]: { label: metricLabel, color: '#7C3AED' } }}
             >
               <AreaChart
                 key={animation.key}
@@ -196,8 +196,8 @@ export function ProfileAnalytics({ replayToken, replayHistory }: ReplayProps) {
               >
                 <defs>
                   <linearGradient id={gradient} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#b88cfa" stopOpacity={0.6} />
-                    <stop offset="95%" stopColor="#b88cfa" stopOpacity={0.03} />
+                    <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.6} />
+                    <stop offset="95%" stopColor="#7C3AED" stopOpacity={0.03} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -219,7 +219,7 @@ export function ProfileAnalytics({ replayToken, replayHistory }: ReplayProps) {
                 <Area
                   type="monotone"
                   dataKey={metric}
-                  stroke="#b88cfa"
+                  stroke="#7C3AED"
                   strokeWidth={2}
                   fill={`url(#${gradient})`}
                   isAnimationActive={animation.active}
@@ -324,7 +324,7 @@ function MarketplaceTrends({ replayToken, replayHistory }: ReplayProps) {
         ) : (
           <ChartContainer
             className={`${styles.categoryChart} ${reveal}`}
-            config={{ count: { label: 'Active listings', color: '#a575de' } }}
+            config={{ count: { label: 'Active listings', color: '#7C3AED' } }}
           >
             <BarChart
               key={animation.key}

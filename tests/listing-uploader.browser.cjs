@@ -1,3 +1,4 @@
+const { readTestPictureJpeg } = require('../scripts/lib/test-pictures.cjs')
 /* global document, window, getComputedStyle, DataTransfer, File */
 /* eslint-disable no-inner-declarations -- Each viewport has isolated fixtures and browser helpers. */
 const assert = require('node:assert/strict')
@@ -151,7 +152,7 @@ fs.mkdirSync(output, { recursive: true })
       const photo = (name) => ({
         name,
         mimeType: 'image/jpeg',
-        buffer: fs.readFileSync('public/demo/reading-chair.jpg'),
+        buffer: readTestPictureJpeg('chair'),
       })
       async function chooser(target, keyboard = false) {
         if (keyboard) await target.focus()

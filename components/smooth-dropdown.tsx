@@ -12,8 +12,8 @@ export type SmoothMenuItem = {
   id: string
   label: string
   icon: ReactNode
+  badge?: ReactNode
   children?: Array<{ id: string; label: string; badge?: ReactNode }>
-  selectOnExpand?: boolean
 }
 const easeOutQuint: [number, number, number, number] = [0.23, 1, 0.32, 1]
 
@@ -205,6 +205,7 @@ export default function MenuInteraction({
                     <button
                       type="button"
                       className={styles.item}
+                      aria-label={item.label}
                       aria-expanded={hasChildren ? isExpanded : undefined}
                       aria-current={
                         isActive && !hasChildren ? 'page' : undefined
@@ -216,8 +217,6 @@ export default function MenuInteraction({
                       onBlur={() => setHoveredItem(null)}
                       onClick={() => {
                         if (hasChildren) {
-                          if (item.selectOnExpand && !isExpanded)
-                            onSelect(item.id)
                           setExpandedParent((current) =>
                             current === item.id ? null : item.id
                           )
@@ -252,6 +251,9 @@ export default function MenuInteraction({
                       )}
                       <span className={styles.icon}>{item.icon}</span>
                       <span className={styles.label}>{item.label}</span>
+                      {item.badge && (
+                        <span className={styles.childBadge}>{item.badge}</span>
+                      )}
                       {hasChildren && (
                         <motion.span
                           className={styles.parentArrow}

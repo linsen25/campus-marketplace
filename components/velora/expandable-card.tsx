@@ -24,6 +24,8 @@ interface ExpandableCardProps {
   expandedMedia?: ReactNode
   topAction?: ReactNode
   primaryAction?: ReactNode
+  /** Optional footer close presentation; local collapse authority stays here. */
+  renderCloseAction?: (close: () => void) => ReactNode
   className?: string
   overlayClassName?: string
   overlayStyle?: CSSProperties
@@ -35,6 +37,24 @@ interface ExpandableCardProps {
   collapsedContent?: ReactNode
   expandedEyebrow?: ReactNode
   triggerLabel?: string
+  /** Opt-in visual prototype seam; omitted by real Marketplace cards. */
+  visualRadius?: number
+}
+
+const prototypeMediaClip = (radius?: number): CSSProperties =>
+  radius === undefined ? {} : { borderRadius: radius, overflow: 'hidden' }
+
+// Keep the optional footer presentation separate from the card's motion state.
+function renderCloseControl(
+  close: () => void,
+  renderAction?: (close: () => void) => ReactNode
+) {
+  if (renderAction) return renderAction(close)
+  return (
+    <button type="button" className={styles.raisedButtonDanger} onClick={close}>
+      <span className={styles.raisedButtonDangerSurface}>Close</span>
+    </button>
+  )
 }
 
 /** The actual expanded shell in a builder: no portal, mutations, or shared IDs. */
@@ -162,6 +182,7 @@ export function ExpandableCard({
   expandedMedia = media,
   topAction,
   primaryAction,
+  renderCloseAction,
   className,
   overlayClassName,
   overlayStyle,
@@ -169,6 +190,7 @@ export function ExpandableCard({
   onIntentionalOpen,
   openOnMount = false,
   interactiveMedia = false,
+  visualRadius,
   collapsedContent = title,
   expandedEyebrow = title,
   triggerLabel = `Open example listing: ${expandedTitle}, ${title}`,
@@ -359,7 +381,10 @@ export function ExpandableCard({
         aria-label={triggerLabel}
         data-slot="expandable-card"
         data-source-hidden={!sourceVisible ? 'true' : undefined}
-        style={{ visibility: !sourceVisible ? 'hidden' : undefined }}
+        style={{
+          visibility: !sourceVisible ? 'hidden' : undefined,
+          borderRadius: visualRadius,
+        }}
         className={cn(styles.trigger, className)}
         onKeyDown={(event) => {
           if (
@@ -389,14 +414,23 @@ export function ExpandableCard({
         }}
       >
         {media && (
-          <span ref={sourceMediaRef} className={styles.media}>
+          <span
+            ref={sourceMediaRef}
+            className={styles.media}
+            style={{ borderRadius: visualRadius }}
+          >
             <motion.span
               layoutId={phase === 'returning' ? undefined : `media-${id}`}
               // The source is always static. Rejoining the shared ID after the
               // handoff must not replay the expanded projection on this image.
               transformTemplate={() => 'none'}
               transition={spring}
-              style={{ display: 'block', width: '100%', height: '100%' }}
+              style={{
+                display: 'block',
+                width: '100%',
+                height: '100%',
+                ...prototypeMediaClip(visualRadius),
+              }}
             >
               {media}
             </motion.span>
@@ -423,6 +457,7 @@ export function ExpandableCard({
                   position: 'fixed',
                   zIndex: 101,
                   pointerEvents: 'none',
+                  borderRadius: visualRadius,
                   left: returnRect.left,
                   top: returnRect.top,
                   width: returnRect.width,
@@ -470,6 +505,7 @@ export function ExpandableCard({
                     aria-labelledby={`title-${id}`}
                     tabIndex={-1}
                     className={styles.dialog}
+                    style={{ borderRadius: visualRadius }}
                   >
                     <ExpandableCardScrollArea settled={settled}>
                       {media && (
@@ -479,6 +515,7 @@ export function ExpandableCard({
                             phase === 'returning' ? undefined : `media-${id}`
                           }
                           style={{
+                            borderRadius: visualRadius,
                             visibility:
                               phase === 'returning' ? 'hidden' : undefined,
                           }}
@@ -528,15 +565,7 @@ export function ExpandableCard({
                       closing={phase === 'returning'}
                       reducedMotion={reducedMotion}
                     >
-                      <button
-                        type="button"
-                        className={styles.raisedButtonDanger}
-                        onClick={close}
-                      >
-                        <span className={styles.raisedButtonDangerSurface}>
-                          Close
-                        </span>
-                      </button>
+                      {renderCloseControl(close, renderCloseAction)}
                       {primaryAction}
                     </ExpandedContentFade>
                   </motion.div>

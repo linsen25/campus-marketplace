@@ -1,10 +1,10 @@
 import styles from './shop-pro-badge.module.css'
 
 /** Fixed hanging Label silhouette, never platform emoji or a Lucide Tag. */
-export function ShopProBadge() {
+export function ShopProBadge({ tier = 'pro' }: { tier?: 'plus' | 'pro' }) {
   return (
     <span className={styles.badge} data-shop-pro-badge="true">
-      PRO
+      {tier === 'plus' ? 'PLUS+' : 'PRO'}
       <span className={styles.chip} aria-hidden="true">
         <svg
           viewBox="0 0 128 128"

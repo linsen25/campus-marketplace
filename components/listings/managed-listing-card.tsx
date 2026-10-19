@@ -2,19 +2,30 @@ import type { Listing } from '@/types/listing'
 
 import styles from './listing-workspace.module.css'
 import { PublishedListingCard } from './published-listing-card'
+import { ResaleManagementCard } from './resale-management-card'
 
 /** Existing owner presentation only. Parent retains state, API and confirmations. */
 export function ManagedListingCard({
   listing,
+  resale = false,
   onEdit,
   onMarkSold,
   onDelete,
 }: {
   listing: Listing
+  resale?: boolean
   onEdit: () => void
   onMarkSold: () => void
   onDelete: () => void
 }) {
+  if (resale)
+    return (
+      <ResaleManagementCard
+        listing={listing}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
+    )
   return (
     <article aria-label={listing.title}>
       <PublishedListingCard listing={listing} owner={true} />

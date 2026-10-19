@@ -23,11 +23,13 @@ export default function MarketFilter({
   onCancel,
   onConfirm,
   includeCondition = false,
+  overlaySelects = false,
 }: {
   applied: MarketFilterValues
   onCancel: () => void
   onConfirm: (values: MarketFilterValues) => void
   includeCondition?: boolean
+  overlaySelects?: boolean
 }) {
   const [draft, setDraft] = useState(applied)
   return (
@@ -41,6 +43,7 @@ export default function MarketFilter({
       <div className={styles.field}>
         <span>Category</span>
         <GlideSelect
+          overlay={overlaySelects}
           ariaLabel="Category"
           size="lg"
           surfaceColor="#2a2134"
@@ -59,6 +62,7 @@ export default function MarketFilter({
         <div className={styles.field}>
           <span>Subcategory</span>
           <GlideSelect
+            overlay={overlaySelects}
             key={draft.category}
             ariaLabel="Subcategory"
             size="lg"
@@ -77,6 +81,7 @@ export default function MarketFilter({
         <div className={styles.field}>
           <span>Condition</span>
           <GlideSelect
+            overlay={overlaySelects}
             ariaLabel="Condition"
             size="lg"
             surfaceColor="#2a2134"

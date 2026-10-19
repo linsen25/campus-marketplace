@@ -7,6 +7,7 @@ const { spawn, spawnSync } = require('node:child_process')
 const assert = require('node:assert/strict')
 const { createClient } = require('@supabase/supabase-js')
 const sharp = require('sharp')
+const { TEST_PICTURES } = require('./lib/test-pictures.cjs')
 const ref = 'pcaqxezdfxofysghssyo'
 const project = 'western-marketplace-staging'
 const url = `https://${ref}.supabase.co`
@@ -71,6 +72,16 @@ const catalog = [
     '#d9d4eb',
   ],
 ]
+// Retain legacy catalog text for exact fixture-description identity lookup.
+// New fixture titles must match the approved canonical photographs.
+const displayTitles = {
+  macbook: 'Laptop Workspace',
+  nike: 'Canvas Sneakers',
+  lamp: 'Desk Lamp',
+  controller: 'Game Controller',
+  textbook: 'Books Collection',
+  monitor: 'Desktop Monitor',
+}
 const q = (value) => "'" + String(value).replaceAll("'", "''") + "'"
 const uuid = (value) => /^[0-9a-f-]{36}$/i.test(value)
 function nonce(key) {
@@ -255,26 +266,20 @@ async function users(admin) {
   }
   return result
 }
-async function image(item, variant = 0) {
-  const [key, , title, , , , color] = item
-  const shapes = {
-    macbook:
-      '<rect x="200" y="125" width="400" height="260" rx="16" fill="#485269"/><rect x="220" y="145" width="360" height="215" rx="5" fill="#aabed8"/><path d="M155 390h490l-35 40H190z" fill="#8391a7"/>',
-    nike: '<path d="M180 320l90-90 90 35 65 58 135 25q65 30 50 65H175q-35-30 5-93z" fill="#f8f7f2" stroke="#475640" stroke-width="12"/><path d="M320 338q65 35 155-30l-125 75q-65 20-30-45z" fill="#344334"/>',
-    lamp: '<path d="M320 210l160-85 110 110-185 80z" fill="#495450"/><path d="M430 290l-60 120" stroke="#495450" stroke-width="18"/><ellipse cx="365" cy="425" rx="130" ry="25" fill="#495450"/>',
-    controller:
-      '<path d="M245 235q155-65 310 0l65 150q-15 70-80 20l-40-50H300l-40 50q-65 50-80-20z" fill="#fafafa" stroke="#555e71" stroke-width="12"/><path d="M260 260v65m-32-32h64" stroke="#555e71" stroke-width="15"/><circle cx="540" cy="280" r="15" fill="#8f90bb"/><circle cx="500" cy="320" r="15" fill="#8f90bb"/>',
-    textbook:
-      '<rect x="255" y="120" width="290" height="330" rx="12" fill="#54776b"/><rect x="255" y="120" width="28" height="330" fill="#365b50"/><text x="310" y="230" fill="white" font-size="35">CALCULUS</text><text x="310" y="290" fill="#bce0cc" font-size="55">f(x)</text>',
-    monitor:
-      '<rect x="190" y="130" width="420" height="265" rx="14" fill="#41495e"/><rect x="207" y="147" width="386" height="225" fill="#9eb0ce"/><path d="M400 395v45m-90 10h180" stroke="#41495e" stroke-width="18"/>',
+async function image(item) {
+  const photos = {
+    macbook: TEST_PICTURES.laptop,
+    nike: TEST_PICTURES.sneakers,
+    lamp: TEST_PICTURES.deskLamp,
+    controller: TEST_PICTURES.controller,
+    textbook: TEST_PICTURES.textbook,
+    monitor: TEST_PICTURES.monitor,
   }
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><rect width="800" height="600" fill="${color}"/><ellipse cx="400" cy="450" rx="250" ry="35" fill="#000" opacity=".08"/><g transform="translate(${
-    variant * 8
-  } 0)">${
-    shapes[key]
-  }</g><text x="40" y="60" fill="#384052" font-family="sans-serif" font-size="26">${title}</text><text x="40" y="565" fill="#566075" font-family="sans-serif" font-size="17">STAGING DEMO · Synthetic illustration · Not for sale</text></svg>`
-  return sharp(Buffer.from(svg)).png().toBuffer()
+  assert(photos[item[0]], 'Unknown demo catalog image')
+  // Existing upload API expects PNG bytes; retain that contract and photo identity.
+  return sharp(path.resolve('public', '.' + photos[item[0]]))
+    .png()
+    .toBuffer()
 }
 async function serve(keys, port = 0) {
   // Same app/API implementation, isolated dev output; never reads production keys.
@@ -449,6 +454,8 @@ async function seed(admin, keys, existing, state, credentials) {
     console.log('Creating/reusing six demo listings and their real images.')
     for (const item of catalog) {
       const [key, owner, title, price, category, subcategory] = item
+      const displayTitle = displayTitles[key]
+      assert(displayTitle, 'Missing approved fixture title')
       const description = `[${marker}:${key}] Synthetic staging demonstration only. ${title} in good condition; pickup near campus. Not a real offer.`
       let rows = query(
         `begin read only; select id,published_at from public.listings where seller_id=${q(
@@ -459,7 +466,7 @@ async function seed(admin, keys, existing, state, credentials) {
       let listing = rows[0]
       if (!listing)
         listing = await api[owner]('/api/listings', {
-          title: `[DEMO] ${title}`,
+          title: displayTitle,
           description,
           price,
           currency: 'CAD',

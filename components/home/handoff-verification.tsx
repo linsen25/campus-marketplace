@@ -64,7 +64,7 @@ export function HandoffVerification({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: reduced ? 0 : 0.14 }}
+            transition={{ duration: reduced ? 0 : 0.18 }}
           >
             {mode === 0 ? (
               <div className={styles.scanIntro}>

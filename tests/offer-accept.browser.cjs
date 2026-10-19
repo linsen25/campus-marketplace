@@ -1,3 +1,4 @@
+const { readTestPictureJpeg } = require('../scripts/lib/test-pictures.cjs')
 /* global fetch */
 // Isolated real hosted staging C1 qualification. No canonical accounts/transactions.
 const fs = require('fs'),
@@ -166,7 +167,7 @@ async function rpc(name, args) {
   return r.data
 }
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex')
-const A = fs.readFileSync('public/demo/reading-chair.jpg'),
+const A = readTestPictureJpeg('chair'),
   B = fs.readFileSync('public/static/icons/icon-maskable-512x512.png')
 async function download(b, p, client = admin) {
   const r = await client.storage.from(b).download(p)

@@ -10,7 +10,7 @@ import {
   useAnimationControls,
 } from 'motion/react'
 import type { CSSProperties, ReactNode } from 'react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { sortPanelFade } from '@/lib/sort-panel-fade'
@@ -61,6 +61,10 @@ export default function FilterInteraction({
   appearance = 'market',
   disabled = false,
   portalContainer,
+  triggerContent,
+  triggerClassName,
+  panelClassName,
+  topLayer = false,
 }: {
   label: string
   mobileLabel?: string
@@ -74,6 +78,10 @@ export default function FilterInteraction({
   appearance?: 'market' | 'notification' | 'select'
   disabled?: boolean
   portalContainer?: HTMLElement | null
+  triggerContent?: ReactNode
+  triggerClassName?: string
+  panelClassName?: string
+  topLayer?: boolean
 }) {
   const anchor = useRef<HTMLDivElement>(null)
   const sortStyle = label === 'Sort' || appearance !== 'market'
@@ -97,6 +105,16 @@ export default function FilterInteraction({
     panelHeight: 340,
     above: false,
   })
+  useLayoutEffect(() => {
+    // Local DOM typing for the native Popover API; keep the project's older DOM types unchanged.
+    const root = activeRoot.current as
+      | (HTMLDivElement & { showPopover: () => void })
+      | null
+    if (isOpen && topLayer && root) {
+      root.setAttribute('popover', 'manual')
+      root.showPopover()
+    }
+  }, [isOpen, topLayer])
   const id = useId()
   const reduced = useReducedMotion()
   const optionControls = useAnimationControls()
@@ -223,7 +241,7 @@ export default function FilterInteraction({
       ref={placeholder ? normalTrigger : activeTrigger}
       type="button"
       disabled={disabled}
-      className={styles.trigger}
+      className={[styles.trigger, triggerClassName].filter(Boolean).join(' ')}
       aria-label={label}
       data-mobile-label={mobileLabel ? true : undefined}
       aria-expanded={isOpen && !isClosing}
@@ -250,19 +268,27 @@ export default function FilterInteraction({
         }
       }}
     >
-      {appearance === 'market' &&
-        (label === 'Sort' ? (
-          <ArrowDownWideNarrow size={22} />
-        ) : (
-          <Filter size={22} />
-        ))}
-      <span className={styles.selection}>
-        {sortStyle
-          ? options.find((option) => option.value === value)?.label || label
-          : label}
-      </span>
-      {appearance !== 'market' && <ChevronDown size={16} aria-hidden={true} />}
-      {mobileLabel && <span className={styles.mobileLabel}>{mobileLabel}</span>}
+      {triggerContent ?? (
+        <>
+          {appearance === 'market' &&
+            (label === 'Sort' ? (
+              <ArrowDownWideNarrow size={22} />
+            ) : (
+              <Filter size={22} />
+            ))}
+          <span className={styles.selection}>
+            {sortStyle
+              ? options.find((option) => option.value === value)?.label || label
+              : label}
+          </span>
+          {appearance !== 'market' && (
+            <ChevronDown size={16} aria-hidden={true} />
+          )}
+          {mobileLabel && (
+            <span className={styles.mobileLabel}>{mobileLabel}</span>
+          )}
+        </>
+      )}
     </button>
   )
   return (
@@ -304,7 +330,7 @@ export default function FilterInteraction({
                   aria-label={`${label} options`}
                   className={`${styles.panel} ${
                     sortStyle ? styles.sortPanel : ''
-                  }`}
+                  } ${panelClassName || ''}`}
                   initial={{ opacity: 0 }}
                   animate={{
                     opacity: isClosing ? 0 : 1,

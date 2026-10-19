@@ -8,6 +8,9 @@
     "prettier"
   ],
   "plugins": ["unused-imports"],
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
   "globals": { "React": true, "JSX": true },
   "rules": {
     "no-undef": "off",
@@ -22,12 +25,22 @@
     ],
     "@typescript-eslint/explicit-function-return-type": "off",
     "spaced-comment": ["error", "always", { "markers": ["/"] }],
+    "prettier/prettier": ["error", { "endOfLine": "auto" }],
     "no-param-reassign": [
       "error",
       {
         "props": true,
         "ignorePropertyModificationsFor": ["accu"]
       }
-    ]
-  }
+    ],
+    "@typescript-eslint/naming-convention": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.js", "**/*.jsx"],
+      "rules": {
+        "@typescript-eslint/naming-convention": "off"
+      }
+    }
+  ]
 }

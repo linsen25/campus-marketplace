@@ -1,4 +1,4 @@
-import { Check, Copy } from 'lucide-react'
+import { CalendarDays, Check, Copy, MapPin, Tag } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { ListingMedia } from '@/components/listings/listing-media'
@@ -309,7 +309,8 @@ function ProtectionDetails({ flow, offset }: StageProps) {
         <OrderCountdown
           expiresAt={Date.parse(data.fulfillment.protectionExpiresAt)}
           serverOffsetMs={offset}
-          suffix="Protection remaining"
+          protection={true}
+          suffix="remaining"
         />
       )}
       {data?.fulfillment.caseState && (
@@ -381,13 +382,22 @@ function FulfillmentDetails({ order, role, flow, terms }: StageProps) {
     <>
       {' '}
       <dl className={styles.amounts}>
-        <dt>Agreed item price</dt>
+        <dt>
+          <Tag size={16} aria-hidden="true" />
+          Agreed item price
+        </dt>
         <dd>{offerAmount(terms.itemAmountCents)}</dd>
         {terms.fulfillment === 'on_campus' && (
           <>
-            <dt>Meeting location</dt>
+            <dt>
+              <MapPin size={16} aria-hidden="true" />
+              Meeting location
+            </dt>
             <dd>{terms.meetupLocation}</dd>
-            <dt>Date / time</dt>
+            <dt>
+              <CalendarDays size={16} aria-hidden="true" />
+              Date / time
+            </dt>
             <dd>
               {new Date(terms.scheduledAt).toLocaleString('en-CA', {
                 timeZone: 'America/Toronto',

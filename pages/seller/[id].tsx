@@ -1,11 +1,11 @@
 import type { GetServerSideProps } from 'next'
 import Head from 'next/head'
 
+import { PublishedListingCard } from '@/components/listings/published-listing-card'
 import { UserAvatar } from '@/components/ui/user-avatar'
 import type { PublicSeller } from '@/lib/public-seller'
 import { publicSellerPath } from '@/lib/public-seller'
 import { getPublicSeller } from '@/lib/server/public-seller'
-import { formatListingPrice } from '@/utils/format-listing-price'
 import { Link } from '@ui/link/link'
 
 import styles from './seller.module.css'
@@ -48,24 +48,7 @@ export default function SellerPage({ seller }: Props) {
                 <ul className={styles.grid}>
                   {seller.listings.map((listing) => (
                     <li key={listing.id}>
-                      <Link
-                        href={`/listings/${encodeURIComponent(listing.id)}`}
-                        className={styles.listing}
-                      >
-                        {listing.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            className={styles.photo}
-                            src={listing.imageUrl}
-                            alt={listing.title}
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className={styles.photo}>No photo available</div>
-                        )}
-                        <h3>{listing.title}</h3>
-                        <p>{formatListingPrice(listing.priceCents)}</p>
-                      </Link>
+                      <PublishedListingCard listing={listing} />
                     </li>
                   ))}
                 </ul>

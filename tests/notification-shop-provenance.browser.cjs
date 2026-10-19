@@ -65,13 +65,53 @@ window.setup=()=>{window.writes=0;window.posts=[];window.feed={unreadCount:54,no
           )
         )
         await feed
-          .getByRole('button', { name: 'View New message', exact: true })
+          .getByRole('button', {
+            name: 'Open notification: New message',
+            exact: true,
+          })
           .click()
         const detail = p.getByRole('dialog')
         await detail
           .getByText('Vintage Loop \u00b7 Shop', { exact: true })
           .waitFor()
         assert.equal(await p.evaluate(() => window.writes), 1)
+        await p.waitForTimeout(reducedMotion === 'reduce' ? 30 : 220)
+        const box = await detail.boundingBox()
+        assert(Math.abs(box.x + box.width / 2 - width / 2) < 2)
+        assert(Math.abs(box.y + box.height / 2 - 450) < 2)
+        await detail.evaluate((node) => {
+          const body = node.querySelector('h3').parentElement.querySelector('p')
+          body.textContent = Array(100)
+            .fill('Long notification content for layout stress testing.')
+            .join(' ')
+        })
+        const longBox = await detail.boundingBox()
+        assert(longBox.height <= 766 && longBox.y >= 0)
+        assert(Math.abs(longBox.y + longBox.height / 2 - 450) < 2)
+        const content = detail.locator('h3').locator('..')
+        assert(
+          await content.evaluate(
+            (node) => node.scrollHeight > node.clientHeight
+          )
+        )
+        await content.evaluate((node) => (node.scrollTop = node.scrollHeight))
+        const closeBox = await detail
+          .getByRole('button', { name: 'Close', exact: true })
+          .boundingBox()
+        assert(
+          closeBox.y >= longBox.y &&
+            closeBox.y + closeBox.height <= longBox.y + longBox.height
+        )
+        await detail.getByRole('button', { name: 'Close', exact: true }).focus()
+        await p.keyboard.press('Tab')
+        await p.keyboard.press('Tab')
+        assert(
+          await detail.evaluate((node) =>
+            node.contains(document.activeElement)
+          ),
+          'focus remains trapped'
+        )
+
         await detail.getByRole('button', { name: 'Close', exact: true }).click()
         await detail.waitFor({ state: 'hidden' })
         await p
@@ -97,10 +137,14 @@ window.setup=()=>{window.writes=0;window.posts=[];window.feed={unreadCount:54,no
           .waitFor()
         await feed
           .getByRole('button', {
-            name: 'Open destination: Payment confirmed',
+            name: 'Open notification: Payment confirmed',
             exact: true,
           })
           .first()
+          .click()
+        await p
+          .getByRole('dialog')
+          .getByRole('button', { name: 'Open in app', exact: true })
           .click()
         await p.waitForFunction(() =>
           window.actions.at(-1)?.includes('section=orders')

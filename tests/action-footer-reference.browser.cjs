@@ -1,4 +1,5 @@
-﻿/* global getComputedStyle, Navigator */
+const { TEST_PICTURES } = require('../scripts/lib/test-pictures.cjs')
+/* global getComputedStyle, Navigator */
 const assert = require('node:assert/strict')
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
 ;(async () => {
@@ -26,7 +27,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
         condition: 'good',
         pickupArea: 'On campus',
         description: 'Works well.',
-        photoUrls: ['/demo/reading-chair.jpg'],
+        photoUrls: [TEST_PICTURES.camera],
         seller: { id: 'owner', displayName: 'Chris' },
         status: 'available',
         publishedAt: '2026-10-05',

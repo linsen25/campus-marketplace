@@ -1,3 +1,4 @@
+const { readTestPictureJpeg } = require('../scripts/lib/test-pictures.cjs')
 /* global fetch, document, innerHeight, matchMedia, window */
 // Real independent staging transactions; no canonical fixture or application changes.
 const fs = require('node:fs')
@@ -533,7 +534,7 @@ async function main() {
     await attachment.locator('input[type=file]').setInputFiles({
       name: 'synthetic-chair.jpg',
       mimeType: 'image/jpeg',
-      buffer: fs.readFileSync('public/demo/reading-chair.jpg'),
+      buffer: readTestPictureJpeg('chair'),
     })
     const finalized = bp.waitForResponse((r) =>
       /\/api\/messages\/images\/[^/]+\/finalize$/.test(

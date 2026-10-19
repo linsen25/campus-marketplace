@@ -20,7 +20,7 @@ fs.writeFileSync(
 import 'tailwindcss/src/css/preflight.css';import '@/components/animata/button/shining-button.css';import React from 'react';import {createRoot} from 'react-dom/client';import {LazyMotion,domAnimation} from 'framer-motion';import {ProfileOverview} from '@/components/home/profile-overview';import {SettingsLogout} from '@/components/home/settings-logout';
 window.actions=[];window.avatarSaves=0;window.usernameSaves=0;window.logoutCalls=0;window.reveals=0;window.capabilities={paymentMethod:{status:'unset'},payoutAccount:{status:'unset'}};
 window.fixtureRequest=async(url,method,input)=>{if(url==='/api/profile/account')return {username:'Fixture',email:'fixture@uwo.ca',emailVerified:true,createdAt:'2026-10-01',nextUsernameChangeAt:null};if(url.startsWith('/api/auth/username-availability'))return {available:true};if(url==='/api/profile/username'){window.usernameSaves++;return {username:input.username,next_change_allowed_at:null}}throw Error('Unexpected request '+url)};
-window.process={env:{}};document.body.style.background='#160f1d';document.body.style.color='white';createRoot(document.getElementById('root')).render(<LazyMotion features={domAnimation}><ProfileOverview settings onAvatarSave={()=>window.avatarSaves++} sessionAction={<SettingsLogout onConfirm={async()=>{window.logoutCalls++;if(window.logoutFails){window.logoutFails=false;throw Error('Controlled sign-out failure')}await new Promise(r=>window.finishLogout=r);return ()=>window.reveals++}}/>}/></LazyMotion>);
+window.process={env:{}};document.body.style.background='#160f1d';document.body.style.color='white';createRoot(document.getElementById('root')).render(<LazyMotion features={domAnimation}><ProfileOverview settings shopPreview={{sellerProfileId:"fixture",username:"Fixture",shopName:"Fixture Shop",category:"Home & Living",description:"Fixture shop"}} onShopSave={async()=>{}} onAvatarSave={()=>window.avatarSaves++} sessionAction={<SettingsLogout onConfirm={async()=>{window.logoutCalls++;if(window.logoutFails){window.logoutFails=false;throw Error('Controlled sign-out failure')}await new Promise(r=>window.finishLogout=r);return ()=>window.reveals++}}/>}/></LazyMotion>);
 `
 )
 async function main() {
@@ -70,6 +70,14 @@ async function main() {
           name + ' uses payment setup component'
         )
         assert.equal(await button.locator('.shining-button__arrow').count(), 0)
+        const expectedColor =
+          name === 'Log out' ? 'rgb(119, 45, 64)' : 'rgb(124, 58, 237)'
+        await p.waitForFunction(
+          ({ node, color }) =>
+            getComputedStyle(node.querySelector('[class*="surface"]'))
+              .backgroundColor === color,
+          { node: await button.elementHandle(), color: expectedColor }
+        )
         const style = await button.evaluate((n) => {
           const s = getComputedStyle(n)
           return {
@@ -85,9 +93,24 @@ async function main() {
           font: '14px',
           radius: '999px',
           surface:
-            name === 'Log out' ? 'rgb(119, 45, 64)' : 'rgb(119, 84, 151)',
+            name === 'Log out' ? 'rgb(119, 45, 64)' : 'rgb(124, 58, 237)',
         })
         geometry.push(await button.boundingBox())
+      }
+      for (const name of [
+        'Change shop name',
+        'Change category',
+        'Change description',
+      ]) {
+        const action = p.getByRole('button', { name, exact: true })
+        assert.equal(
+          await action.evaluate(
+            (node) =>
+              getComputedStyle(node.querySelector('[class*="surface"]'))
+                .backgroundColor
+          ),
+          'rgb(124, 58, 237)'
+        )
       }
       const edge = geometry[0].x + geometry[0].width
       assert(

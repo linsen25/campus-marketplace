@@ -1,20 +1,25 @@
 import { Skeleton } from '@/components/ui/skeleton'
 
 import styles from './order-detail-preview.module.css'
+import listStyles from './order-list-presentation.module.css'
 import profile from './profile.module.css'
 /** Ready for real backend loading. Local in-memory previews never pretend to load. */
 export function OrderListSkeleton() {
   return (
-    <div className={styles.orderList} role="status" aria-label="Loading orders">
+    <div className={listStyles.list} role="status" aria-label="Loading orders">
       {[0, 1, 2, 3].map((id) => (
-        <article key={id} className={`${profile.panel} ${styles.orderCard}`}>
+        <article key={id} className={listStyles.card}>
+          <Skeleton className={listStyles.media} />
           <div style={{ display: 'grid', gap: 16, flex: 1 }}>
             <Skeleton style={{ height: 24, width: '70%' }} />
             <Skeleton style={{ height: 18, width: '40%' }} />
             <Skeleton style={{ height: 28, width: '60%' }} />
             <Skeleton style={{ height: 16, width: '80%' }} />
           </div>
-          <Skeleton style={{ height: 40, width: 120, maxWidth: '100%' }} />
+          <Skeleton
+            className={listStyles.desktopOpen}
+            style={{ height: 38, width: 120, maxWidth: '100%' }}
+          />
         </article>
       ))}
     </div>

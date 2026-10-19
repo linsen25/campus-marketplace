@@ -1,10 +1,9 @@
 import { motion } from 'motion/react'
 
-import { ShopCard } from '@/components/shops/shop-card'
-import { homepageShopDemo } from '@/lib/fixtures/homepage-shop-demo'
-
 import styles from './homepage-listing-demo.module.css'
 import { useHomeReducedMotion } from './use-home-reduced-motion'
+import demo from './welcome-demo-cards.module.css'
+import { WelcomeShopDemoCard } from './welcome-shop-demo-card'
 
 export function HomepageShopDemo() {
   const reduced = useHomeReducedMotion()
@@ -37,9 +36,9 @@ export function HomepageShopDemo() {
           sellers grow beyond everyday resale.
         </p>
       </motion.header>
-      <div className={styles.columns}>
+      <div className={`${styles.columns} ${demo.shopDemoRow}`}>
         <motion.div data-demo-enter="card" {...enter(0.12)}>
-          <ShopCard shop={homepageShopDemo} preview={true} />
+          <WelcomeShopDemoCard />
         </motion.div>
         <motion.div
           className={styles.videoColumn}
@@ -52,7 +51,14 @@ export function HomepageShopDemo() {
           >
             <p>Create Shop Demo</p>
           </div>
-          <p className={styles.note}>Tutorial video coming soon.</p>
+          <div className={demo.shopVideoInfo}>
+            <h3>Create your own storefront</h3>
+            <p>
+              See how to set up your Shop, organize listings, and bring
+              everything together in one place.
+            </p>
+            <p className={styles.note}>Tutorial video coming soon.</p>
+          </div>
         </motion.div>
       </div>
     </section>

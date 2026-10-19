@@ -1,4 +1,4 @@
-import { ArrowRight, ChevronRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { CardAction } from '@/components/listings/card-actions'
@@ -24,8 +24,8 @@ import type { Agreement, Offer, OfferTerms } from '@/types/offer'
 
 import workspace from '../listings/listing-workspace.module.css'
 
+import { OfferTimelineCard } from './offer-timeline-card'
 import styles from './offer-ui.module.css'
-import requestStyles from './order-request-preview.module.css'
 import { OrderScheduleField } from './order-schedule-field'
 import profile from './profile.module.css'
 
@@ -256,53 +256,19 @@ export function OfferCard({
     )
   return (
     <div>
-      <div
-        className={styles.timelineCard}
-        data-offer-own={own}
-        data-offer-id={offer.id}
-        data-offer-status={status}
+      <OfferTimelineCard
+        id={offer.id}
+        own={own}
+        direction={direction}
+        status={status}
+        positive={
+          ['Active', 'Accepted'].includes(offer.status) && !invalidAcceptedOrder
+        }
+        amountCents={offer.terms.itemAmountCents}
+        fields={fields}
+        counter={offer.mutationKind === 'counter'}
+        onOpen={() => setOpen(true)}
       >
-        <div className={`${requestStyles.collapsed} ${styles.offerButton}`}>
-          <button
-            type="button"
-            className={styles.offerBody}
-            aria-label={`Open ${direction} Offer: ${status}`}
-            onClick={() => setOpen(true)}
-          >
-            <span>
-              <small>
-                {direction} ·{' '}
-                {offer.mutationKind === 'counter' ? 'Counter Offer' : 'Offer'}
-              </small>
-              <strong>{offerAmount(offer.terms.itemAmountCents)}</strong>
-              {fields.length > 0 && (
-                <small>
-                  Changed: {fields.slice(0, 3).join(' · ')}
-                  {fields.length > 3 ? ` · +${fields.length - 3} more` : ''}
-                </small>
-              )}
-            </span>
-          </button>
-          <button
-            type="button"
-            className={styles.detailArrow}
-            data-withdraw-exempt={true}
-            aria-label={`View ${direction} Offer details`}
-            onClick={() => setOpen(true)}
-          >
-            <ChevronRight size={18} aria-hidden="true" />
-          </button>
-        </div>
-        <span
-          className={`${styles.offerStatus} ${
-            ['Active', 'Accepted'].includes(offer.status) &&
-            !invalidAcceptedOrder
-              ? ''
-              : styles.offerStatusClosed
-          }`}
-        >
-          {status}
-        </span>
         {open && (
           <FadingDialog
             className={`${styles.dialog} ${styles.detailDialog}`}
@@ -423,7 +389,7 @@ export function OfferCard({
             </ActionRow>
           </FadingDialog>
         )}
-      </div>
+      </OfferTimelineCard>
     </div>
   )
 }

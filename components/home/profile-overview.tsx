@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react'
 import actionStyles from '@/components/animata/button/action-button-sizing.module.css'
 import { CardAction } from '@/components/listings/card-actions'
 import { NotificationSettings } from '@/components/notifications/notification-settings'
-import { ShopProfile } from '@/components/shops/shop-profile'
 import { ShopSettings } from '@/components/shops/shop-settings'
 import { ActionRow } from '@/components/ui/action-row'
 import { useContentReveal } from '@/components/ui/content-reveal'
@@ -517,9 +516,6 @@ export function ProfileOverview({
           )}
         </AnimatePresence>
       </section>
-      {!settings && (
-        <ShopProfile shop={shopPreview} username={account?.username ?? null} />
-      )}
     </>
   )
 }

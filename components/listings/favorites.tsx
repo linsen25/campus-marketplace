@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useContentReveal } from '@/components/ui/content-reveal'
 import { ListingSkeletonGrid } from '@/components/ui/workspace-skeletons'
 import { getFavoriteListings } from '@/lib/favorites-api'
-import type { Listing } from '@/types/listing'
+import type { Listing, ListingChannel } from '@/types/listing'
 
 import { CardAction } from './card-actions'
 import { ContentStateError } from './content-state-error'
@@ -12,7 +12,7 @@ import styles from './listing-workspace.module.css'
 import { PublishedListingCard } from './published-listing-card'
 import { WorkspaceEmpty } from './workspace-empty'
 
-export function Favorites() {
+export function Favorites({ channel }: { channel?: ListingChannel }) {
   const [items, setItems] = useState<Listing[]>([])
   const [page, setPage] = useState(1)
   const [hasNext, setHasNext] = useState(false)
@@ -25,6 +25,7 @@ export function Favorites() {
     setError('')
     try {
       const result = await getFavoriteListings({
+        channel,
         sort: 'newest',
         page,
         pageSize: 20,
@@ -43,7 +44,7 @@ export function Favorites() {
     } finally {
       if (request === version.current) setLoading(false)
     }
-  }, [page])
+  }, [page, channel])
   useEffect(() => {
     setLoading(true)
     setItems([])
@@ -66,7 +67,11 @@ export function Favorites() {
   }, [load])
   return (
     <section
-      aria-label="Favorites"
+      aria-label={
+        channel
+          ? { shop: 'Shop Favorites', resale: 'Resale Favorites' }[channel]
+          : 'Favorites'
+      }
       className={`${styles.workspace} ${styles.favoritesWorkspace}`}
     >
       {loading && (

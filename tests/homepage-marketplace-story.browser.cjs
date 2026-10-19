@@ -1,4 +1,5 @@
-/* global window,document */
+const { TEST_PICTURES } = require('../scripts/lib/test-pictures.cjs')
+/* global window,document,getComputedStyle */
 const fs = require('node:fs'),
   path = require('node:path'),
   assert = require('node:assert/strict')
@@ -53,10 +54,10 @@ assert(sequence.every((x, i) => x >= 0 && (!i || x > sequence[i - 1])))
                 path: path.join(root, 'bundle.js'),
                 contentType: 'application/javascript',
               })
-            if (u.pathname === '/demo/reading-chair.jpg')
+            if (u.pathname === TEST_PICTURES.chair)
               return r.fulfill({
-                path: 'public/demo/reading-chair.jpg',
-                contentType: 'image/jpeg',
+                path: 'public' + TEST_PICTURES.chair,
+                contentType: 'image/webp',
               })
           }
           network++
@@ -83,8 +84,124 @@ assert(sequence.every((x, i) => x >= 0 && (!i || x > sequence[i - 1])))
           assert.equal(await panel.locator('[data-flow-preview]').count(), 1)
           assert.equal(
             await panel.locator('button,a,input').count(),
+            name === 'Find' ? 1 : name === 'Connect' ? 2 : 0,
+            'only local demo Favorite / no-op real Offer controls'
+          )
+          if (name === 'Find') {
+            const card = panel.locator('[data-listing-card-preview]')
+            await card.waitFor()
+            for (const text of [
+              'CA$45',
+              'Wooden accent chair',
+              'Good \u00b7 Home & Living',
+            ])
+              assert((await card.textContent()).includes(text))
+            assert.equal(
+              await card
+                .getByText('Resale \u00b7 Listing preview', { exact: true })
+                .count(),
+              0
+            )
+            const geometry = await card.evaluate((el) => {
+              const media = el.firstElementChild.firstElementChild,
+                r = media.getBoundingClientRect()
+              return {
+                width: r.width,
+                height: r.height,
+                radius: getComputedStyle(media).borderRadius,
+                fit: getComputedStyle(media.querySelector('img')).objectFit,
+                bg: getComputedStyle(el.firstElementChild).backgroundColor,
+              }
+            })
+            assert(
+              Math.abs(geometry.width - geometry.height) < 0.5,
+              'Find image square'
+            )
+            assert(
+              geometry.width <= 300,
+              'Find does not stretch across preview'
+            )
+            assert.equal(geometry.radius, '16px')
+            assert.equal(geometry.fit, 'cover')
+            assert.equal(geometry.bg, 'rgba(0, 0, 0, 0)')
+            const heart = card.getByRole('button', {
+              name: 'Add to favorites',
+              exact: true,
+            })
+            await heart.click()
+            assert.equal(
+              await card
+                .getByRole('button', {
+                  name: 'Remove from favorites',
+                  exact: true,
+                })
+                .getAttribute('aria-pressed'),
+              'true'
+            )
+            await p.waitForTimeout(650)
+            await card
+              .getByRole('button', {
+                name: 'Remove from favorites',
+                exact: true,
+              })
+              .focus()
+            await p.keyboard.press('Space')
+            assert.equal(
+              await card
+                .getByRole('button', { name: 'Add to favorites', exact: true })
+                .getAttribute('aria-pressed'),
+              'false'
+            )
+          }
+          if (name === 'Connect') {
+            const offer = panel.locator('[data-offer-id="welcome-offer"]')
+            assert.equal(await offer.getAttribute('data-offer-own'), 'true')
+            assert.equal(
+              await offer.getAttribute('data-offer-status'),
+              'Active'
+            )
+            assert((await offer.textContent()).includes('Buyer \u00b7 Offer'))
+            assert((await offer.textContent()).includes('CA$40'))
+            assert.equal(
+              await offer.getByText('Pending', { exact: true }).count(),
+              0
+            )
+            const visual = await offer.evaluate((el) => {
+              const body = el.firstElementChild,
+                status = el.querySelector(':scope > span'),
+                r = body.getBoundingClientRect(),
+                b = status.getBoundingClientRect()
+              const conversation = el.parentElement.parentElement
+              return {
+                radius: getComputedStyle(body).borderRadius,
+                bg: getComputedStyle(body).backgroundColor,
+                blur: getComputedStyle(body, '::before').filter,
+                statusBg: getComputedStyle(status).backgroundColor,
+                gap: r.top - b.bottom,
+                chatGap: getComputedStyle(conversation).gap,
+                buyer: getComputedStyle(
+                  conversation.children[1].querySelector('p')
+                ).backgroundColor,
+                seller: getComputedStyle(
+                  conversation.lastElementChild.querySelector('p')
+                ).backgroundColor,
+              }
+            })
+            assert.equal(visual.radius, '16px')
+            assert.equal(visual.bg, 'rgb(37, 99, 235)')
+            assert.equal(visual.blur, 'blur(18px)')
+            assert.equal(visual.statusBg, 'rgb(22, 101, 52)')
+            assert(Math.abs(visual.gap - 4) < 0.5)
+            assert.equal(visual.chatGap, '16px')
+            assert.equal(visual.buyer, 'rgb(0, 122, 255)')
+            assert.equal(visual.seller, 'rgb(119, 84, 151)')
+            for (const button of await offer.getByRole('button').all())
+              await button.click()
+          }
+          assert.equal(
+            await p.getByRole('dialog').count(),
             0,
-            'preview is static'
+            'demo never opens live Listing / Offer flow'
           )
           assert.equal(
             await tabs.nth(index).getAttribute('aria-selected'),

@@ -27,8 +27,8 @@ function query(table) {
       assert.equal(
         columns,
         table === 'profiles'
-          ? 'id,username'
-          : 'id,title,price_cents,listing_images(path,slot,ready)'
+          ? 'id,username,display_name'
+          : 'id,title,description,price_cents,currency,category,subcategory,condition,listing_channel,preferred_payment_mode,preferred_fulfillment,meeting_location,estimated_delivery_fee_cents,status,created_at,updated_at,published_at,listing_images(path,slot,ready)'
       )
       return q
     },
@@ -63,6 +63,7 @@ function query(table) {
             : {
                 id,
                 username: profileUsername,
+                display_name: 'Public Seller',
                 email: 'DO_NOT_PUBLISH_EMAIL',
                 legal_name: 'DO_NOT_PUBLISH_NAME',
               },
@@ -107,6 +108,15 @@ function load(file) {
             }
           },
         }
+      if (name === '@/components/listings/published-listing-card')
+        return {
+          PublishedListingCard: ({ listing }) =>
+            React.createElement(
+              'div',
+              { 'data-published-listing': listing.id },
+              listing.title
+            ),
+        }
       if (name === 'next/head')
         return {
           __esModule: true,
@@ -125,7 +135,10 @@ function load(file) {
         return load(fs.existsSync(f + '.ts') ? f + '.ts' : f + '.tsx')
       }
       if (name.startsWith('.')) {
-        const f = require('node:path').resolve(require('node:path').dirname(file), name)
+        const f = require('node:path').resolve(
+          require('node:path').dirname(file),
+          name
+        )
         return load(fs.existsSync(f + '.ts') ? f + '.ts' : f + '.tsx')
       }
       return require(name)
@@ -145,6 +158,18 @@ async function main() {
     seller_id: id,
     title: 'Public item ' + n,
     price_cents: 1200,
+    currency: 'CAD',
+    category: 'Electronics',
+    subcategory: 'Cameras',
+    condition: 'good',
+    description: 'Public description',
+    listing_channel: 'resale',
+    preferred_payment_mode: 'uu_pay',
+    preferred_fulfillment: 'ON_CAMPUS',
+    meeting_location: 'User meeting label',
+    estimated_delivery_fee_cents: 0,
+    created_at: '2026-10-16',
+    updated_at: '2026-10-16',
     status: 'available',
     published_at: '2026-10-16',
     listing_images: [
@@ -171,8 +196,20 @@ async function main() {
   assert.equal((await service.getPublicSeller(id)).username, 'demo_seller_a')
   profileUsername = 'SellerFixture'
   assert.equal(seller.listings.length, 1)
-  assert(seller.listings[0].imageUrl.endsWith('/ready'))
+  assert(seller.listings[0].photoUrls[0].endsWith('/ready'))
   assert.equal(seller.avatarUrl, null)
+  assert(
+    !Object.values(seller.listings[0]).includes(undefined),
+    'SSR-safe projection'
+  )
+  assert.equal(seller.listings[0].condition, 'good')
+  assert.equal(seller.listings[0].category, 'Electronics')
+  assert.equal(seller.listings[0].seller.displayName, 'Public Seller')
+  assert.deepEqual(seller.listings[0].meetingLocation, {
+    label: 'User meeting label',
+  })
+  assert(!JSON.stringify(seller).includes('DO_NOT_PUBLISH'))
+  assert(!('email' in seller.listings[0]))
   assert(!JSON.stringify(seller).includes('DO_NOT_PUBLISH'))
   const markup = renderToStaticMarkup(
     React.createElement(route.default, { seller })

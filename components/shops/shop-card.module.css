@@ -1,0 +1,21 @@
+/* Preserve the existing Shop CTA geometry while using StatefulButton layers. */
+.loadingAction.loadingAction {
+  --surface: #166534;
+  display: inline-grid;
+  height: 52px;
+  padding: 0 16px;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 600;
+}
+.loadingAction.loadingAction:hover {
+  --surface: #14532d;
+  background: transparent;
+}
+.label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}

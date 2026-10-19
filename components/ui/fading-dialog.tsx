@@ -19,10 +19,12 @@ export function FadingDialog({
   onCancel,
   onKeyDownCapture,
   focusAtTop = false,
+  dismissOnBackdrop = true,
   ...props
 }: DialogHTMLAttributes<HTMLDialogElement> & {
   onRequestClose?: () => void
   focusAtTop?: boolean
+  dismissOnBackdrop?: boolean
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const [present, remove] = usePresence()
@@ -80,7 +82,7 @@ export function FadingDialog({
               event.clientY < rect.top ||
               event.clientY > rect.bottom)
           ) {
-            onRequestClose?.()
+            if (dismissOnBackdrop) onRequestClose?.()
           }
           onClickCapture?.(event)
         }

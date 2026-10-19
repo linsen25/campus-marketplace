@@ -145,3 +145,206 @@
   gap: 16px;
   margin-top: 16px;
 }
+
+/* Detail-only presentation; stage selection and action guards remain upstream. */
+.detail {
+  gap: 20px;
+}
+.header {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.header > h3 {
+  font-size: 24px;
+  font-weight: 600;
+}
+.summary {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+}
+.thumbnail {
+  width: 80px;
+  height: 80px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #241c2d;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  text-align: center;
+}
+.thumbnail > div,
+.thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.summaryText {
+  min-width: 0;
+}
+.summaryText h4 {
+  font-size: 18px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+.summaryText p {
+  color: #c1adcf;
+  margin-top: 6px;
+}
+.detail > section[aria-label='Order Progress'],
+.detail .details,
+.detail .currentStep {
+  background: #1c1524;
+  border: 1px solid #b995dc29;
+  border-radius: 16px;
+  padding: 20px;
+}
+.stageContent {
+  gap: 20px;
+}
+.currentStep > h4 {
+  font-size: 21px;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+.currentStep > p {
+  line-height: 1.6;
+  color: #c1adcf;
+}
+.currentStep > section[aria-label='Current-stage actions'] {
+  background: transparent;
+  border: 0;
+  padding: 16px 0 0;
+}
+.currentStep > button {
+  --surface: #775497;
+}
+.detail .details > h4 {
+  margin-bottom: 12px;
+}
+.details dl {
+  margin-block: 16px;
+  gap: 12px 20px;
+}
+.details dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.details dt svg {
+  flex: none;
+  color: #a68bb9;
+}
+.detail section[aria-label='Cancel Order'] {
+  border: 0;
+  border-top: 1px solid #b995dc29;
+  border-radius: 0;
+  padding: 16px 0;
+  background: transparent;
+}
+.detail section[aria-label='Cancel Order'] > h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.detail section[aria-label='Cancel Order'] > p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #b5a7c0;
+}
+.cancelDisclosure button {
+  border: 1px solid #544260;
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: #211929;
+}
+.backAction button,
+.nextAction button {
+  --shine-color: #775497;
+}
+.backAction button :global(.shining-button__body) {
+  background: #211929;
+  box-shadow: inset 0 0 0 1px #544260;
+}
+.nextAction button :global(.shining-button__body) {
+  background: #775497;
+}
+@media (max-width: 767px) {
+  .summary {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .thumbnail {
+    width: 64px;
+    height: 64px;
+  }
+  .summary > span {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .summaryText h4 {
+    font-size: 16px;
+  }
+  .detail .details,
+  .detail .currentStep,
+  .detail > section[aria-label='Order Progress'] {
+    padding: 16px;
+  }
+}
+
+.primaryAction {
+  --surface: #775497;
+}
+
+.navigation button:disabled :global(.shining-button__body) {
+  background: #514b57;
+  box-shadow: none;
+}
+
+.currentStep section[aria-label='Payment'] button {
+  --shine-color: #775497;
+  --press-surface: #211929;
+  --press-depth: #15101b;
+}
+
+.currentStep
+  form[aria-label='Private delivery address']
+  button:not([data-state='error']),
+.currentStep
+  form[aria-label='Courier shipment']
+  button:not([data-state='error']) {
+  --surface: #775497;
+}
+.detail section[aria-label='Cancel Order'] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+}
+.detail section[aria-label='Cancel Order'] > p,
+.detail section[aria-label='Cancel Order'] > section,
+.detail section[aria-label='Cancel Order'] > span {
+  grid-column: 1 / -1;
+}
+.detail section[aria-label='Cancel Order'] > .cancelDisclosure {
+  grid-column: 2;
+  grid-row: 1;
+  margin-top: 0;
+}
+
+/* This pass changes only the specified enabled workflow controls. */
+.nextAction button:not(:disabled) {
+  --shine-color: #7c3aed;
+}
+.nextAction button:not(:disabled) :global(.shining-button__body) {
+  background: #7c3aed;
+}
+.reportIssue:not(:disabled):not([data-state='error']) {
+  --surface: #7c3aed;
+}
+.protectionIssue {
+  margin-bottom: 16px;
+}

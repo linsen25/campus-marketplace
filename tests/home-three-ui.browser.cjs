@@ -1,4 +1,5 @@
-﻿// Real shell, formal Order, Favorites/cards, mobile menu and financial panel; offline fixtures.
+const { testPictureDataUrl } = require('../scripts/lib/test-pictures.cjs')
+// Real shell, formal Order, Favorites/cards, mobile menu and financial panel; offline fixtures.
 /* global window, document, getComputedStyle, innerWidth */
 const fs = require('node:fs'),
   path = require('node:path'),
@@ -52,7 +53,9 @@ const mocks = {
     'export function useMarketplaceSession(){return {seller:{id:"buyer"}}}',
   '@/components/listings/use-listing-offer-context':
     'export function useListingOfferContext(){return {loading:false,context:{available:true,orderId:null,hasHistory:false}}}',
-  '@/lib/favorites-api': `const image='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500"><rect width="400" height="500" fill="purple"/></svg>');export async function getFavoriteListings(params){window.favoriteCalls.push(params);return window.empty?[]:Array.from({length:10},(_,i)=>({id:'fixture-'+i,title:'Fixture listing '+i,price:8000,currency:'CAD',publishedAt:'2026-10-01T00:00:00Z',status:'available',photoUrls:[image],seller:{id:'seller',displayName:'Seller'},category:'Electronics',condition:'good',pickupArea:'Weldon',description:'Fixture'}))}export async function favoriteState(){return {favorited:true}}export async function setFavorite(){throw Error('Unexpected favorite write')}`,
+  '@/lib/favorites-api': `const image=${JSON.stringify(
+    testPictureDataUrl('monitor')
+  )};export async function getFavoriteListings(params){window.favoriteCalls.push(params);return window.empty?[]:Array.from({length:10},(_,i)=>({id:'fixture-'+i,title:'Fixture listing '+i,price:8000,currency:'CAD',publishedAt:'2026-10-01T00:00:00Z',status:'available',photoUrls:[image],seller:{id:'seller',displayName:'Seller'},category:'Electronics',condition:'good',pickupArea:'Weldon',description:'Fixture'}))}export async function favoriteState(){return {favorited:true}}export async function setFavorite(){throw Error('Unexpected favorite write')}`,
 }
 for (const [name, source] of Object.entries(mocks)) {
   const file = path.join(

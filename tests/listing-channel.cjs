@@ -282,7 +282,7 @@ async function main() {
   )
   assert.match(
     fs.readFileSync('components/listings/home-listings.tsx', 'utf8'),
-    /getMyListings\(\{\s*channel:\s*'resale'/
+    /getMyListings\(\{\s*channel\s*\}/
   )
   const previousFetch = global.fetch
   global.window = {}

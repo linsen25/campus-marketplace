@@ -47,6 +47,10 @@
 .action:not([data-state='error']) {
   --surface: #166534;
 }
+.area[data-shop-surface='settings']
+  .action:not(:disabled):not([data-state='error']) {
+  --surface: #7c3aed;
+}
 .viewAction :global(.shining-button) {
   height: 44px;
   padding: 0;

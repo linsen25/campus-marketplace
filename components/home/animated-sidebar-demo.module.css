@@ -341,7 +341,7 @@
   }
 
   .navigation :is(a[href^="#"], a[href="/home?section=notifications"]) > span:first-child,
-  .navigation :is(a[href^="#"], a[href="/home?section=notifications"]) svg {
+  .navigation :is(a[href^="#"], a[href="/home?section=notifications"]) > span:first-child svg {
     width: var(--desktop-app-icon-size);
     height: var(--desktop-app-icon-size);
   }

@@ -57,25 +57,32 @@ fs.writeFileSync(
           0
         )
       }
-      const chooseStatus = async (label) => {
+      const choose = async (name, label) => {
+        await page.getByRole('button', { name: 'Filter', exact: true }).click()
+        const group = page.getByRole('group', { name, exact: true })
+        await group.getByRole('radio', { name: label, exact: true }).focus()
+        await group
+          .getByRole('radio', { name: label, exact: true })
+          .press('Space')
+        assert(
+          await group
+            .getByRole('radio', { name: label, exact: true })
+            .isChecked(),
+          'filter value selected ' + label
+        )
         await page
-          .getByRole('button', { name: 'Notification status', exact: true })
+          .getByRole('button', { name: 'Close filters', exact: true })
           .click()
-        const panel = page.getByRole('region', {
-          name: 'Notification status options',
-          exact: true,
-        })
-        await panel
-          .getByRole('button', { name: label, exact: true })
-          .press('Enter')
-        await panel.waitFor({ state: 'hidden' })
+        await page
+          .getByRole('region', { name: 'Filter options', exact: true })
+          .waitFor({ state: 'hidden' })
       }
-      assert(
-        (
-          await page
-            .getByRole('button', { name: 'Notification status', exact: true })
-            .textContent()
-        ).includes('Unread')
+      const chooseStatus = (label) => choose('Notification status', label)
+      assert.equal(
+        await page
+          .getByRole('button', { name: 'Unread', exact: true })
+          .getAttribute('aria-pressed'),
+        'true'
       )
       const bell = page.getByRole('button', {
         name: 'Notifications, 0 unread',
@@ -124,7 +131,7 @@ fs.writeFileSync(
         0
       )
       const normalCategoryX = await dialog
-        .locator('li > span')
+        .locator('li > button > span')
         .first()
         .evaluate((e) => e.getBoundingClientRect().x)
       await page.screenshot({
@@ -152,7 +159,7 @@ fs.writeFileSync(
       await page.getByRole('button', { name: 'Done', exact: true }).waitFor()
       assert.equal(await page.getByRole('checkbox').count(), 1)
       const selectionCategoryX = await dialog
-        .locator('li > span')
+        .locator('li > button > span')
         .first()
         .evaluate((e) => e.getBoundingClientRect().x)
       assert(selectionCategoryX > normalCategoryX)
@@ -177,7 +184,7 @@ fs.writeFileSync(
       await expectUnread(1)
       assert.equal(
         await dialog
-          .locator('li > span')
+          .locator('li > button > span')
           .first()
           .evaluate((e) => e.getBoundingClientRect().x),
         normalCategoryX
@@ -197,9 +204,37 @@ fs.writeFileSync(
       )
       // A View detail survives removal of its source row under default Unread.
       await page
-        .getByRole('button', { name: 'View New offer received', exact: true })
+        .getByRole('button', {
+          name: 'Open notification: New offer received',
+          exact: true,
+        })
         .click()
       await page.getByRole('dialog').waitFor()
+      await page.waitForTimeout(220)
+      const detailBox = await page.getByRole('dialog').boundingBox()
+      console.log('Detail bounds', width, detailBox)
+      assert(
+        Math.abs(detailBox.x + detailBox.width / 2 - width / 2) < 2,
+        'detail horizontally centered'
+      )
+      assert(
+        Math.abs(detailBox.y + detailBox.height / 2 - 450) < 2,
+        'detail vertically centered'
+      )
+      assert(detailBox.height < 500, 'short notification stays compact')
+      assert.equal(
+        await page.evaluate(
+          () => getComputedStyle(document.documentElement).overflowY
+        ),
+        'hidden'
+      )
+      await page
+        .getByRole('dialog')
+        .getByText('Received', { exact: true })
+        .waitFor()
+      await page.screenshot({
+        path: 'tests/artifacts/notification-detail-' + width + '.png',
+      })
       await expectUnread()
       assert.equal(await dialog.locator('li').count(), 0)
       assert.equal(await page.getByRole('dialog').count(), 1)
@@ -213,12 +248,21 @@ fs.writeFileSync(
         window.feed.unreadCount = 1
         window.signal()
       })
-      await page
+      await dialog
         .getByRole('button', {
-          name: 'Open destination: New offer received',
+          name: 'Open notification: New offer received',
           exact: true,
         })
         .click()
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Open in app', exact: true })
+        .click()
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Close', exact: true })
+        .click()
+      await page.getByRole('dialog').waitFor({ state: 'hidden' })
       await page.waitForFunction(() =>
         window.actions.some((x) => x.includes('conversation='))
       )
@@ -236,12 +280,11 @@ fs.writeFileSync(
       await page
         .getByText('No notifications match these filters.', { exact: true })
         .waitFor()
-      assert(
-        (
-          await page
-            .getByRole('button', { name: 'Notification status', exact: true })
-            .textContent()
-        ).includes('Unread')
+      assert.equal(
+        await page
+          .getByRole('button', { name: 'Unread', exact: true })
+          .getAttribute('aria-pressed'),
+        'true'
       )
       await chooseStatus('All status')
       await dialog.locator('li').waitFor()
@@ -250,7 +293,10 @@ fs.writeFileSync(
       assert.equal(await page.locator('nav [aria-label="1 unread"]').count(), 0)
       await page.evaluate(() => (window.actions = []))
       await dialog
-        .getByRole('button', { name: 'View New offer received', exact: true })
+        .getByRole('button', {
+          name: 'Open notification: New offer received',
+          exact: true,
+        })
         .click()
       const report = page.getByRole('dialog')
       await report
@@ -268,10 +314,19 @@ fs.writeFileSync(
       await report.waitFor({ state: 'hidden' })
       await dialog
         .getByRole('button', {
-          name: 'Open destination: New offer received',
+          name: 'Open notification: New offer received',
           exact: true,
         })
         .click()
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Open in app', exact: true })
+        .click()
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Close', exact: true })
+        .click()
+      await page.getByRole('dialog').waitFor({ state: 'hidden' })
       await page.waitForFunction(() =>
         window.actions.some((x) => x.includes('conversation='))
       )
@@ -340,18 +395,19 @@ fs.writeFileSync(
         window.signal()
       })
       await page
-        .getByRole('button', { name: 'View New message', exact: true })
+        .getByRole('button', {
+          name: 'Open notification: New message',
+          exact: true,
+        })
         .waitFor()
       const rows = dialog.locator('li')
       assert.equal(await rows.count(), 4)
-      await rows.first().locator('strong').click()
-      assert.equal(
-        await page.evaluate(() => window.actions.length + window.writes),
-        0
-      )
       await page.evaluate(() => (window.fail = true))
       await page
-        .getByRole('button', { name: 'View New message', exact: true })
+        .getByRole('button', {
+          name: 'Open notification: New message',
+          exact: true,
+        })
         .click()
       await page.getByRole('alert').waitFor()
       assert.equal(await page.getByRole('dialog').count(), 0)
@@ -363,7 +419,10 @@ fs.writeFileSync(
         () => !document.querySelector('[role="alert"]')
       )
       await page
-        .getByRole('button', { name: 'View New message', exact: true })
+        .getByRole('button', {
+          name: 'Open notification: New message',
+          exact: true,
+        })
         .click()
       assert.equal(
         await page.getByRole('dialog').count(),
@@ -385,11 +444,11 @@ fs.writeFileSync(
       await page.waitForFunction(
         () =>
           document.activeElement?.getAttribute('aria-label') ===
-          'View New message'
+          'Open notification: New message'
       )
       await page
         .getByRole('button', {
-          name: 'View Saved Listing price dropped',
+          name: 'Open notification: Saved Listing price dropped',
           exact: true,
         })
         .click()
@@ -413,17 +472,6 @@ fs.writeFileSync(
         system: 'System',
         '': 'All notifications',
       }
-      const choose = async (name, label) => {
-        await page.getByRole('button', { name, exact: true }).click()
-        const panel = page.getByRole('region', {
-          name: name + ' options',
-          exact: true,
-        })
-        await panel
-          .getByRole('button', { name: label, exact: true })
-          .press('Enter')
-        await panel.waitFor({ state: 'hidden' })
-      }
       const filter = {
         selectOption: (value) => choose('Notification category', labels[value]),
       }
@@ -443,13 +491,33 @@ fs.writeFileSync(
           () => document.querySelectorAll('li').length === 1
         )
         assert.equal(await page.evaluate(() => window.channels), 1)
-        if (value === 'system')
+        if (value === 'system') {
+          await rows.first().getByRole('button').click()
+          const noTarget = page.getByRole('dialog')
+          await noTarget.waitFor()
           assert.equal(
-            await dialog
-              .getByRole('button', { name: /Open destination:/ })
+            await noTarget
+              .getByRole('button', { name: 'Open in app', exact: true })
               .count(),
             0
           )
+          await noTarget
+            .getByRole('button', {
+              name: 'Close notification detail',
+              exact: true,
+            })
+            .click()
+          await noTarget.waitFor({ state: 'hidden' })
+          await page.evaluate(() => {
+            window.feed.notifications.find(
+              (n) => n.event_type === 'notification_test'
+            ).read_at = null
+            window.feed.unreadCount = window.feed.notifications.filter(
+              (n) => !n.read_at
+            ).length
+            window.signal()
+          })
+        }
       }
       await page.evaluate(() => (window.delayCategory = true))
       await filter.selectOption('message')
@@ -457,13 +525,18 @@ fs.writeFileSync(
       await page.waitForTimeout(1100)
       await dialog.getByText('Order cancelled', { exact: true }).waitFor()
       assert.equal(await rows.count(), 1)
+      await page.getByRole('button', { name: 'Filter', exact: true }).click()
       assert(
-        (
-          await page
-            .getByRole('button', { name: 'Notification category', exact: true })
-            .textContent()
-        ).includes('Orders')
+        await page
+          .getByRole('radio', { name: 'Orders', exact: true })
+          .isChecked()
       )
+      await page
+        .getByRole('button', { name: 'Close filters', exact: true })
+        .click()
+      await page
+        .getByRole('region', { name: 'Filter options', exact: true })
+        .waitFor({ state: 'hidden' })
       assert.equal(await page.evaluate(() => window.channels), 1)
       await page.evaluate(() => (window.delayCategory = false))
       await filter.selectOption('')
@@ -482,7 +555,8 @@ fs.writeFileSync(
       const alignment = await dialog.locator('li').evaluateAll((rows) =>
         rows.map((row) => ({
           checkbox: row.querySelector('input').getBoundingClientRect().x,
-          category: row.querySelector('input + span').getBoundingClientRect().x,
+          category: row.querySelector('button > span').getBoundingClientRect()
+            .x,
         }))
       )
       assert(
@@ -610,19 +684,17 @@ fs.writeFileSync(
         0
       )
       assert.equal(await page.evaluate(() => window.channels), 1)
-      await page
-        .getByRole('button', { name: 'Notification category', exact: true })
-        .click()
+      await page.getByRole('button', { name: 'Filter', exact: true }).click()
       await page.keyboard.press('Escape')
       await page
         .getByRole('region', {
-          name: 'Notification category options',
+          name: 'Filter options',
           exact: true,
         })
         .waitFor({ state: 'hidden' })
       assert(
         await page
-          .getByRole('button', { name: 'Notification category', exact: true })
+          .getByRole('button', { name: 'Filter', exact: true })
           .evaluate((e) => document.activeElement === e)
       )
       await page.screenshot({
@@ -714,7 +786,10 @@ fs.writeFileSync(
         () => window.feed.notifications.find((n) => !n.read_at).id
       )
       await page
-        .getByRole('button', { name: 'View Order completed', exact: true })
+        .getByRole('button', {
+          name: 'Open notification: Order completed',
+          exact: true,
+        })
         .first()
         .click()
       await page.getByRole('dialog').waitFor()
@@ -744,12 +819,11 @@ fs.writeFileSync(
         .getByText('No notifications match these filters.', { exact: true })
         .waitFor()
       assert.equal(await page.getByRole('checkbox').count(), 0)
-      assert(
-        (
-          await page
-            .getByRole('button', { name: 'Notification status', exact: true })
-            .textContent()
-        ).includes('Unread')
+      assert.equal(
+        await page
+          .getByRole('button', { name: 'Unread', exact: true })
+          .getAttribute('aria-pressed'),
+        'true'
       )
       await page.evaluate(() => window.show(null))
       assert.equal(

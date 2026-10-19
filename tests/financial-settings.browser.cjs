@@ -98,6 +98,13 @@ async function main() {
           })
         for (const key of ['payment_method', 'payout_account']) {
           const button = section(key).getByRole('button')
+          assert.equal(
+            await button.evaluate((node) =>
+              getComputedStyle(node).getPropertyValue('--surface').trim()
+            ),
+            '#7c3aed',
+            'Settings setup/manage/resolve actions use the primary purple'
+          )
           await button.click()
           const dialog = p.getByRole('dialog')
           await dialog.waitFor()
@@ -177,7 +184,12 @@ async function main() {
             'rgb(119, 45, 64)'
           )
           const primary = dialog.getByRole('button', {
-            name: key === 'payment_method' ? 'Save payment method' : 'Continue',
+            name:
+              key === 'payment_method'
+                ? payment === 'set'
+                  ? 'Save changes'
+                  : 'Save payment method'
+                : 'Continue',
             exact: true,
           })
           assert(
@@ -214,7 +226,11 @@ async function main() {
             await dialog
               .getByRole('button', {
                 name:
-                  key === 'payment_method' ? 'Save payment method' : 'Continue',
+                  key === 'payment_method'
+                    ? payment === 'set'
+                      ? 'Save changes'
+                      : 'Save payment method'
+                    : 'Continue',
                 exact: true,
               })
               .isDisabled()
@@ -263,6 +279,15 @@ async function main() {
       }
       await p.evaluate(() => window.actionCase(true, ''))
       assert(await section('payment_method').getByRole('button').isDisabled())
+      assert.equal(
+        await section('payment_method')
+          .getByRole('button')
+          .evaluate((node) =>
+            getComputedStyle(node).getPropertyValue('--surface').trim()
+          ),
+        '#775497',
+        'Disabled setup keeps its original muted treatment'
+      )
       assert(await section('payout_account').getByRole('button').isEnabled())
       await p.evaluate(() =>
         window.actionCase(

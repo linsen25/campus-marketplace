@@ -1,11 +1,12 @@
 'use client'
 
 import cn from 'classnames'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ChevronRight } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 
+import { ListingMedia } from '@/components/listings/listing-media'
 import { UserAvatar } from '@/components/ui/user-avatar'
 import type { Conversation } from '@/types/conversation'
 
@@ -42,6 +43,7 @@ export interface ClientCardProps {
   onSelect: (conversation: Conversation) => void
   children?: ReactNode
   className?: string
+  mode?: 'Buying' | 'Selling'
 }
 
 export function ConversationList({
@@ -49,7 +51,9 @@ export function ConversationList({
   selectedId,
   onSelect,
   dynamicArrow = false,
+  expandedRows = false,
 }: Pick<ClientCardProps, 'conversations' | 'onSelect' | 'selectedId'> & {
+  expandedRows?: boolean
   dynamicArrow?: boolean
 }) {
   return (
@@ -60,14 +64,26 @@ export function ConversationList({
           key={conversation.id}
           className={cn(
             styles.conversation,
+            expandedRows && styles.productRow,
             dynamicArrow && 'dynamic-arrow-row'
           )}
           data-conversation-id={conversation.id}
           aria-pressed={conversation.id === selectedId}
           onClick={() => onSelect(conversation)}
         >
-          <span className={styles.avatarSlot}>
-            <ConversationAvatar conversation={conversation} />
+          <span
+            className={
+              expandedRows ? styles.productThumbnail : styles.avatarSlot
+            }
+          >
+            {expandedRows && conversation.listing.photoUrls.length ? (
+              <ListingMedia
+                images={conversation.listing.photoUrls.slice(0, 1)}
+                alt={conversation.listing.title}
+              />
+            ) : (
+              <ConversationAvatar conversation={conversation} />
+            )}
           </span>
           <span className={styles.rowText}>
             <strong>{conversation.person.name}</strong>
@@ -77,6 +93,19 @@ export function ConversationList({
             />
             <small>{conversation.lastMessage}</small>
           </span>
+          {expandedRows && (
+            <span className={styles.rowMeta}>
+              {conversation.time && <time>{conversation.time}</time>}
+              {conversation.unreadCount > 0 && (
+                <span
+                  className={styles.unreadCount}
+                  aria-label={`${conversation.unreadCount} unread messages`}
+                >
+                  {conversation.unreadCount}
+                </span>
+              )}
+            </span>
+          )}
           {dynamicArrow && (
             <ArrowRight
               size={16}
@@ -106,11 +135,19 @@ export function ClientCard({
   onSelect,
   children,
   className,
+  mode = 'Buying',
 }: ClientCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const reduced = useReducedMotion()
-  const recent = conversations.slice(0, 3)
-  const hiddenCount = conversations.length - recent.length
+  const [search, setSearch] = useState('')
+  const query = search.trim().toLocaleLowerCase()
+  const results = conversations.filter((conversation) =>
+    [
+      conversation.person.name,
+      conversation.listing.title,
+      conversation.lastMessage,
+    ].some((text) => text.toLocaleLowerCase().includes(query))
+  )
   return (
     <div
       className={cn(styles.wrapper, className)}
@@ -125,12 +162,21 @@ export function ClientCard({
         transition={
           reduced
             ? { duration: 0 }
-            : { type: 'spring', stiffness: 350, damping: 35 }
+            : { duration: 0.26, ease: [0.22, 1, 0.36, 1] }
         }
       >
         {!isExpanded && (
           <div className={styles.stack}>
-            {recent.map((conversation) => (
+            <button
+              type="button"
+              className={styles.counter}
+              aria-label="Expand conversations"
+              aria-expanded={false}
+              onClick={() => setIsExpanded(true)}
+            >
+              <ChevronRight size={18} aria-hidden="true" />
+            </button>
+            {conversations.map((conversation) => (
               <button
                 type="button"
                 key={conversation.id}
@@ -145,16 +191,6 @@ export function ClientCard({
                 <ConversationAvatar conversation={conversation} />
               </button>
             ))}
-            {hiddenCount > 0 && (
-              <button
-                type="button"
-                className={styles.counter}
-                aria-label="Expand conversations"
-                onClick={() => setIsExpanded(true)}
-              >
-                +{hiddenCount}
-              </button>
-            )}
           </div>
         )}
         <AnimatePresence>
@@ -169,15 +205,30 @@ export function ClientCard({
             >
               <div className={styles.expandedInner}>
                 <div className={styles.backRow}>
-                  <ClientCardBack onClick={() => setIsExpanded(false)} />
+                  <strong>{mode}</strong>
+                  <button
+                    type="button"
+                    className={styles.back}
+                    aria-label="Collapse conversations"
+                    aria-expanded={true}
+                    onClick={() => setIsExpanded(false)}
+                  >
+                    <ArrowLeft size={18} aria-hidden="true" />
+                  </button>
                 </div>
+                <input
+                  className={styles.search}
+                  type="search"
+                  aria-label="Search conversations"
+                  placeholder="Search conversations..."
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
                 <ConversationList
-                  conversations={conversations}
+                  expandedRows={true}
+                  conversations={results}
                   selectedId={selectedId}
-                  onSelect={(conversation) => {
-                    onSelect(conversation)
-                    setIsExpanded(false)
-                  }}
+                  onSelect={onSelect}
                 />
               </div>
             </motion.div>

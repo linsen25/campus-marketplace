@@ -1,30 +1,10 @@
 import type { GetServerSideProps } from 'next'
-import Head from 'next/head'
 
-import { Container } from '@/components/container/container'
-import { BackButton } from '@/components/listings/back-button'
-import { ListingForm } from '@/components/listings/listing-form'
 import { getMarketplaceSession } from '@/lib/server/marketplace-auth'
-
+/** Legacy entry resolves to the single management-owned creation sheet. */
 export default function NewListingPage() {
-  return (
-    <>
-      <Head>
-        <title>Post listing | Usual & Unusual</title>
-      </Head>
-      <main className="py-8 laptop:py-12">
-        <Container>
-          <div className="flex flex-col gap-6">
-            <BackButton href="/listings" />
-            <h1 className="text-2xl font-bold">Sell an item</h1>
-            <ListingForm />
-          </div>
-        </Container>
-      </main>
-    </>
-  )
+  return null
 }
-
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const seller = await getMarketplaceSession(context)
   if (!seller)
@@ -34,5 +14,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         permanent: false,
       },
     }
-  return { props: {} }
+  return {
+    redirect: { destination: '/home?section=create-listing', permanent: false },
+  }
 }

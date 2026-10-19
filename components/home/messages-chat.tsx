@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import ShiningButton from '@/components/animata/button/shining-button'
 import { ConversationListingProvenance } from '@/components/conversation-listing-provenance'
-import { UserAvatar } from '@/components/ui/user-avatar'
+import { ListingMedia } from '@/components/listings/listing-media'
 import { RequestTimelineSkeleton } from '@/components/ui/workspace-skeletons'
 import { StatefulButton } from '@/components/velora/stateful-button'
 import { useFormalOffers } from '@/hooks/use-formal-offers'
@@ -428,12 +428,19 @@ export function MessagesChat({
       <header className={styles.header}>
         <div className={styles.identity}>
           <div className={styles.avatar}>
-            <UserAvatar username={name} image={image} />
+            {listing.photoUrls.length ? (
+              <ListingMedia
+                images={listing.photoUrls.slice(0, 1)}
+                alt={listing.title}
+              />
+            ) : (
+              <span className={styles.noPhoto}>No photo</span>
+            )}
           </div>
           <div className={styles.identityText}>
-            <h3>{name}</h3>
+            <h3 title={listing.title}>{listing.title}</h3>
+            <span title={time}>{name}</span>
             <ConversationListingProvenance provenance={listing.provenance} />
-            {time && <span>{time}</span>}
           </div>
         </div>
         <span className={styles.listingAction}>

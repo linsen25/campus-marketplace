@@ -68,20 +68,24 @@ async function main() {
         'username',
       ])
       assert(seller.listings.length)
-      for (const listing of seller.listings)
-        assert.deepEqual(Object.keys(listing).sort(), [
-          'id',
-          'imageUrl',
-          'priceCents',
-          'title',
-        ])
+      for (const listing of seller.listings) {
+        assert.equal(listing.currency, 'CAD')
+        assert.equal(listing.status, 'available')
+        assert.equal(listing.seller.id, seller.identifier)
+        assert(Array.isArray(listing.photoUrls))
+        assert.equal(typeof listing.category, 'string')
+        assert(!('email' in listing))
+        assert(!('legal_name' in listing))
+        assert(!('provider' in (listing.meetingLocation || {})))
+        assert(!('placeId' in (listing.meetingLocation || {})))
+      }
       assert.equal(
         await page.locator('[data-public-seller-id] h1').textContent(),
         seller.username
       )
       assert(
         (await page
-          .locator('[aria-label="Active listings"] a[href^="/listings/"]')
+          .locator('[aria-label="Active listings"] [data-published-listing]')
           .count()) > 0
       )
       assert(

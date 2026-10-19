@@ -1,10 +1,12 @@
 import dynamic from 'next/dynamic'
+import { useCallback, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import ShiningButton from '@/components/animata/button/shining-button'
 import { useAuthModal } from '@/components/auth/auth-modal'
 import { Link } from '@ui/link/link'
 
+import { MarketBrandMark } from './market-brand-mark'
 import { useHomeReducedMotion } from './use-home-reduced-motion'
 import styles from './welcome-hero.module.css'
 
@@ -19,7 +21,11 @@ const TextType = dynamic(
   () => import(/* webpackChunkName: 'text-type' */ '@/components/ui/TextType'),
   { ssr: false }
 )
-const SUBTITLE = 'Buy and sell second-hand items within the Western community.'
+const SUBTITLE_LINES = [
+  'Buy and sell second-hand items within the',
+  'Western community.',
+] as const
+const SUBTITLE = SUBTITLE_LINES.join(' ')
 
 export function WelcomeHero({
   visual,
@@ -29,12 +35,15 @@ export function WelcomeHero({
   ticket?: boolean
 }) {
   const reduced = useHomeReducedMotion()
+  const [firstLineComplete, setFirstLineComplete] = useState(false)
+  const completeFirstLine = useCallback(() => setFirstLineComplete(true), [])
   const { openAuth } = useAuthModal()
   return (
     <section className={styles.hero} aria-labelledby="welcome-title">
       <nav className={styles.navigation} aria-label="Welcome navigation">
         <Link href="/" className={styles.brand}>
-          Usual & Unusual
+          <MarketBrandMark />
+          <span>Usual & Unusual</span>
         </Link>
         <div className={styles.actions}>
           <ShiningButton
@@ -79,21 +88,41 @@ export function WelcomeHero({
           </h1>
           <div className={styles.subtitle} aria-label={SUBTITLE}>
             <span className={styles.subtitleSizer} aria-hidden="true">
-              {SUBTITLE}
+              {SUBTITLE_LINES.map((line) => (
+                <span key={line} className={styles.subtitleLine}>
+                  {line}
+                </span>
+              ))}
             </span>
             <div className={styles.subtitleText} aria-hidden="true">
-              {reduced !== false ? (
-                SUBTITLE
-              ) : (
-                <TextType
-                  text={SUBTITLE}
-                  as="span"
-                  loop={false}
-                  showCursor={false}
-                  typingSpeed={30}
-                  initialDelay={150}
-                />
-              )}
+              <span className={styles.subtitleLine}>
+                {reduced !== false ? (
+                  SUBTITLE_LINES[0]
+                ) : (
+                  <TextType
+                    text={SUBTITLE_LINES[0]}
+                    as="span"
+                    loop={false}
+                    showCursor={false}
+                    typingSpeed={30}
+                    initialDelay={150}
+                    onTypingComplete={completeFirstLine}
+                  />
+                )}
+              </span>
+              <span className={styles.subtitleLine}>
+                {reduced !== false
+                  ? SUBTITLE_LINES[1]
+                  : firstLineComplete && (
+                      <TextType
+                        text={SUBTITLE_LINES[1]}
+                        as="span"
+                        loop={false}
+                        showCursor={false}
+                        typingSpeed={30}
+                      />
+                    )}
+              </span>
             </div>
           </div>
         </div>

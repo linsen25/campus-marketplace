@@ -1,0 +1,70 @@
+.ticker {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+}
+.progress {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #ffffff12;
+}
+.indicator {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  background: var(--progress-color, #9560f5);
+  transition: transform 0.35s ease;
+}
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border-radius: 8px;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.tableRow {
+  border-bottom: 1px solid #ffffff12;
+  transition: background-color 0.15s;
+}
+.tableRow:hover {
+  background: #ffffff04;
+}
+.tableRow:last-child {
+  border-bottom: 0;
+}
+.tableHead {
+  height: 44px;
+  color: #b7aac5;
+  text-align: left;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 8px 12px;
+}
+.tableCell {
+  padding: 16px 12px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.caption {
+  color: #b7aac5;
+  font-size: 12px;
+  text-align: left;
+  caption-side: bottom;
+  padding: 14px 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .indicator,
+  .tableRow {
+    transition: none;
+  }
+}

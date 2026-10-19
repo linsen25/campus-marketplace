@@ -1,3 +1,5 @@
+const { readTestPictureJpeg } = require('../scripts/lib/test-pictures.cjs')
+const { TEST_PICTURES } = require('../scripts/lib/test-pictures.cjs')
 /* global document, window, getComputedStyle, requestAnimationFrame, performance, MutationObserver */
 /* eslint-disable no-inner-declarations -- Each viewport has isolated fixtures and browser helpers. */
 const assert = require('node:assert/strict')
@@ -6,7 +8,7 @@ const path = require('node:path')
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
 const output = path.join(process.env.TEMP, 'create-success-validation')
 fs.mkdirSync(output, { recursive: true })
-const jpeg = fs.readFileSync('public/demo/reading-chair.jpg')
+const jpeg = readTestPictureJpeg('camera')
 const photo = (index) => ({
   name: `photo-${index}.jpg`,
   mimeType: 'image/jpeg',
@@ -26,7 +28,7 @@ const baseListing = (id, seller = 'owner') => ({
   meetingLocation: { label: 'Outside UCC front doors' },
   estimatedDeliveryFeeCents: 0,
   description: 'Works well.',
-  photoUrls: ['/demo/reading-chair.jpg'],
+  photoUrls: [TEST_PICTURES.camera],
   seller: {
     id: seller,
     displayName: seller === 'owner' ? 'Chris' : 'Another seller',
@@ -100,7 +102,7 @@ const baseListing = (id, seller = 'owner') => ({
             return send({ error: 'Upload failed. Please retry.' }, 503)
           }
           const listing = rows.find((item) => item.id === p.split('/').pop())
-          listing.photoUrls.push('/demo/reading-chair.jpg')
+          listing.photoUrls.push(TEST_PICTURES.camera)
           return send(listing)
         }
         if (p === '/api/listings') {

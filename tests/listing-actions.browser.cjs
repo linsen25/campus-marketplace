@@ -1,3 +1,4 @@
+const { testPictureDataUrl } = require('../scripts/lib/test-pictures.cjs')
 // Actual expanded Listing, detail page, offer/contact hooks; offline HTTP only.
 /* global window, document, Event */
 const fs = require('node:fs'),
@@ -46,7 +47,9 @@ import 'tailwindcss/src/css/preflight.css';import React from 'react';import {cre
       '/'
     )}';import '@/components/animata/button/shining-button.css';
 const root=createRoot(document.getElementById('root'));window.routes=[];window.lookups=0;
-window.show=v=>{window.routes=[];window.lookups=0;window.viewer=v.owner?'seller':'buyer';const photo='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500"><rect width="400" height="500" fill="purple"/></svg>');window.liveListing={id:'listing',seller:{id:'seller',displayName:'Seller'},title:'Fixture listing',price:8000,currency:'CAD',photoUrls:[photo],status:v.status,description:'Frozen description',category:'Electronics',subcategory:'Other',condition:'good',pickupArea:'Weldon'};window.context={available:v.status==='available',orderId:v.order?'active-order':null,activeOfferId:null,hasHistory:!!v.history};flushSync(()=>root.render(<LazyMotion features={domAnimation}><div key={JSON.stringify(v)}>{v.page?<ListingPage listing={window.liveListing}/>:<PublishedListingCard listing={window.liveListing}/>}</div></LazyMotion>));};
+window.show=v=>{window.routes=[];window.lookups=0;window.viewer=v.owner?'seller':'buyer';const photo=${JSON.stringify(
+    testPictureDataUrl('monitor')
+  )};window.liveListing={id:'listing',seller:{id:'seller',displayName:'Seller'},title:'Fixture listing',price:8000,currency:'CAD',photoUrls:[photo],status:v.status,description:'Frozen description',category:'Electronics',subcategory:'Other',condition:'good',pickupArea:'Weldon'};window.context={available:v.status==='available',orderId:v.order?'active-order':null,activeOfferId:null,hasHistory:!!v.history};flushSync(()=>root.render(<LazyMotion features={domAnimation}><div key={JSON.stringify(v)}>{v.page?<ListingPage listing={window.liveListing}/>:<PublishedListingCard listing={window.liveListing}/>}</div></LazyMotion>));};
 `
 )
 async function run() {

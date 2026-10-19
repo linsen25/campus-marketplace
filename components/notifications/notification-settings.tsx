@@ -42,7 +42,7 @@ export function NotificationSettings() {
               width={56}
               height={30}
               radius={15}
-              trackOnColor="#9375c4"
+              trackOnColor="#7C3AED"
               thumbColor="#737078"
               thumbOnColor="#f5f5f5"
               onChange={(value) => save(key, value)}

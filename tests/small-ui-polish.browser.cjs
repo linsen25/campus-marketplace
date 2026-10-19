@@ -1,3 +1,5 @@
+const { readTestPictureJpeg } = require('../scripts/lib/test-pictures.cjs')
+const { TEST_PICTURES } = require('../scripts/lib/test-pictures.cjs')
 /* global document, window, getComputedStyle, Navigator */
 /* eslint-disable no-inner-declarations -- Each viewport has isolated fixtures and browser helpers. */
 const assert = require('node:assert/strict')
@@ -36,7 +38,7 @@ fs.mkdirSync(output, { recursive: true })
             condition: 'good',
             pickupArea: 'On campus',
             description: 'Working camera',
-            photoUrls: ['/demo/reading-chair.jpg'],
+            photoUrls: [TEST_PICTURES.camera],
             seller: { id: 'owner', displayName: 'Chris' },
             status: 'available',
             publishedAt: '2026-10-05',
@@ -626,7 +628,7 @@ fs.mkdirSync(output, { recursive: true })
       ).setFiles({
         name: 'first.jpg',
         mimeType: 'image/jpeg',
-        buffer: fs.readFileSync('public/demo/reading-chair.jpg'),
+        buffer: readTestPictureJpeg('camera'),
       })
       await settle()
       assert.equal(await form.locator('[data-selected-photos] img').count(), 1)
@@ -663,12 +665,12 @@ fs.mkdirSync(output, { recursive: true })
         {
           name: 'second.jpg',
           mimeType: 'image/jpeg',
-          buffer: fs.readFileSync('public/demo/reading-chair.jpg'),
+          buffer: readTestPictureJpeg('camera'),
         },
         {
           name: 'extremely-long-selected-file-name-that-must-truncate-in-the-local-photo-viewer-and-not-overflow.jpg',
           mimeType: 'image/jpeg',
-          buffer: fs.readFileSync('public/demo/reading-chair.jpg'),
+          buffer: readTestPictureJpeg('camera'),
         },
       ])
       await selected

@@ -1,0 +1,27 @@
+.fallback {
+  width: 100%;
+  height: 100%;
+  font-size: 72px;
+  border-radius: 0;
+}
+.compact {
+  height: 100%;
+}
+.compact > div:first-child {
+  aspect-ratio: auto;
+  height: 180px;
+}
+.compact > div:last-child {
+  padding: 18px;
+  gap: 12px;
+}
+.compact h3 {
+  font-size: 22px;
+  line-height: 28px;
+}
+.compact p {
+  overflow-wrap: anywhere;
+}
+.compact button {
+  margin-top: 0;
+}

@@ -271,3 +271,16 @@
     animation: none;
   }
 }
+
+/* Opt-in native top-layer menu for scroll-contained creation dialogs. */
+.glide-select__menu[popover] {
+  position: fixed;
+  inset: auto;
+  min-width: 0;
+  margin: 0;
+  color: var(--gs-text);
+}
+.glide-select__menu[popover] .glide-select__list {
+  max-height: var(--gs-list-height, 220px);
+  overscroll-behavior: contain;
+}

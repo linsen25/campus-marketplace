@@ -453,7 +453,6 @@ export function OrderDetailPreview({
       </button>
       <header className={styles.header}>
         <div>
-          <p className={styles.eyebrow}>Order Detail</p>
           <h3>{listing.title}</h3>
         </div>
         <span className={profile.verified}>

@@ -1,3 +1,5 @@
+const { readTestPictureJpeg } = require('../scripts/lib/test-pictures.cjs')
+const { TEST_PICTURES } = require('../scripts/lib/test-pictures.cjs')
 /* global document, window, getComputedStyle */
 /* eslint-disable no-inner-declarations -- Each viewport has isolated fixtures and browser helpers. */
 const assert = require('node:assert/strict')
@@ -17,8 +19,8 @@ const item = (id, owner = 'owner', sold = false, multiple = true) => ({
   pickupArea: 'On campus',
   description: 'Works well. Includes the original accessories.',
   photoUrls: multiple
-    ? ['/demo/reading-chair.jpg', '/demo/reading-chair.jpg?photo=2']
-    : ['/demo/reading-chair.jpg'],
+    ? [TEST_PICTURES.camera, TEST_PICTURES.camera + '?photo=2']
+    : [TEST_PICTURES.camera],
   seller: {
     id: owner,
     displayName: owner === 'owner' ? 'Chris' : 'Another seller',
@@ -500,7 +502,7 @@ const item = (id, owner = 'owner', sold = false, multiple = true) => ({
       const file = (i) => ({
         name: `${i}.jpg`,
         mimeType: 'image/jpeg',
-        buffer: fs.readFileSync('public/demo/reading-chair.jpg'),
+        buffer: readTestPictureJpeg('camera'),
       })
       const input = form.locator('input[type="file"]')
       await input.setInputFiles({

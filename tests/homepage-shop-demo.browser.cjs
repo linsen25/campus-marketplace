@@ -1,3 +1,4 @@
+const { TEST_PICTURES } = require('../scripts/lib/test-pictures.cjs')
 /* global window,document,getComputedStyle */
 // Real landing demo components and ShopCard; local fixtures/static image only.
 const fs = require('node:fs'),
@@ -59,10 +60,10 @@ assert(
                 path: path.join(root, 'bundle.js'),
                 contentType: 'application/javascript',
               })
-            if (u.pathname === '/demo/reading-chair.jpg')
+            if (u.pathname === TEST_PICTURES.chair)
               return r.fulfill({
-                path: 'public/demo/reading-chair.jpg',
-                contentType: 'image/jpeg',
+                path: 'public' + TEST_PICTURES.chair,
+                contentType: 'image/webp',
               })
             if (u.pathname === '/')
               return r.fulfill({

@@ -1,0 +1,220 @@
+.dialog {
+  position: fixed;
+  inset: auto 0 0;
+  margin: 0 auto;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: calc(100dvh - 24px);
+  overflow: hidden;
+  border: 1px solid rgba(20, 70, 54, 0.08);
+  border-bottom: 0;
+  border-radius: 24px 24px 0 0;
+  background: radial-gradient(
+      ellipse 72% 17% at 46% -4%,
+      rgba(42, 188, 123, 0.24) 0%,
+      rgba(22, 126, 85, 0.09) 48%,
+      transparent 100%
+    ),
+    radial-gradient(
+      ellipse 48% 24% at 102% 1%,
+      rgba(18, 130, 87, 0.09) 0%,
+      transparent 100%
+    ),
+    radial-gradient(
+      ellipse 95% 46% at 48% 31%,
+      rgba(2, 10, 8, 0.18) 0%,
+      rgba(3, 13, 10, 0.08) 52%,
+      transparent 100%
+    ),
+    linear-gradient(
+      180deg,
+      #07513b 0%,
+      #073d2f 9%,
+      #0a2c23 20%,
+      #0b201a 31%,
+      #0b1714 43%,
+      #0a100f 58%,
+      #090b0b 100%
+    );
+  box-shadow: 0 0 26px rgba(15, 145, 90, 0.045), 0 24px 80px rgba(0, 0, 0, 0.54);
+  color: #fff;
+}
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 16px 24px 12px;
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.top button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.top button:hover {
+  background: #ffffff14;
+}
+.top button:focus-visible {
+  outline: 2px solid #71717a;
+  outline-offset: 2px;
+}
+.body {
+  display: flex;
+  justify-content: center;
+  min-height: 0;
+  padding: 8px 24px calc(24px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.body > section {
+  flex-shrink: 0;
+  height: fit-content;
+}
+.dialog::backdrop {
+  background: #0009;
+  backdrop-filter: blur(6px);
+}
+.dialog.dialog[open] {
+  animation: rise 160ms ease-out both;
+}
+.dialog.dialog[data-exiting] {
+  animation: sink 180ms ease-in both;
+}
+@keyframes rise {
+  from {
+    transform: translateY(var(--pricing-slide, 100%));
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes sink {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(var(--pricing-slide, 100%));
+    opacity: 0;
+  }
+}
+@media (min-width: 640px) {
+  .dialog {
+    --pricing-slide: 24px;
+    inset: 0;
+    margin: auto;
+    width: 552px;
+    max-width: calc(100% - 48px);
+    height: fit-content;
+    max-height: calc(100dvh - 48px);
+    border-bottom: 1px solid rgba(5, 10, 9, 0.95);
+    border-radius: 24px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog.dialog[open],
+  .dialog.dialog[data-exiting] {
+    animation: none;
+  }
+}
+
+/* The clipped outer shell owns decoration; .body remains the scroll owner. */
+.decoration::before,
+.decoration::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+.decoration::before {
+  width: 360px;
+  height: 360px;
+  top: -225px;
+  right: -95px;
+  background: linear-gradient(
+    135deg,
+    rgba(76, 220, 151, 0.09),
+    rgba(5, 65, 45, 0.018)
+  );
+  border: 1px solid rgba(100, 255, 180, 0.028);
+}
+.decoration::after {
+  width: 300px;
+  height: 300px;
+  top: -170px;
+  right: -175px;
+  border: 42px solid rgba(91, 210, 145, 0.022);
+}
+.top,
+.body {
+  position: relative;
+  z-index: 1;
+}
+@media (max-width: 639px) {
+  .decoration::before {
+    width: 280px;
+    height: 280px;
+    top: -175px;
+    right: -85px;
+  }
+  .decoration::after {
+    width: 230px;
+    height: 230px;
+    top: -130px;
+    right: -140px;
+    border-width: 32px;
+  }
+}
+
+.decoration {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* One masked 1px ring: bright across the top and its rounded corners,
+   fading down the upper sides; no inner stroke or bottom illumination. */
+.dialog::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  z-index: 3;
+  background: linear-gradient(
+    180deg,
+    rgba(105, 240, 168, 0.55) 0%,
+    rgba(105, 240, 168, 0.18) 10%,
+    rgba(105, 240, 168, 0) 28%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}

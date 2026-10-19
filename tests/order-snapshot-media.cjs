@@ -1,3 +1,4 @@
+const { readTestPictureJpeg } = require('../scripts/lib/test-pictures.cjs')
 const assert = require('assert/strict'),
   fs = require('fs'),
   vm = require('vm'),
@@ -28,7 +29,7 @@ const code = ts.transpileModule(source, {
     target: ts.ScriptTarget.ES2020,
   },
 }).outputText
-const input = fs.readFileSync('public/demo/reading-chair.jpg'),
+const input = readTestPictureJpeg('chair'),
   hash = crypto.createHash('sha256').update(input).digest('hex')
 class ApiError extends Error {
   constructor(m, status) {

@@ -217,12 +217,14 @@ interface SidebarLinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
   href: string
   icon: ReactNode
   label: string
+  badge?: ReactNode
   active?: boolean
 }
 
 export function SidebarLink({
   icon,
   label,
+  badge,
   active = false,
   className,
   onClick,
@@ -243,7 +245,10 @@ export function SidebarLink({
       <span className={styles.icon} aria-hidden="true">
         {icon}
       </span>
-      <span className={styles.reveal}>{label}</span>
+      <span className={styles.reveal}>
+        {label}
+        {badge && <span className={styles.badge}>{badge}</span>}
+      </span>
     </a>
   )
 }

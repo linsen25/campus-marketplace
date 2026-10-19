@@ -1,4 +1,3 @@
-import { CardAction } from '@/components/listings/card-actions'
 import { WorkspaceEmpty } from '@/components/listings/workspace-empty'
 import {
   previewNextStep,
@@ -20,9 +19,9 @@ import workspaceStyles from '../listings/listing-workspace.module.css'
 
 import { FormalOrders } from './formal-orders'
 import { OrderDetailPreview } from './order-detail-preview'
-import styles from './order-detail-preview.module.css'
+import { OrderListBadge, OrderListCard } from './order-list-presentation'
+import listStyles from './order-list-presentation.module.css'
 import { useOrderVisual } from './order-visual-context'
-import profile from './profile.module.css'
 
 /** Explicit buyer/seller workspace boundary; cards share presentation, never state stores. */
 export function OrderList({
@@ -40,36 +39,30 @@ export function OrderList({
       data-order-workspace={mode}
     >
       {orders.length ? (
-        <div className={styles.orderList}>
+        <div className={listStyles.list}>
           <p className={workspaceStyles.hint}>
             Ephemeral local previews in this browser only.
           </p>
           {orders.map((order) => (
-            <article
+            <OrderListCard
               key={order.id}
-              className={`${profile.panel} ${styles.orderCard}`}
-              data-order-list-card={order.id}
-            >
-              <div>
-                <h4>{order.snapshot.listing.title}</h4>
-                <p>
-                  {formatOrderVisualAmount(order.snapshot.draft.price)} &middot;{' '}
-                  {fulfillmentLabels[order.snapshot.draft.fulfillment]}
-                </p>
-                <span className={profile.verified}>
-                  {previewStatusLabel(order, role)}
-                </span>
-                <p className={workspaceStyles.hint}>
-                  {previewNextStep(order, role)}
-                </p>
-              </div>
-              <CardAction
-                variant="blue"
-                onClick={() => visuals.open(order.id, mode)}
-              >
-                View Order
-              </CardAction>
-            </article>
+              id={order.id}
+              title={order.snapshot.listing.title}
+              images={order.snapshot.listing.photoUrls}
+              amount={formatOrderVisualAmount(order.snapshot.draft.price)}
+              fulfillment={
+                order.snapshot.draft.fulfillment === 'meet'
+                  ? 'Meeting'
+                  : fulfillmentLabels[order.snapshot.draft.fulfillment]
+              }
+              state={
+                <>
+                  <OrderListBadge label={previewStatusLabel(order, role)} />
+                  <p>{previewNextStep(order, role)}</p>
+                </>
+              }
+              onOpen={() => visuals.open(order.id, mode)}
+            />
           ))}
         </div>
       ) : (

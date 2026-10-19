@@ -3,7 +3,7 @@ import Head from 'next/head'
 import { useEffect, useRef, useState } from 'react'
 
 import { BackButton } from '@/components/listings/back-button'
-import { ListingCard } from '@/components/listings/listing-card'
+import { PublishedListingCard } from '@/components/listings/published-listing-card'
 import {
   deleteListing,
   getMyListings,
@@ -84,7 +84,7 @@ export default function MyListingsPage({
             >
               {listings.map((listing) => (
                 <li key={listing.id} className="flex min-w-0 flex-col gap-2">
-                  <ListingCard listing={listing} />
+                  <PublishedListingCard listing={listing} owner={true} />
                   {listing.status === 'sold' && (
                     <p className="small-bold">SOLD</p>
                   )}

@@ -1,4 +1,4 @@
-/* global window, document, getComputedStyle */
+/* global window, document, getComputedStyle, requestAnimationFrame, performance, DOMMatrixReadOnly */
 // Offline UI-only pricing qualification. Real directory/cards, dialog and My Shop.
 const fs = require('node:fs'),
   path = require('node:path'),
@@ -8,17 +8,30 @@ const aliases = require('./browser-fixture-mocks.cjs')(root)
 fs.writeFileSync(
   path.join(root, 'entry.tsx'),
   `
-import 'tailwindcss/src/css/preflight.css';import '@/components/animata/button/shining-button.css';import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {LazyMotion,domAnimation} from 'framer-motion';import {MarketFeedViewport} from '@/components/listings/market-feed-viewport';import {ShopDirectory} from '@/components/shops/shop-directory';import {ShopListingWorkspace} from '@/components/shops/shop-listing-workspace';import {Sidebar,SidebarBody} from '@/components/velora/animated-sidebar';import {SectionHeader} from '@/components/home/section-header';import home from '@/components/home/animated-sidebar-demo.module.css';import '@/styles/desktop-app-tokens.css';
+import 'tailwindcss/src/css/preflight.css';import PricingCard from '@/components/pricing-card';import '@/components/animata/button/shining-button.css';import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {LazyMotion,domAnimation} from 'framer-motion';import {MarketFeedViewport} from '@/components/listings/market-feed-viewport';import {ShopDirectory} from '@/components/shops/shop-directory';import {ShopListingWorkspace} from '@/components/shops/shop-listing-workspace';import {Sidebar,SidebarBody} from '@/components/velora/animated-sidebar';import {SectionHeader} from '@/components/home/section-header';import home from '@/components/home/animated-sidebar-demo.module.css';import '@/styles/desktop-app-tokens.css';
 const root=createRoot(document.getElementById('root'));window.actions=[];window.requests=[];window.fixtureRequest=async(...args)=>{window.requests.push(args);throw Error('No requests permitted')};window.process={env:{}};
 const shops=[{sellerProfileId:'fixture',username:'fixture_shop',shopName:'Vintage Loop',category:'Electronics',description:'Curated campus finds.'}];
-function Home({create}){return <div className={home.page}><div className={home.mobileShell}><header className={home.mobileHeader}><h1>My Shop</h1></header><main className={home.mobileMain}><ShopListingWorkspace create={create}/></main></div><Sidebar className={home.frame}><SidebarBody logo={<span/>} title='Home'><span>Listings</span></SidebarBody><main className={home.main} data-home-main><SectionHeader title='My Shop'/><ShopListingWorkspace create={create}/></main></Sidebar></div>};function App({surface}){const [mode,setMode]=useState('resale');return <LazyMotion features={domAnimation}>{surface!=='market'?<Home create={surface==='create'}/>:<main style={{maxWidth:1200,margin:'0 auto',padding:20,minHeight:1400}}>{surface==='market'?<><header data-fixed-controls><button onClick={()=>setMode('resale')}>Resale</button><button onClick={()=>setMode('shop')}>Shop</button></header><MarketFeedViewport mode={mode} resale={<p>Resale listings</p>} shop={<ShopDirectory shops={shops}/>}/></>:<ShopListingWorkspace create={surface==='create'}/>}</main>}</LazyMotion>};let n=0;window.show=surface=>flushSync(()=>root.render(<App key={++n} surface={surface}/>));
+function Home({create}){return <div className={home.page}><div className={home.mobileShell}><header className={home.mobileHeader}><h1>My Shop</h1></header><main className={home.mobileMain}><ShopListingWorkspace create={create}/></main></div><Sidebar className={home.frame}><SidebarBody logo={<span/>} title='Home'><span>Listings</span></SidebarBody><main className={home.main} data-home-main><SectionHeader title='My Shop'/><ShopListingWorkspace create={create}/></main></Sidebar></div>};function App({surface}){const [mode,setMode]=useState('resale');return <LazyMotion features={domAnimation}>{surface!=='market'?<Home create={surface==='create'}/>:<main style={{maxWidth:1200,margin:'0 auto',padding:20,minHeight:1400}}>{surface==='market'?<><header data-fixed-controls><button onClick={()=>setMode('resale')}>Resale</button><button onClick={()=>setMode('shop')}>Shop</button></header><MarketFeedViewport mode={mode} resale={<p>Resale listings</p>} shop={<ShopDirectory shops={shops}/>}/></>:<ShopListingWorkspace create={surface==='create'}/>}</main>}</LazyMotion>};let n=0;window.show=surface=>flushSync(()=>root.render(<App key={++n} surface={surface}/>));window.showTrial=(eligibility,preview=false)=>flushSync(()=>root.render(<PricingCard trialEligibility={eligibility} showTrialPreview={preview}/>));
 `
 )
 fs.writeFileSync(
   path.join(root, 'index.html'),
   '<!doctype html><meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:0;background:#160f1d;color:white;font-family:Arial}</style><script>window.process={env:{}}</script><div id="root"></div><script src="bundle.js"></script>'
 )
-;(async () => {
+
+const pricingSource = fs.readFileSync('components/pricing-card.tsx', 'utf8')
+for (const source of [
+  'layoutId="tab-bg"',
+  'stiffness: 300',
+  'damping: 30',
+  'mass: 0.8',
+  'idx * 0.05',
+  '0.3',
+  '0.4',
+  '[0.32, 0.72, 0, 1]',
+])
+  assert(pricingSource.includes(source), source)
+async function main() {
   await build(aliases)
   fs.unlinkSync(path.join(root, 'entry.tsx'))
   const {
@@ -36,405 +49,533 @@ fs.writeFileSync(
           reducedMotion,
         })
         p.setDefaultTimeout(7000)
-        let network = 0
         const errors = []
+        let network = 0
         p.on('pageerror', (e) => errors.push(e.message))
-        await p.route(/^https?:/, (r) => {
+        await p.route('**/*', (r) => {
+          const url = new URL(r.request().url())
+          if (url.origin === 'http://localhost:4177') {
+            if (url.pathname === '/')
+              return r.fulfill({
+                path: path.join(root, 'index.html'),
+                contentType: 'text/html',
+              })
+            if (url.pathname === '/bundle.js')
+              return r.fulfill({
+                path: path.join(root, 'bundle.js'),
+                contentType: 'application/javascript',
+              })
+            if (
+              url.pathname.startsWith('/static/') ||
+              url.pathname.startsWith('/demo/')
+            )
+              return r.fulfill({ path: 'public' + url.pathname })
+          }
           network++
           return r.abort()
         })
-        await p.goto(
-          'file:///' + path.join(root, 'index.html').replaceAll('\\', '/')
-        )
+        await p.goto('http://localhost:4177/')
         await p.evaluate(() => window.show('market'))
-        assert.equal(
-          await p
-            .getByRole('complementary', { name: 'Shop Pro promotion' })
-            .count(),
-          0
-        )
-        const header = await p.locator('[data-fixed-controls]').boundingBox()
         await p.getByRole('button', { name: 'Shop', exact: true }).click()
-        const banner = p.getByRole('complementary', {
+        const promo = p.getByRole('complementary', {
           name: 'Shop Pro promotion',
         })
-        await banner.waitFor()
-        await p.waitForTimeout(500)
-        assert.deepEqual(
-          await p.locator('[data-fixed-controls]').boundingBox(),
-          header
-        )
-        await p
-          .getByRole('button', { name: 'Open shop: Vintage Loop' })
-          .waitFor()
-        if (reducedMotion === 'reduce' && [390, 1280].includes(width))
-          await p.screenshot({
-            path: 'tests/artifacts/shop-pro-pricing-banner-' + width + '.png',
-          })
-        const opener = banner.getByRole('button', {
-          name: 'Explore Shop Pro',
+        await promo.waitFor()
+        const slider = p.locator('[data-overlapping-slider]')
+        await slider.waitFor()
+        const opener = promo.getByRole('button', { name: 'Explore Shop Pro' })
+        await opener.focus()
+        const scroll = await p.evaluate(() => window.scrollY)
+        await opener.click()
+        const dialog = p.getByRole('dialog', {
+          name: 'Shop Pro pricing',
           exact: true,
         })
-        const bannerGeometry = await banner.evaluate((el) => {
-          const r = (e) => e.getBoundingClientRect().toJSON()
-          return {
-            banner: r(el),
-            cta: r(el.querySelector('button:not([aria-label])')),
-            close: r(el.querySelector('[aria-label]')),
-          }
-        })
-        assert(
-          Math.abs(
-            bannerGeometry.banner.right -
-              bannerGeometry.cta.right -
-              (width < 640 ? 20 : 24)
-          ) < 1,
-          'banner CTA right inset'
-        )
-        assert(
-          Math.abs(
-            bannerGeometry.banner.bottom - bannerGeometry.cta.bottom - 20
-          ) < 1,
-          'banner CTA bottom inset'
-        )
-        assert(
-          bannerGeometry.cta.width < bannerGeometry.banner.width - 60,
-          'banner CTA not full-width'
-        )
-        assert(bannerGeometry.close.y < bannerGeometry.cta.y, 'X above CTA')
-        await opener.click()
-        const dialog = p.getByRole('dialog', { name: 'Shop Pro plans' })
         await dialog.waitFor()
-        await p.waitForTimeout(450)
-        const overlay = await dialog.evaluate((el) => {
-          const body = el.querySelector('[data-shop-pro-pricing]').parentElement
-          const css = getComputedStyle(el)
-          return {
-            rect: el.getBoundingClientRect().toJSON(),
-            slide: css.getPropertyValue('--sheet-slide-distance').trim(),
-            animation: css.animationName,
-            transform: css.transform,
-            scrolls: body.scrollHeight > body.clientHeight + 1,
-            scrollTop: body.scrollTop,
-          }
-        })
-        if (width < 640) {
-          assert(
-            Math.abs(overlay.rect.bottom - 900) < 1,
-            'mobile bottom attached'
-          )
-          assert.equal(overlay.rect.width, width, 'mobile natural full width')
-          assert.equal(overlay.slide, '', 'mobile full-height entrance')
-        } else {
-          assert(
-            Math.abs((overlay.rect.top + overlay.rect.bottom) / 2 - 450) < 1,
-            'wide dialog vertically centered'
-          )
-          assert(
-            overlay.rect.top >= 24 && overlay.rect.bottom <= 876,
-            'comfortable top/bottom margins'
-          )
-          assert(
-            overlay.rect.left >= 24 && overlay.rect.right <= width - 24,
-            'wide dialog horizontal margins'
-          )
-          assert.equal(overlay.slide, '24px', 'wide dialog short slide')
-          assert(
-            !overlay.scrolls,
-            'no internal scroll when desktop content fits'
-          )
-        }
-        assert.equal(overlay.scrollTop, 0, 'opens at top')
-        if (reducedMotion === 'reduce') {
-          assert.equal(overlay.animation, 'none')
-          assert.equal(overlay.transform, 'none')
-        }
-        console.log(
-          'OVERLAY',
-          width,
-          reducedMotion,
-          JSON.stringify(overlay.rect)
-        )
-        assert.equal(await dialog.getByRole('radio').count(), 3)
-        const delays = await dialog
-          .locator('label')
-          .evaluateAll((es) =>
-            es.map((e) => getComputedStyle(e).animationDelay)
-          )
-        assert.deepEqual(
-          delays,
-          reducedMotion === 'reduce'
-            ? ['0s', '0s', '0s']
-            : ['0.16s', '0.22s', '0.28s']
-        )
-        const backgroundY = await p.evaluate(() => window.scrollY)
-        const controlWidth = (
-          await p.locator('[data-fixed-controls]').boundingBox()
-        ).width
-        await p.mouse.move(4, 4)
-        await p.mouse.wheel(0, 300)
-        await p.waitForTimeout(100)
+        await p.waitForTimeout(500)
+        const card = dialog.locator('[data-pricing-card]')
+        await card.waitFor()
+        const header = dialog.locator(':scope > header'),
+          logo = header.locator('[data-market-brand-mark] img')
         assert.equal(
-          await p.evaluate(() => window.scrollY),
-          backgroundY,
-          'background scroll locked'
+          await header.getByText('Shop Plans', { exact: true }).count(),
+          1
         )
         assert.equal(
-          (await p.locator('[data-fixed-controls]').boundingBox()).width,
-          controlWidth,
-          'no horizontal jump'
+          await logo.getAttribute('src'),
+          '/static/icons/uu-logo.svg'
+        )
+        await logo.evaluate((img) => img.decode())
+        const logoBox = await logo.boundingBox(),
+          titleBox = await header
+            .getByText('Shop Plans', { exact: true })
+            .boundingBox()
+        assert.equal(logoBox.height, 30)
+        assert(logoBox.x + logoBox.width < titleBox.x)
+        assert(
+          Math.abs(
+            logoBox.y + logoBox.height / 2 - titleBox.y - titleBox.height / 2
+          ) < 1
         )
 
-        assert(
-          await dialog.getByRole('radio', { name: /^3 Months/ }).isChecked()
+        assert.equal(
+          await dialog
+            .getByRole('heading', { name: 'Choose your plan' })
+            .count(),
+          1
         )
-        await dialog.locator('label:has(input[value="1-month"])').click()
-        await dialog
-          .getByRole('radio', { name: /^1 Month/ })
-          .press('ArrowRight')
-        assert(
-          await dialog.getByRole('radio', { name: /^3 Months/ }).isChecked()
+        assert.equal(
+          await dialog
+            .getByRole('button', { name: 'Plus', exact: true })
+            .getAttribute('aria-pressed'),
+          'true'
         )
-        const boxes = await dialog
-          .getByRole('radio')
-          .evaluateAll((es) =>
-            es.map((e) => e.parentElement.getBoundingClientRect().toJSON())
-          )
-        assert(
-          width < 640 ? boxes[0].y < boxes[1].y : boxes[0].y === boxes[1].y,
-          'responsive plan columns'
+        assert.equal(await dialog.locator('[data-plan-detail]').count(), 1)
+        assert.equal(
+          await dialog
+            .locator('[data-plan-detail]')
+            .getAttribute('data-plan-detail'),
+          'plus'
         )
-        assert(
-          boxes.every((b) => b.height >= 320),
-          'substantial cards'
-        )
-        if (width >= 640)
-          assert(
-            boxes.every(
-              (b) =>
-                Math.abs(b.height - boxes[0].height) < 1 &&
-                Math.abs(b.width - boxes[0].width) < 1
-            ),
-            'equal card dimensions'
-          )
-        const cardTexts = await dialog.locator('label').allTextContents()
-        assert(
-          cardTexts[0].includes('Shop discovery') &&
-            !cardTexts[0].includes('Shop Analytics')
-        )
-        assert(
-          cardTexts[1].includes('Shop Analytics') &&
-            !cardTexts[1].includes('Optimized Promotion')
-        )
-        assert(cardTexts[2].includes('Optimized Promotion'))
         for (const text of [
-          'CA$9.90 / month',
-          'CA$6.97 / month',
-          'CA$5.48 / month',
-          'Save CA$8.80',
-          'Save CA$26.50',
+          'CA$2.99',
+          'Run your shop',
+          'Your own storefront',
+          'Product & inventory management',
+          'Customer reviews',
+          'Sales analytics',
+          'Billing & sales records',
         ])
-          assert((await dialog.textContent()).includes(text))
-        assert(
-          await dialog.evaluate((el) => {
-            const p = el.querySelector('[data-shop-pro-pricing]')
-            const r = p.getBoundingClientRect()
-            const b = p.querySelector('footer button').getBoundingClientRect()
-            return Math.abs(r.right - b.right) < 1 && b.width < r.width - 60
-          }),
-          'sheet Continue right aligned'
+          assert((await card.textContent()).includes(text), text)
+        for (const text of [
+          'Monthly',
+          'Yearly',
+          'Standard',
+          'Advanced',
+          'solo',
+          'startup',
+          'teams',
+          '1TB of Space',
+          'Users',
+          '20% OFF',
+        ])
+          assert(
+            !(await dialog.textContent()).includes(text),
+            'removed or not authoritative: ' + text
+          )
+        const trialCTA = dialog.getByRole('button', {
+          name: 'Start 2-Month Free Pro Trial',
+          exact: true,
+        })
+        await trialCTA.scrollIntoViewIfNeeded()
+        assert(await trialCTA.isVisible())
+        assert.equal(
+          await card.getAttribute('data-trial-eligibility'),
+          'unavailable'
         )
-        assert(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth))
+        for (const text of [
+          'No credit card required \u00b7 No automatic charges',
+          'OR',
+          'New sellers can try Pro for 2 months. After the trial, choose Plus, Pro, or continue without paid Shop features.',
+        ])
+          assert(
+            await dialog.getByText(text, { exact: true }).isVisible(),
+            text
+          )
+        await trialCTA.click()
+        assert(
+          await dialog.isVisible(),
+          'trial CTA is a no-op, no fake success'
+        )
+        assert.equal(await trialCTA.locator('svg').count(), 1)
+        assert.equal(
+          await trialCTA.evaluate((el) => getComputedStyle(el).color),
+          'rgb(255, 255, 255)'
+        )
+        assert.equal(await dialog.locator('[data-plan-price]').count(), 1)
+        assert(
+          await dialog
+            .locator('[data-plan-price]')
+            .evaluate((el) => !!el.shadowRoot),
+          'real NumberFlow custom element'
+        )
+        const regularCTA = dialog.getByRole('button', {
+          name: 'Continue with Plus \u00b7 CA$2.99/mo',
+          exact: true,
+        })
+        await regularCTA.click()
+        assert(await dialog.isVisible(), 'CTA remains safe no-op')
+        const geometry = await dialog.evaluate((el) => {
+          const b = el.getBoundingClientRect(),
+            card = el.querySelector('[data-pricing-card]'),
+            body = card.parentElement,
+            cb = card.getBoundingClientRect()
+          return {
+            x: b.x,
+            y: b.y,
+            w: b.width,
+            h: b.height,
+            bottom: b.bottom,
+            cardWidth: cb.width,
+            gradient: getComputedStyle(el).backgroundImage,
+            borderColor: getComputedStyle(el).borderTopColor,
+            topWidth: getComputedStyle(el).borderTopWidth,
+            sideColor: getComputedStyle(el).borderLeftColor,
+            bottomWidth: getComputedStyle(el).borderBottomWidth,
+            bottomColor: getComputedStyle(el).borderBottomColor,
+            rimContent: getComputedStyle(el, '::before').content,
+            rimPadding: getComputedStyle(el, '::before').padding,
+            rimLight: getComputedStyle(el, '::before').backgroundImage,
+            rimComposite: getComputedStyle(el, '::before').maskComposite,
+            rimPointer: getComputedStyle(el, '::before').pointerEvents,
+            rimAnimation: getComputedStyle(el, '::before').animationName,
+            planMaterial: getComputedStyle(
+              el.querySelector('[data-plan-detail]')
+            ).backgroundImage,
+            planShadow: getComputedStyle(el.querySelector('[data-plan-detail]'))
+              .boxShadow,
+            shadow: getComputedStyle(el).boxShadow,
+            orb: getComputedStyle(
+              el.querySelector('[aria-hidden=true]'),
+              '::before'
+            ).width,
+            orbPointer: getComputedStyle(
+              el.querySelector('[aria-hidden=true]'),
+              '::before'
+            ).pointerEvents,
+            orbAnimation: getComputedStyle(
+              el.querySelector('[aria-hidden=true]'),
+              '::before'
+            ).animationName,
+            clipping: getComputedStyle(el).overflow,
+            scrolling: getComputedStyle(body).overflowY,
+            overflow:
+              el.scrollWidth > el.clientWidth ||
+              card.scrollWidth > card.clientWidth,
+            bodyOverflow: body.scrollHeight > body.clientHeight,
+            backdrop: getComputedStyle(el, '::backdrop').backgroundColor,
+            animation: getComputedStyle(el).animationName,
+            bodyLock: getComputedStyle(document.body).overflow,
+            rootLock: getComputedStyle(document.documentElement).overflow,
+          }
+        })
+        assert(geometry.x >= 0 && geometry.x + geometry.w <= width + 0.5)
+        assert(geometry.y >= 0 && geometry.bottom <= 900.5)
+        assert(!geometry.overflow, 'dialog/card no horizontal overflow')
+        assert(geometry.cardWidth <= 504.5 && geometry.cardWidth >= 290)
+        assert(
+          geometry.gradient.includes('rgb(7, 81, 59)') &&
+            geometry.gradient.includes('rgb(9, 11, 11)')
+        )
+        if (width >= 640) assert.equal(geometry.w, 552)
+        assert.equal(geometry.backdrop, 'rgba(0, 0, 0, 0.6)')
+        assert.equal(
+          (geometry.gradient.match(/radial-gradient/g) || []).length,
+          3
+        )
+        assert.equal(geometry.borderColor, 'rgba(20, 70, 54, 0.08)')
+        for (const color of ['15, 145, 90', 'rgba(0, 0, 0, 0.54)'])
+          assert(geometry.shadow.includes(color), color)
+        assert.equal(geometry.orb, width < 640 ? '280px' : '360px')
+        assert.equal(geometry.topWidth, '1px')
+        assert.equal(geometry.sideColor, 'rgba(20, 70, 54, 0.08)')
+        assert.notEqual(geometry.rimContent, 'none', 'one dedicated pseudo rim')
+        assert.equal(geometry.rimPadding, '1px')
+        assert(
+          geometry.rimComposite.includes('exclude'),
+          'rounded ring mask supported'
+        )
+        assert(geometry.rimLight.includes('105, 240, 168'))
+        assert(geometry.rimLight.includes('0.55'))
+        assert.equal(geometry.rimPointer, 'none')
+        assert.equal(geometry.rimAnimation, 'none')
+        assert(geometry.gradient.includes('72% 17%'))
+        assert(geometry.gradient.includes('95% 46%'))
+        assert(!geometry.shadow.includes('inset'), 'no duplicate inner edge')
+        if (width >= 640) {
+          assert.equal(geometry.bottomWidth, '1px')
+          assert.equal(geometry.bottomColor, 'rgba(5, 10, 9, 0.95)')
+        } else assert.equal(geometry.bottomWidth, '0px')
+        assert(geometry.planMaterial.includes('rgb(247, 249, 248) 100%'))
+        assert(geometry.planShadow.includes('rgba(0, 0, 0, 0.075)'))
+        assert.equal(geometry.orbPointer, 'none')
+        assert.equal(geometry.orbAnimation, 'none')
+        assert.equal(geometry.clipping, 'hidden')
+        assert.equal(geometry.scrolling, 'auto')
+        assert(
+          geometry.bodyLock === 'hidden' || geometry.rootLock === 'hidden',
+          'scroll locked'
+        )
+        if (width < 640)
+          assert(Math.abs(geometry.bottom - 900) < 1, 'mobile bottom attached')
+        else
+          assert(
+            Math.abs(geometry.y - (900 - geometry.h) / 2) < 2,
+            'desktop centered'
+          )
+        assert.equal(geometry.animation === 'none', reducedMotion === 'reduce')
         assert(
           await dialog.evaluate(
             (el) =>
-              Array.from(el.querySelectorAll('*')).filter(
-                (n) =>
-                  ['auto', 'scroll'].includes(getComputedStyle(n).overflowY) &&
-                  n.scrollHeight > n.clientHeight
-              ).length <= 1
-          ),
-          'one internal scroll owner'
+              document.activeElement === el ||
+              el.contains(document.activeElement)
+          )
         )
-        if (reducedMotion === 'reduce' && [390, 1280].includes(width))
-          await p.screenshot({
-            path: 'tests/artifacts/shop-pro-pricing-sheet-' + width + '.png',
-          })
-        await dialog
-          .getByRole('button', { name: 'Continue', exact: true })
-          .click()
-        assert.equal(await dialog.count(), 1)
-        assert.deepEqual(await p.evaluate(() => window.requests), [])
+        // Native top-layer inertness prevents interaction with the slider below.
+        assert(await dialog.evaluate((el) => el.matches(':modal')))
+        await p.mouse.move(2, 300)
+        await p.mouse.wheel(0, 300)
+        await p.waitForTimeout(80)
+        assert.equal(await p.evaluate(() => window.scrollY), scroll)
+        const beforeCard = await dialog
+          .locator('[data-plan-detail]')
+          .boundingBox()
+        const flow = dialog.locator('[data-plan-price]')
+        await flow.evaluate((el) => {
+          window.priceNode = el
+          window.whiteCard = el.closest('[data-plan-detail]')
+        })
+        const priceBox = await flow.locator('..').boundingBox()
+        for (const [key, value, count] of [
+          ['pro', 5.99, 3],
+          ['plus', 2.99, 5],
+        ]) {
+          // Sample actual rendered digit transforms, shared-layout pill motion and feature stagger.
+          await p.evaluate((key) => {
+            window.motionSamples = []
+            window.samplingFinished = false
+            const until = performance.now() + 1400
+            const sample = () => {
+              const host = window.priceNode
+              const features = document.querySelector(
+                `[data-plan-features="${key}"]`
+              )
+              const items = features
+                ? Array.from(features.querySelectorAll('li'))
+                : []
+              const pill = document.querySelector(
+                '[aria-label="Shop plan"] button[aria-pressed="true"] > span'
+              )
+              const digit = host.shadowRoot?.querySelector(
+                '[part~="integer-digit"] .digit__num:not([inert])'
+              )
+              const spinning = host.shadowRoot?.querySelector('.is-spinning')
+              window.motionSamples.push({
+                digit: digit ? getComputedStyle(digit).transform : null,
+                spinning: !!spinning,
+                x: pill?.getBoundingClientRect().x,
+                features: items.map((el) => ({
+                  opacity: Number(getComputedStyle(el).opacity),
+                  y: new DOMMatrixReadOnly(getComputedStyle(el).transform).m42,
+                })),
+                priceOpacity: getComputedStyle(host).opacity,
+              })
+              if (performance.now() < until) requestAnimationFrame(sample)
+              else window.samplingFinished = true
+            }
+            requestAnimationFrame(sample)
+          }, key)
+          await dialog
+            .getByRole('button', {
+              name: key === 'pro' ? 'Pro' : 'Plus',
+              exact: true,
+            })
+            .click()
+          await p.waitForFunction(() => window.samplingFinished)
+          const samples = await p.evaluate(() => window.motionSamples)
+          assert(
+            await flow.evaluate((el) => el === window.priceNode),
+            'NumberFlow instance stays mounted'
+          )
+          assert(
+            await flow.evaluate(
+              (el) => el.closest('[data-plan-detail]') === window.whiteCard
+            ),
+            'one persistent white card'
+          )
+          assert.equal(await dialog.locator('[data-plan-detail]').count(), 1)
+          assert.equal(await card.locator('li').count(), count)
+          assert.equal(
+            await flow.evaluate(
+              (el) => JSON.parse(el.getAttribute('data')).valueAsString
+            ),
+            value.toFixed(2)
+          )
+          assert(
+            samples.every((s) => s.priceOpacity === '1'),
+            'price is not faded'
+          )
+          if (reducedMotion === 'no-preference') {
+            assert(
+              samples.some((s) => s.spinning),
+              'NumberFlow digit is spinning'
+            )
+            assert(
+              new Set(samples.filter((s) => s.spinning).map((s) => s.digit))
+                .size > 2,
+              'visible rolling digit transform changes'
+            )
+            assert(
+              new Set(samples.map((s) => Math.round(s.x))).size > 2,
+              'original shared-layout pill moves'
+            )
+            assert(
+              samples.some(
+                (s) =>
+                  s.features.length === count &&
+                  s.features[0].opacity > s.features[count - 1].opacity + 0.02
+              ),
+              'feature opacity is staggered'
+            )
+            assert(
+              samples.some((s) => s.features.some((f) => f.y > 0.1)),
+              'feature translates from y=5'
+            )
+          } else {
+            assert(
+              !samples.some((s) => s.spinning),
+              'no reduced-motion digit roll'
+            )
+            assert(
+              !samples.some((s) => s.features.some((f) => f.y > 0.1)),
+              'reduced motion removes feature translate'
+            )
+          }
+          const currentPriceBox = await flow.locator('..').boundingBox()
+          assert(
+            Math.abs(priceBox.width - currentPriceBox.width) < 1,
+            'price width stable'
+          )
+          assert(
+            Math.abs(priceBox.x - currentPriceBox.x) < 1,
+            'price position stable'
+          )
+          const name = key === 'pro' ? 'Pro' : 'Plus'
+          await dialog
+            .getByRole('button', {
+              name: `Continue with ${name} \u00b7 CA$${value.toFixed(2)}/mo`,
+              exact: true,
+            })
+            .click()
+          assert(await dialog.isVisible(), 'Continue remains no-op')
+        }
+        for (const text of [
+          'Run your shop',
+          'Your own storefront',
+          'Product & inventory management',
+          'Customer reviews',
+          'Sales analytics',
+          'Billing & sales records',
+        ])
+          assert((await card.textContent()).includes(text), text)
+        const afterCard = await dialog
+          .locator('[data-plan-detail]')
+          .boundingBox()
+        assert(
+          Math.abs(beforeCard.height - afterCard.height) < 1,
+          'stable outer white card height'
+        )
+        // Focus remains trapped after repeated Tab presses.
+        for (let i = 0; i < 12; i++) {
+          await p.keyboard.press('Tab')
+          assert(
+            await dialog.evaluate(
+              (el) =>
+                el === document.activeElement ||
+                el.contains(document.activeElement) ||
+                document.activeElement === document.body
+            )
+          )
+        }
+        const ctaVisual = await regularCTA.evaluate((el) => ({
+          background: getComputedStyle(el).backgroundColor,
+          color: getComputedStyle(el).color,
+          classes: el.className,
+        }))
+        assert(
+          ['rgb(255, 255, 255)', 'rgb(234, 240, 236)'].includes(
+            ctaVisual.background
+          ),
+          JSON.stringify(ctaVisual)
+        )
+        await p.screenshot({
+          path: path.join(root, `new-pricing-${width}-${reducedMotion}.png`),
+        })
+        await p.keyboard.press('Escape')
+        if (reducedMotion === 'no-preference') {
+          assert.equal(await dialog.getAttribute('data-exiting'), 'true')
+          assert.equal(
+            await dialog.evaluate((el) => el.open),
+            true,
+            'native lock stays through exit'
+          )
+        }
+        await dialog.waitFor({ state: 'detached' })
+        assert(
+          await opener.evaluate((el) => el === document.activeElement),
+          'focus restored'
+        )
+        assert.equal(await p.evaluate(() => window.scrollY), scroll)
+        assert.equal(
+          await p.evaluate(() => document.documentElement.style.overflow),
+          ''
+        )
+        await opener.click()
+        await dialog.waitFor()
+        await p.waitForTimeout(250)
         await dialog
           .getByRole('button', { name: 'Close Shop Pro pricing' })
-          .focus()
-        await p.keyboard.press('Shift+Tab')
+          .click()
+        await dialog.waitFor({ state: 'detached' })
+        assert(await opener.evaluate((el) => el === document.activeElement))
+        // Short-screen dialog scroll owner; close never scrolls out of reach.
+        await p.setViewportSize({ width, height: 540 })
+        await opener.click()
+        await dialog.waitFor()
+        await p.waitForTimeout(300)
+        const body = dialog.locator('[data-pricing-card]').locator('..')
         assert(
-          await dialog.evaluate(
-            (el) =>
-              el.contains(document.activeElement) ||
-              document.activeElement === document.body
-          ),
-          'focus stays in sheet'
+          await body.evaluate((el) => el.scrollHeight > el.clientHeight),
+          'short-screen internal scroll'
         )
-        await p.keyboard.press('Escape')
-        await dialog.waitFor({ state: 'hidden' })
-        await p.waitForTimeout(220)
+        await body.evaluate((el) => {
+          el.scrollTop = el.scrollHeight
+        })
+        assert(await body.evaluate((el) => el.scrollTop > 0))
         assert(
-          await opener.evaluate((e) => document.activeElement === e),
-          'focus return'
+          await dialog
+            .getByRole('button', { name: 'Close Shop Pro pricing' })
+            .isVisible()
         )
-        const before = await p
-          .getByRole('region', { name: 'Shop directory', exact: true })
-          .boundingBox()
-        await banner
+        await dialog
+          .getByRole('button', { name: 'Close Shop Pro pricing' })
+          .click()
+        await dialog.waitFor({ state: 'detached' })
+        await p.setViewportSize({ width, height: 900 })
+        await promo
           .getByRole('button', { name: 'Dismiss Shop Pro promotion' })
           .click()
-        await banner.waitFor({ state: 'hidden' })
-        const after = await p
-          .getByRole('region', { name: 'Shop directory', exact: true })
-          .boundingBox()
-        assert(after.y < before.y, 'content moves upward')
-        await p.evaluate(() => window.show('inline'))
-        const inline = p.locator('[data-shop-listing-workspace]:visible')
-        await inline.locator('[data-shop-pro-pricing]').waitFor()
-        assert(
-          await inline
-            .locator('label')
-            .evaluateAll((es) =>
-              es.every((e) => getComputedStyle(e).animationName === 'none')
-            ),
-          'inline has no sheet stagger'
+        await promo.waitFor({ state: 'detached' })
+        await slider.waitFor()
+        // Actual shared Home workspace in existing responsive Home shell.
+        await p.evaluate(() => window.show('home'))
+        const workspace = p
+          .locator('[data-shop-listing-workspace="empty"]')
+          .first()
+        await workspace.waitFor({ state: 'attached' })
+        assert.equal((await workspace.textContent()).trim(), '')
+        assert.equal(
+          await p
+            .locator('[data-pricing-card], [data-shop-pro-pricing]')
+            .count(),
+          0
         )
         assert.equal(await p.getByRole('dialog').count(), 0)
         assert.equal(
           await p
-            .getByRole('complementary', { name: 'Shop Pro promotion' })
-            .count(),
-          0
-        )
-        const geometry = await inline.evaluate((el) => {
-          const rect = (e) => e.getBoundingClientRect().toJSON()
-          const main = el.parentElement
-          const pricing = el.querySelector('[data-shop-pro-pricing]')
-          const css = getComputedStyle(main)
-          const box = rect(main)
-          const contentLeft = box.left + parseFloat(css.paddingLeft)
-          const contentRight =
-            box.left + main.clientWidth - parseFloat(css.paddingRight)
-          const title =
-            main.querySelector('[data-home-section-header] h2') ||
-            main.previousElementSibling.querySelector('h1')
-          return {
-            main: box,
-            workspace: rect(el),
-            pricing: rect(pricing),
-            title: rect(title),
-            cards: [...el.querySelectorAll('label')].map(rect),
-            footer: rect(el.querySelector('footer')),
-            continue: rect(el.querySelector('footer button')),
-            contentLeft,
-            contentRight,
-            background: getComputedStyle(pricing).backgroundColor,
-            outer: getComputedStyle(el).backgroundColor,
-          }
-        })
-        assert(
-          Math.abs(
-            (geometry.workspace.left + geometry.workspace.right) / 2 -
-              (geometry.contentLeft + geometry.contentRight) / 2
-          ) < 1,
-          'centered in post-sidebar workspace'
-        )
-        assert(
-          Math.abs(geometry.title.x - geometry.contentLeft) < 1,
-          'page title uses Home shell inset'
-        )
-        assert(
-          Math.abs(geometry.cards[0].x - geometry.pricing.x) < 1,
-          'card baseline'
-        )
-        assert(
-          Math.abs(geometry.footer.x - geometry.pricing.x) < 1,
-          'footer baseline'
-        )
-        assert(
-          Math.abs(geometry.continue.right - geometry.pricing.right) < 1,
-          'Home Continue lower-right'
-        )
-        assert.equal(geometry.background, 'rgba(0, 0, 0, 0)')
-        assert.equal(geometry.outer, 'rgba(0, 0, 0, 0)')
-        assert.equal(await inline.locator('[data-shop-pro-badge]').count(), 0)
-        assert.equal(
-          await p
-            .getByRole('heading', { name: 'My Shop', exact: true })
-            .count(),
-          1,
-          'one visible page heading, no inner duplicate'
-        )
-        console.log(
-          'HOME',
-          width,
-          JSON.stringify({
-            x: geometry.workspace.x,
-            width: geometry.workspace.width,
-            card: geometry.cards[0].width,
-            height: geometry.cards[0].height,
-          })
-        )
-        if (reducedMotion === 'reduce')
-          await p.screenshot({
-            path: 'tests/artifacts/shop-pro-pricing-home-' + width + '.png',
-          })
-        if (width >= 1024) {
-          await p
-            .getByRole('button', { name: 'Keep expanded', exact: true })
-            .click()
-          await p.waitForTimeout(350)
-          const pinned = await inline.evaluate((el) => {
-            const main = el.parentElement,
-              css = getComputedStyle(main),
-              r = main.getBoundingClientRect(),
-              b = el.getBoundingClientRect()
-            return {
-              left: r.left,
-              center: (b.left + b.right) / 2,
-              expected:
-                (r.left +
-                  parseFloat(css.paddingLeft) +
-                  r.left +
-                  main.clientWidth -
-                  parseFloat(css.paddingRight)) /
-                2,
-              title: main
-                .querySelector('[data-home-section-header]')
-                .getBoundingClientRect().x,
-              x: b.x,
-            }
-          })
-          assert(
-            pinned.left > geometry.main.left + 170,
-            'pinned sidebar reserves actual workspace'
-          )
-          assert(
-            Math.abs(pinned.center - pinned.expected) < 1,
-            'pricing centers after pinned sidebar'
-          )
-          assert(
-            Math.abs(pinned.title - (pinned.left + 24)) < 1,
-            'title follows shared Home shell inset'
-          )
-        }
-        await inline.locator('label').filter({ hasText: '6 Months' }).click()
-        await inline
-          .getByRole('button', { name: 'Continue', exact: true })
-          .click()
-        assert(
-          await inline.getByRole('radio', { name: /^6 Months/ }).isChecked()
-        )
-        assert.equal(
-          await inline
-            .getByRole('button', { name: 'Create Shop Listing', exact: true })
+            .getByText(
+              /Subscribe to unlock|Choose a plan|Shop Pro required|Coming soon/
+            )
             .count(),
           0
         )
@@ -443,68 +584,52 @@ fs.writeFileSync(
             () => document.documentElement.scrollWidth <= window.innerWidth
           )
         )
-        assert.equal(network, 0)
+        // Visual preview is independent of eligibility. Neither branch grants anything.
+        for (const eligibility of ['unavailable', 'ineligible', 'eligible']) {
+          for (const preview of [false, true]) {
+            await p.evaluate(
+              ({ eligibility, preview }) =>
+                window.showTrial(eligibility, preview),
+              { eligibility, preview }
+            )
+            const expected = preview || eligibility === 'eligible'
+            assert.equal(
+              await p
+                .getByRole('button', {
+                  name: 'Start 2-Month Free Pro Trial',
+                  exact: true,
+                })
+                .count(),
+              expected ? 1 : 0
+            )
+            assert.equal(
+              await p.getByText('OR', { exact: true }).count(),
+              expected ? 1 : 0
+            )
+            assert.equal(
+              await p
+                .locator('[data-pricing-card]')
+                .getAttribute('data-trial-eligibility'),
+              eligibility
+            )
+          }
+        }
         assert.deepEqual(errors, [])
+        assert.equal(network, 0)
         assert.deepEqual(await p.evaluate(() => window.requests), [])
-        await p.setViewportSize({ width, height: 560 })
-        await p.evaluate(() => window.show('market'))
-        await p.getByRole('button', { name: 'Shop', exact: true }).click()
-        await p
-          .getByRole('button', { name: 'Explore Shop Pro', exact: true })
-          .click()
-        await dialog.waitFor()
-        await p.waitForTimeout(450)
-        const shortBox = await dialog.boundingBox()
-        assert(
-          shortBox.y >= 0 && shortBox.y + shortBox.height <= 561,
-          'short viewport no clipping'
-        )
-        if (width >= 640)
-          assert(
-            Math.abs(shortBox.y + shortBox.height / 2 - 280) < 1,
-            'short wide dialog centered'
-          )
-        else
-          assert(
-            Math.abs(shortBox.y + shortBox.height - 560) < 1,
-            'short mobile bottom attached'
-          )
-        assert(
-          await dialog
-            .getByRole('button', { name: 'Close Shop Pro pricing' })
-            .isVisible()
-        )
-        await dialog
-          .getByRole('button', { name: 'Continue', exact: true })
-          .scrollIntoViewIfNeeded()
-        assert(
-          await dialog
-            .getByRole('button', { name: 'Continue', exact: true })
-            .isVisible()
-        )
-        await p.keyboard.press('Escape')
-        await dialog.waitFor({ state: 'hidden' })
-        assert(
-          await p.evaluate(
-            () =>
-              document.documentElement.style.overflow !== 'hidden' &&
-              document.body.style.overflow !== 'hidden'
-          ),
-          'scroll cleanup'
-        )
-        if (reducedMotion === 'reduce') assert.equal(await inline.count(), 0)
-        await p.close()
         console.log(
-          'PASS',
+          'PASS new Pricing Card',
           width,
           reducedMotion,
-          'Shop-only banner, sheet/inline shared plans, selection/keyboard/no-op, responsive/short-screen fit, focus/Escape/scroll cleanup, no requests'
+          '2.99/5.99 persistent NumberFlow roll, original tab/stagger/content, full 2-month trial preview, modal/scroll/focus, zero requests'
         )
+        await p.close()
       }
   } finally {
     await browser.close()
   }
-})().catch((e) => {
+}
+main().catch((e) => {
   console.error(e)
   process.exitCode = 1
 })

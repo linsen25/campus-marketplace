@@ -3,7 +3,6 @@ import { useRouter } from 'next/router'
 import { useRef, useState } from 'react'
 
 import { CardAction } from '@/components/listings/card-actions'
-import success from '@/components/listings/create-success.module.css'
 import GlideSelect from '@/components/ui/GlideSelect'
 import { StatefulButton } from '@/components/velora/stateful-button'
 import { useFinancialCapabilities } from '@/hooks/use-financial-capabilities'
@@ -21,6 +20,7 @@ import { HandoffVerification } from './handoff-verification'
 import { OrderCampusPayment } from './order-campus-payment'
 import styles from './order-detail-preview.module.css'
 import { CourierShipmentForm, DeliveryAddressForm } from './order-flow-actions'
+import pageStyles from './order-stage-page.module.css'
 import profile from './profile.module.css'
 
 const cancellationCopy: Record<string, string> = {
@@ -98,7 +98,7 @@ function BuyerDeliveryPayment({
     )
   return (
     <StatefulButton
-      className={success.createButton}
+      className={pageStyles.primaryAction}
       disabled={blocked}
       onClick={onPay}
     >
@@ -315,7 +315,7 @@ export function OrderCurrentStep({
   return (
     <>
       <section
-        className={profile.panel}
+        className={`${profile.panel} ${pageStyles.currentStep}`}
         aria-label="Current Step"
         data-current-step={stage}
       >
@@ -449,7 +449,7 @@ export function OrderCurrentStep({
                   </p>
                 ) : (
                   <StatefulButton
-                    className={success.createButton}
+                    className={pageStyles.primaryAction}
                     disabled={blocked}
                     onClick={() => act('confirm-agreement')}
                   >
@@ -472,228 +472,237 @@ export function OrderCurrentStep({
             }
           </p>
         )}
-      </section>
-      {!readOnly &&
-        ![
-          'review',
-          'completed',
-          'cancelled',
-          'expired',
-          'loading',
-          'cancellation',
-          'exchange',
-          'inspect',
-        ].includes(stage) && (
-          <section className={profile.panel} aria-label="Current-stage actions">
-            {stage === 'payment' &&
-              (terms.fulfillment === 'on_campus' ? (
-                <OrderCampusPayment
-                  order={order}
-                  role={role}
-                  showDetails={false}
-                  onRefresh={refresh}
-                  onUpdated={onUpdated}
-                />
-              ) : (
-                <p>
-                  Waiting for authoritative payment confirmation. Handoff is not
-                  available yet.
-                </p>
-              ))}
-            {stage === 'checkout' && data?.checkout && (
-              <>
-                <p>
-                  {buyer
-                    ? 'Provide your private delivery address and pay before the payment deadline.'
-                    : 'The Buyer must provide their address and complete payment. You can see only the agreed coarse area until Paid.'}
-                </p>
-                {buyer && !data.checkout.checkoutStartedAt && (
-                  <StatefulButton
-                    className={success.createButton}
-                    disabled={blocked}
-                    onClick={() => act('checkout')}
-                  >
-                    Start checkout
-                  </StatefulButton>
-                )}
-                {buyer &&
-                  data.checkout.checkoutStartedAt &&
-                  !data.checkout.addressFrozen &&
-                  terms.fulfillment === 'delivery' &&
-                  terms.deliveryArea && (
-                    <DeliveryAddressForm
-                      disabled={blocked}
-                      initial={data.checkout.address}
-                      area={terms.deliveryArea}
-                      onDirty={setAddressDirty}
-                      onSave={(address) => act('address', { address })}
-                    />
-                  )}
-                {buyer &&
-                  data.checkout.checkoutStartedAt &&
-                  data.checkout.address &&
-                  !addressDirty && (
-                    <BuyerDeliveryPayment
-                      blocked={blocked}
-                      onPay={() => act('payment')}
-                    />
-                  )}
-              </>
-            )}
-            {stage === 'handoff' &&
-              order.paymentStatus === 'paid' &&
-              (terms.fulfillment === 'on_campus' ||
-                (terms.deliveryMethod === 'seller_delivery' &&
-                  data?.fulfillment.deliveryStartedAt)) && (
+        {!readOnly &&
+          ![
+            'review',
+            'completed',
+            'cancelled',
+            'expired',
+            'loading',
+            'cancellation',
+            'exchange',
+            'inspect',
+          ].includes(stage) && (
+            <section
+              className={profile.panel}
+              aria-label="Current-stage actions"
+            >
+              {stage === 'payment' &&
+                (terms.fulfillment === 'on_campus' ? (
+                  <OrderCampusPayment
+                    order={order}
+                    role={role}
+                    showDetails={false}
+                    onRefresh={refresh}
+                    onUpdated={onUpdated}
+                  />
+                ) : (
+                  <p>
+                    Waiting for authoritative payment confirmation. Handoff is
+                    not available yet.
+                  </p>
+                ))}
+              {stage === 'checkout' && data?.checkout && (
                 <>
-                  {buyer ? (
-                    <BuyerHandoffCredential
-                      key={order.id}
-                      orderId={order.id}
-                      credential={data?.credential}
-                    />
-                  ) : (
-                    <>
-                      {data?.fulfillment.handoffReady ? (
-                        <>
-                          <HandoffVerification
-                            disabled={blocked}
-                            numericRetryAt={numericRetryAt}
-                            onOpenScanner={() => setScannerOpen(true)}
-                            onVerify={(code) =>
-                              act('handoff', {
-                                channel: 'code',
-                                credential: code,
-                              })
-                            }
-                          />
-                          {scannerOpen && (
-                            <HandoffScanner
-                              key={order.id}
-                              onClose={() => setScannerOpen(false)}
-                              onVerify={(token) =>
+                  <p>
+                    {buyer
+                      ? 'Provide your private delivery address and pay before the payment deadline.'
+                      : 'The Buyer must provide their address and complete payment. You can see only the agreed coarse area until Paid.'}
+                  </p>
+                  {buyer && !data.checkout.checkoutStartedAt && (
+                    <StatefulButton
+                      className={pageStyles.primaryAction}
+                      disabled={blocked}
+                      onClick={() => act('checkout')}
+                    >
+                      Start checkout
+                    </StatefulButton>
+                  )}
+                  {buyer &&
+                    data.checkout.checkoutStartedAt &&
+                    !data.checkout.addressFrozen &&
+                    terms.fulfillment === 'delivery' &&
+                    terms.deliveryArea && (
+                      <DeliveryAddressForm
+                        disabled={blocked}
+                        initial={data.checkout.address}
+                        area={terms.deliveryArea}
+                        onDirty={setAddressDirty}
+                        onSave={(address) => act('address', { address })}
+                      />
+                    )}
+                  {buyer &&
+                    data.checkout.checkoutStartedAt &&
+                    data.checkout.address &&
+                    !addressDirty && (
+                      <BuyerDeliveryPayment
+                        blocked={blocked}
+                        onPay={() => act('payment')}
+                      />
+                    )}
+                </>
+              )}
+              {stage === 'handoff' &&
+                order.paymentStatus === 'paid' &&
+                (terms.fulfillment === 'on_campus' ||
+                  (terms.deliveryMethod === 'seller_delivery' &&
+                    data?.fulfillment.deliveryStartedAt)) && (
+                  <>
+                    {buyer ? (
+                      <BuyerHandoffCredential
+                        key={order.id}
+                        orderId={order.id}
+                        credential={data?.credential}
+                      />
+                    ) : (
+                      <>
+                        {data?.fulfillment.handoffReady ? (
+                          <>
+                            <HandoffVerification
+                              disabled={blocked}
+                              numericRetryAt={numericRetryAt}
+                              onOpenScanner={() => setScannerOpen(true)}
+                              onVerify={(code) =>
                                 act('handoff', {
-                                  channel: 'qr',
-                                  credential: token,
+                                  channel: 'code',
+                                  credential: code,
                                 })
                               }
                             />
-                          )}
-                        </>
-                      ) : (
-                        <p>Waiting for authoritative handoff availability.</p>
-                      )}
+                            {scannerOpen && (
+                              <HandoffScanner
+                                key={order.id}
+                                onClose={() => setScannerOpen(false)}
+                                onVerify={(token) =>
+                                  act('handoff', {
+                                    channel: 'qr',
+                                    credential: token,
+                                  })
+                                }
+                              />
+                            )}
+                          </>
+                        ) : (
+                          <p>Waiting for authoritative handoff availability.</p>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
+              {stage === 'delivery' && order.paymentStatus === 'paid' && (
+                <>
+                  {buyer ? (
+                    <p>
+                      Payment is secured. Waiting for the Seller to start
+                      delivery. Inspect the item on arrival before presenting
+                      your handoff credential.
+                    </p>
+                  ) : (
+                    <>
+                      <p>
+                        Payment is secured. Start delivery when you begin the
+                        delivery effort.
+                      </p>
+                      <StatefulButton
+                        className={pageStyles.primaryAction}
+                        disabled={blocked}
+                        onClick={() => act('start-delivery')}
+                      >
+                        Start delivery
+                      </StatefulButton>
                     </>
                   )}
                 </>
               )}
-            {stage === 'delivery' && order.paymentStatus === 'paid' && (
-              <>
-                {buyer ? (
-                  <p>
-                    Payment is secured. Waiting for the Seller to start
-                    delivery. Inspect the item on arrival before presenting your
-                    handoff credential.
-                  </p>
-                ) : (
-                  <>
-                    <p>
-                      Payment is secured. Start delivery when you begin the
-                      delivery effort.
-                    </p>
-                    <StatefulButton
-                      className={success.createButton}
-                      disabled={blocked}
-                      onClick={() => act('start-delivery')}
-                    >
-                      Start delivery
-                    </StatefulButton>
-                  </>
-                )}
-              </>
-            )}
-            {stage === 'shipment' && order.paymentStatus === 'paid' && (
-              <>
-                {data?.courier?.state === 'not_shipped' &&
-                  (!buyer ? (
-                    <CourierShipmentForm
-                      disabled={blocked}
-                      onShip={(carrierLabel, trackingReference) =>
-                        act('shipment', { carrierLabel, trackingReference })
-                      }
-                    />
-                  ) : (
-                    <p>Waiting for the Seller to ship.</p>
-                  ))}
-                {data?.courier?.state === 'shipped' && (
-                  <>
-                    {buyer ? (
-                      <StatefulButton
-                        className={success.createButton}
+              {stage === 'shipment' && order.paymentStatus === 'paid' && (
+                <>
+                  {data?.courier?.state === 'not_shipped' &&
+                    (!buyer ? (
+                      <CourierShipmentForm
                         disabled={blocked}
-                        onClick={() => act('received')}
-                      >
-                        Confirm Received
-                      </StatefulButton>
-                    ) : (
-                      <p>
-                        Waiting for trusted delivery or Buyer confirmation of
-                        receipt.
-                      </p>
-                    )}
-                  </>
-                )}
-                {data?.courier?.state === 'delivered' && (
-                  <p>Courier delivery recorded. Refreshing Protection state.</p>
-                )}
-              </>
-            )}
-            {stage === 'protection' && data && (
-              <>
-                {buyer && !data.fulfillment.protectionHold && (
-                  <>
-                    <label className={workspace.field}>
-                      Describe the issue
-                      <GlideSelect
-                        ariaLabel="Protection issue reason"
-                        size="lg"
-                        disabled={blocked}
-                        value={reason}
-                        options={[
-                          {
-                            value: 'ITEM_NOT_RECEIVED',
-                            label: 'Item not received',
-                          },
-                          { value: 'WRONG_ITEM', label: 'Wrong item' },
-                          {
-                            value: 'MATERIALLY_NOT_AS_DESCRIBED',
-                            label: 'Materially not as described',
-                          },
-                          {
-                            value: 'MISSING_AGREED_ITEM',
-                            label: 'Missing agreed item',
-                          },
-                          {
-                            value: 'QUALIFYING_HIDDEN_DEFECT',
-                            label: 'Qualifying hidden defect',
-                          },
-                        ]}
-                        onChange={setReason}
+                        onShip={(carrierLabel, trackingReference) =>
+                          act('shipment', { carrierLabel, trackingReference })
+                        }
                       />
-                    </label>
-                    <StatefulButton
-                      className={success.createButton}
-                      disabled={blocked || !reason.trim()}
-                      onClick={() => act('case', { reason: reason.trim() })}
-                    >
-                      Report an issue
-                    </StatefulButton>
-                  </>
-                )}
-              </>
-            )}
-          </section>
-        )}
+                    ) : (
+                      <p>Waiting for the Seller to ship.</p>
+                    ))}
+                  {data?.courier?.state === 'shipped' && (
+                    <>
+                      {buyer ? (
+                        <StatefulButton
+                          className={pageStyles.primaryAction}
+                          disabled={blocked}
+                          onClick={() => act('received')}
+                        >
+                          Confirm Received
+                        </StatefulButton>
+                      ) : (
+                        <p>
+                          Waiting for trusted delivery or Buyer confirmation of
+                          receipt.
+                        </p>
+                      )}
+                    </>
+                  )}
+                  {data?.courier?.state === 'delivered' && (
+                    <p>
+                      Courier delivery recorded. Refreshing Protection state.
+                    </p>
+                  )}
+                </>
+              )}
+              {stage === 'protection' && data && (
+                <>
+                  {buyer && !data.fulfillment.protectionHold && (
+                    <>
+                      <label
+                        className={`${workspace.field} ${pageStyles.protectionIssue}`}
+                      >
+                        Describe the issue
+                        <GlideSelect
+                          ariaLabel="Protection issue reason"
+                          overlay={true}
+                          placement="top-desktop"
+                          size="lg"
+                          disabled={blocked}
+                          value={reason}
+                          options={[
+                            {
+                              value: 'ITEM_NOT_RECEIVED',
+                              label: 'Item not received',
+                            },
+                            { value: 'WRONG_ITEM', label: 'Wrong item' },
+                            {
+                              value: 'MATERIALLY_NOT_AS_DESCRIBED',
+                              label: 'Materially not as described',
+                            },
+                            {
+                              value: 'MISSING_AGREED_ITEM',
+                              label: 'Missing agreed item',
+                            },
+                            {
+                              value: 'QUALIFYING_HIDDEN_DEFECT',
+                              label: 'Qualifying hidden defect',
+                            },
+                          ]}
+                          onChange={setReason}
+                        />
+                      </label>
+                      <StatefulButton
+                        className={pageStyles.reportIssue}
+                        disabled={blocked || !reason.trim()}
+                        onClick={() => act('case', { reason: reason.trim() })}
+                      >
+                        Report an issue
+                      </StatefulButton>
+                    </>
+                  )}
+                </>
+              )}
+            </section>
+          )}
+      </section>
       {(flow.error || error || blocked) && (
         <section className={profile.panel} aria-label="Order refresh">
           {(flow.error || error) && <p role="alert">{flow.error || error}</p>}

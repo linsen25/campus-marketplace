@@ -12,7 +12,7 @@
   min-width: 0;
   min-height: 0;
   width: 100%;
-  overflow: auto hidden;
+  overflow: hidden;
   overscroll-behavior-x: contain;
   border: 1px solid #b995dc29;
   border-radius: 16px;
@@ -35,9 +35,9 @@
   align-items: center;
   gap: var(--client-avatar-gap);
   width: 64px;
-
-  /* Match the header's 40px avatar centered within its 44px action row. */
-  padding: 14px var(--client-rail-padding) var(--client-rail-padding);
+  height: 100%;
+  overflow: hidden auto;
+  padding: 12px var(--client-rail-padding);
 }
 
 .avatarSlot {
@@ -72,8 +72,7 @@ button.avatarSlot {
 }
 
 .expanded {
-  position: absolute;
-  inset: 0 auto 0 0;
+  height: 100%;
   width: var(--contacts-expanded-width);
   overflow: hidden;
 }
@@ -90,7 +89,10 @@ button.avatarSlot {
 
 .backRow {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   flex-shrink: 0;
+  min-height: 32px;
 }
 
 .back {
@@ -131,7 +133,7 @@ button.avatarSlot {
 }
 
 .conversation:hover,
-.conversation[aria-pressed="true"] {
+.conversation[aria-pressed='true'] {
   background: #3b2e48;
 }
 
@@ -204,4 +206,71 @@ button.avatarSlot {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+.stack .avatarSlot[aria-pressed='true'] {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
+}
+.search {
+  width: 100%;
+  min-width: 0;
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border: 1px solid #b995dc29;
+  border-radius: 10px;
+  background: #160f1d;
+  color: #f5f3f7;
+  font: inherit;
+  font-size: 13px;
+}
+.search:focus-visible {
+  outline: 2px solid #b88cfa;
+  outline-offset: -2px;
+}
+.productRow {
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+.productRow:hover {
+  background: #ffffff08;
+}
+.productRow[aria-pressed='true'] {
+  background: #7c3aed24;
+  border-color: #a78bfa40;
+}
+.productThumbnail {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 10px;
+}
+.productRow .rowText {
+  flex: 1;
+}
+.rowMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  align-self: stretch;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+  color: #aa95bb;
+  font-size: 10px;
+}
+.unreadCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding-inline: 5px;
+  border-radius: 999px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 11px;
 }

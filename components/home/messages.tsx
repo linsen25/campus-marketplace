@@ -721,6 +721,7 @@ export function Messages({
             </div>
           ) : (
             <ClientCard
+              mode={active === 'selling' ? 'Selling' : 'Buying'}
               conversations={conversations}
               selectedId={selected?.id || ''}
               onSelect={select}

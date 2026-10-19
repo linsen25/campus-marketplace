@@ -1,272 +1,1010 @@
-import { useEffect, useRef, useState } from 'react'
+/* eslint jsx-a11y/no-noninteractive-tabindex: off -- The labelled demo region has a keyboard equivalent to its content-click Shop Plans action. */
+/* eslint @next/next/no-img-element: off -- Immutable local demo product thumbnails. */
+import { AnimatePresence } from 'framer-motion'
 import {
+  Coins,
+  Receipt,
+  ChartNoAxesColumnIncreasing,
+  Package,
+  LockKeyhole,
+  Plus,
+  X,
+  ShoppingBag,
+  Clock3,
+  CircleX,
+} from 'lucide-react'
+import { motion, useReducedMotion } from 'motion/react'
+import { useCallback, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import {
+  ComposedChart,
   Area,
-  AreaChart,
-  Bar,
+  Line,
   BarChart,
+  Bar,
+  AreaChart,
   CartesianGrid,
-  LabelList,
   XAxis,
   YAxis,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
 } from 'recharts'
 
-import { AnalyticsPeriodControl } from '@/components/home/profile-analytics'
-import { useProfileChartAnimation } from '@/components/home/profile-chart-animation'
-import profile from '@/components/home/profile.module.css'
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart'
+import ShiningButton from '@/components/animata/button/shining-button'
+import FilterInteraction from '@/components/filter-interaction'
+import { ChartContainer } from '@/components/ui/chart'
+import { FadingDialog } from '@/components/ui/fading-dialog'
+import { NumberTicker } from '@/components/ui/number-ticker'
+import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { ActivityPeriod } from '@/lib/account-activity'
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCaption,
+} from '@/components/ui/table'
+import {
+  loadShopAnalysisFixture,
+  shopAnalysisFixtureAsOf,
+} from '@/lib/fixtures/shop-analysis-fixture'
+import { parseOfferAmount } from '@/lib/offer-amount'
+import {
+  shopAnalysisRanges,
+  shopMoney,
+  shopComparison,
+} from '@/lib/shop-analysis'
 import type {
-  ShopAnalytics,
-  ShopAnalyticsFixtureLoader,
-} from '@/lib/shop-presentation'
+  ShopAnalysisRange,
+  ShopAnalysisDemoAccess,
+  ShopAnalysisResponse,
+  ShopExpense,
+} from '@/lib/shop-analysis'
 import type { ShopPreview } from '@/types/shop'
 
+import styles from './shop-analysis.module.css'
+import { ShopPricingDialog } from './shop-pricing-dialog'
 import { ShopProBadge } from './shop-pro-badge'
-import styles from './shop-surfaces.module.css'
 
-function ShopCharts({
-  shop,
-  loadFixture,
-  replayToken,
+const colors = ['#9560f5', '#e56cb6', '#769aff', '#b7aac5', '#4ade80']
+const financialConfig = {
+  revenue: { label: 'Revenue', color: colors[0] },
+  expenses: { label: 'Expenses', color: colors[1] },
+  profit: { label: 'Estimated Profit', color: colors[4] },
+}
+type DemoLoader = typeof loadShopAnalysisFixture
+function Select({
+  label,
+  value,
+  options,
+  onChange,
+  portalContainer,
 }: {
-  shop: ShopPreview
-  loadFixture: ShopAnalyticsFixtureLoader
-  replayToken: number
+  portalContainer?: HTMLElement
+  label: string
+  value: string
+  options:
+    | Array<{ value: string; label: string }>
+    | ReadonlyArray<{ value: string; label: string }>
+  onChange: (value: string) => void
 }) {
-  const [period, setPeriod] = useState<ActivityPeriod>('7D')
-  const [data, setData] = useState<ShopAnalytics | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [open, setOpen] = useState(false)
+  return (
+    <FilterInteraction
+      label={label}
+      portalContainer={portalContainer}
+      appearance="select"
+      isOpen={open}
+      value={value}
+      options={[...options]}
+      onOpenChange={setOpen}
+      onChange={onChange}
+    />
+  )
+}
+function DateRangePlacement({
+  wide,
+  target,
+  children,
+}: {
+  wide: boolean
+  target?: HTMLElement | null
+  children: ReactNode
+}) {
+  return <>{wide && target ? createPortal(children, target) : children}</>
+}
+function Module({
+  title,
+  children,
+  note,
+  action,
+}: {
+  title: string
+  children: ReactNode
+  note?: string
+  action?: ReactNode
+}) {
+  return (
+    <section className={styles.module} aria-label={title}>
+      <div className={styles.moduleHeader}>
+        <h3>{title}</h3>
+        {action}
+      </div>
+      {note && <p className={styles.muted}>{note}</p>}
+      {children}
+    </section>
+  )
+}
+function AnalysisTooltip({
+  active,
+  payload,
+  label,
+  money = true,
+}: {
+  active?: boolean
+  payload?: ReadonlyArray<{
+    name?: string
+    value?: number
+    dataKey?: string
+    color?: string
+    payload?: { name?: string }
+  }>
+  label?: number | string
+  money?: boolean
+}) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className={styles.tooltip}>
+      <strong>{label || payload[0]?.payload?.name}</strong>
+      {payload
+        .filter((x) => typeof x.value === 'number')
+        .map((item, index) => (
+          <p key={item.dataKey || index}>
+            <span style={{ color: item.color }}>{item.name}</span>
+            <b>
+              {money
+                ? shopMoney(Math.round(Number(item.value) * 100))
+                : Number(item.value).toLocaleString('en-CA')}
+            </b>
+          </p>
+        ))}
+    </div>
+  )
+}
+function Donut({
+  entries,
+  total,
+  label,
+}: {
+  entries: Array<{ name: string; cents: number }>
+  total: number
+  label: string
+}) {
+  if (!entries.length)
+    return (
+      <p className={styles.empty}>No {label.toLowerCase()} in this period.</p>
+    )
+  return (
+    <div className={styles.donutRow}>
+      <div className={styles.donut}>
+        <ChartContainer config={{}} className={styles.donutChart}>
+          <PieChart>
+            <Pie
+              data={entries.map((x) => ({
+                name: x.name,
+                value: x.cents / 100,
+              }))}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              innerRadius="72%"
+              outerRadius="95%"
+              stroke="none"
+              isAnimationActive={false}
+            >
+              {entries.map((e, i) => (
+                <Cell key={e.name} fill={colors[i % colors.length]} />
+              ))}
+            </Pie>
+            <Tooltip
+              content={<AnalysisTooltip />}
+              wrapperStyle={{ zIndex: 10 }}
+            />
+          </PieChart>
+        </ChartContainer>
+        <div className={styles.donutTotal}>
+          <strong>{shopMoney(total)}</strong>
+          <span>Total</span>
+        </div>
+      </div>
+      <ul className={styles.breakdown}>
+        {entries.map((e, i) => (
+          <li key={e.name}>
+            <span
+              className={styles.dot}
+              style={{ background: colors[i % colors.length] }}
+            />
+            <span>{e.name}</span>
+            <b>{shopMoney(e.cents)}</b>
+            <small>
+              {total > 0 ? ((e.cents / total) * 100).toFixed(1) : '0'}%
+            </small>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+function ExpenseDialog({
+  onClose,
+  onAdd,
+}: {
+  onClose: () => void
+  onAdd: (expense: ShopExpense) => void
+}) {
+  const [portal, setPortal] = useState<HTMLFormElement | null>(null)
+  const [kind, setKind] = useState('Packaging')
+  const [amount, setAmount] = useState('')
+  const [date, setDate] = useState(shopAnalysisFixtureAsOf)
+  const [description, setDescription] = useState('')
   const [error, setError] = useState('')
-  const [attempt, setAttempt] = useState(0)
-  const [replay, setReplay] = useState(0)
-  // Separate history and datasets; account metrics never enter this surface.
-  const history = useRef({ activity: 0, marketplace: 0 })
-  const viewsAnimation = useProfileChartAnimation(
-    replayToken,
-    history,
-    'activity',
-    Boolean(data) && !loading && !error,
-    replay
+  return (
+    <FadingDialog
+      className={styles.dialog}
+      aria-label="Add demo expense"
+      onRequestClose={onClose}
+    >
+      <header className={styles.row}>
+        <h2>Add Expense</h2>
+        <button
+          type="button"
+          className={styles.iconButton}
+          aria-label="Close Add Expense"
+          onClick={onClose}
+        >
+          <X size={20} />
+        </button>
+      </header>
+      <p className={styles.muted}>
+        Demo only. Changes stay in this page session and are not saved to your
+        account.
+      </p>
+      <form
+        ref={setPortal}
+        onSubmit={(event) => {
+          event.preventDefault()
+          const cents = parseOfferAmount(amount)
+          if (cents === null || cents <= 0) {
+            setError(
+              'Enter a positive CAD amount with up to two decimal places.'
+            )
+            return
+          }
+          if (
+            !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+            !Number.isFinite(Date.parse(date)) ||
+            date > shopAnalysisFixtureAsOf
+          ) {
+            setError('Choose a valid date on or before the demo date.')
+            return
+          }
+          onAdd({
+            id: crypto.randomUUID(),
+            channel: 'shop',
+            kind: kind as ShopExpense['kind'],
+            on: date,
+            amountCents: cents,
+            description,
+          })
+          onClose()
+        }}
+      >
+        <div className={styles.field}>
+          <span>Expense Type</span>
+          <Select
+            portalContainer={portal ?? undefined}
+            label="Expense Type"
+            value={kind}
+            options={['Packaging', 'Marketing', 'Other'].map((value) => ({
+              value,
+              label: value,
+            }))}
+            onChange={setKind}
+          />
+        </div>
+        <label className={styles.field}>
+          Amount (CAD)
+          <input
+            required={true}
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </label>
+        <label className={styles.field}>
+          Date
+          <input
+            required={true}
+            type="date"
+            max={shopAnalysisFixtureAsOf}
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+        </label>
+        <label className={styles.field}>
+          Description (optional)
+          <textarea
+            maxLength={500}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </label>
+        {error && <p role="alert">{error}</p>}
+        <div className={styles.dialogActions}>
+          <ShiningButton type="button" onClick={onClose}>
+            Cancel
+          </ShiningButton>
+          <ShiningButton type="submit">Add demo expense</ShiningButton>
+        </div>
+      </form>
+    </FadingDialog>
   )
-  const barsAnimation = useProfileChartAnimation(
-    replayToken,
-    history,
-    'marketplace',
-    Boolean(data) && !loading && !error,
-    replay
+}
+function Dashboard({
+  data,
+  onExpense,
+}: {
+  data: ShopAnalysisResponse
+  onExpense: () => void
+}) {
+  const reduced = useReducedMotion()
+  const c = data.current
+  const p = data.previous
+  const metrics = [
+    {
+      label: 'Total Revenue',
+      value: c.revenueCents,
+      previous: p.revenueCents,
+      Icon: Coins,
+      color: colors[0],
+    },
+    {
+      label: 'Total Expenses',
+      value: c.knownExpensesCents,
+      previous: p.knownExpensesCents,
+      Icon: Receipt,
+      color: colors[1],
+    },
+    {
+      label: 'Estimated Profit',
+      value: c.estimatedProfitCents,
+      previous: p.estimatedProfitCents,
+      Icon: ChartNoAxesColumnIncreasing,
+      color: colors[4],
+    },
+    {
+      label: 'Items Sold',
+      value: c.sold,
+      previous: p.sold,
+      Icon: Package,
+      color: colors[2],
+    },
+  ]
+  const tick = (v: string) => v.slice(5)
+  return (
+    <>
+      <div className={styles.sectionHeading}>
+        <div>
+          <h2>Business Overview</h2>
+          <p>Recorded Shop sales and estimated business costs.</p>
+        </div>
+        <ShopProBadge tier="plus" />
+      </div>
+      <div className={styles.kpis}>
+        {metrics.map(({ label, value, previous, Icon, color }, i) => (
+          <section
+            key={label}
+            className={styles.kpi}
+            aria-label={label}
+            style={{ color }}
+          >
+            <Icon size={21} />
+            <h3>{label}</h3>
+            <div
+              className={`${styles.value} ${
+                value !== null && value < 0 ? styles.negative : ''
+              }`}
+              data-kpi={label}
+            >
+              {value === null ? (
+                <span>—</span>
+              ) : (
+                <>
+                  {i !== 3 && <span className={styles.currency}>CA$</span>}
+                  <NumberTicker
+                    value={i === 3 ? value : value / 100}
+                    decimalPlaces={i === 3 ? 0 : 2}
+                  />
+                </>
+              )}
+            </div>
+            <p>
+              {shopComparison(value, previous)} <span>vs previous period</span>
+            </p>
+          </section>
+        ))}
+      </div>
+      <p className={styles.disclosure}>
+        Recorded Shop Sales Revenue includes completed UU Pay and directly paid
+        Shop orders. It does not verify bank deposits or external payment
+        collection.
+      </p>
+      {Boolean(c.missingCostCount) && (
+        <p className={styles.warning} role="status">
+          Profit may be incomplete due to missing cost data. Expenses show known
+          costs only.
+        </p>
+      )}
+      {!c.orders.completed && (
+        <p className={styles.empty}>
+          No sales data yet. Complete your first order to see your sales trends.
+        </p>
+      )}
+      <Module
+        title="Revenue & Expenses"
+        note="Estimated Profit = Revenue - Expenses. All amounts in CAD."
+      >
+        <ChartContainer config={financialConfig} className={styles.chart}>
+          <ComposedChart
+            accessibilityLayer={true}
+            data={c.trend}
+            margin={{ top: 20, right: 12, left: 0, bottom: 6 }}
+          >
+            <CartesianGrid vertical={false} stroke="#ffffff12" />
+            <XAxis
+              dataKey="date"
+              tickFormatter={tick}
+              minTickGap={42}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              width={56}
+              tickFormatter={(v) => `$${v}`}
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip
+              content={<AnalysisTooltip />}
+              allowEscapeViewBox={{ x: false, y: false }}
+            />
+            <Area
+              name="Revenue"
+              dataKey="revenue"
+              type="monotone"
+              stroke={colors[0]}
+              fill={colors[0]}
+              fillOpacity={0.12}
+              isAnimationActive={!reduced}
+            />
+            <Area
+              name="Expenses"
+              dataKey="expenses"
+              type="monotone"
+              stroke={colors[1]}
+              fill={colors[1]}
+              fillOpacity={0.07}
+              isAnimationActive={!reduced}
+            />
+            <Line
+              name="Estimated Profit"
+              dataKey="profit"
+              stroke={colors[4]}
+              dot={false}
+              strokeWidth={2}
+              isAnimationActive={!reduced}
+            />
+          </ComposedChart>
+        </ChartContainer>
+        <div className={styles.legend}>
+          <span style={{ color: colors[0] }}>Revenue</span>
+          <span style={{ color: colors[1] }}>Expenses</span>
+          <span style={{ color: colors[4] }}>Estimated Profit</span>
+        </div>
+      </Module>
+      <div className={`${styles.twoColumns} ${styles.businessRow}`}>
+        <Module
+          title="Expense Breakdown"
+          action={
+            <div className={styles.moduleAction}>
+              <ShiningButton onClick={onExpense}>
+                <Plus size={15} /> Add Expense
+              </ShiningButton>
+            </div>
+          }
+        >
+          <Donut
+            entries={c.breakdown}
+            total={c.knownExpensesCents}
+            label="Expenses"
+          />
+          <p className={styles.muted}>
+            Includes product cost snapshots, operating expenses and Shop
+            subscription fees. Demo expenses are not persisted.
+          </p>
+        </Module>
+        <Module title="Order Overview">
+          <div className={styles.orders}>
+            {[
+              {
+                name: 'Completed Orders',
+                value: c.orders.completed,
+                Icon: ShoppingBag,
+              },
+              { name: 'Pending Orders', value: c.orders.pending, Icon: Clock3 },
+              {
+                name: 'Cancelled Orders',
+                value: c.orders.cancelled,
+                Icon: CircleX,
+              },
+            ].map(({ name, value, Icon }) => (
+              <div key={name}>
+                <Icon size={20} />
+                <span>{name}</span>
+                <strong>{value}</strong>
+              </div>
+            ))}
+          </div>
+          <p className={styles.muted}>
+            Completed orders use completion date. Pending and cancelled orders
+            use their recorded creation date in this demo.
+          </p>
+        </Module>
+      </div>
+      <Module
+        title="Items Sold Trend"
+        note="Item quantity sold, not number of orders."
+      >
+        <ChartContainer
+          config={{ sold: { label: 'Items Sold', color: colors[0] } }}
+          className={styles.chart}
+        >
+          <BarChart accessibilityLayer={true} data={c.trend}>
+            <CartesianGrid vertical={false} stroke="#ffffff12" />
+            <XAxis
+              dataKey="date"
+              tickFormatter={tick}
+              minTickGap={42}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              width={36}
+              allowDecimals={false}
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip content={<AnalysisTooltip money={false} />} />
+            <Bar
+              name="Items Sold"
+              dataKey="sold"
+              fill={colors[0]}
+              radius={[5, 5, 0, 0]}
+              maxBarSize={32}
+              isAnimationActive={!reduced}
+            />
+          </BarChart>
+        </ChartContainer>
+      </Module>
+    </>
   )
+}
+function Advanced({ data }: { data: ShopAnalysisResponse }) {
+  const reduced = useReducedMotion()
+  const pro = data.pro
+  if (!pro) return null
+  const products = pro.products
+  const top = [...products]
+    .sort((a, b) => b.sold - a.sold || a.id.localeCompare(b.id))
+    .slice(0, 5)
+  const max = top[0]?.sold || 0
+  const distribution = products
+    .slice(0, 5)
+    .map((p) => ({ name: p.name, cents: p.revenueCents }))
+  if (products.length > 5)
+    distribution.push({
+      name: 'Other Products',
+      cents: products.slice(5).reduce((sum, p) => sum + p.revenueCents, 0),
+    })
+  return (
+    <>
+      <Module
+        title="Product Performance"
+        note="See which products bring the most revenue and profit."
+      >
+        {products.length ? (
+          <Table className={styles.performanceTable}>
+            <TableCaption>
+              Product contribution profit = revenue - cost snapshots - direct
+              product expenses. General Shop costs are not allocated to
+              products.
+            </TableCaption>
+            <TableHeader>
+              <TableRow>
+                {[
+                  '#',
+                  'Product',
+                  'Items Sold',
+                  'Revenue',
+                  'Cost',
+                  'Profit',
+                  'Margin',
+                ].map((label) => (
+                  <TableHead
+                    key={label}
+                    className={
+                      ['#', 'Product'].includes(label)
+                        ? undefined
+                        : styles.numeric
+                    }
+                  >
+                    {label}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.map((p, i) => (
+                <TableRow key={p.id}>
+                  <TableCell>{i + 1}</TableCell>
+                  <TableCell>
+                    <div className={styles.product}>
+                      <img src={p.image} alt="" width={36} height={36} />
+                      <span>{p.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className={styles.numeric}>{p.sold}</TableCell>
+                  <TableCell className={styles.numeric}>
+                    {shopMoney(p.revenueCents)}
+                  </TableCell>
+                  <TableCell className={styles.numeric}>
+                    {p.costCents === null ? 'Unknown' : shopMoney(p.costCents)}
+                  </TableCell>
+                  <TableCell
+                    className={`${styles.numeric} ${
+                      p.profitCents !== null && p.profitCents < 0
+                        ? styles.negative
+                        : styles.positive
+                    }`}
+                  >
+                    {p.profitCents === null
+                      ? '\u2014'
+                      : shopMoney(p.profitCents)}
+                  </TableCell>
+                  <TableCell>
+                    <div className={styles.margin}>
+                      <span>
+                        {p.margin === null
+                          ? '\u2014'
+                          : `${p.margin.toFixed(1)}%`}
+                      </span>
+                      <Progress
+                        value={p.margin ?? 0}
+                        aria-label={`${p.name} profit margin`}
+                        aria-valuetext={
+                          p.margin === null
+                            ? 'Unknown cost'
+                            : `${p.margin.toFixed(1)}% profit margin`
+                        }
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <p className={styles.empty}>
+            No completed Shop products in this period.
+          </p>
+        )}
+      </Module>
+      <div className={styles.twoColumns}>
+        <Module
+          title="Product Revenue Distribution"
+          note="Revenue share, not profit share."
+        >
+          <Donut
+            entries={distribution}
+            total={data.current.revenueCents}
+            label="Product Revenue"
+          />
+        </Module>
+        <Module title="Top Selling Products">
+          {top.length ? (
+            <ol className={styles.ranking}>
+              {top.map((p) => (
+                <li key={p.id}>
+                  <img src={p.image} alt="" width={34} height={34} />
+                  <div>
+                    <div className={styles.row}>
+                      <span>{p.name}</span>
+                      <b>{p.sold}</b>
+                    </div>
+                    <Progress
+                      value={max ? (p.sold / max) * 100 : 0}
+                      aria-label={`${p.name} relative sales`}
+                      aria-valuetext={`${p.sold} items sold, relative to top seller`}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className={styles.empty}>No product sales in this period.</p>
+          )}
+        </Module>
+      </div>
+      <Module
+        title="Featured Shop Performance"
+        note="Track how your featured shop performs."
+      >
+        {pro.featured.impressions ? (
+          <>
+            <div className={styles.featuredMetrics}>
+              <div>
+                <span>Impressions</span>
+                <strong>{pro.featured.impressions.toLocaleString()}</strong>
+              </div>
+              <div>
+                <span>Shop Visits</span>
+                <strong>{pro.featured.visits.toLocaleString()}</strong>
+              </div>
+              <div>
+                <span>Visit Rate</span>
+                <strong>{pro.featured.rate?.toFixed(1)}%</strong>
+              </div>
+            </div>
+            <p className={styles.muted}>
+              Attributed featured visits / featured impressions. Organic visits
+              are excluded.
+            </p>
+            <ChartContainer
+              config={{
+                impressions: { label: 'Impressions', color: colors[0] },
+                visits: { label: 'Attributed Visits', color: colors[2] },
+              }}
+              className={styles.chart}
+            >
+              <AreaChart accessibilityLayer={true} data={data.current.trend}>
+                <CartesianGrid vertical={false} stroke="#ffffff12" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(v) => v.slice(5)}
+                  minTickGap={42}
+                />
+                <YAxis width={40} />
+                <Tooltip content={<AnalysisTooltip money={false} />} />
+                <Area
+                  name="Impressions"
+                  dataKey="impressions"
+                  stroke={colors[0]}
+                  fill={colors[0]}
+                  fillOpacity={0.12}
+                  isAnimationActive={!reduced}
+                />
+                <Area
+                  name="Attributed Shop Visits"
+                  dataKey="visits"
+                  stroke={colors[2]}
+                  fill={colors[2]}
+                  fillOpacity={0.08}
+                  isAnimationActive={!reduced}
+                />
+              </AreaChart>
+            </ChartContainer>
+          </>
+        ) : (
+          <p className={styles.empty}>
+            No featured impressions in this period. Promotion event tracking is
+            not connected.
+          </p>
+        )}
+      </Module>
+    </>
+  )
+}
+/** Demo access is presentation only. No production entitlement or analytics endpoint is invented. */
+export function ShopAnalysis({
+  replayToken = 1,
+  demoAccess,
+  headerActionsTarget,
+  loadDemo = loadShopAnalysisFixture,
+}: {
+  shop?: ShopPreview
+  replayToken?: number
+  demoAccess?: ShopAnalysisDemoAccess
+  headerActionsTarget?: HTMLElement | null
+  loadDemo?: DemoLoader
+}) {
+  // Until live analytics/access exists, the page itself is the explicitly labelled demo.
+  // Explicit demoAccess remains a component-test seam, never subscription authority.
+  const preview = demoAccess === undefined
+  const access = demoAccess ?? 'pro'
+  const [range, setRange] = useState<ShopAnalysisRange>('month')
+  const [wideHeader, setWideHeader] = useState(false)
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 768px)')
+    const update = () => setWideHeader(query.matches)
+    update()
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
+  const [data, setData] = useState<ShopAnalysisResponse | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [retry, setRetry] = useState(0)
+  const [expenses, setExpenses] = useState<ShopExpense[]>([])
+  const [expenseOpen, setExpenseOpen] = useState(false)
+  const [plans, setPlans] = useState(false)
+  const reduced = useReducedMotion()
+  const changeRange = useCallback((v: string) => {
+    if (shopAnalysisRanges.some((x) => x.value === v))
+      setRange(v as ShopAnalysisRange)
+  }, [])
   useEffect(() => {
     let current = true
     setLoading(true)
     setError('')
-    loadFixture(period)
+    loadDemo(range, access, expenses)
       .then((result) => {
         if (!current) return
         if (
-          result.period !== period ||
-          result.sellerProfileId !== shop.sellerProfileId
+          result.source !== 'fixture' ||
+          result.range !== range ||
+          result.access !== access
         )
-          throw Error('Incorrect Shop analytics scope')
+          throw Error('Incorrect demo response')
         setData(result)
-        setReplay((value) => value + 1)
         setLoading(false)
       })
-      .catch(() => {
-        if (!current) return
-        setError('Shop analytics are unavailable. Please retry.')
-        setLoading(false)
+      .catch((reason: unknown) => {
+        if (current) {
+          setError(
+            reason instanceof Error && reason.message === 'unauthorized'
+              ? 'You do not have access to this Shop analysis.'
+              : 'Shop analytics are unavailable. Please retry.'
+          )
+          setLoading(false)
+        }
       })
     return () => {
       current = false
     }
-  }, [period, shop.sellerProfileId, loadFixture, attempt])
-  return (
-    <>
-      <p className={styles.fixture}>UI fixture · Illustrative data only</p>
-      <div className={profile.controls}>
-        <AnalyticsPeriodControl
-          period={period}
-          label="Shop analysis period"
-          onChange={setPeriod}
-        />
-      </div>
-      {error && (
-        <p className={profile.notice} role="alert">
-          {error}
-          <button
-            type="button"
-            onClick={() => setAttempt((value) => value + 1)}
-          >
-            Retry
-          </button>
-        </p>
-      )}
-      {!data && loading && (
-        <Skeleton style={{ height: 260 }} aria-label="Loading Shop analytics" />
-      )}
-      {data && (
-        <div
-          className={styles.charts}
-          aria-busy={loading}
-          data-shop-analytics-period={data.period}
-        >
-          <section
-            className={styles.chartBody}
-            aria-label="Shop Views"
-            data-chart-animation={viewsAnimation.phase}
-          >
-            <h4>Shop Views</h4>
-            <p className={profile.caption}>
-              Intentional public Shop visits · {data.period}
-            </p>
-            {data.views.length ? (
-              <ChartContainer
-                config={{ views: { label: 'Shop Views', color: '#b88cfa' } }}
-              >
-                <AreaChart
-                  key={viewsAnimation.key}
-                  accessibilityLayer={true}
-                  data={data.views}
-                  margin={{ top: 12, right: 8, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid
-                    vertical={false}
-                    stroke="#776088"
-                    strokeOpacity={0.22}
-                  />
-                  <XAxis
-                    dataKey="label"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={10}
-                    minTickGap={30}
-                  />
-                  <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent />}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="views"
-                    stroke="#b88cfa"
-                    strokeWidth={2}
-                    fill="#b88cfa"
-                    fillOpacity={0.12}
-                    isAnimationActive={viewsAnimation.active}
-                    onAnimationStart={viewsAnimation.handleStart}
-                    onAnimationEnd={viewsAnimation.handleEnd}
-                  />
-                </AreaChart>
-              </ChartContainer>
-            ) : (
-              <p className={profile.notice}>No Shop visits in this period.</p>
-            )}
-          </section>
-          <section
-            className={styles.chartBody}
-            aria-label="Top Listings"
-            data-chart-animation={barsAnimation.phase}
-          >
-            <h4>Top Listings</h4>
-            <p className={profile.caption}>
-              Listing views · This Shop only · {data.period}
-            </p>
-            {data.topListings.length ? (
-              <ChartContainer
-                className={styles.barChart}
-                config={{ views: { label: 'Listing views', color: '#a575de' } }}
-              >
-                <BarChart
-                  key={barsAnimation.key}
-                  accessibilityLayer={true}
-                  data={data.topListings}
-                  layout="vertical"
-                  margin={{ top: 12, right: 38, left: 0, bottom: 8 }}
-                >
-                  <XAxis hide={true} type="number" />
-                  <YAxis
-                    dataKey="title"
-                    type="category"
-                    tickLine={false}
-                    axisLine={false}
-                    width={132}
-                    tick={{ fontSize: 10 }}
-                  />
-                  <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent />}
-                  />
-                  <Bar
-                    dataKey="views"
-                    fill="var(--color-views)"
-                    radius={[0, 5, 5, 0]}
-                    barSize={22}
-                    isAnimationActive={barsAnimation.active}
-                    onAnimationStart={barsAnimation.handleStart}
-                    onAnimationEnd={barsAnimation.handleEnd}
-                  >
-                    <LabelList
-                      dataKey="views"
-                      position="right"
-                      fill="#d6c7e4"
-                      fontSize={10}
-                    />
-                  </Bar>
-                </BarChart>
-              </ChartContainer>
-            ) : (
-              <p className={profile.notice}>No listing views in this period.</p>
-            )}
-          </section>
-        </div>
-      )}
-    </>
-  )
-}
-
-export function ShopAnalysis({
-  shop,
-  loadFixture,
-  replayToken = 1,
-}: {
-  shop?: ShopPreview
-  loadFixture?: ShopAnalyticsFixtureLoader
-  replayToken?: number
-}) {
-  let content = (
-    <p className={styles.inactive}>
-      Shop analytics become available when your Shop is active.
-    </p>
-  )
-  if (shop)
-    content = (
-      <p className={styles.inactive}>Shop analytics are not available yet.</p>
-    )
-  if (shop && loadFixture)
-    content = (
-      <ShopCharts
-        shop={shop}
-        loadFixture={loadFixture}
-        replayToken={replayToken}
+  }, [access, range, expenses, retry, loadDemo])
+  const dateControl = (
+    <div className={styles.dateSelect}>
+      <Select
+        label="Date range"
+        value={range}
+        options={shopAnalysisRanges}
+        onChange={changeRange}
       />
-    )
+    </div>
+  )
   return (
-    <section
-      className={`${profile.panel} ${styles.area}`}
+    <motion.section
+      className={styles.page}
       aria-label="Shop Analysis"
       data-shop-surface="analysis"
-      data-shop-active={Boolean(shop)}
+      data-replay-token={replayToken}
+      initial={{ opacity: reduced ? 1 : 0, y: reduced ? 0 : 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: reduced ? 0 : 0.4 }}
     >
-      <header className={profile.panelHeader}>
-        <h3>Shop Analysis</h3>
-        <ShopProBadge />
-      </header>
-      {content}
-    </section>
+      <DateRangePlacement wide={wideHeader} target={headerActionsTarget}>
+        {dateControl}
+      </DateRangePlacement>
+      <>
+        {error && (
+          <div className={styles.empty} role="alert">
+            {error}
+            <ShiningButton onClick={() => setRetry((v) => v + 1)}>
+              Retry
+            </ShiningButton>
+          </div>
+        )}
+        {!error && (!data || data.access !== access) && (
+          <Skeleton
+            style={{ height: 360 }}
+            aria-label="Loading Shop analytics"
+          />
+        )}
+        {!error && data && data.access === access && (
+          <div
+            aria-busy={loading}
+            data-analysis-range={data.range}
+            data-analysis-preview={preview || undefined}
+            role="region"
+            aria-label={
+              preview
+                ? 'Demo Shop analytics - press Enter to view Shop Plans'
+                : 'Shop analytics content'
+            }
+            tabIndex={preview ? 0 : undefined}
+            onClickCapture={(event) => {
+              if (!preview) return
+              event.preventDefault()
+              event.stopPropagation()
+              setPlans(true)
+            }}
+            onKeyDownCapture={(event) => {
+              if (
+                preview &&
+                event.target === event.currentTarget &&
+                ['Enter', ' '].includes(event.key)
+              ) {
+                event.preventDefault()
+                setPlans(true)
+              }
+            }}
+          >
+            <Dashboard data={data} onExpense={() => setExpenseOpen(true)} />
+            <div className={`${styles.sectionHeading} ${styles.proHeading}`}>
+              <div>
+                <h2>Pro Insights</h2>
+                <p>Advanced insights to help your shop grow.</p>
+              </div>
+              <ShopProBadge />
+            </div>
+            {access === 'plus' ? (
+              <section
+                className={styles.locked}
+                aria-label="Locked Pro preview"
+              >
+                <LockKeyhole size={25} />
+                <h3>Unlock advanced Shop insights</h3>
+                <p>Locked preview - no Pro-exclusive account data is loaded.</p>
+                <ul>
+                  <li>Product Performance</li>
+                  <li>Product Revenue Distribution</li>
+                  <li>Top Selling Products</li>
+                  <li>Featured Shop Performance</li>
+                </ul>
+                <ShiningButton onClick={() => setPlans(true)}>
+                  Upgrade to Pro
+                </ShiningButton>
+              </section>
+            ) : (
+              <>
+                <p className={styles.muted}>
+                  {access === 'trial'
+                    ? '2-month Pro Trial demo - full Plus and Pro visibility. No trial subscription charge is included.'
+                    : 'Pro demo - full Plus and Pro visibility.'}
+                </p>
+                <Advanced data={data} />
+              </>
+            )}
+          </div>
+        )}
+      </>
+      <AnimatePresence>
+        {expenseOpen && (
+          <ExpenseDialog
+            onClose={() => setExpenseOpen(false)}
+            onAdd={(expense) => setExpenses((values) => [...values, expense])}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {plans && <ShopPricingDialog onClose={() => setPlans(false)} />}
+      </AnimatePresence>
+    </motion.section>
   )
 }

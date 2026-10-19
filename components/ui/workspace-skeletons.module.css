@@ -93,3 +93,8 @@
     min-height: 480px;
   }
 }
+
+/* Listing-grid placeholders follow the collapsed real card only. */
+.listingMedia {
+  aspect-ratio: 1 / 1;
+}

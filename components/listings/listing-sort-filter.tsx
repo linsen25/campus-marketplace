@@ -1,3 +1,4 @@
+import { ArrowDownWideNarrow, ChevronDown } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -14,12 +15,20 @@ export function ListingSortFilter({
   onSort,
   onFilter,
   mobileLabels = false,
+  triggerClassName,
+  panelClassName,
+  showSort = true,
+  overlaySelects = false,
 }: {
   applied: MarketFilterValues
   sort: string
   onSort: (value: string) => void
   onFilter: (values: MarketFilterValues) => void
   mobileLabels?: boolean
+  triggerClassName?: string
+  panelClassName?: string
+  showSort?: boolean
+  overlaySelects?: boolean
 }) {
   const [panel, setPanel] = useState<'filter' | 'sort' | null>(null)
   const [closing, setClosing] = useState(false)
@@ -48,18 +57,35 @@ export function ListingSortFilter({
           />,
           document.body
         )}
-      <FilterInteraction
-        label="Sort"
-        mobileLabel={mobileLabels ? 'Sort' : undefined}
-        options={[...marketSorts]}
-        value={sort}
-        isOpen={panel === 'sort'}
-        isClosing={closing}
-        onOpenChange={(open) => toggle('sort', open)}
-        onChange={onSort}
-      />
+      {showSort && (
+        <FilterInteraction
+          label="Sort"
+          triggerClassName={triggerClassName}
+          triggerContent={
+            triggerClassName ? (
+              <>
+                <ArrowDownWideNarrow size={16} />
+                <span>
+                  {marketSorts.find((item) => item.value === sort)?.label}
+                </span>
+                <ChevronDown size={14} />
+              </>
+            ) : undefined
+          }
+          mobileLabel={mobileLabels ? 'Sort' : undefined}
+          options={[...marketSorts]}
+          value={sort}
+          isOpen={panel === 'sort'}
+          isClosing={closing}
+          onOpenChange={(open) => toggle('sort', open)}
+          onChange={onSort}
+        />
+      )}
       <FilterInteraction
         label="Filter"
+        panelClassName={panelClassName}
+        topLayer={overlaySelects}
+        triggerClassName={triggerClassName}
         mobileLabel={mobileLabels ? 'Filter' : undefined}
         isOpen={panel === 'filter'}
         isClosing={closing}
@@ -69,6 +95,7 @@ export function ListingSortFilter({
           key={JSON.stringify(applied)}
           applied={applied}
           includeCondition={true}
+          overlaySelects={overlaySelects}
           onCancel={() => toggle('filter', false)}
           onConfirm={(values) => {
             onFilter(values)

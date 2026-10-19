@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 
 type Option = string | { value: string; label: ReactNode; tag?: string }
 export default function GlideSelect(props: {
+  placement?: 'bottom' | 'top-desktop' | 'top'
+  overlay?: boolean
   placeholder?: string
   accentColor?: string
   options: readonly Option[]

@@ -95,7 +95,7 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .pulse-heart:not([data-liked='true']):not(:disabled):hover
+  .pulse-heart:not([data-appearance='image-overlay']):not([data-liked='true']):not(:disabled):hover
     .pulse-heart__heart {
     color: color-mix(in srgb, var(--ph-idle) 45%, var(--ph-liked));
   }
@@ -170,5 +170,28 @@
 
   .pulse-heart__roll {
     transition: none;
+  }
+}
+
+/* Opt-in photography overlay; default PulseHeart presentation stays unchanged. */
+.pulse-heart[data-appearance='image-overlay'] {
+  border-radius: 50%;
+  background: rgba(25, 25, 25, 0.6);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.pulse-heart[data-appearance='image-overlay'] .pulse-heart__pill {
+  background: transparent;
+}
+
+.pulse-heart[data-appearance='image-overlay']:not([data-liked='true'])
+  .pulse-heart__heart {
+  color: #fafafa;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pulse-heart[data-appearance='image-overlay']:not(:disabled):hover {
+    background: rgba(25, 25, 25, 0.72);
   }
 }

@@ -1,3 +1,4 @@
+const { readTestPictureJpeg } = require('../scripts/lib/test-pictures.cjs')
 /* global document, window, innerWidth */
 // Real main app, two independent authenticated disposable staging participants.
 const assert = require('node:assert/strict')
@@ -394,7 +395,7 @@ async function run() {
     await buyer.locator('input[type="file"]').setInputFiles({
       name: 'synthetic-withdrawal.jpg',
       mimeType: 'image/jpeg',
-      buffer: fs.readFileSync('public/demo/reading-chair.jpg'),
+      buffer: readTestPictureJpeg('chair'),
     })
     await buyer
       .getByRole('region', { name: 'Add attachment' })

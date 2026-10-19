@@ -1,3 +1,4 @@
+const { readTestPictureJpeg } = require('../scripts/lib/test-pictures.cjs')
 // Real shared Create/Edit form with isolated in-memory API callbacks only.
 /* global window, document, getComputedStyle, innerWidth */
 const fs = require('node:fs'),
@@ -190,7 +191,7 @@ async function run() {
           await form.locator('input[type="file"]').setInputFiles({
             name: 'fixture.png',
             mimeType: 'image/png',
-            buffer: fs.readFileSync('public/demo/reading-chair.jpg'),
+            buffer: readTestPictureJpeg('chair'),
           })
           await form
             .getByRole('button', { name: 'Create', exact: true })

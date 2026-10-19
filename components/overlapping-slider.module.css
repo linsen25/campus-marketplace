@@ -1,0 +1,74 @@
+.slider {
+  width: 100%;
+  min-width: 0;
+}
+.viewport {
+  width: 100%;
+  overflow: hidden;
+  padding: 12px 0 20px;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 6%,
+    #000 94%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 6%,
+    #000 94%,
+    transparent
+  );
+}
+.viewport:active {
+  cursor: grabbing;
+}
+.track {
+  position: relative;
+  display: flex;
+  align-items: start;
+  padding-right: 0;
+}
+.card {
+  flex-shrink: 0;
+  position: relative;
+  transform-origin: 50% 90%;
+  transform: translate3d(var(--x, 0px), var(--y, 0px), 0) scale(var(--s, 1));
+  will-change: transform;
+}
+.card > div {
+  height: 100%;
+}
+.viewport:focus-visible {
+  outline: 2px solid #b19aca;
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .track,
+  .card {
+    transition: none !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .viewport {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 3%,
+      #000 97%,
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 3%,
+      #000 97%,
+      transparent
+    );
+  }
+}

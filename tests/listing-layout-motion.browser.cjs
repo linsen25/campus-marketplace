@@ -1,3 +1,4 @@
+const { testPictureDataUrl } = require('../scripts/lib/test-pictures.cjs')
 // Actual Market ExpandableCard motion/scroll-owner regression, offline only.
 /* global window, document, getComputedStyle */
 const fs = require('node:fs'),
@@ -6,7 +7,9 @@ const fs = require('node:fs'),
 const { root, build } = require('./message-payload.browser.cjs')
 fs.writeFileSync(
   path.join(root, 'entry.tsx'),
-  `import 'tailwindcss/src/css/preflight.css';import React from 'react';import {createRoot} from 'react-dom/client';import {ExpandableCard} from '@/components/velora/expandable-card';const image=<img alt="Synthetic listing" style={{width:'100%',height:'100%',objectFit:'cover'}} src={'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500"><rect width="400" height="500" fill="purple"/></svg>')}/>;createRoot(document.getElementById('root')).render(<div style={{paddingTop:400,minHeight:2200}}><div style={{width:240,margin:'0 auto'}}><ExpandableCard title="CA$80" expandedTitle="Synthetic motion fixture" media={image}><p>Frozen listing details</p></ExpandableCard></div></div>);`
+  `import 'tailwindcss/src/css/preflight.css';import React from 'react';import {createRoot} from 'react-dom/client';import {ExpandableCard} from '@/components/velora/expandable-card';const image=<img alt="Synthetic listing" style={{width:'100%',height:'100%',objectFit:'cover'}} src={${JSON.stringify(
+    testPictureDataUrl('monitor')
+  )}}/>;createRoot(document.getElementById('root')).render(<div style={{paddingTop:400,minHeight:2200}}><div style={{width:240,margin:'0 auto'}}><ExpandableCard title="CA$80" expandedTitle="Synthetic motion fixture" media={image}><p>Frozen listing details</p></ExpandableCard></div></div>);`
 )
 fs.writeFileSync(
   path.join(root, 'index.html'),

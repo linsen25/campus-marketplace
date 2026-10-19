@@ -129,7 +129,10 @@ export function BuyerHandoffCredential({
         ) : (
           <>
             {qr && <p>QR expired</p>}
-            <StatefulButton onClick={generate}>
+            <StatefulButton
+              className={styles.generateAction}
+              onClick={generate}
+            >
               {qr ? 'Generate new QR code' : 'Generate QR code'}
             </StatefulButton>
           </>

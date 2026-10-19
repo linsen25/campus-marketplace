@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import ShiningButton from '@/components/animata/button/shining-button'
 import { useAuthModal } from '@/components/auth/auth-modal'
-import PulseHeart from '@/components/react-bits/pulse-heart'
 import { ExpandableCard } from '@/components/velora/expandable-card'
 import { favoriteState, setFavorite } from '@/lib/favorites-api'
 import { listingConditions } from '@/lib/listing-metadata'
@@ -11,8 +10,15 @@ import { formatListingPrice } from '@/utils/format-listing-price'
 
 import detailStyles from './homepage-listing-demo.module.css'
 import actionStyles from './listing-action-availability.module.css'
+import {
+  ListingCardSummary,
+  ListingFavoriteControl,
+  listingCardRadius,
+} from './listing-card-presentation'
 import { ListingMedia } from './listing-media'
 import { useMarketplaceSession } from './marketplace-session'
+import styles from './published-listing-card.module.css'
+import { PublishedListingDetails } from './published-listing-details'
 import { useListingOfferContext } from './use-listing-offer-context'
 import { useMessageSeller } from './use-message-seller'
 
@@ -75,28 +81,43 @@ export function PublishedListingCard({
   const [favorite, setFavorited] = useState(initiallyFavorited)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [overlayActive, setOverlayActive] = useState(false)
+  const saving = useRef(false)
+  const favoriteVersion = useRef(0)
+  const overlayListener = useRef(onOverlayActiveChange)
+  overlayListener.current = onOverlayActiveChange
+  // Keep the dialog's lock/focus effect stable across Favorite and parent renders.
+  const overlayChanged = useCallback((active: boolean) => {
+    setOverlayActive(active)
+    overlayListener.current?.(active)
+  }, [])
   const messaging = useMessageSeller(listing.id)
   const offerContext = useListingOfferContext(listing.id, listing.seller.id)
   useEffect(() => {
     if (!seller || own || initiallyFavorited) return undefined
     let active = true
+    const version = favoriteVersion.current
     favoriteState(listing.id)
       .then((result) => {
-        if (active) setFavorited(result.favorited)
+        if (active && version === favoriteVersion.current)
+          setFavorited(result.favorited)
       })
       .catch(() => {
-        if (active) setError('Favorites unavailable. Try again.')
+        if (active && version === favoriteVersion.current)
+          setError('Favorites unavailable. Try again.')
       })
     return () => {
       active = false
     }
   }, [listing.id, seller, own, initiallyFavorited])
   async function toggle(liked: boolean) {
-    if (busy) return
+    if (saving.current) return
     if (!seller) {
       openAuth({ mode: 'signin', intent: 'login' })
       return
     }
+    saving.current = true
+    favoriteVersion.current += 1
     setBusy(true)
     setError('')
     try {
@@ -109,76 +130,104 @@ export function PublishedListingCard({
         reason instanceof Error ? reason.message : 'Unable to update favorites.'
       )
     } finally {
+      saving.current = false
       setBusy(false)
     }
   }
+  const favoriteControl =
+    !own && listing.status === 'available' ? (
+      <ListingFavoriteControl
+        liked={favorite}
+        disabled={busy}
+        onChange={(liked) => toggle(liked)}
+      />
+    ) : undefined
   return (
-    <ExpandableCard
-      title={listing.price === 0 ? 'Free' : formatListingPrice(listing.price)}
-      expandedTitle={listing.title}
-      media={
-        <ListingMedia
-          images={listing.photoUrls.slice(0, 1)}
-          alt={listing.title}
-        />
-      }
-      expandedMedia={
-        <ListingMedia images={listing.photoUrls} alt={listing.title} />
-      }
-      overlayClassName={overlayClassName}
-      overlayStyle={overlayStyle}
-      topAction={
-        !own && listing.status === 'available' ? (
-          <PulseHeart
-            liked={favorite}
-            disabled={busy}
-            showCount={false}
-            size={26}
-            corner={22}
-            idleColor="#b9a9c5"
-            likedColor="#d97991"
-            pillColor="transparent"
-            label={favorite ? 'Remove from favorites' : 'Add to favorites'}
-            onChange={(liked) => toggle(liked)}
-          />
-        ) : undefined
-      }
-      primaryAction={
-        !own ? (
-          <>
-            <ShiningButton
-              variant="green"
-              desktopAppearance={true}
-              disabled={messaging.busy}
-              onClick={() => messaging.contact()}
-            >
-              Message Seller
-            </ShiningButton>
-            {offerContext.enabled && (
-              <div className={actionStyles.offerAction}>
-                <ShiningButton
-                  variant="green"
-                  desktopAppearance={true}
-                  disabled={offerContext.busy || offerContext.disabled}
-                  onClick={() => offerContext.open()}
-                >
-                  {offerContext.label}
-                </ShiningButton>
-                {offerContext.reason && (
-                  <p className={actionStyles.reason}>{offerContext.reason}</p>
-                )}
-              </div>
+    <div className={styles.shell} data-published-listing={listing.id}>
+      <ExpandableCard
+        className={styles.card}
+        renderCloseAction={(close) => (
+          <ShiningButton
+            variant="red"
+            desktopAppearance={true}
+            showArrow={false}
+            onClick={close}
+          >
+            Close
+          </ShiningButton>
+        )}
+        visualRadius={listingCardRadius}
+        collapsedContent={<ListingCardSummary listing={listing} />}
+        title={listing.price === 0 ? 'Free' : formatListingPrice(listing.price)}
+        expandedTitle={listing.title}
+        expandedEyebrow={
+          <span className={styles.expandedPriceRow}>
+            <span className={styles.expandedPriceValue}>
+              {listing.price === 0 ? 'Free' : formatListingPrice(listing.price)}
+            </span>
+            {favoriteControl && (
+              <span className={styles.expandedFavorite}>{favoriteControl}</span>
             )}
-          </>
-        ) : undefined
-      }
-      onOverlayActiveChange={onOverlayActiveChange}
-      onIntentionalOpen={own ? undefined : onIntentionalOpen}
-    >
-      <ListingDetails listing={listing} />
-      {messaging.error && <p role="alert">{messaging.error}</p>}
-      {offerContext.error && <p role="alert">{offerContext.error}</p>}
-      {error && <p role="alert">{error}</p>}
-    </ExpandableCard>
+          </span>
+        }
+        media={
+          <ListingMedia
+            images={listing.photoUrls.slice(0, 1)}
+            alt={listing.title}
+          />
+        }
+        expandedMedia={
+          <ListingMedia images={listing.photoUrls} alt={listing.title} />
+        }
+        overlayClassName={[styles.expandedOverlay, overlayClassName]
+          .filter(Boolean)
+          .join(' ')}
+        overlayStyle={overlayStyle}
+        primaryAction={
+          !own ? (
+            <>
+              <ShiningButton
+                variant="green"
+                desktopAppearance={true}
+                disabled={messaging.busy}
+                onClick={() => messaging.contact()}
+              >
+                Message Seller
+              </ShiningButton>
+              {offerContext.enabled && (
+                <div className={actionStyles.offerAction}>
+                  <ShiningButton
+                    variant="green"
+                    desktopAppearance={true}
+                    disabled={offerContext.busy || offerContext.disabled}
+                    onClick={() => offerContext.open()}
+                  >
+                    {offerContext.label}
+                  </ShiningButton>
+                  {offerContext.reason && (
+                    <p className={actionStyles.reason}>{offerContext.reason}</p>
+                  )}
+                </div>
+              )}
+            </>
+          ) : undefined
+        }
+        onOverlayActiveChange={overlayChanged}
+        onIntentionalOpen={own ? undefined : onIntentionalOpen}
+      >
+        <PublishedListingDetails listing={listing} />
+        {messaging.error && <p role="alert">{messaging.error}</p>}
+        {offerContext.error && <p role="alert">{offerContext.error}</p>}
+        {error && <p role="alert">{error}</p>}
+      </ExpandableCard>
+      {!overlayActive && favoriteControl && (
+        <div className={styles.favorite}>{favoriteControl}</div>
+      )}
+      {!overlayActive && error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   )
 }

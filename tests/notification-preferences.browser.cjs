@@ -1,4 +1,4 @@
-/* global window, document, sessionStorage */
+/* global window, document, sessionStorage, getComputedStyle */
 // Real Provider, Settings, supplied switch and popups; only session/API/Broadcast mocked.
 const fs = require('node:fs')
 const path = require('node:path')
@@ -94,6 +94,21 @@ async function main() {
         const rect = await toggle(label).boundingBox()
         assert.equal(rect.width, 56)
         assert.equal(rect.height, 30)
+        assert.equal(
+          await toggle(label).evaluate((node) =>
+            getComputedStyle(node).getPropertyValue('--ss-track-on').trim()
+          ),
+          '#7C3AED'
+        )
+        await p.waitForFunction(
+          (node) =>
+            getComputedStyle(node.querySelector('[class*="track"]'))
+              .backgroundColor ===
+            (node.getAttribute('aria-checked') === 'true'
+              ? 'rgb(124, 58, 237)'
+              : 'rgb(39, 39, 42)'),
+          await toggle(label).elementHandle()
+        )
       }
       const positions = await p
         .getByRole('switch')

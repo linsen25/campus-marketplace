@@ -1,3 +1,4 @@
+const { TEST_PICTURES } = require('../scripts/lib/test-pictures.cjs')
 /* global Navigator, getComputedStyle, requestAnimationFrame */
 /* eslint-disable no-inner-declarations -- Per-viewport helpers own isolated fixtures. */
 const assert = require('node:assert/strict')
@@ -11,7 +12,7 @@ const item = {
   condition: 'good',
   pickupArea: 'On campus',
   description: 'Fixture only',
-  photoUrls: ['/demo/reading-chair.jpg'],
+  photoUrls: [TEST_PICTURES.camera],
   seller: { id: 'other', displayName: 'Seller' },
   status: 'available',
   publishedAt: '2026-10-05',

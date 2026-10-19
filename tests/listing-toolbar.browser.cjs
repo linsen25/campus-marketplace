@@ -1,3 +1,4 @@
+const { TEST_PICTURES } = require('../scripts/lib/test-pictures.cjs')
 /* global document, window, getComputedStyle, Navigator */
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
@@ -20,7 +21,7 @@ const listing = (
   pickupArea: 'On campus',
   currency: 'CAD',
   description: 'Toolbar verification fixture.',
-  photoUrls: ['/demo/reading-chair.jpg'],
+  photoUrls: [TEST_PICTURES.camera],
   seller: { id: seller, displayName: 'Fixture' },
   publishedAt: '2026-10-05',
   createdAt: '2026-10-05',

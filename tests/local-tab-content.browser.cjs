@@ -1,4 +1,5 @@
-﻿/* global window, document, getComputedStyle, requestAnimationFrame, MutationObserver, Navigator */
+const { TEST_PICTURES } = require('../scripts/lib/test-pictures.cjs')
+/* global window, document, getComputedStyle, requestAnimationFrame, MutationObserver, Navigator */
 /* eslint-disable no-inner-declarations -- Each viewport owns isolated frame and navigation fixtures. */
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
@@ -16,7 +17,7 @@ const listing = (id, sold) => ({
   condition: 'good',
   pickupArea: 'On campus',
   description: 'Local fixture.',
-  photoUrls: ['/demo/reading-chair.jpg'],
+  photoUrls: [TEST_PICTURES.camera],
   seller: { id: 'owner', displayName: 'Fixture' },
   status: sold ? 'sold' : 'available',
   publishedAt: '2026-10-05',

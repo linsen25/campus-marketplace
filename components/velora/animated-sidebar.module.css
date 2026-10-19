@@ -267,3 +267,9 @@
     transition: none;
   }
 }
+
+.badge {
+  display: inline-flex;
+  margin-left: 8px;
+  vertical-align: middle;
+}

@@ -48,6 +48,7 @@ export default function GlideSelect({
   glideDuration = 220,
   rememberPosition = true,
   disabled = false,
+  overlay = false,
   ariaLabel = 'Select',
   className = '',
 }) {
@@ -79,8 +80,14 @@ export default function GlideSelect({
     const el = menuRef.current
     const root = rootRef.current
     if (!el || !root) return
-    // Market's bounded inner scroll region keeps the menu below its field.
-    setSide('bottom')
+    if (overlay) el.showPopover()
+    setSide(
+      placement === 'top' ||
+        (placement === 'top-desktop' &&
+          window.matchMedia('(min-width: 1024px)').matches)
+        ? 'top'
+        : 'bottom'
+    )
     setScrolling(false)
     scrollIntent.current = 0
     scrollbarPointer.current = false
@@ -98,6 +105,48 @@ export default function GlideSelect({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
+
+  useLayoutEffect(() => {
+    if (!overlay || phase !== 'open') return undefined
+    const position = () => {
+      const trigger = triggerRef.current
+      const menu = menuRef.current
+      if (!trigger || !menu) return
+      const box = trigger.getBoundingClientRect()
+      const below = window.innerHeight - box.bottom - 14
+      const above = box.top - 14
+      const preferTop =
+        placement === 'top' ||
+        (placement === 'top-desktop' &&
+          window.matchMedia('(min-width: 1024px)').matches)
+      const topSide = preferTop
+        ? above >= 180 || above > below
+        : below < 180 && above > below
+      const available = Math.max(40, topSide ? above : below)
+      menu.style.width = `${Math.min(box.width, window.innerWidth - 16)}px`
+      menu.style.left = `${Math.max(
+        8,
+        Math.min(box.left, window.innerWidth - box.width - 8)
+      )}px`
+      menu.style.setProperty(
+        '--gs-list-height',
+        `${Math.min(220, available - 10)}px`
+      )
+      menu.style.top = `${
+        topSide
+          ? box.top - Math.min(available, menu.scrollHeight) - 6
+          : box.bottom + 6
+      }px`
+      setSide(topSide ? 'top' : 'bottom')
+    }
+    position()
+    window.addEventListener('resize', position)
+    window.addEventListener('scroll', position, true)
+    return () => {
+      window.removeEventListener('resize', position)
+      window.removeEventListener('scroll', position, true)
+    }
+  }, [overlay, phase, placement])
 
   useLayoutEffect(() => {
     const p = pillRef.current
@@ -340,6 +389,7 @@ export default function GlideSelect({
       {phase !== 'closed' ? (
         <div
           ref={menuRef}
+          popover={overlay ? 'manual' : undefined}
           className={styles['glide-select__menu']}
           data-state="open"
           data-side={side}

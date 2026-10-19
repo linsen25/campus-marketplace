@@ -1,3 +1,4 @@
+const { readTestPictureJpeg } = require('../scripts/lib/test-pictures.cjs')
 const assert = require('node:assert/strict')
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
 ;(async () => {
@@ -152,9 +153,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
       const file = (name = 'chair.jpg') => ({
         name,
         mimeType: 'image/jpeg',
-        buffer: require('node:fs').readFileSync(
-          'public/demo/reading-chair.jpg'
-        ),
+        buffer: readTestPictureJpeg('chair'),
       })
       const mode = panel.getByRole('region', {
         name: 'Add attachment',

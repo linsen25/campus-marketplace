@@ -1,5 +1,7 @@
 import type { Listing } from '@/types/listing'
 
+import { TEST_PICTURES } from './test-pictures'
+
 type HomepageListingShowcase = Pick<
   Listing,
   | 'category'
@@ -18,9 +20,9 @@ type HomepageListingShowcase = Pick<
 // Local showcase only. Verification is not a field returned by listings-api.
 // Never pass this fixture to Supabase, Favorites or Messages.
 export const homepageListingDemo: HomepageListingShowcase = {
-  title: 'Woven accent chair',
+  title: 'Wooden accent chair',
   price: 4500,
-  photoUrls: ['/demo/reading-chair.jpg'],
+  photoUrls: [TEST_PICTURES.chair],
   category: 'Home & Dorm',
   subcategory: 'Furniture',
   condition: 'good',

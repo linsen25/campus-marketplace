@@ -1,0 +1,129 @@
+/* Same FadingDialog slide-up/slide-down pattern as the existing Shop Plans sheet. */
+.dialog {
+  position: fixed;
+  inset: auto 0 0;
+  margin: 0 auto;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  height: calc(100dvh - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow: hidden;
+  border: 1px solid #544161;
+  border-bottom: 0;
+  border-radius: 24px 24px 0 0;
+  background: #21182b;
+  color: #f5f1fa;
+  box-shadow: 0 24px 80px #0008;
+}
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 24px;
+  border-bottom: 1px solid #ffffff0d;
+  flex-shrink: 0;
+}
+.header h2 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  margin: 0;
+}
+.header button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  color: inherit;
+  cursor: pointer;
+}
+.header button:hover {
+  background: #ffffff12;
+}
+.header button:focus-visible {
+  outline: 2px solid #b88cfa;
+  outline-offset: 2px;
+}
+.body {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  padding: 0 8px;
+}
+.dialog::backdrop {
+  background: #0009;
+  backdrop-filter: blur(3px);
+}
+.dialog.dialog[open] {
+  animation: rise 160ms ease-out both;
+}
+.dialog.dialog[data-exiting] {
+  animation: sink 180ms ease-in both;
+}
+@keyframes rise {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes sink {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+@media (min-width: 640px) {
+  .dialog {
+    inset: 0;
+    margin: auto;
+    width: min(1080px, calc(100vw - 64px));
+    max-width: calc(100% - 48px);
+    height: min(760px, calc(100dvh - 64px));
+    max-height: calc(100dvh - 64px);
+    border-bottom: 1px solid #544161;
+    border-radius: 24px;
+  }
+}
+@media (max-width: 639px) {
+  .header {
+    padding: 12px 16px;
+  }
+  .body {
+    padding-inline: 0;
+  }
+}
+/* The measured wizard content drives Resale's desktop shell; mobile and Shop
+   retain their existing fixed workspace. Flex shrinking caps only real overflow. */
+@media (min-width: 768px) {
+  .dialog[data-listing-creation-sheet='resale'] {
+    height: fit-content;
+  }
+  .dialog[data-listing-creation-sheet='resale'] .body {
+    flex: 0 1 auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog.dialog[open],
+  .dialog.dialog[data-exiting] {
+    animation: none;
+  }
+}

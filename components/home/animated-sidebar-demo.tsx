@@ -3,6 +3,7 @@ import {
   Bell,
   MessageCircle,
   Package,
+  Store,
   ClipboardList,
   Settings,
   UserRound,
@@ -14,12 +15,15 @@ import type { ReactNode } from 'react'
 
 import { HomeListings } from '@/components/listings/home-listings'
 import type { ListingLeaveGuard } from '@/components/listings/listing-form'
+import { ShopManagementTitle } from '@/components/listings/shop-management-title'
 import {
   useDesktopRouteTransition,
   usePendingDestination,
 } from '@/components/navigation/desktop-route-transition'
 import { NotificationBell } from '@/components/notifications/notification-bell'
 import { NotificationsView } from '@/components/notifications/notifications-view'
+import shopAnalysisStyles from '@/components/shops/shop-analysis.module.css'
+import { ShopAnalysis } from '@/components/shops/shop-analytics'
 import { ShopProBadge } from '@/components/shops/shop-pro-badge'
 import MenuInteraction from '@/components/smooth-dropdown'
 import { LocalTabContent } from '@/components/ui/local-tab-content'
@@ -51,64 +55,56 @@ const GradientWaves = dynamic(
   }
 )
 
-type Group = 'listings' | 'messages' | 'orders' | 'profile'
+const creationHeadings = new Map([
+  ['create-listing', 'Manage Resale'],
+  ['create-shop-listing', 'Manage Products'],
+])
 
-const navigationDestination = (id: string) =>
-  ({ 'create-listing': 'my-listings', 'create-shop-listing': 'my-shop' }[id] ??
-  id)
+type Group = 'messages' | 'orders' | 'profile' | 'resale' | 'shop'
 
 const groups: Array<{
   id: Group
   label: string
   icon: ReactNode
-  selectOnExpand?: boolean
+  badge?: ReactNode
   children: Array<{
     id: string
     label: string
     heading: string
     badge?: ReactNode
-    hidden?: boolean
   }>
 }> = [
+  { id: 'profile', label: 'Profile', icon: <UserRound />, children: [] },
   {
-    id: 'profile',
-    label: 'Profile',
-    icon: <UserRound />,
+    id: 'resale',
+    label: 'My Resale',
+    icon: <Package />,
     children: [
-      { id: 'overview', label: 'Overview', heading: 'Overview' },
-      { id: 'analytics', label: 'Analysis', heading: 'Analysis' },
+      { id: 'my-listings', label: 'Manage Resale', heading: 'Manage Resale' },
+      {
+        id: 'favorites',
+        label: 'Resale Favorites',
+        heading: 'Resale Favorites',
+      },
     ],
   },
   {
-    id: 'listings',
-    selectOnExpand: true,
-    label: 'Listings',
-    icon: <Package />,
+    id: 'shop',
+    label: 'My Shop',
+    icon: <Store />,
+    badge: <ShopProBadge tier="plus" />,
     children: [
+      { id: 'my-shop', label: 'Manage Products', heading: 'Manage Products' },
       {
-        id: 'my-listings',
-        label: 'My Resale',
-        heading: 'My Resale',
+        id: 'shop-favorites',
+        label: 'Shop Favorites',
+        heading: 'Shop Favorites',
       },
       {
-        id: 'create-listing',
-        label: 'Create Resale',
-        heading: 'Create Resale',
-        hidden: true,
+        id: 'shop-analysis',
+        label: 'Shop Analysis',
+        heading: 'Shop Analysis',
       },
-      {
-        id: 'my-shop',
-        label: 'My Shop',
-        heading: 'My Shop',
-        badge: <ShopProBadge />,
-      },
-      {
-        id: 'create-shop-listing',
-        label: 'Create Shop Listing',
-        heading: 'Create Shop Listing',
-        hidden: true,
-      },
-      { id: 'favorites', label: 'Favorites', heading: 'Favorites' },
     ],
   },
   {
@@ -131,16 +127,6 @@ const groups: Array<{
   },
 ]
 
-const mobileGroups = groups.map((group) => ({
-  ...group,
-  children: group.children
-    .filter((child) => !child.hidden)
-    .map((child) => ({
-      ...child,
-      heading: group.id === 'messages' ? child.label : child.heading,
-    })),
-}))
-
 // eslint-disable-next-line complexity -- Existing responsive Home destinations keep separate mobile and desktop rendering branches.
 export function AnimatedSidebarDemo() {
   const router = useRouter()
@@ -149,6 +135,8 @@ export function AnimatedSidebarDemo() {
   const logout = useProfileLogout()
   const pendingDestination = usePendingDestination()
   const arrivingFromMarket = useRef(false)
+  const [analysisHeaderTarget, setAnalysisHeaderTarget] =
+    useState<HTMLDivElement | null>(null)
   const [username, setUsername] = useState<string | null>(null)
   const [avatarImage, setAvatarImage] = useState<string>()
   const saveAvatar = useCallback((file: File) => {
@@ -216,14 +204,17 @@ export function AnimatedSidebarDemo() {
   }, [pendingDestination, desktop, active])
   const [selected, setSelected] = useState<Record<Group, string>>({
     profile: 'overview',
-    listings: 'my-listings',
+    resale: 'my-listings',
+    shop: 'my-shop',
     messages: 'buying',
     orders: 'purchases',
   })
+  const [expanded, setExpanded] = useState<Group | null>(null)
   // Preview navigation follows Home's existing local destination pattern. No route/API request.
   useEffect(() => {
     if (!orderVisuals.selection) return
     setActive('orders')
+    setExpanded('orders')
     setSelected((current) => ({
       ...current,
       orders: orderVisuals.selection?.workspace || current.orders,
@@ -236,6 +227,7 @@ export function AnimatedSidebarDemo() {
       if (section === 'notifications') setActive('notifications')
       if (section === 'orders') {
         setActive('orders')
+        setExpanded('orders')
         setSelected((current) => ({
           ...current,
           orders: ['sales', 'selling'].includes(
@@ -247,24 +239,33 @@ export function AnimatedSidebarDemo() {
       }
       if (section === 'messages') {
         setActive('messages')
+        setExpanded('messages')
         setSelected((current) => ({
           ...current,
           messages:
             router.query.destination === 'selling' ? 'selling' : 'buying',
         }))
       }
-      if (
-        [
-          'my-listings',
-          'create-listing',
-          'favorites',
-          'my-shop',
-          'create-shop-listing',
-        ].includes(String(section))
-      ) {
-        setActive('listings')
-        setSelected((current) => ({ ...current, listings: String(section) }))
+      // Legacy create links open the management-owned overlay, never a second page.
+      if (section === 'create-listing') {
+        setActive('resale')
+        setExpanded('resale')
+        setSelected((current) => ({ ...current, resale: 'create-listing' }))
       }
+      if (section === 'create-shop-listing') {
+        setActive('shop')
+        setExpanded('shop')
+        setSelected((current) => ({ ...current, shop: 'create-shop-listing' }))
+      }
+      const target = groups.find((item) =>
+        item.children.some((child) => child.id === section)
+      )
+      if (target) {
+        setActive(target.id)
+        setExpanded(target.id)
+        setSelected((current) => ({ ...current, [target.id]: String(section) }))
+      }
+      if (section === 'profile' || section === 'analytics') setActive('profile')
     }
     syncSection()
     // Local sidebar selection can diverge from an unchanged URL. Reapply even
@@ -286,7 +287,7 @@ export function AnimatedSidebarDemo() {
       else enter()
       return
     }
-    const replayCharts = id === 'profile' && child === 'analytics'
+    const replayCharts = id === 'profile'
     const alreadySelected =
       id === active && child && selected[id as Group] === child
     if (
@@ -302,7 +303,7 @@ export function AnimatedSidebarDemo() {
       setActive(id)
       const section = groups.find((item) => item.id === id)
       if (section) {
-        const next = child ?? section.children[0].id
+        const next = child ?? section.children[0]?.id ?? 'overview'
         setSelected((current) => ({ ...current, [id]: next }))
       }
     }
@@ -311,8 +312,28 @@ export function AnimatedSidebarDemo() {
   }
   const group = groups.find((item) => item.id === active)
   const heading =
+    creationHeadings.get(group ? selected[group.id] : '') ??
     group?.children.find((child) => child.id === selected[group.id])?.heading ??
+    group?.label ??
     (active === 'notifications' ? 'Notifications' : 'Settings')
+  const managementHeading =
+    heading === 'Manage Products' ? <ShopManagementTitle /> : heading
+
+  const renderDesktopHeaderActions = () => {
+    if (!desktop) return null
+    if (active === 'shop' && selected.shop === 'shop-analysis')
+      return (
+        <div className={shopAnalysisStyles.workspaceActions}>
+          <div
+            ref={setAnalysisHeaderTarget}
+            className={shopAnalysisStyles.dateSlot}
+            data-shop-analysis-date-slot={true}
+          />
+          <NotificationBell />
+        </div>
+      )
+    return <NotificationBell />
+  }
   return (
     <div className={styles.page} data-slot="home-sidebar-demo">
       {desktop ? (
@@ -364,12 +385,24 @@ export function AnimatedSidebarDemo() {
       )}
       <div className={styles.mobileShell}>
         <header className={styles.mobileHeader} data-home-mobile-header="true">
-          <h1 className={styles.mobileTitle}>{heading}</h1>
-          {!desktop && <NotificationBell />}
+          <h1 className={styles.mobileTitle}>{managementHeading}</h1>
+          {!desktop &&
+            (active === 'shop' && selected.shop === 'shop-analysis' ? (
+              <div className={shopAnalysisStyles.workspaceActions}>
+                <div
+                  ref={setAnalysisHeaderTarget}
+                  className={shopAnalysisStyles.dateSlot}
+                  data-shop-analysis-date-slot={true}
+                />
+                <NotificationBell />
+              </div>
+            ) : (
+              <NotificationBell />
+            ))}
           <MenuInteraction
             compact={true}
             items={[
-              ...mobileGroups,
+              ...groups,
               {
                 id: 'notifications',
                 label: 'Notifications',
@@ -378,9 +411,7 @@ export function AnimatedSidebarDemo() {
               { id: 'settings', label: 'Settings', icon: <Settings /> },
             ]}
             activeItem={active}
-            selectedChild={
-              group ? navigationDestination(selected[group.id]) : undefined
-            }
+            selectedChild={group ? selected[group.id] : undefined}
             onSelect={(id, child) =>
               selectSection(id as Group | 'notifications' | 'settings', child)
             }
@@ -390,21 +421,17 @@ export function AnimatedSidebarDemo() {
           {!desktop && active === 'notifications' && <NotificationsView />}
           {!desktop && active === 'profile' && (
             <LocalTabContent tab={selected.profile}>
-              {selected.profile === 'overview' && (
-                <ProfileOverview
-                  showHeading={false}
-                  avatarImage={avatarImage}
-                  onFinancialSettings={() => selectSection('settings')}
-                  onUsername={setUsername}
-                  onAvatarSave={saveAvatar}
-                />
-              )}
-              {selected.profile === 'analytics' && (
-                <AccountAnalysis
-                  replayToken={chartReplayToken}
-                  replayHistory={chartReplayHistory}
-                />
-              )}
+              <ProfileOverview
+                showHeading={false}
+                avatarImage={avatarImage}
+                onFinancialSettings={() => selectSection('settings')}
+                onUsername={setUsername}
+                onAvatarSave={saveAvatar}
+              />
+              <AccountAnalysis
+                replayToken={chartReplayToken}
+                replayHistory={chartReplayHistory}
+              />
             </LocalTabContent>
           )}
           {!desktop && active === 'messages' && (
@@ -430,16 +457,27 @@ export function AnimatedSidebarDemo() {
               onUsername={setUsername}
             />
           )}
-          {!desktop && active === 'listings' && (
-            <HomeListings
-              page={selected.listings}
-              onGuardChange={registerListingGuard}
-              onSelect={(page) => {
-                listingGuard.current = null
-                setSelected((current) => ({ ...current, listings: page }))
-              }}
-            />
-          )}
+          {!desktop &&
+            active === 'shop' &&
+            selected.shop === 'shop-analysis' && (
+              <ShopAnalysis
+                replayToken={chartReplayToken}
+                headerActionsTarget={analysisHeaderTarget}
+              />
+            )}
+          {!desktop &&
+            (active === 'resale' || active === 'shop') &&
+            selected[active] !== 'shop-analysis' && (
+              <HomeListings
+                key={active}
+                page={selected[active]}
+                onGuardChange={registerListingGuard}
+                onSelect={(page) => {
+                  listingGuard.current = null
+                  setSelected((current) => ({ ...current, [active]: page }))
+                }}
+              />
+            )}
         </main>
       </div>
       <Sidebar className={styles.frame}>
@@ -486,45 +524,52 @@ export function AnimatedSidebarDemo() {
               <SidebarLink
                 href={`#${item.id}`}
                 label={item.label}
+                aria-label={item.label}
+                badge={item.badge}
                 icon={item.icon}
                 active={active === item.id}
-                aria-expanded={active === item.id}
+                aria-expanded={
+                  item.children.length ? expanded === item.id : undefined
+                }
                 onClick={(event) => {
                   event.preventDefault()
-                  selectSection(item.id)
+                  if (item.id === 'resale' || item.id === 'shop') {
+                    setExpanded((current) =>
+                      current === item.id ? null : item.id
+                    )
+                  } else {
+                    setExpanded(item.children.length ? item.id : null)
+                    selectSection(item.id)
+                  }
                 }}
               />
               {item.children.length > 0 && (
                 <div
                   className={styles.submenu}
-                  data-open={active === item.id || undefined}
+                  data-open={expanded === item.id || undefined}
                 >
                   <div className={styles.submenuInner}>
-                    {item.children
-                      .filter((child) => !child.hidden)
-                      .map((child) => (
-                        <button
-                          key={child.id}
-                          type="button"
-                          className={styles.child}
-                          aria-label={child.label}
-                          aria-current={
-                            active === item.id &&
-                            navigationDestination(selected[item.id]) ===
-                              child.id
-                              ? 'page'
-                              : undefined
-                          }
-                          onClick={() => selectSection(item.id, child.id)}
-                        >
-                          {child.label}
-                          {child.badge && (
-                            <span className={styles.childBadge}>
-                              {child.badge}
-                            </span>
-                          )}
-                        </button>
-                      ))}
+                    {item.children.map((child) => (
+                      <button
+                        key={child.id}
+                        type="button"
+                        className={styles.child}
+                        aria-label={child.label}
+                        aria-current={
+                          active === item.id && selected[item.id] === child.id
+                            ? 'page'
+                            : undefined
+                        }
+                        onClick={() => selectSection(item.id, child.id)}
+                      >
+                        {child.label}
+                        {child.badge && (
+                          <span className={styles.childBadge}>
+                            {child.badge}
+                          </span>
+                        )}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
@@ -536,28 +581,24 @@ export function AnimatedSidebarDemo() {
             title={
               active === 'profile' && selected.profile === 'overview'
                 ? 'Profile'
-                : heading
+                : managementHeading
             }
           >
-            {desktop && <NotificationBell />}
+            {renderDesktopHeaderActions()}
           </SectionHeader>
           {desktop && active === 'notifications' && <NotificationsView />}
           {desktop && active === 'profile' && (
             <>
-              {selected.profile === 'overview' && (
-                <ProfileOverview
-                  avatarImage={avatarImage}
-                  onFinancialSettings={() => selectSection('settings')}
-                  onUsername={setUsername}
-                  onAvatarSave={saveAvatar}
-                />
-              )}
-              {selected.profile === 'analytics' && (
-                <AccountAnalysis
-                  replayToken={chartReplayToken}
-                  replayHistory={chartReplayHistory}
-                />
-              )}
+              <ProfileOverview
+                avatarImage={avatarImage}
+                onFinancialSettings={() => selectSection('settings')}
+                onUsername={setUsername}
+                onAvatarSave={saveAvatar}
+              />
+              <AccountAnalysis
+                replayToken={chartReplayToken}
+                replayHistory={chartReplayHistory}
+              />
             </>
           )}
           {desktop && active === 'messages' && (
@@ -583,16 +624,27 @@ export function AnimatedSidebarDemo() {
               onUsername={setUsername}
             />
           )}
-          {desktop && active === 'listings' && (
-            <HomeListings
-              page={selected.listings}
-              onGuardChange={registerListingGuard}
-              onSelect={(page) => {
-                listingGuard.current = null
-                setSelected((current) => ({ ...current, listings: page }))
-              }}
-            />
-          )}
+          {desktop &&
+            active === 'shop' &&
+            selected.shop === 'shop-analysis' && (
+              <ShopAnalysis
+                replayToken={chartReplayToken}
+                headerActionsTarget={analysisHeaderTarget}
+              />
+            )}
+          {desktop &&
+            (active === 'resale' || active === 'shop') &&
+            selected[active] !== 'shop-analysis' && (
+              <HomeListings
+                key={active}
+                page={selected[active]}
+                onGuardChange={registerListingGuard}
+                onSelect={(page) => {
+                  listingGuard.current = null
+                  setSelected((current) => ({ ...current, [active]: page }))
+                }}
+              />
+            )}
         </main>
       </Sidebar>
     </div>

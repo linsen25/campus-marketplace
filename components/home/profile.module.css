@@ -145,7 +145,11 @@
   cursor: pointer;
 }
 
-.segment button[aria-pressed="true"],
+.analytics .segment button[aria-pressed="true"] {
+  background: #7C3AED;
+  color: #fff;
+}
+
 .listingChoices button[aria-pressed="true"] {
   background: #664780;
   color: #fff;
