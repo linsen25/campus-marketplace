@@ -95,3 +95,9 @@ configuration must subscribe the existing endpoint to the three Refund event typ
 Remote schema deployment, webhook configuration, scheduler activation and real
 Stripe test-mode payment/refund acceptance remain separately authorized work. No
 real Refund, Transfer or Payout was executed in B23-A/B/C.
+
+The final local pre-Staging lock-order and replay qualification is recorded in
+`BUSINESS-V1-B21-B23-PRE-STAGING-QUALIFICATION.md`. B21, B22 and B23 now share the
+Listing -> Order -> PaymentAttempt financial lock prefix; B22 preserves the original
+`paid_after_cancellation_requested` exception and evidence across due and Webhook
+replays.

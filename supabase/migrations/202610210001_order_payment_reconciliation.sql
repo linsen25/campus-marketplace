@@ -139,21 +139,31 @@ begin
  if p_action='apply_event' then
   select * into e from marketplace_private.stripe_webhook_inbox where platform=p_platform and mode='test' and purpose='marketplace_order'
    and account_scope=p_platform and event_id=p_value->>'evidenceId' for update;
-  if e.event_id is null or e.lease is distinct from p_token or e.lease_until<t or e.provider_ref is distinct from p_value->>'providerReference'
+  if e.event_id is null or e.lease is distinct from p_token or e.lease_until<=clock_timestamp()
+   or e.provider_ref is distinct from p_value->>'providerReference'
    then raise exception 'Stale event lease.' using errcode='40001';end if;
   select * into a from marketplace_private.campus_payment_attempts where provider='stripe' and provider_mode='test'
-   and provider_platform=p_platform and provider_purpose='marketplace_order' and provider_reference=e.provider_ref for update;
+   and provider_platform=p_platform and provider_purpose='marketplace_order' and provider_reference=e.provider_ref;
  else
   select * into a from marketplace_private.campus_payment_attempts where id=(p_value->>'attemptId')::uuid and provider='stripe'
-   and provider_mode='test' and provider_platform=p_platform and provider_purpose='marketplace_order' for update;
-  if a.id is null or a.provider_reconcile_lease is distinct from p_token or a.provider_reconcile_lease_until<t
-   then raise exception 'Stale reconciliation lease.' using errcode='40001';end if;
+   and provider_mode='test' and provider_platform=p_platform and provider_purpose='marketplace_order';
  end if;
  if a.id is null then raise exception 'Payment attempt binding unavailable.' using errcode='P0002';end if;
  select * into o from public.orders where id=a.order_id;
+ if o.id is null then raise exception 'Payment attempt binding unavailable.' using errcode='P0002';end if;
  perform 1 from public.listings where id=o.listing_id for update;
  select * into o from public.orders where id=a.order_id for update;
  select * into a from marketplace_private.campus_payment_attempts where id=a.id for update;
+ if a.id is null or a.order_id is distinct from o.id or a.provider<>'stripe' or a.provider_mode<>'test'
+  or a.provider_platform is distinct from p_platform or a.provider_purpose<>'marketplace_order' then
+  raise exception 'Payment attempt changed.' using errcode='40001';end if;
+ if p_action='apply_event' then
+  if e.lease is distinct from p_token or e.lease_until<=clock_timestamp()
+   or e.provider_ref is distinct from a.provider_reference then
+   raise exception 'Stale event lease.' using errcode='40001';end if;
+ elsif a.provider_reconcile_lease is distinct from p_token or a.provider_reconcile_lease_until<=clock_timestamp() then
+  raise exception 'Stale reconciliation lease.' using errcode='40001';
+ end if;
  mismatch:=a.provider_reference is distinct from p_value->>'providerReference' or a.id::text is distinct from p_value->>'attemptId'
   or a.order_id::text is distinct from p_value->>'orderId' or a.provider_amount_cents is distinct from amount
   or a.provider_currency is distinct from upper(p_value->>'currency') or a.provider_customer_ref is distinct from p_value->>'customer'
@@ -164,7 +174,10 @@ begin
  if mismatch or (provider_state='succeeded' and received<>amount) or (provider_state='canceled' and received<>0) then
   err:='binding_mismatch';result:='exception';
  elsif provider_state='succeeded' then
-  if a.status='paid' and o.payment_status='paid' then result:='duplicate';
+  if a.status='paid' and o.payment_status='paid' then
+   if a.provider_reconcile_state='exception' and a.provider_exception_code='paid_after_cancellation_requested' then
+    err:='paid_after_cancellation_requested';result:='exception';
+   else result:='duplicate';end if;
   elsif a.status='processing' and o.lifecycle_status='open' and o.payment_status='processing' and o.holds_listing
    and exists(select 1 from public.listings where id=o.listing_id and status='pending' and reserved_order_id=o.id) then
    cancel_pending:=exists(select 1 from marketplace_private.order_cancellation_intents where order_id=o.id);
@@ -189,7 +202,9 @@ begin
  else result:='pending';end if;
 
  update marketplace_private.campus_payment_attempts set provider_status=provider_state,provider_observed_at=t,
-  provider_evidence_id=p_value->>'evidenceId',provider_reconcile_state=case when result in('applied','duplicate') then 'applied' when result='exception' then 'exception' else 'pending' end,
+  provider_evidence_id=case when provider_reconcile_state='exception' and provider_exception_code='paid_after_cancellation_requested'
+   then provider_evidence_id else p_value->>'evidenceId' end,
+  provider_reconcile_state=case when result in('applied','duplicate') then 'applied' when result='exception' then 'exception' else 'pending' end,
   provider_exception_code=err,provider_reconcile_after=case when result='pending' then t+interval '1 minute' else null end,
   provider_reconcile_lease=case when p_action='apply_due' then null else provider_reconcile_lease end,
   provider_reconcile_lease_until=case when p_action='apply_due' then null else provider_reconcile_lease_until end where id=a.id;

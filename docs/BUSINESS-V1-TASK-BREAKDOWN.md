@@ -374,6 +374,13 @@ migrations, Stripe webhook subscription, a reliable authenticated Worker schedul
 and real Stripe test-mode acceptance remain incomplete; the overall B23 task is not
 yet completed and no real Stripe refund has executed.
 
+B21-B23 pre-Staging qualification (2026-10-21): **LOCAL FINANCIAL CONCURRENCY AND
+MIGRATION CHAIN QUALIFIED**. The five pending migrations apply consecutively in an
+isolated PostgreSQL database, financial paths use a consistent per-Order lock order,
+and cancellation-race replays preserve their refund-eligible B22 exception evidence.
+This status does not include Staging deployment, Worker scheduling, webhook provider
+configuration or real Stripe test-mode acceptance.
+
 | ID / priority | Small deliverable and existing code to reuse                                                                                                                | Dependency / schema                                                                                                                                | Security and staging acceptance                                                                                                                                                                                                                     |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | B20 / P0      | Specify concrete provider operation mapping to existing frozen economics/attempt/settlement authorizations. Confirm actual SDK/docs in implementation task. | B01/B07/B08; existing server-only Stripe setup. Schema:inventory provider refs, unique attempts and operation audit needs.                         | Amount/currency/destination from server records only; external mode never calls Stripe. Exit: exact create/success/failure/unknown/retry transition table without changed fees or timing rules.                                                     |

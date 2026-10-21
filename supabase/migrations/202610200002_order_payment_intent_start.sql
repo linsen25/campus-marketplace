@@ -99,11 +99,15 @@ declare a marketplace_private.campus_payment_attempts;o public.orders;l public.l
 begin
  perform marketplace_private.require_stripe_staging();
  if p_action not in('claim','bind','read','release') or p_platform !~ '^acct_[A-Za-z0-9]+$' then raise exception 'Invalid provider operation.' using errcode='23514';end if;
- select * into a from marketplace_private.campus_payment_attempts where id=p_attempt and buyer_id=p_buyer for update;
+ -- Locate without locking, then join the global per-Order financial lock order.
+ select * into a from marketplace_private.campus_payment_attempts where id=p_attempt and buyer_id=p_buyer;
  if a.id is null then raise exception 'Payment attempt unavailable.' using errcode='42501';end if;
  select * into o from public.orders where id=a.order_id;
+ if o.id is null then raise exception 'Payment attempt unavailable.' using errcode='42501';end if;
  perform 1 from public.listings where id=o.listing_id for update;
  select * into o from public.orders where id=a.order_id for update;
+ select * into a from marketplace_private.campus_payment_attempts where id=p_attempt and buyer_id=p_buyer for update;
+ if a.id is null or a.order_id is distinct from o.id then raise exception 'Payment attempt changed.' using errcode='40001';end if;
  select * into l from public.listings where id=o.listing_id;
  confirmable:=o.buyer_id=p_buyer and o.seller_id is not null and o.seller_id<>p_buyer and o.lifecycle_status='open' and o.holds_listing and o.payment_status='processing' and l.status='pending' and l.reserved_order_id=o.id and marketplace_private.payment_mode(o.terms_snapshot->'terms')='uu_pay' and marketplace_private.order_agreement_ready(o.id);
  if p_action='claim' and not confirmable then raise exception 'Order not payment ready.' using errcode='23505';end if;

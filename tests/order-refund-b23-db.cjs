@@ -738,8 +738,96 @@ async function main() {
         `select public.marketplace_order_refund_events('retry','${platform}','${recoveredEvent.lease}',
          '{"eventId":"evt_RefundCrash","reason":"provider_unavailable"}'::jsonb);`
     )
+
+    // B21 read, B22 event application and B23 claim all wait at Listing first.
+    // When the blocker releases, they serialize Listing -> Order -> Attempt
+    // instead of forming the former Attempt <-> Listing deadlock cycle.
+    const lockIds = seed({
+      reconcileState: 'exception',
+      exceptionCode: 'paid_after_cancellation_requested',
+    })
+    prepare(lockIds.order)
+    sql(`update marketplace_private.order_refund_operations set next_reconcile_at=now()+interval '1 hour';
+      update marketplace_private.order_refund_operations set next_reconcile_at=now()-interval '1 second'
+       where order_id='${lockIds.order}';`)
+    const paymentEventLease = randomUUID()
+    sql(`insert into marketplace_private.stripe_webhook_inbox(
+      platform,mode,event_id,event_type,account_scope,purpose,provider_ref,status,lease,lease_until)
+      values('${platform}','test','evt_LockOrder','payment_intent.succeeded','${platform}',
+       'marketplace_order','${lockIds.pi}','processing','${paymentEventLease}',now()+interval '180 seconds');`)
+    const paymentObservation = JSON.stringify({
+      amount: 10825,
+      amountReceived: 10825,
+      attemptId: lockIds.attempt,
+      currency: 'cad',
+      customer: 'cus_Buyer',
+      evidenceId: 'evt_LockOrder',
+      livemode: false,
+      metadataAttempt: lockIds.attempt,
+      metadataEnvironment: 'staging',
+      metadataKind: 'marketplace_order',
+      orderId: lockIds.order,
+      paymentMethod: 'pm_Card',
+      providerReference: lockIds.pi,
+      providerStatus: 'succeeded',
+      sellerAccount: 'acct_Seller',
+      transferGroup: `uu_order_${lockIds.order}`,
+    }).replaceAll("'", "''")
+    const blocker = runAsync(
+      'psql',
+      args,
+      `begin;set local application_name='b23_lock_blocker';
+       select 1 from public.listings where id='${lockIds.listing}' for update;
+       select pg_sleep(2);commit;`
+    )
+    let blockerReady = false
+    for (let index = 0; index < 40; index++) {
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      if (
+        sql(
+          `select coalesce(wait_event,'') from pg_stat_activity where application_name='b23_lock_blocker';`
+        ).includes('PgSleep')
+      ) {
+        blockerReady = true
+        break
+      }
+    }
+    assert(blockerReady, 'listing blocker must be active')
+    const bounded = `set lock_timeout='5s';set statement_timeout='10s';${claims}`
+    const providerRead = runAsync(
+      'psql',
+      args,
+      `${bounded}set application_name='b21_provider_lock_order';
+       select public.marketplace_order_payment_provider('read','${lockIds.attempt}','${buyer}','${platform}',null,'{}');`
+    )
+    const paymentApply = runAsync(
+      'psql',
+      args,
+      `${bounded}set application_name='b22_payment_lock_order';
+       select public.marketplace_order_payment_reconciliation('apply_event','${platform}','${paymentEventLease}',
+        '${paymentObservation}');`
+    )
+    const refundClaim = runAsync(
+      'psql',
+      args,
+      `${bounded}set application_name='b23_refund_lock_order';
+       select public.marketplace_order_refund_operation('claim_due',null,'${platform}',null);`
+    )
+    await blocker
+    const lockResults = await Promise.all([
+      providerRead,
+      paymentApply,
+      refundClaim,
+    ])
+    assert(lockResults.every((output) => !/deadlock detected/i.test(output)))
+    assert.equal(
+      sql(
+        `select provider_exception_code from marketplace_private.campus_payment_attempts where id='${lockIds.attempt}';`
+      ),
+      'paid_after_cancellation_requested'
+    )
     console.log(
-      'PASS B23-A/B/C isolated PostgreSQL authorization, bounded discovery, purpose-isolated event dedupe/lease/wake, immutable refund identity, fenced observations and no Order/Seller mutation'
+      'PASS B21-B23 isolated PostgreSQL lock order, migration chain, authorization, bounded discovery, event fencing, immutable refund identity and no Order/Seller mutation'
     )
   } finally {
     if (started) run('pg_ctl', ['-D', data, '-m', 'immediate', '-w', 'stop'])

@@ -144,6 +144,10 @@ async function main() {
         'utf8'
       )
     )
+    sql(`insert into marketplace_private.stripe_webhook_inbox(
+      platform,mode,event_id,event_type,account_scope,owner_ref)
+      values('acct_TestPlatform','test','evt_LegacySetup','customer.updated',
+       'acct_TestPlatform','cus_Legacy');`)
     sql(
       fs.readFileSync(
         'supabase/migrations/202610210001_order_payment_reconciliation.sql',
@@ -164,6 +168,13 @@ async function main() {
       attempt: `22111111-1111-4111-8111-1111111111${suffix}`,
     })
     sql(`insert into public.profiles values('${buyer}'),('${seller}');`)
+    assert.equal(
+      sql(
+        `select purpose||'|'||coalesce(provider_ref,'null') from marketplace_private.stripe_webhook_inbox
+         where event_id='evt_LegacySetup';`
+      ),
+      'account_setup|null'
+    )
     sql(`insert into marketplace_private.stripe_bindings(user_id,kind,platform,mode,status,owner_ref,instrument_ref) values
       ('${buyer}','payment_method','${platform}','test','set','cus_Buyer','pm_Card'),
       ('${seller}','payout_account','${platform}','test','ready','acct_Seller','ba_Bank');`)
@@ -244,14 +255,20 @@ async function main() {
       ),
       '1'
     )
-    assert.equal(
+    const legacySetupClaim = JSON.parse(
       sql(
         claims +
-          `select public.marketplace_stripe_events('claim','${platform}') is null;`
+          `select public.marketplace_stripe_events('claim','${platform}');`
       )
         .split('\n')
-        .at(-1),
-      't'
+        .at(-1)
+    )
+    assert.equal(legacySetupClaim.event_id, 'evt_LegacySetup')
+    assert.equal(
+      sql(
+        `select status from marketplace_private.stripe_webhook_inbox where purpose='marketplace_order' and event_id='evt_Success';`
+      ),
+      'pending'
     )
     let claim = claimEvent()
     assert.equal(claim.eventId, 'evt_Success')
@@ -356,8 +373,21 @@ async function main() {
     const race = base('04')
     seed(race, 'pi_Race')
     sql(
-      `insert into marketplace_private.order_cancellation_intents values('${race.order}','pending');`
+      `insert into marketplace_private.order_cancellation_intents values('${race.order}','pending');
+       update marketplace_private.campus_payment_attempts set provider_reconcile_after=now()+interval '1 hour'
+        where status='processing';
+       update marketplace_private.campus_payment_attempts set provider_reconcile_after=now()-interval '1 second'
+        where id='${race.attempt}';`
     )
+    const raceDueClaim = JSON.parse(
+      sql(
+        claims +
+          `select public.marketplace_order_payment_reconciliation('claim_due','${platform}');`
+      )
+        .split('\n')
+        .at(-1)
+    )
+    assert.equal(raceDueClaim.attemptId, race.attempt)
     enqueue('evt_Race', 'pi_Race')
     claim = claimEvent()
     assert.equal(
@@ -375,6 +405,54 @@ async function main() {
         `select provider_exception_code from marketplace_private.campus_payment_attempts where id='${race.attempt}';`
       ),
       'paid_after_cancellation_requested'
+    )
+    assert.equal(
+      sql(
+        `select count(*) from marketplace_private.order_settlement_authorizations where order_id='${race.order}';`
+      ),
+      '1'
+    )
+    const dueReplay = JSON.parse(
+      sql(
+        claims +
+          `select public.marketplace_order_payment_reconciliation('apply_due','${platform}','${
+            raceDueClaim.lease
+          }','${value(
+            race,
+            'pi_Race',
+            'reconcile:00000000-0000-4000-8000-000000000004',
+            'succeeded'
+          )}');`
+      )
+        .split('\n')
+        .at(-1)
+    )
+    assert.equal(dueReplay.result, 'exception')
+    assert.equal(dueReplay.exceptionCode, 'paid_after_cancellation_requested')
+    assert.equal(
+      sql(
+        `select provider_exception_code||'|'||provider_evidence_id from marketplace_private.campus_payment_attempts
+         where id='${race.attempt}';`
+      ),
+      'paid_after_cancellation_requested|evt_Race'
+    )
+    enqueue('evt_RaceReplay', 'pi_Race')
+    claim = claimEvent()
+    const replay = applyEvent(
+      race,
+      'pi_Race',
+      'evt_RaceReplay',
+      claim.lease,
+      'succeeded'
+    )
+    assert.equal(replay.result, 'exception')
+    assert.equal(replay.exceptionCode, 'paid_after_cancellation_requested')
+    assert.equal(
+      sql(
+        `select provider_reconcile_state||'|'||provider_exception_code||'|'||provider_evidence_id
+         from marketplace_private.campus_payment_attempts where id='${race.attempt}';`
+      ),
+      'exception|paid_after_cancellation_requested|evt_Race'
     )
     assert.equal(
       sql(
