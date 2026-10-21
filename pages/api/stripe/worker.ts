@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'crypto'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 import { drainStripeOrderPayments } from '@/lib/server/stripe-order-reconciliation'
+import { drainStripeOrderRefundWork } from '@/lib/server/stripe-order-refund'
 import { drainStripeEvents } from '@/lib/server/stripe-setup'
 
 export default async function handler(
@@ -25,10 +26,16 @@ export default async function handler(
   try {
     const setup = await drainStripeEvents()
     const orderPayments = await drainStripeOrderPayments()
+    const orderRefunds = await drainStripeOrderRefundWork()
     return res.status(200).json({
-      processed: setup.processed + orderPayments.processed,
+      processed:
+        setup.processed +
+        orderPayments.processed +
+        orderRefunds.events.processed +
+        orderRefunds.refunds.processed,
       setup,
       orderPayments,
+      orderRefunds,
     })
   } catch {
     return res

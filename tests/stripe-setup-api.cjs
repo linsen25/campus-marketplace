@@ -29,12 +29,21 @@ const dependencies = {
     },
   },
   '@/lib/server/stripe-order-reconciliation': {
-    drainStripeOrderPayments: async () => ({
-      processed: 0,
-      recovered: 0,
-      pending: 0,
-      exceptions: 0,
-    }),
+    drainStripeOrderPayments: async () => {
+      calls.push(['order-payments'])
+      return { processed: 0, recovered: 0, pending: 0, exceptions: 0 }
+    },
+  },
+  '@/lib/server/stripe-order-refund': {
+    drainStripeOrderRefundWork: async () => {
+      calls.push(['order-refunds'])
+      return {
+        enabled: false,
+        events: { processed: 0, retried: 0, mismatches: 0 },
+        discovery: { prepared: 0, skipped: 0 },
+        refunds: { processed: 0, pending: 0, exceptions: 0 },
+      }
+    },
   },
   '@/lib/server/marketplace-auth': {
     requireMarketplaceUser: async () => {
@@ -71,7 +80,10 @@ const dependencies = {
         capabilities: { paymentMethod: { status: 'set' } },
       }
     },
-    drainStripeEvents: async () => ({ processed: 0 }),
+    drainStripeEvents: async () => {
+      calls.push(['setup-events'])
+      return { processed: 0 }
+    },
     receiveStripeEvent: async (raw, signature, channel) => {
       if (webhookPersistenceFailure)
         throw new Error('synthetic database failure')
@@ -240,6 +252,11 @@ async function main() {
     res
   )
   assert.equal(res.code, 200)
+  assert.deepEqual(
+    calls.slice(-3).map((entry) => entry[0]),
+    ['setup-events', 'order-payments', 'order-refunds']
+  )
+  assert.equal(res.value.orderRefunds.enabled, false)
   if (old === undefined) delete process.env.STRIPE_WORKER_SECRET
   else process.env.STRIPE_WORKER_SECRET = old
   // Enabling account setup cannot accidentally route an Order through the simulator.

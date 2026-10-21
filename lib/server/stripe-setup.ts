@@ -1,4 +1,5 @@
-// Account setup ONLY: no PaymentIntent, charges, refunds, transfers or payouts.
+// Account setup plus purpose-isolated signed payment/refund notice routing.
+// No Order financial outcome or money movement is applied in this module.
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'crypto'
 
 import type Stripe from 'stripe'
@@ -13,6 +14,10 @@ import {
   enqueueStripeOrderPaymentEvent,
   orderPaymentEventTypes,
 } from '@/lib/server/stripe-order-reconciliation'
+import {
+  enqueueStripeOrderRefundEvent,
+  orderRefundEventTypes,
+} from '@/lib/server/stripe-order-refund'
 import { stripeClient, stripeRuntime } from '@/lib/server/stripe-runtime'
 import { sellerOnboardingProfile } from '@/lib/server/stripe-seller-profile'
 
@@ -466,6 +471,55 @@ export const accountSetupEvents = [
   'v2.core.account[identity].updated',
   'v2.core.account[defaults].updated',
 ]
+
+type OrderPaymentNotice = {
+  eventId: string
+  eventType: typeof orderPaymentEventTypes[number]
+  paymentIntentId: string
+}
+type OrderRefundNotice = {
+  eventId: string
+  eventType: typeof orderRefundEventTypes[number]
+  refundId: string
+}
+
+function platformFinancialNotice(event: Stripe.Event, type: string) {
+  if (event.account) throw new Error('Unexpected connected financial event')
+  const object = event.data.object as unknown as {
+    id: string
+    object?: string
+    metadata?: Record<string, string>
+  }
+  if (
+    orderRefundEventTypes.includes(type as typeof orderRefundEventTypes[number])
+  ) {
+    if (object.object !== 'refund' || !object.id?.startsWith('re_'))
+      throw new Error('Invalid refund event')
+    if (object.metadata?.uu_kind !== 'marketplace_order_refund') return null
+    const orderRefund: OrderRefundNotice = {
+      eventId: event.id,
+      eventType: type as typeof orderRefundEventTypes[number],
+      refundId: object.id,
+    }
+    return { orderRefund }
+  }
+  if (
+    !orderPaymentEventTypes.includes(
+      type as typeof orderPaymentEventTypes[number]
+    )
+  )
+    return null
+  if (object.object !== 'payment_intent' || !object.id?.startsWith('pi_'))
+    throw new Error('Invalid payment event')
+  if (object.metadata?.uu_kind !== 'marketplace_order') return null
+  const orderPayment: OrderPaymentNotice = {
+    eventId: event.id,
+    eventType: type as typeof orderPaymentEventTypes[number],
+    paymentIntentId: object.id,
+  }
+  return { orderPayment }
+}
+
 // eslint-disable-next-line complexity -- Channel, signature, purpose and account checks must fail closed together.
 export async function receiveStripeEvent(
   raw: Buffer,
@@ -478,13 +532,8 @@ export async function receiveStripeEvent(
   let type: string
   let owner: string | null = null
   let scope = config.platform
-  let orderPayment:
-    | {
-        eventId: string
-        eventType: typeof orderPaymentEventTypes[number]
-        paymentIntentId: string
-      }
-    | undefined
+  let orderPayment: OrderPaymentNotice | undefined
+  let orderRefund: OrderRefundNotice | undefined
   try {
     if (channel === 'account') {
       const event = stripe.parseEventNotification(
@@ -518,32 +567,13 @@ export async function receiveStripeEvent(
           channel === 'platform' ? platformSetupEvents : connectedSetupEvents
         ).includes(type)
       ) {
-        if (
-          channel !== 'platform' ||
-          !orderPaymentEventTypes.includes(
-            type as typeof orderPaymentEventTypes[number]
-          )
-        )
-          return
-        if (event.account) throw new Error('Unexpected connected payment event')
-        const paymentIntent = event.data.object as unknown as {
-          id: string
-          object?: string
-          metadata?: Record<string, string>
-        }
-        if (
-          paymentIntent.object !== 'payment_intent' ||
-          !paymentIntent.id?.startsWith('pi_')
-        )
-          throw new Error('Invalid payment event')
-        // Signed metadata is only a purpose router. A fresh provider retrieval
-        // still verifies every immutable binding before applying any outcome.
-        if (paymentIntent.metadata?.uu_kind !== 'marketplace_order') return
-        orderPayment = {
-          eventId: event.id,
-          eventType: type as typeof orderPaymentEventTypes[number],
-          paymentIntentId: paymentIntent.id,
-        }
+        if (channel !== 'platform') return
+        // Signed metadata is only a purpose router. Consumers retrieve the
+        // current provider object and verify every immutable financial binding.
+        const notice = platformFinancialNotice(event, type)
+        if (!notice) return
+        orderPayment = notice.orderPayment
+        orderRefund = notice.orderRefund
       }
       const object = event.data.object as unknown as {
         id: string
@@ -569,6 +599,10 @@ export async function receiveStripeEvent(
   // Persistence errors intentionally escape as 503 so Stripe retries delivery.
   if (orderPayment) {
     await enqueueStripeOrderPaymentEvent(orderPayment)
+    return
+  }
+  if (orderRefund) {
+    await enqueueStripeOrderRefundEvent(orderRefund)
     return
   }
   await rpc('marketplace_stripe_events', {

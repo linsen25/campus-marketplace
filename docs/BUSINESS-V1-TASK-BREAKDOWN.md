@@ -352,6 +352,28 @@ remain reconciliation triggers; only a freshly retrieved, completely bound Strip
 PaymentIntent can apply the existing locked payment transition. B23–B25 remain
 separate and no real payment capability is enabled.
 
+B23-A status (2026-10-21): **LOCAL DATABASE FOUNDATION COMPLETE**. See
+[B23 plan](BUSINESS-V1-B23-PLAN.md). The private refund operation,
+server-derived Buyer release amount, immutable Stripe payment binding and fenced
+claim lease are locally qualified. No Stripe Refund, remote migration, Transfer or
+Payout has executed; the overall B23 task is not complete.
+
+B23-B status (2026-10-21): **LOCAL REFUND EXECUTOR COMPLETE — REAL STRIPE
+ACCEPTANCE DEFERRED**. The default-off executor revalidates the original PaymentIntent,
+reuses exact existing Refunds, creates at most once from a first execute claim, and
+persists fenced provider observations through the B23-B result RPC. Unknown outcomes
+remain reconcilable and `reconcile` never creates.
+
+B23-C status (2026-10-21): **LOCAL WEBHOOK AND WORKER INTEGRATION COMPLETE — REMOTE
+ACCEPTANCE DEFERRED**. The existing signed Platform webhook now routes the three Stripe
+Refund notices into a purpose-isolated durable inbox. The existing authenticated
+Worker retrieves current Refund state, wakes matching operations, discovers bounded
+authorized candidates through the original `prepare` authority, and invokes B23-B.
+The default-off gate consumes no event, candidate or first-execute lease. Staging
+migrations, Stripe webhook subscription, a reliable authenticated Worker scheduler
+and real Stripe test-mode acceptance remain incomplete; the overall B23 task is not
+yet completed and no real Stripe refund has executed.
+
 | ID / priority | Small deliverable and existing code to reuse                                                                                                                | Dependency / schema                                                                                                                                | Security and staging acceptance                                                                                                                                                                                                                     |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | B20 / P0      | Specify concrete provider operation mapping to existing frozen economics/attempt/settlement authorizations. Confirm actual SDK/docs in implementation task. | B01/B07/B08; existing server-only Stripe setup. Schema:inventory provider refs, unique attempts and operation audit needs.                         | Amount/currency/destination from server records only; external mode never calls Stripe. Exit: exact create/success/failure/unknown/retry transition table without changed fees or timing rules.                                                     |

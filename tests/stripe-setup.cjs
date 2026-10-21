@@ -14,7 +14,8 @@ class ListingApiError extends Error {
 const bindings = new Map(),
   operations = new Map(),
   events = [],
-  orderEvents = []
+  orderEvents = [],
+  refundEvents = []
 const customers = new Map(),
   setups = new Map(),
   methods = new Map(),
@@ -151,6 +152,12 @@ async function dbRpc(name, p) {
       assert.equal(p.p_action, 'enqueue')
       if (!orderEvents.some((event) => event.id === p.p_value.id))
         orderEvents.push({ ...p.p_value })
+      return { data: {} }
+    }
+    if (name === 'marketplace_order_refund_events') {
+      assert.equal(p.p_action, 'enqueue')
+      if (!refundEvents.some((event) => event.id === p.p_value.id))
+        refundEvents.push({ ...p.p_value })
       return { data: {} }
     }
     throw Error('Unexpected RPC')
@@ -482,6 +489,34 @@ async function main() {
     'platform'
   )
   assert.equal(orderEvents.length, 1)
+  for (const type of ['refund.created', 'refund.updated', 'refund.failed']) {
+    await event(type, {
+      id: `re_${type.replace(/[^a-z]/g, '')}`,
+      object: 'refund',
+      metadata: { uu_kind: 'marketplace_order_refund' },
+    })
+  }
+  assert.equal(refundEvents.length, 3)
+  assert(refundEvents.every((item) => item.scope === platform))
+  assert(refundEvents.every((item) => item.providerReference.startsWith('re_')))
+  await event('refund.updated', {
+    id: 're_Membership',
+    object: 'refund',
+    metadata: { uu_kind: 'shop_membership_refund' },
+  })
+  assert.equal(refundEvents.length, 3)
+  await assert.rejects(() =>
+    event(
+      'refund.updated',
+      {
+        id: 're_Connected',
+        object: 'refund',
+        metadata: { uu_kind: 'marketplace_order_refund' },
+      },
+      'platform',
+      { account: 'acct_Connected' }
+    )
+  )
   assert.equal(orderEvents[0].providerReference, 'pi_OrderSynthetic')
   assert.equal(orderEvents[0].scope, platform)
   await event('payment_intent.succeeded', {
