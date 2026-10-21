@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 import { validUsername } from '@/lib/auth-username'
 import { ListingApiError } from '@/lib/listing-validation'
+import { profileAvatarProjection } from '@/lib/profile-avatar'
 import { publicSellerIdentifierPattern } from '@/lib/public-seller'
 import type { PublicSeller } from '@/lib/public-seller'
 import type { ListingRow } from '@/lib/supabase/listing-mapper'
@@ -30,7 +31,7 @@ export async function getPublicSeller(
   })
   const profile = await client
     .from('profiles')
-    .select('id,username,display_name')
+    .select('id,username,display_name,avatar_path')
     .eq(uuid ? 'id' : 'username_normalized', identifier.toLowerCase())
     .maybeSingle()
   if (profile.error) throw new ListingApiError('Seller page unavailable.', 503)
@@ -39,9 +40,10 @@ export async function getPublicSeller(
   const result = await client
     .from('listings')
     .select(
-      'id,title,description,price_cents,currency,category,subcategory,condition,listing_channel,preferred_payment_mode,preferred_fulfillment,meeting_location,estimated_delivery_fee_cents,status,created_at,updated_at,published_at,listing_images(path,slot,ready)'
+      'id,title,description,price_cents,currency,category,subcategory,condition,listing_channel,preferred_payment_mode,preferred_fulfillment,meeting_location,estimated_delivery_fee_cents,status,created_at,updated_at,published_at,listing_images(id,path,slot,ready,storage_bucket)'
     )
     .eq('seller_id', sellerProfile.id)
+    .eq('listing_channel', 'resale')
     .eq('status', 'available')
     .not('published_at', 'is', null)
     .order('created_at', { ascending: false })
@@ -51,7 +53,10 @@ export async function getPublicSeller(
   return {
     identifier: sellerProfile.id,
     username: sellerProfile.username || 'UU seller',
-    avatarUrl: null,
+    avatarUrl: profileAvatarProjection(
+      sellerProfile.id,
+      sellerProfile.avatar_path ?? null
+    ).avatarUrl,
     page,
     hasNextPage: page < 1000 && result.data.length > pageSize,
     listings: result.data.slice(0, pageSize).map((row) => {

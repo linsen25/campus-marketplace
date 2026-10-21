@@ -33,6 +33,7 @@ interface PulseHeartProps {
   label?: string
   appearance?: 'default' | 'image-overlay'
   className?: string
+  confirmOnChange?: boolean
 }
 
 type CountRoll = { a: string; b: string; at: number; up: boolean }
@@ -75,6 +76,7 @@ export default function PulseHeart({
   label = 'Like',
   appearance = 'default',
   className = '',
+  confirmOnChange = false,
 }: PulseHeartProps) {
   const controlled = likedProp !== undefined
   const [inner, setInner] = useState(defaultLiked)
@@ -100,14 +102,6 @@ export default function PulseHeart({
   useEffect(() => {
     setTotal(count)
   }, [count])
-
-  useEffect(() => {
-    if (raf.current) return
-    if (shownRef.current.liked === liked && shownRef.current.count === total)
-      return
-    shownRef.current = { liked, count: total }
-    setShown(shownRef.current)
-  }, [liked, total])
 
   useLayoutEffect(() => {
     const root = rootRef.current
@@ -197,6 +191,27 @@ export default function PulseHeart({
     raf.current = requestAnimationFrame(tick)
   }
 
+  useEffect(() => {
+    if (raf.current) return
+    if (
+      confirmOnChange &&
+      viaPointer.current &&
+      shownRef.current.liked !== liked
+    ) {
+      viaPointer.current = false
+      if (!reducedMotion()) {
+        run(liked, total)
+        return
+      }
+    }
+    if (shownRef.current.liked === liked && shownRef.current.count === total)
+      return
+    shownRef.current = { liked, count: total }
+    setShown(shownRef.current)
+    // run uses current cfg refs; only confirmed value changes initiate this mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liked, total, confirmOnChange])
+
   const handlePointerDown = (e: PointerEvent<HTMLButtonElement>) => {
     if (e.button !== 0 || disabled) return
     viaPointer.current = true
@@ -219,6 +234,11 @@ export default function PulseHeart({
     viaPointer.current = false
     const nextLiked = !liked
     const nextCount = total + (nextLiked ? 1 : -1)
+    if (confirmOnChange) {
+      viaPointer.current = pointer
+      onChange?.(nextLiked, total)
+      return
+    }
     if (!controlled) setInner(nextLiked)
     setTotal(nextCount)
     onChange?.(nextLiked, nextCount)

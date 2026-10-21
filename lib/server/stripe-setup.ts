@@ -1,17 +1,19 @@
 // Account setup ONLY: no PaymentIntent, charges, refunds, transfers or payouts.
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'crypto'
 
-import Stripe from 'stripe'
+import type Stripe from 'stripe'
 
 import { ListingApiError } from '@/lib/listing-validation'
 import {
   createTrustedFinancialClient,
   projectFinancialCapabilities,
 } from '@/lib/server/financial-capabilities-service'
+import { stripeConfiguration } from '@/lib/server/stripe-environment'
 import {
-  stripeApiVersion,
-  stripeConfiguration,
-} from '@/lib/server/stripe-environment'
+  enqueueStripeOrderPaymentEvent,
+  orderPaymentEventTypes,
+} from '@/lib/server/stripe-order-reconciliation'
+import { stripeClient, stripeRuntime } from '@/lib/server/stripe-runtime'
 import { sellerOnboardingProfile } from '@/lib/server/stripe-seller-profile'
 
 export type SetupKind = 'payment_method' | 'payout_account'
@@ -28,22 +30,6 @@ type Binding = {
   status: string
   refresh_hash: string | null
   refresh_expires_at: string | null
-}
-function client() {
-  const config = stripeConfiguration()
-  const stripe = new Stripe(config.secretKey, {
-    apiVersion: stripeApiVersion,
-    timeout: 10000,
-    maxNetworkRetries: 1,
-  })
-  return { config, stripe }
-}
-async function runtime() {
-  const { config, stripe } = client()
-  const account = await stripe.accounts.retrieve(null)
-  if (account.id !== config.platform)
-    throw new ListingApiError('Secure account setup is unavailable.', 503)
-  return { config, stripe }
 }
 async function rpc<T>(
   name: string,
@@ -79,12 +65,12 @@ async function withBinding<T>(
   user: string,
   kind: SetupKind,
   run: (
-    r: Awaited<ReturnType<typeof runtime>>,
+    r: Awaited<ReturnType<typeof stripeRuntime>>,
     b: Binding,
     patch: (value: Record<string, unknown>) => Promise<Binding>
   ) => Promise<T>
 ) {
-  const r = await runtime()
+  const r = await stripeRuntime()
   const claimed = await store<Binding | null>(
     'claim',
     user,
@@ -127,7 +113,7 @@ async function operationKey(b: Binding, kind: 'owner' | 'setup') {
   return `uu:test:${b.platform}:${kind}:${op.id}`
 }
 async function ensureOwner(
-  r: Awaited<ReturnType<typeof runtime>>,
+  r: Awaited<ReturnType<typeof stripeRuntime>>,
   b: Binding,
   patch: (v: Record<string, unknown>) => Promise<Binding>
 ) {
@@ -194,7 +180,7 @@ function owned(
 }
 // eslint-disable-next-line complexity -- Independently verifies setup ownership, replacement safety and card eligibility.
 async function buyerProjection(
-  r: Awaited<ReturnType<typeof runtime>>,
+  r: Awaited<ReturnType<typeof stripeRuntime>>,
   b: Binding,
   patch: (v: Record<string, unknown>) => Promise<Binding>
 ): Promise<string> {
@@ -291,7 +277,7 @@ export function sellerReadiness(
   }
 }
 async function sellerProjection(
-  r: Awaited<ReturnType<typeof runtime>>,
+  r: Awaited<ReturnType<typeof stripeRuntime>>,
   b: Binding,
   patch: (v: Record<string, unknown>) => Promise<Binding>
 ) {
@@ -480,17 +466,25 @@ export const accountSetupEvents = [
   'v2.core.account[identity].updated',
   'v2.core.account[defaults].updated',
 ]
+// eslint-disable-next-line complexity -- Channel, signature, purpose and account checks must fail closed together.
 export async function receiveStripeEvent(
   raw: Buffer,
   signature: string,
   channel: 'account' | 'connected' | 'platform'
 ) {
   // Verify the raw signature before any provider network or persistence work.
-  const { config, stripe } = client()
+  const { config, stripe } = stripeClient()
   let id: string
   let type: string
   let owner: string | null = null
   let scope = config.platform
+  let orderPayment:
+    | {
+        eventId: string
+        eventType: typeof orderPaymentEventTypes[number]
+        paymentIntentId: string
+      }
+    | undefined
   try {
     if (channel === 'account') {
       const event = stripe.parseEventNotification(
@@ -523,8 +517,34 @@ export async function receiveStripeEvent(
         !(
           channel === 'platform' ? platformSetupEvents : connectedSetupEvents
         ).includes(type)
-      )
-        return
+      ) {
+        if (
+          channel !== 'platform' ||
+          !orderPaymentEventTypes.includes(
+            type as typeof orderPaymentEventTypes[number]
+          )
+        )
+          return
+        if (event.account) throw new Error('Unexpected connected payment event')
+        const paymentIntent = event.data.object as unknown as {
+          id: string
+          object?: string
+          metadata?: Record<string, string>
+        }
+        if (
+          paymentIntent.object !== 'payment_intent' ||
+          !paymentIntent.id?.startsWith('pi_')
+        )
+          throw new Error('Invalid payment event')
+        // Signed metadata is only a purpose router. A fresh provider retrieval
+        // still verifies every immutable binding before applying any outcome.
+        if (paymentIntent.metadata?.uu_kind !== 'marketplace_order') return
+        orderPayment = {
+          eventId: event.id,
+          eventType: type as typeof orderPaymentEventTypes[number],
+          paymentIntentId: paymentIntent.id,
+        }
+      }
       const object = event.data.object as unknown as {
         id: string
         customer?: string | null
@@ -545,6 +565,11 @@ export async function receiveStripeEvent(
     }
   } catch {
     throw new ListingApiError('Invalid Stripe event.', 400)
+  }
+  // Persistence errors intentionally escape as 503 so Stripe retries delivery.
+  if (orderPayment) {
+    await enqueueStripeOrderPaymentEvent(orderPayment)
+    return
   }
   await rpc('marketplace_stripe_events', {
     p_action: 'enqueue',

@@ -4,8 +4,6 @@ import {
   useElements,
   useStripe,
 } from '@stripe/react-stripe-js'
-import type { Stripe as StripeClient } from '@stripe/stripe-js'
-import { loadStripe } from '@stripe/stripe-js/pure'
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 
@@ -14,14 +12,12 @@ import { DynamicAction } from '@/components/ui/dynamic-action'
 import { Skeleton } from '@/components/ui/skeleton'
 import { billingCountryOptions } from '@/lib/billing-countries'
 import { marketplaceRequest } from '@/lib/listings-api'
+import { getStripeClient, stripeClientAvailable } from '@/lib/stripe-client'
 
 import css from './financial-settings.module.css'
 import profile from './profile.module.css'
 
-export const stripeSetupAvailable = () =>
-  /^pk_test_[A-Za-z0-9]+$/.test(
-    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
-  )
+export const stripeSetupAvailable = stripeClientAvailable
 type Prepared = {
   clientSecret: string
   publishableKey: string
@@ -67,20 +63,6 @@ function PaymentLoading({ error = '' }: { error?: string }) {
       )}
     </div>
   )
-}
-let cachedStripe: Promise<StripeClient | null> | null = null
-function stripeClient(key: string) {
-  if (
-    key !== process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
-    !stripeSetupAvailable()
-  )
-    throw new Error('Unavailable')
-  if (!cachedStripe)
-    cachedStripe = loadStripe(key).catch(() => {
-      cachedStripe = null
-      return null
-    })
-  return cachedStripe
 }
 function CardElement({
   mode,
@@ -261,7 +243,7 @@ export function StripeCardSetup({
     setError('')
     marketplaceRequest<Prepared>('/api/stripe/card-setup', 'POST', {})
       .then(async (result) => {
-        const stripe = await stripeClient(result.publishableKey)
+        const stripe = await getStripeClient(result.publishableKey)
         if (!stripe) throw new Error('Secure card setup unavailable')
         if (active) setPrepared(result)
       })
@@ -275,7 +257,7 @@ export function StripeCardSetup({
   if (prepared)
     return (
       <Elements
-        stripe={stripeClient(prepared.publishableKey)}
+        stripe={getStripeClient(prepared.publishableKey)}
         options={{
           clientSecret: prepared.clientSecret,
           appearance: {

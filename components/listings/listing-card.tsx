@@ -1,6 +1,8 @@
 import classNames from 'classnames'
 import Image from 'next/image'
 
+import { useMarketplaceSession } from '@/components/listings/marketplace-session'
+import { recordMarketplaceView } from '@/lib/record-marketplace-view'
 import type { Listing } from '@/types/listing'
 import { formatListingPrice } from '@/utils/format-listing-price'
 import { Link } from '@ui/link/link'
@@ -12,6 +14,7 @@ export type ListingCardProps = {
 }
 
 export function ListingCard({ listing }: ListingCardProps) {
+  const { seller } = useMarketplaceSession()
   const photo = listing.photoUrls[0]
 
   return (
@@ -25,6 +28,21 @@ export function ListingCard({ listing }: ListingCardProps) {
         href={`/listings/${encodeURIComponent(listing.id)}`}
         className="flex gap-2 flex-col focus-visible:outline focus-visible:outline-2"
         aria-label={`View ${listing.title}`}
+        onClick={(event) => {
+          if (
+            !event.defaultPrevented &&
+            event.button === 0 &&
+            !event.metaKey &&
+            !event.ctrlKey &&
+            !event.shiftKey &&
+            !event.altKey &&
+            seller &&
+            seller.id !== listing.seller.id &&
+            listing.publishedAt &&
+            listing.status === 'available'
+          )
+            recordMarketplaceView(listing.id)
+        }}
       >
         <div
           className={`${styles.photo} relative overflow-hidden bg-neutral-lightest`}

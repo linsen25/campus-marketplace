@@ -15,6 +15,11 @@ import {
   requireOrderRequestEnvironment,
 } from '@/lib/server/order-request-service'
 import { signOrderSnapshotMedia } from '@/lib/server/order-snapshot-media'
+import { stripeRequested } from '@/lib/server/stripe-environment'
+import {
+  assertStripeOrderPaymentsEnabled,
+  prepareOrderPaymentConfirmation,
+} from '@/lib/server/stripe-order-payment'
 import { createMarketplaceClient } from '@/lib/supabase/server'
 import type { MarketplaceContext } from '@/lib/supabase/server'
 import type { FormalOrder, FormalOrders, MeetupRevision } from '@/types/order'
@@ -261,20 +266,16 @@ export function createOrdersService(context: MarketplaceContext) {
       body: Record<string, unknown>
     ) {
       requireFinancialEnvironment()
-      if (
-        action === 'payment' &&
-        process.env.STRIPE_PROVIDER_ENABLED === 'true'
-      )
-        throw new ListingApiError(
-          'Order payments are not enabled in this Stripe setup phase.',
-          503
-        )
+      const providerPayment = action === 'payment' && stripeRequested()
+      if (providerPayment) assertStripeOrderPaymentsEnabled()
       if (Object.keys(body).some((key) => key !== 'clientActionId'))
         throw new ListingApiError('Unexpected payment fields.')
       const orderId = messageUuid(id)
       // Check trusted service availability before starting a protected attempt.
       const trusted =
-        action === 'payment' ? createTrustedFinancialClient() : null
+        action === 'payment' && !providerPayment
+          ? createTrustedFinancialClient()
+          : null
       const data = await call(
         action === 'inspection'
           ? 'marketplace_confirm_campus_inspection'
@@ -301,12 +302,21 @@ export function createOrdersService(context: MarketplaceContext) {
             503
           )
       }
+      const confirmation = providerPayment
+        ? await prepareOrderPaymentConfirmation(
+            data.attemptId,
+            (
+              await requireMarketplaceUser(client)
+            ).id
+          )
+        : undefined
       const current = await call('marketplace_order_detail', {
         p_order_id: orderId,
       })
       return {
         order: await present(current.order),
         serverTime: current.serverTime,
+        ...(confirmation ? { paymentConfirmation: confirmation } : {}),
       }
     },
     async meetupAction(

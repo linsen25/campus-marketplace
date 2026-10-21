@@ -9,6 +9,21 @@ export type MessagesSignal = {
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
 let teardown: Promise<unknown> = Promise.resolve()
 
+function disposeRealtimeClient(
+  client: ReturnType<typeof createClient> | undefined
+) {
+  teardown = teardown
+    .then(async () => {
+      try {
+        await client?.removeAllChannels()
+      } finally {
+        // Channel-removal failure must not keep a logged-out socket alive.
+        client?.realtime.disconnect()
+      }
+    })
+    .catch(() => {})
+}
+
 export function parseMessagesSignal(value: unknown): MessagesSignal | null {
   if (!value || typeof value !== 'object') return null
   const item = value as Record<string, unknown>
@@ -164,13 +179,7 @@ export function connectMessagesRealtime(
     window.removeEventListener('marketplace-session-ended', ended)
     window.removeEventListener('storage', storage)
     document.removeEventListener('visibilitychange', resume)
-    const owned = client
-    teardown = teardown
-      .then(async () => {
-        await owned?.removeAllChannels()
-        owned?.realtime.disconnect()
-      })
-      .catch(() => {})
+    disposeRealtimeClient(client)
   }
   const ended = () => {
     stop()
@@ -239,6 +248,12 @@ export function connectMessagesRealtime(
           })
         } catch {
           if (!stopped) {
+            // A partially initialized client has no usable subscription. Clear
+            // it so start() can retry; serialize disposal before its replacement.
+            const failed = client
+            client = undefined
+            disposeRealtimeClient(failed)
+            if (timer) clearTimeout(timer)
             timer = setTimeout(() => {
               start().catch(() => {})
             }, 5000)

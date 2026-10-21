@@ -21,6 +21,9 @@ export function ShopCardPresentation({
   shop,
   favorite,
   onFavorite,
+  favoriteDisabled = false,
+  favoriteError,
+  confirmFavorite = false,
   action,
   compact = false,
   welcome = false,
@@ -29,6 +32,9 @@ export function ShopCardPresentation({
   shop: ShopCardVisual
   favorite?: boolean
   onFavorite?: (value: boolean) => void
+  favoriteDisabled?: boolean
+  favoriteError?: ReactNode
+  confirmFavorite?: boolean
   action: ReactNode
   compact?: boolean
   welcome?: boolean
@@ -59,6 +65,8 @@ export function ShopCardPresentation({
             <PulseHeart
               appearance="image-overlay"
               liked={Boolean(favorite)}
+              disabled={favoriteDisabled}
+              confirmOnChange={confirmFavorite}
               showCount={false}
               size={26}
               corner={24}
@@ -111,6 +119,7 @@ export function ShopCardPresentation({
             Illustrative demo figures
           </small>
         )}
+        {favoriteError}
         {action}
       </div>
     </article>

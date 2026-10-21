@@ -8,7 +8,6 @@ import {
   Package,
   LockKeyhole,
   Plus,
-  X,
   ShoppingBag,
   Clock3,
   CircleX,
@@ -36,7 +35,6 @@ import {
 import ShiningButton from '@/components/animata/button/shining-button'
 import FilterInteraction from '@/components/filter-interaction'
 import { ChartContainer } from '@/components/ui/chart'
-import { FadingDialog } from '@/components/ui/fading-dialog'
 import { NumberTicker } from '@/components/ui/number-ticker'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -49,11 +47,7 @@ import {
   TableCell,
   TableCaption,
 } from '@/components/ui/table'
-import {
-  loadShopAnalysisFixture,
-  shopAnalysisFixtureAsOf,
-} from '@/lib/fixtures/shop-analysis-fixture'
-import { parseOfferAmount } from '@/lib/offer-amount'
+import { loadShopAnalysisFixture } from '@/lib/fixtures/shop-analysis-fixture'
 import {
   shopAnalysisRanges,
   shopMoney,
@@ -66,8 +60,11 @@ import type {
   ShopExpense,
 } from '@/lib/shop-analysis'
 import type { ShopPreview } from '@/types/shop'
+import type { RealShopAnalysis } from '@/types/shop-analysis'
 
+import { RealShopAnalysisView } from './real-shop-analysis'
 import styles from './shop-analysis.module.css'
+import { ExpenseDialog } from './shop-expense-dialog'
 import { ShopPricingDialog } from './shop-pricing-dialog'
 import { ShopProBadge } from './shop-pro-badge'
 
@@ -241,121 +238,6 @@ function Donut({
     </div>
   )
 }
-function ExpenseDialog({
-  onClose,
-  onAdd,
-}: {
-  onClose: () => void
-  onAdd: (expense: ShopExpense) => void
-}) {
-  const [portal, setPortal] = useState<HTMLFormElement | null>(null)
-  const [kind, setKind] = useState('Packaging')
-  const [amount, setAmount] = useState('')
-  const [date, setDate] = useState(shopAnalysisFixtureAsOf)
-  const [description, setDescription] = useState('')
-  const [error, setError] = useState('')
-  return (
-    <FadingDialog
-      className={styles.dialog}
-      aria-label="Add demo expense"
-      onRequestClose={onClose}
-    >
-      <header className={styles.row}>
-        <h2>Add Expense</h2>
-        <button
-          type="button"
-          className={styles.iconButton}
-          aria-label="Close Add Expense"
-          onClick={onClose}
-        >
-          <X size={20} />
-        </button>
-      </header>
-      <p className={styles.muted}>
-        Demo only. Changes stay in this page session and are not saved to your
-        account.
-      </p>
-      <form
-        ref={setPortal}
-        onSubmit={(event) => {
-          event.preventDefault()
-          const cents = parseOfferAmount(amount)
-          if (cents === null || cents <= 0) {
-            setError(
-              'Enter a positive CAD amount with up to two decimal places.'
-            )
-            return
-          }
-          if (
-            !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
-            !Number.isFinite(Date.parse(date)) ||
-            date > shopAnalysisFixtureAsOf
-          ) {
-            setError('Choose a valid date on or before the demo date.')
-            return
-          }
-          onAdd({
-            id: crypto.randomUUID(),
-            channel: 'shop',
-            kind: kind as ShopExpense['kind'],
-            on: date,
-            amountCents: cents,
-            description,
-          })
-          onClose()
-        }}
-      >
-        <div className={styles.field}>
-          <span>Expense Type</span>
-          <Select
-            portalContainer={portal ?? undefined}
-            label="Expense Type"
-            value={kind}
-            options={['Packaging', 'Marketing', 'Other'].map((value) => ({
-              value,
-              label: value,
-            }))}
-            onChange={setKind}
-          />
-        </div>
-        <label className={styles.field}>
-          Amount (CAD)
-          <input
-            required={true}
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </label>
-        <label className={styles.field}>
-          Date
-          <input
-            required={true}
-            type="date"
-            max={shopAnalysisFixtureAsOf}
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-        </label>
-        <label className={styles.field}>
-          Description (optional)
-          <textarea
-            maxLength={500}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </label>
-        {error && <p role="alert">{error}</p>}
-        <div className={styles.dialogActions}>
-          <ShiningButton type="button" onClick={onClose}>
-            Cancel
-          </ShiningButton>
-          <ShiningButton type="submit">Add demo expense</ShiningButton>
-        </div>
-      </form>
-    </FadingDialog>
-  )
-}
 function Dashboard({
   data,
   onExpense,
@@ -368,7 +250,8 @@ function Dashboard({
   const p = data.previous
   const metrics = [
     {
-      label: 'Total Revenue',
+      label:
+        data.source === 'real' ? 'Recorded Product Sales' : 'Total Revenue',
       value: c.revenueCents,
       previous: p.revenueCents,
       Icon: Coins,
@@ -441,10 +324,13 @@ function Dashboard({
         ))}
       </div>
       <p className={styles.disclosure}>
-        Recorded Shop Sales Revenue includes completed UU Pay and directly paid
-        Shop orders. It does not verify bank deposits or external payment
-        collection.
+        {data.source === 'real'
+          ? 'Recorded Product Sales includes eligible completed item sales only. Delivery and Buyer Protection fees are excluded. It is not money received, settled earnings or verified external payment.'
+          : 'Recorded Shop Sales Revenue includes completed UU Pay and directly paid Shop orders. It does not verify bank deposits or external payment collection.'}
       </p>
+      {data.source === 'real' && (
+        <RealCoverage data={data as RealShopAnalysis} />
+      )}
       {Boolean(c.missingCostCount) && (
         <p className={styles.warning} role="status">
           Profit may be incomplete due to missing cost data. Expenses show known
@@ -453,7 +339,9 @@ function Dashboard({
       )}
       {!c.orders.completed && (
         <p className={styles.empty}>
-          No sales data yet. Complete your first order to see your sales trends.
+          {data.source === 'real'
+            ? 'No attributable completed Shop sales in this period. Missing historical facts, if any, are listed above.'
+            : 'No sales data yet. Complete your first order to see your sales trends.'}
         </p>
       )}
       <Module
@@ -535,8 +423,9 @@ function Dashboard({
             label="Expenses"
           />
           <p className={styles.muted}>
-            Includes product cost snapshots, operating expenses and Shop
-            subscription fees. Demo expenses are not persisted.
+            {data.source === 'real'
+              ? 'Known frozen product costs plus recorded operating expenses. No subscription charges are inferred. Expense edits and soft deletion restate this report.'
+              : 'Includes product cost snapshots, operating expenses and Shop subscription fees. Demo expenses are not persisted.'}
           </p>
         </Module>
         <Module title="Order Overview">
@@ -562,14 +451,19 @@ function Dashboard({
             ))}
           </div>
           <p className={styles.muted}>
-            Completed orders use completion date. Pending and cancelled orders
-            use their recorded creation date in this demo.
+            {data.source === 'real'
+              ? 'Completed orders use completion date. Pending and cancelled orders use creation date; these are not one conversion cohort.'
+              : 'Completed orders use completion date. Pending and cancelled orders use their recorded creation date in this demo.'}
           </p>
         </Module>
       </div>
       <Module
         title="Items Sold Trend"
-        note="Item quantity sold, not number of orders."
+        note={
+          data.source === 'real'
+            ? 'One completed eligible Listing unit or lot per Order; no inferred quantity.'
+            : 'Item quantity sold, not number of orders.'
+        }
       >
         <ChartContainer
           config={{ sold: { label: 'Items Sold', color: colors[0] } }}
@@ -610,14 +504,16 @@ function Advanced({ data }: { data: ShopAnalysisResponse }) {
   const pro = data.pro
   if (!pro) return null
   const products = pro.products
-  const top = [...products]
-    .sort((a, b) => b.sold - a.sold || a.id.localeCompare(b.id))
-    .slice(0, 5)
+  const top =
+    pro.topProducts ??
+    [...products]
+      .sort((a, b) => b.sold - a.sold || a.id.localeCompare(b.id))
+      .slice(0, 5)
   const max = top[0]?.sold || 0
-  const distribution = products
-    .slice(0, 5)
-    .map((p) => ({ name: p.name, cents: p.revenueCents }))
-  if (products.length > 5)
+  const distribution =
+    pro.distribution ??
+    products.slice(0, 5).map((p) => ({ name: p.name, cents: p.revenueCents }))
+  if (!pro.distribution && products.length > 5)
     distribution.push({
       name: 'Other Products',
       cents: products.slice(5).reduce((sum, p) => sum + p.revenueCents, 0),
@@ -626,14 +522,18 @@ function Advanced({ data }: { data: ShopAnalysisResponse }) {
     <>
       <Module
         title="Product Performance"
-        note="See which products bring the most revenue and profit."
+        note={
+          data.source === 'real'
+            ? 'Top 20 products by recorded item sales; totals and distribution include all products.'
+            : 'See which products bring the most revenue and profit.'
+        }
       >
         {products.length ? (
           <Table className={styles.performanceTable}>
             <TableCaption>
-              Product contribution profit = revenue - cost snapshots - direct
-              product expenses. General Shop costs are not allocated to
-              products.
+              {data.source === 'real'
+                ? 'Contribution estimate = recorded item sales - frozen Order costs. General operating expenses are not allocated to products.'
+                : 'Product contribution profit = revenue - cost snapshots - direct product expenses. General Shop costs are not allocated to products.'}
             </TableCaption>
             <TableHeader>
               <TableRow>
@@ -665,7 +565,9 @@ function Advanced({ data }: { data: ShopAnalysisResponse }) {
                   <TableCell>{i + 1}</TableCell>
                   <TableCell>
                     <div className={styles.product}>
-                      <img src={p.image} alt="" width={36} height={36} />
+                      {p.image && (
+                        <img src={p.image} alt="" width={36} height={36} />
+                      )}
                       <span>{p.name}</span>
                     </div>
                   </TableCell>
@@ -722,7 +624,7 @@ function Advanced({ data }: { data: ShopAnalysisResponse }) {
         >
           <Donut
             entries={distribution}
-            total={data.current.revenueCents}
+            total={data.current.revenueCents ?? 0}
             label="Product Revenue"
           />
         </Module>
@@ -731,7 +633,9 @@ function Advanced({ data }: { data: ShopAnalysisResponse }) {
             <ol className={styles.ranking}>
               {top.map((p) => (
                 <li key={p.id}>
-                  <img src={p.image} alt="" width={34} height={34} />
+                  {'image' in p && typeof p.image === 'string' && p.image && (
+                    <img src={p.image} alt="" width={34} height={34} />
+                  )}
                   <div>
                     <div className={styles.row}>
                       <span>{p.name}</span>
@@ -751,77 +655,190 @@ function Advanced({ data }: { data: ShopAnalysisResponse }) {
           )}
         </Module>
       </div>
-      <Module
-        title="Featured Shop Performance"
-        note="Track how your featured shop performs."
-      >
-        {pro.featured.impressions ? (
-          <>
-            <div className={styles.featuredMetrics}>
-              <div>
-                <span>Impressions</span>
-                <strong>{pro.featured.impressions.toLocaleString()}</strong>
+      {(data.source !== 'real' || data.access !== 'plus') && (
+        <Module
+          title="Featured Shop Performance"
+          note="Track how your featured shop performs."
+        >
+          {pro.featured?.impressions ? (
+            <>
+              <div className={styles.featuredMetrics}>
+                <div>
+                  <span>Impressions</span>
+                  <strong>{pro.featured.impressions.toLocaleString()}</strong>
+                </div>
+                <div>
+                  <span>Shop Visits</span>
+                  <strong>{pro.featured.visits.toLocaleString()}</strong>
+                </div>
+                <div>
+                  <span>Visit Rate</span>
+                  <strong>{pro.featured.rate?.toFixed(1)}%</strong>
+                </div>
               </div>
-              <div>
-                <span>Shop Visits</span>
-                <strong>{pro.featured.visits.toLocaleString()}</strong>
-              </div>
-              <div>
-                <span>Visit Rate</span>
-                <strong>{pro.featured.rate?.toFixed(1)}%</strong>
-              </div>
-            </div>
-            <p className={styles.muted}>
-              Attributed featured visits / featured impressions. Organic visits
-              are excluded.
+              <p className={styles.muted}>
+                Attributed featured visits / featured impressions. Organic
+                visits are excluded.
+              </p>
+              <ChartContainer
+                config={{
+                  impressions: { label: 'Impressions', color: colors[0] },
+                  visits: { label: 'Attributed Visits', color: colors[2] },
+                }}
+                className={styles.chart}
+              >
+                <AreaChart accessibilityLayer={true} data={data.current.trend}>
+                  <CartesianGrid vertical={false} stroke="#ffffff12" />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(v) => v.slice(5)}
+                    minTickGap={42}
+                  />
+                  <YAxis width={40} />
+                  <Tooltip content={<AnalysisTooltip money={false} />} />
+                  <Area
+                    name="Impressions"
+                    dataKey="impressions"
+                    stroke={colors[0]}
+                    fill={colors[0]}
+                    fillOpacity={0.12}
+                    isAnimationActive={!reduced}
+                  />
+                  <Area
+                    name="Attributed Shop Visits"
+                    dataKey="visits"
+                    stroke={colors[2]}
+                    fill={colors[2]}
+                    fillOpacity={0.08}
+                    isAnimationActive={!reduced}
+                  />
+                </AreaChart>
+              </ChartContainer>
+            </>
+          ) : (
+            <p className={styles.empty}>
+              {data.source === 'real'
+                ? 'Promotion performance is unavailable. Impressions and attributed visits have not been collected; ordinary authenticated opens are not promotion attribution.'
+                : 'No featured impressions in this period. Promotion event tracking is not connected.'}
             </p>
-            <ChartContainer
-              config={{
-                impressions: { label: 'Impressions', color: colors[0] },
-                visits: { label: 'Attributed Visits', color: colors[2] },
-              }}
-              className={styles.chart}
-            >
-              <AreaChart accessibilityLayer={true} data={data.current.trend}>
-                <CartesianGrid vertical={false} stroke="#ffffff12" />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={(v) => v.slice(5)}
-                  minTickGap={42}
-                />
-                <YAxis width={40} />
-                <Tooltip content={<AnalysisTooltip money={false} />} />
-                <Area
-                  name="Impressions"
-                  dataKey="impressions"
-                  stroke={colors[0]}
-                  fill={colors[0]}
-                  fillOpacity={0.12}
-                  isAnimationActive={!reduced}
-                />
-                <Area
-                  name="Attributed Shop Visits"
-                  dataKey="visits"
-                  stroke={colors[2]}
-                  fill={colors[2]}
-                  fillOpacity={0.08}
-                  isAnimationActive={!reduced}
-                />
-              </AreaChart>
-            </ChartContainer>
-          </>
-        ) : (
-          <p className={styles.empty}>
-            No featured impressions in this period. Promotion event tracking is
-            not connected.
-          </p>
-        )}
-      </Module>
+          )}
+        </Module>
+      )}
     </>
   )
 }
 /** Demo access is presentation only. No production entitlement or analytics endpoint is invented. */
-export function ShopAnalysis({
+function RealCoverage({ data }: { data: RealShopAnalysis }) {
+  const c = data.current.coverage
+  return (
+    <p className={styles.disclosure} role="status">
+      Real account data · Toronto · {data.membershipStatus}. Recorded UU Pay:{' '}
+      {shopMoney(c.uuPayCents)}; externally confirmed:{' '}
+      {shopMoney(c.externalCents)}. Known gross item subtotal:{' '}
+      {shopMoney(c.grossItemValueCents)}; excluded refunded-order item value:{' '}
+      {shopMoney(c.excludedRefundedItemCents)} (not a verified refund cashflow).
+      Known sales subtotal: {shopMoney(c.knownSalesCents)}.{' '}
+      {data.current.missingCostCount} unknown costs; {c.missingProvenanceCount}{' '}
+      missing Shop origins; {c.currencyMismatchCount} currency mismatches;{' '}
+      {c.invalidFactCount} incomplete facts; {c.refundedCount} refunded Orders.
+      {!c.profitComplete &&
+        ' Profit is unavailable because required financial facts are incomplete.'}
+      Recorded authenticated opens: {c.authenticatedShopOpens} Shop,{' '}
+      {c.authenticatedListingOpens} Listing; not total or unique visitors.
+      Period {data.current.bounds.start} to {data.current.bounds.end}{' '}
+      (exclusive); observed through {data.current.bounds.observedUntil}.
+      Comparison {data.previous.bounds.start} to {data.previous.bounds.end}:
+      whole preceding equal-calendar-day period versus current-to-date.
+      Pending/cancelled counts use creation date; {c.expiredCount} expired
+      Orders are separate.
+    </p>
+  )
+}
+
+function LiveAnalysisFrame({
+  headerActionsTarget,
+}: {
+  headerActionsTarget?: HTMLElement | null
+}) {
+  const [wide, setWide] = useState(false)
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 768px)')
+    const update = () => setWide(query.matches)
+    update()
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
+  const reduced = useReducedMotion()
+  return (
+    <RealShopAnalysisView>
+      {(state) => (
+        <motion.section
+          className={styles.page}
+          aria-label="Shop Analysis"
+          data-shop-surface="analysis"
+          initial={{ opacity: reduced ? 1 : 0, y: reduced ? 0 : 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: reduced ? 0 : 0.4 }}
+        >
+          <DateRangePlacement wide={wide} target={headerActionsTarget}>
+            <div className={styles.dateSelect}>
+              <Select
+                label="Date range"
+                value={state.range}
+                options={shopAnalysisRanges}
+                onChange={(value) => state.changeRange(value)}
+              />
+            </div>
+          </DateRangePlacement>
+          {state.loading && (
+            <Skeleton
+              style={{ height: 360 }}
+              aria-label="Loading Shop analytics"
+            />
+          )}
+          {state.error && (
+            <div className={styles.empty} role="alert">
+              {state.error}
+              <ShiningButton onClick={() => state.retry()}>Retry</ShiningButton>
+            </div>
+          )}
+          {state.data && !state.loading && !state.error && (
+            <div
+              role="region"
+              aria-label="Real Shop analytics"
+              data-analysis-range={state.data.range}
+            >
+              <Dashboard
+                data={state.data}
+                onExpense={() => state.addExpense()}
+              />
+              <div className={`${styles.sectionHeading} ${styles.proHeading}`}>
+                <div>
+                  <h2>Product Insights</h2>
+                  <p>
+                    Recorded sales performance. Promotion analysis requires Pro
+                    and collected attribution.
+                  </p>
+                </div>
+                <ShopProBadge
+                  tier={state.data.access === 'plus' ? 'plus' : 'pro'}
+                />
+              </div>
+              <Advanced data={state.data} />
+            </div>
+          )}
+        </motion.section>
+      )}
+    </RealShopAnalysisView>
+  )
+}
+
+export function ShopAnalysis(props: Parameters<typeof DemoShopAnalysis>[0]) {
+  if (props.loadDemo || props.demoAccess) return <DemoShopAnalysis {...props} />
+  return <LiveAnalysisFrame headerActionsTarget={props.headerActionsTarget} />
+}
+
+function DemoShopAnalysis({
   replayToken = 1,
   demoAccess,
   headerActionsTarget,

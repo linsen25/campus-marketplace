@@ -6,12 +6,14 @@ const { root, build } = require('./message-payload.browser.cjs')
 const aliases = require('./browser-fixture-mocks.cjs')(root)
 fs.writeFileSync(
   path.join(root, 'view-session.js'),
-  `export function useMarketplaceSession(){return {seller:window.owner?{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'}:null}}`
+  `export function useMarketplaceSession(){return {seller:{id:window.owner?'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa':'cccccccc-cccc-4ccc-8ccc-cccccccccccc'}}}`
 )
 aliases['@/components/listings/marketplace-session'] = path.join(
   root,
   'view-session.js'
 )
+aliases['./marketplace-session'] =
+  aliases['@/components/listings/marketplace-session']
 fs.writeFileSync(
   path.join(root, 'favorite-mock.js'),
   `export async function favoriteState(){return {favorited:false}};export async function setFavorite(){return {favorited:false}}`
@@ -23,7 +25,7 @@ fs.writeFileSync(
 const root=createRoot(document.getElementById('root'));window.requests=[];window.events=new Set();window.owner=false;window.fail=false;window.hold=false;window.overlay=0;
 window.fixtureRequest=async(url,method,body)=>{window.requests.push(body);if(window.hold)await new Promise(r=>window.release=r);window.events.add(body.eventId);if(window.fail){window.fail=false;throw Error('Lost acknowledgement')}return {recorded:true}};
 const listing={id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',title:'Analytics synthetic listing',description:'Test',category:'Electronics',subcategory:'Computers & Tablets',price:1000,currency:'CAD',status:'available',preferredFulfillment:'ON_CAMPUS',pickupArea:'Campus',photoUrls:[],seller:{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',displayName:'Synthetic'},createdAt:new Date().toISOString(),publishedAt:new Date().toISOString()};
-window.paint=()=>flushSync(()=>root.render(<div style={{width:240,margin:'30px auto'}}><PublishedListingCard owner={window.owner} listing={listing} onIntentionalOpen={()=>recordMarketplaceView(listing.id)} onOverlayActiveChange={()=>window.overlay++}/></div>));
+window.paint=()=>flushSync(()=>root.render(<div style={{width:240,margin:'30px auto'}}><PublishedListingCard owner={window.owner} listing={listing} onOverlayActiveChange={()=>window.overlay++}/></div>));
 window.restore=()=>flushSync(()=>root.render(<ExpandableCard title="Restore" expandedTitle="Restored" openOnMount onIntentionalOpen={()=>recordMarketplaceView(listing.id)}><p>Restored</p></ExpandableCard>));window.paint();`
 )
 ;(async () => {

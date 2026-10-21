@@ -43,12 +43,12 @@ export type ShopAnalysisSource = {
 }
 export type ShopAnalysisPoint = {
   date: string
-  revenue: number
-  expenses: number
+  revenue: number | null
+  expenses: number | null
   profit: number | null
-  sold: number
-  impressions: number
-  visits: number
+  sold: number | null
+  impressions: number | null
+  visits: number | null
 }
 export type ShopProductAnalysis = {
   id: string
@@ -62,7 +62,7 @@ export type ShopProductAnalysis = {
   margin: number | null
 }
 export type ShopAnalysisCore = {
-  revenueCents: number
+  revenueCents: number | null
   knownExpensesCents: number
   estimatedProfitCents: number | null
   sold: number
@@ -74,14 +74,26 @@ export type ShopAnalysisCore = {
   featured: { impressions: number; visits: number; rate: number | null }
 }
 export type ShopAnalysisResponse = {
-  source: 'fixture'
+  source: 'fixture' | 'real'
   timezone: 'America/Toronto'
   asOf: string
   range: ShopAnalysisRange
   access: ShopAnalysisDemoAccess
+  membershipStatus?: string
+  nextBoundaryAt?: string | null
   current: Omit<ShopAnalysisCore, 'featured' | 'products'>
   previous: Omit<ShopAnalysisCore, 'featured' | 'products'>
-  pro?: Pick<ShopAnalysisCore, 'featured' | 'products'>
+  pro?: Pick<ShopAnalysisCore, 'products'> & {
+    featured: ShopAnalysisCore['featured'] | null
+    topProducts?: Array<{
+      id: string
+      name: string
+      sold: number
+      image?: string
+    }>
+    distribution?: Array<{ name: string; cents: number }>
+    promotionAvailable?: boolean
+  }
 }
 const day = (iso: string) => new Date(`${iso}T00:00:00Z`)
 const iso = (date: Date) => date.toISOString().slice(0, 10)
@@ -210,8 +222,8 @@ export function calculateShopAnalysis(
       visits: sum(events.map((e) => e.attributedVisits)),
     })
   }
-  const impressions = sum(trend.map((p) => p.impressions))
-  const visits = sum(trend.map((p) => p.visits))
+  const impressions = sum(trend.map((p) => p.impressions ?? 0))
+  const visits = sum(trend.map((p) => p.visits ?? 0))
   return {
     revenueCents,
     knownExpensesCents,

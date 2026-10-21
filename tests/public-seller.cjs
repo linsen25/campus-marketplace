@@ -6,6 +6,7 @@ const React = require('react'),
   { renderToStaticMarkup } = require('react-dom/server')
 const id = '12345678-1234-4234-8234-123456789abc'
 let absent = false,
+  avatarPath = null,
   profileUsername = 'SellerFixture',
   failed = false,
   rows = [],
@@ -27,8 +28,8 @@ function query(table) {
       assert.equal(
         columns,
         table === 'profiles'
-          ? 'id,username,display_name'
-          : 'id,title,description,price_cents,currency,category,subcategory,condition,listing_channel,preferred_payment_mode,preferred_fulfillment,meeting_location,estimated_delivery_fee_cents,status,created_at,updated_at,published_at,listing_images(path,slot,ready)'
+          ? 'id,username,display_name,avatar_path'
+          : 'id,title,description,price_cents,currency,category,subcategory,condition,listing_channel,preferred_payment_mode,preferred_fulfillment,meeting_location,estimated_delivery_fee_cents,status,created_at,updated_at,published_at,listing_images(id,path,slot,ready,storage_bucket)'
       )
       return q
     },
@@ -64,6 +65,7 @@ function query(table) {
                 id,
                 username: profileUsername,
                 display_name: 'Public Seller',
+                avatar_path: avatarPath,
                 email: 'DO_NOT_PUBLISH_EMAIL',
                 legal_name: 'DO_NOT_PUBLISH_NAME',
               },
@@ -197,7 +199,31 @@ async function main() {
   profileUsername = 'SellerFixture'
   assert.equal(seller.listings.length, 1)
   assert(seller.listings[0].photoUrls[0].endsWith('/ready'))
+  const oldMedia = rows[0].listing_images
+  rows[0].listing_images = [
+    {
+      id,
+      path: 'private/path',
+      slot: 1,
+      ready: true,
+      storage_bucket: 'listing-images-private',
+    },
+  ]
+  assert.equal(
+    (await service.getPublicSeller(id)).listings[0].photoUrls[0],
+    '/api/listing-media/' + id
+  )
+  rows[0].listing_images = oldMedia
+
   assert.equal(seller.avatarUrl, null)
+  avatarPath = id + '/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.webp'
+  const withAvatar = await service.getPublicSeller(id)
+  assert.equal(
+    withAvatar.avatarUrl,
+    '/api/profile/avatar/' + id + '?v=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  )
+  assert(!('avatar_path' in withAvatar))
+  avatarPath = null
   assert(
     !Object.values(seller.listings[0]).includes(undefined),
     'SSR-safe projection'

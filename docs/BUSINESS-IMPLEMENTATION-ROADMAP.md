@@ -1,5 +1,19 @@
 # Business implementation roadmap ? plan only
 
+## Complete Business V1 audit update — 2026-10-18
+
+The original UI handoff planning below is supplemented by a fresh current-worktree business trace:
+
+- [BUSINESS-V1-LOGIC-AUDIT.md](BUSINESS-V1-LOGIC-AUDIT.md): page/feature status, persistence/authority paths, complete journeys, executable evidence and missing capabilities.
+- [BUSINESS-V1-SOURCE-INDEX.md](BUSINESS-V1-SOURCE-INDEX.md): all 47 page/API files, table declarations and last RPC/function-definition lookup; not deployed-schema certification.
+- [BUSINESS-V1-TASK-BREAKDOWN.md](BUSINESS-V1-TASK-BREAKDOWN.md):30 small ordered tasks, dependency tracks, schema/security/staging acceptance gates. Plan only; none starts automatically.
+
+Additions to the earlier roadmap: Avatar Save is local object-URL state; Settings Change password Save is disabled; own account read returns no canonical cooldown timestamp; positive Shop provisioning remains absent; Shop Favorites is product Listing favorites, without Shop-entity persistence or Master–Detail Shop UI. Resale refresh fetches available rows in100-row batches, not merely SSR20. Several APIs remain staging-only. Existing Stripe inbox/bindings and settlement authorizations must be reused where suitable instead of recreated.
+
+Fresh evidence:30 selected offline tests pass, exercising actual implementation with controlled SDK/API transports. This does not certify deployed RLS, full two-user journeys, real funds, new email delivery or timer workers. No backend implementation, migration, remote write, production access, Git staging/commit/push was performed by this audit.
+
+---
+
 Date:2026-10-18. Current local worktree authority; no new backend implementation, migration, Stripe operation, entitlement or production rollout is authorized by this document. Existing migrations are evidence of repository design, not proof that every environment has them applied. Preserve current product decisions and frozen historical records.
 
 ## Existing foundations to preserve

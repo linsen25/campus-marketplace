@@ -101,7 +101,9 @@ async function main() {
             fullPage: true,
           })
         await show('settings', false)
-        await shop().getByText('Available with Shop Pro').waitFor()
+        await shop()
+          .getByText('Your account does not have a Shop yet.')
+          .waitFor()
         assert.equal(await shop().getByRole('button').count(), 0)
         assert.equal(
           await p

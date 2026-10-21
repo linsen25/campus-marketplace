@@ -1,6 +1,7 @@
 import { createHash } from 'crypto'
 
 import { hasImageSignature, listingImageRules } from '@/lib/listing-images'
+import { listingImageBucket } from '@/lib/listing-media'
 import { ListingApiError } from '@/lib/listing-validation'
 import { createChatStorage } from '@/lib/server/chat-image-storage'
 import { requireMarketplaceUser } from '@/lib/server/marketplace-auth'
@@ -10,6 +11,7 @@ import type { MarketplaceClient } from '@/lib/supabase/server'
 const bucket = 'order-snapshot-media'
 type Asset = {
   id: string
+  source_bucket: string
   source_path: string
   path: string
   mime_type: string | null
@@ -69,7 +71,13 @@ export async function prepareOrderSnapshotMedia(
     p_command: messageUuid(commandId),
   })
   for (const asset of batch.assets) {
-    const source = await bytes('listing-images', asset.source_path)
+    const source = await bytes(
+      listingImageBucket({
+        path: asset.source_path,
+        storage_bucket: asset.source_bucket,
+      }),
+      asset.source_path
+    )
     // Reconcile a successful upload whose response/verification was lost.
     const existing = await storage().storage.from(bucket).info(asset.path)
     if (existing.error) {

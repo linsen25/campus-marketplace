@@ -5,7 +5,10 @@ import {
   listingImageRules,
   validateListingImage,
 } from '@/lib/listing-images'
+import { listingImageBucket, listingImageUrl } from '@/lib/listing-media'
 import { ListingApiError } from '@/lib/listing-validation'
+import { recoverListingImage } from '@/lib/server/listing-image-recovery'
+import { removeListingImageObjects } from '@/lib/server/listing-image-storage'
 import {
   requireMarketplaceUser,
   requireSameOriginWrite,
@@ -26,6 +29,18 @@ function checkImage(file: { type: string; size: number }): void {
       error instanceof Error ? error.message : 'Invalid image.'
     )
   }
+}
+
+function recoverySlot(value: unknown, count: number) {
+  if (
+    typeof value !== 'string' ||
+    !/^[1-6]$/.test(value) ||
+    Number(value) > count
+  )
+    throw new ListingApiError(
+      'Choose an image slot within the creation manifest.'
+    )
+  return Number(value)
 }
 
 async function readImage(req: NextApiRequest): Promise<Buffer> {
@@ -62,7 +77,7 @@ async function reserveImage(
     const { data, error } = await client
       .from('listing_images')
       .insert({ listing_id: id, slot })
-      .select('id,path')
+      .select('id,path,storage_bucket')
       .single()
     if (!error) return data
     if (error.code !== '23505') databaseError(error)
@@ -97,18 +112,30 @@ export default async function handler(
     if (req.method === 'DELETE') {
       const { data: images, error } = await client
         .from('listing_images')
-        .select('id,path')
+        .select('id,path,storage_bucket')
         .eq('listing_id', id)
       databaseError(error)
       const image = images?.find(
         (item) =>
-          client.storage.from(listingBucket).getPublicUrl(item.path).data
-            .publicUrl === req.query.url
+          listingImageUrl(
+            item,
+            (path) =>
+              client.storage.from(listingBucket).getPublicUrl(path).data
+                .publicUrl
+          ) === req.query.url
       )
       if (!image) throw new ListingApiError('Image not found.', 404)
       await removeImageReservation(client, image)
     } else {
       const bytes = await readImage(req)
+      if (req.query.slot !== undefined) {
+        await recoverListingImage(client, id, user.id, {
+          slot: recoverySlot(req.query.slot, listing.expectedImageCount ?? 0),
+          bytes,
+          contentType: String(req.headers['content-type']),
+        })
+        return res.status(200).json(await repository.getCreationListing(id))
+      }
       const image = await reserveImage(
         client,
         id,
@@ -118,7 +145,7 @@ export default async function handler(
         throw new ListingApiError('Unable to reserve an image slot.', 503)
       try {
         const { error } = await client.storage
-          .from(listingBucket)
+          .from(listingImageBucket(image))
           .upload(image.path, bytes, {
             contentType: String(req.headers['content-type']),
             upsert: false,
@@ -126,18 +153,17 @@ export default async function handler(
           })
         if (error)
           throw new ListingApiError('Image upload failed. Please retry.', 503)
-        const { error: rowError } = await client
+        const { data: attached, error: rowError } = await client
           .from('listing_images')
           .update({ ready: true })
           .eq('id', image.id)
+          .select('id')
+          .maybeSingle()
         databaseError(rowError)
+        if (!attached)
+          throw new ListingApiError('Image reservation was removed.', 409)
       } catch (error) {
-        // If metadata deletion is rejected, do not attempt object deletion.
-        try {
-          await removeImageReservation(client, image)
-        } catch {
-          /* Best-effort orphan cleanup; retain the upload error. */
-        }
+        await cleanupFailedUpload(client, id, image)
         throw error
       }
     }
@@ -157,7 +183,7 @@ export const config = { api: { bodyParser: false } }
 
 export async function removeImageReservation(
   client: MarketplaceClient,
-  image: { id: string; path: string }
+  image: { id: string; path: string; storage_bucket: string }
 ): Promise<void> {
   const { data, error } = await client
     .from('listing_images')
@@ -168,12 +194,42 @@ export async function removeImageReservation(
   databaseError(error)
   if (!data)
     throw new ListingApiError('Image reservation was not removed.', 409)
-  const { error: storageError } = await client.storage
-    .from(listingBucket)
-    .remove([image.path])
+  const storageError = await removeListingImageObjects(client, [image])
   if (storageError)
     throw new ListingApiError(
       'Image metadata removed; orphan object cleanup requires retry.',
       503
     )
+}
+
+async function cleanupFailedUpload(
+  client: MarketplaceClient,
+  listingId: string,
+  image: { id: string; path: string; storage_bucket: string }
+) {
+  try {
+    await removeImageReservation(client, image)
+  } catch {
+    try {
+      // A late upload can outlive Discard. Confirm absence before object cleanup;
+      // session Storage RLS independently protects any current reference.
+      const check = await client
+        .from('listing_images')
+        .select('id')
+        .eq('id', image.id)
+        .maybeSingle()
+      if (!check.error && !check.data)
+        await removeListingImageObjects(client, [image])
+    } catch {
+      // Retain original upload error and the exact reconciliation key below.
+    }
+    // eslint-disable-next-line no-console -- Candidate key only, no credentials.
+    console.warn(
+      'Listing upload cleanup requires reconciliation',
+      listingId,
+      image.id,
+      image.storage_bucket,
+      image.path
+    )
+  }
 }

@@ -3,7 +3,21 @@
 const fs = require('node:fs'),
   path = require('node:path'),
   assert = require('node:assert/strict')
-const { root, build } = require('./message-payload.browser.cjs')
+// Preserve older browser artifacts; each pricing-only run uses a fresh root.
+const root = fs.mkdtempSync(path.resolve('tests/artifacts/pricing-v11-'))
+const fixtureModule = { exports: {} }
+new Function(
+  'require',
+  'module',
+  'exports',
+  fs
+    .readFileSync('tests/message-payload.browser.cjs', 'utf8')
+    .replace(
+      "const root = path.resolve('tests/artifacts/message-payload-qualification')",
+      'const root = ' + JSON.stringify(root)
+    )
+)(require, fixtureModule, fixtureModule.exports)
+const { build } = fixtureModule.exports
 const aliases = require('./browser-fixture-mocks.cjs')(root)
 fs.writeFileSync(
   path.join(root, 'entry.tsx'),
@@ -42,7 +56,9 @@ async function main() {
     headless: true,
   })
   try {
-    for (const width of [390, 430, 820, 1280, 1536])
+    for (const width of process.env.PRICING_TEST_WIDTH
+      ? [Number(process.env.PRICING_TEST_WIDTH)]
+      : [390, 430, 820, 1280, 1536])
       for (const reducedMotion of ['reduce', 'no-preference']) {
         const p = await browser.newPage({
           viewport: { width, height: 900 },
@@ -138,7 +154,7 @@ async function main() {
           'plus'
         )
         for (const text of [
-          'CA$2.99',
+          'CA$1.99',
           'Run your shop',
           'Your own storefront',
           'Product & inventory management',
@@ -200,11 +216,166 @@ async function main() {
           'real NumberFlow custom element'
         )
         const regularCTA = dialog.getByRole('button', {
-          name: 'Continue with Plus \u00b7 CA$2.99/mo',
+          name: 'Continue with Plus \u00b7 CA$1.99/mo',
           exact: true,
         })
         await regularCTA.click()
         assert(await dialog.isVisible(), 'CTA remains safe no-op')
+        const billing = dialog.getByRole('group', {
+          name: 'Billing option',
+          exact: true,
+        })
+        const auto = billing.getByRole('radio', {
+          name: 'Auto-renew',
+          exact: true,
+        })
+        const once = billing.getByRole('radio', {
+          name: 'One month',
+          exact: true,
+        })
+        assert.equal(await billing.getByRole('radio').count(), 2)
+        assert(await auto.isChecked())
+        assert(!(await once.isChecked()))
+        assert.equal(
+          await auto.getAttribute('name'),
+          await once.getAttribute('name')
+        )
+        const flowIdentity = dialog.locator('[data-plan-price]')
+        await flowIdentity.evaluate((el) => {
+          window.billingPriceNode = el
+          window.billingWhiteCard = el.closest('[data-plan-detail]')
+        })
+        const expectPrice = async (plan, mode, price) => {
+          await p.waitForFunction(
+            ({ price }) =>
+              JSON.parse(
+                document.querySelector('[data-plan-price]').getAttribute('data')
+              ).valueAsString === price,
+            { price: price.toFixed(2) }
+          )
+          assert(
+            await dialog
+              .getByRole('button', {
+                name: `Continue with ${plan} · CA$${price.toFixed(2)}${
+                  mode === 'auto' ? '/mo' : ' one-time'
+                }`,
+                exact: true,
+              })
+              .isVisible()
+          )
+          assert(await (mode === 'auto' ? auto : once).isChecked())
+          assert.equal(await billing.locator('input:checked').count(), 1)
+          assert(
+            await flowIdentity.evaluate(
+              (el) =>
+                el === window.billingPriceNode &&
+                el.closest('[data-plan-detail]') === window.billingWhiteCard
+            )
+          )
+          assert.equal(
+            (
+              await flowIdentity.locator('../..').locator('small').textContent()
+            ).trim(),
+            mode === 'auto' ? '/ month' : 'one-time'
+          )
+        }
+        await billing.scrollIntoViewIfNeeded()
+        await p.evaluate(() => {
+          window.billingSamples = []
+          window.billingSamplingDone = false
+          const until = performance.now() + 800
+          const sample = () => {
+            const host = window.billingPriceNode
+            const row = document.querySelector(
+              'input[value="one-time"]'
+            ).parentElement
+            const dot = row.querySelector('[aria-hidden="true"] > span')
+            window.billingSamples.push({
+              spinning: !!host.shadowRoot?.querySelector('.is-spinning'),
+              dotOpacity: Number(getComputedStyle(dot).opacity),
+              dotTransform: getComputedStyle(dot).transform,
+              background: getComputedStyle(row).backgroundColor,
+            })
+            if (performance.now() < until) requestAnimationFrame(sample)
+            else window.billingSamplingDone = true
+          }
+          requestAnimationFrame(sample)
+        })
+        await once.locator('..').click({ position: { x: 150, y: 28 } })
+        await p.waitForFunction(() => window.billingSamplingDone)
+        const billingSamples = await p.evaluate(() => window.billingSamples)
+        if (reducedMotion === 'no-preference') {
+          assert(
+            billingSamples.some((s) => s.spinning),
+            'billing change rolls real NumberFlow digits'
+          )
+          assert(
+            billingSamples.some((s) => s.dotOpacity > 0 && s.dotOpacity < 1),
+            'radio dot animates'
+          )
+          assert(
+            new Set(billingSamples.map((s) => s.background)).size > 1,
+            'billing row highlight transitions'
+          )
+        } else {
+          assert(
+            !billingSamples.some((s) => s.spinning),
+            'reduced-motion billing change does not roll'
+          )
+          assert(
+            !billingSamples.some((s) => s.dotOpacity > 0 && s.dotOpacity < 1),
+            'reduced-motion dot appears directly'
+          )
+        }
+        await dialog
+          .getByRole('button', {
+            name: 'Continue with Plus · CA$2.99 one-time',
+            exact: true,
+          })
+          .scrollIntoViewIfNeeded()
+        await expectPrice('Plus', 'one-time', 2.99)
+        await dialog.getByRole('button', { name: 'Pro', exact: true }).click()
+        await dialog
+          .getByRole('button', {
+            name: 'Continue with Pro · CA$5.99 one-time',
+            exact: true,
+          })
+          .scrollIntoViewIfNeeded()
+        await expectPrice('Pro', 'one-time', 5.99)
+        await auto.click()
+        await dialog
+          .getByRole('button', {
+            name: 'Continue with Pro · CA$4.99/mo',
+            exact: true,
+          })
+          .scrollIntoViewIfNeeded()
+        await expectPrice('Pro', 'auto', 4.99)
+        await dialog.getByRole('button', { name: 'Plus', exact: true }).click()
+        await regularCTA.scrollIntoViewIfNeeded()
+        await expectPrice('Plus', 'auto', 1.99)
+        await auto.click()
+        assert(await auto.isChecked(), 'selected radio cannot toggle off')
+        await auto.focus()
+        await p.keyboard.press('Tab')
+        await p.keyboard.press('Shift+Tab')
+        assert.equal(
+          await auto
+            .locator('..')
+            .evaluate((el) => getComputedStyle(el).outlineStyle),
+          'solid'
+        )
+        await p.keyboard.press('ArrowDown')
+        assert(await once.isChecked(), 'native radio arrow navigation')
+        await p.keyboard.press('ArrowUp')
+        assert(await auto.isChecked())
+        await billing.scrollIntoViewIfNeeded()
+        for (const radio of [auto, once]) {
+          const row = radio.locator('..')
+          assert(await row.evaluate((el) => el.scrollWidth <= el.clientWidth))
+          const circle = await row.locator('[aria-hidden="true"]').boundingBox()
+          assert.equal(circle.width, 18)
+          assert.equal(circle.height, 18)
+        }
         const geometry = await dialog.evaluate((el) => {
           const b = el.getBoundingClientRect(),
             card = el.querySelector('[data-pricing-card]'),
@@ -337,8 +508,8 @@ async function main() {
         })
         const priceBox = await flow.locator('..').boundingBox()
         for (const [key, value, count] of [
-          ['pro', 5.99, 3],
-          ['plus', 2.99, 5],
+          ['pro', 4.99, 3],
+          ['plus', 1.99, 5],
         ]) {
           // Sample actual rendered digit transforms, shared-layout pill motion and feature stagger.
           await p.evaluate((key) => {
@@ -501,6 +672,9 @@ async function main() {
         await p.screenshot({
           path: path.join(root, `new-pricing-${width}-${reducedMotion}.png`),
         })
+        // Closing discards both local selections, even after a different last choice.
+        await once.click()
+        await dialog.getByRole('button', { name: 'Pro', exact: true }).click()
         await p.keyboard.press('Escape')
         if (reducedMotion === 'no-preference') {
           assert.equal(await dialog.getAttribute('data-exiting'), 'true')
@@ -523,6 +697,17 @@ async function main() {
         await opener.click()
         await dialog.waitFor()
         await p.waitForTimeout(250)
+        assert(
+          await dialog
+            .getByRole('radio', { name: 'Auto-renew', exact: true })
+            .isChecked()
+        )
+        assert.equal(
+          await dialog
+            .getByRole('button', { name: 'Plus', exact: true })
+            .getAttribute('aria-pressed'),
+          'true'
+        )
         await dialog
           .getByRole('button', { name: 'Close Shop Pro pricing' })
           .click()
@@ -542,6 +727,42 @@ async function main() {
           el.scrollTop = el.scrollHeight
         })
         assert(await body.evaluate((el) => el.scrollTop > 0))
+        await dialog
+          .getByRole('button', {
+            name: 'Continue with Plus · CA$1.99/mo',
+            exact: true,
+          })
+          .scrollIntoViewIfNeeded()
+        assert(
+          await dialog
+            .getByRole('button', {
+              name: 'Continue with Plus · CA$1.99/mo',
+              exact: true,
+            })
+            .isVisible()
+        )
+        await dialog
+          .getByRole('button', {
+            name: 'Start 2-Month Free Pro Trial',
+            exact: true,
+          })
+          .scrollIntoViewIfNeeded()
+        assert(
+          await dialog
+            .getByRole('button', {
+              name: 'Start 2-Month Free Pro Trial',
+              exact: true,
+            })
+            .isVisible()
+        )
+        assert(
+          await dialog.evaluate(
+            (el) =>
+              el.getBoundingClientRect().bottom <= 540.5 &&
+              el.getBoundingClientRect().top >= 0 &&
+              el.scrollWidth <= el.clientWidth
+          )
+        )
         assert(
           await dialog
             .getByRole('button', { name: 'Close Shop Pro pricing' })
@@ -621,7 +842,7 @@ async function main() {
           'PASS new Pricing Card',
           width,
           reducedMotion,
-          '2.99/5.99 persistent NumberFlow roll, original tab/stagger/content, full 2-month trial preview, modal/scroll/focus, zero requests'
+          'four billing prices, native radios/keyboard, persistent NumberFlow roll, original tab/stagger/content, full 2-month trial preview, modal/scroll/focus, zero requests'
         )
         await p.close()
       }

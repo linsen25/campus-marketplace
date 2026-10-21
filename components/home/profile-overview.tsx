@@ -2,7 +2,7 @@
 
 import { AnimatePresence } from 'framer-motion'
 import type { ReactNode } from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import actionStyles from '@/components/animata/button/action-button-sizing.module.css'
 import { CardAction } from '@/components/listings/card-actions'
@@ -14,10 +14,13 @@ import { DynamicAction } from '@/components/ui/dynamic-action'
 import { FadingDialog } from '@/components/ui/fading-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatefulButton } from '@/components/velora/stateful-button'
-import { passwordRules } from '@/lib/auth-password'
+import type { OwnShopProfile } from '@/hooks/use-own-shop-profile'
+import { requestPasswordChange } from '@/lib/auth-change-password'
+import { passwordRules, validSignupPassword } from '@/lib/auth-password'
 import { reservedUsername, validUsername } from '@/lib/auth-username'
 import { marketplaceRequest } from '@/lib/listings-api'
 import type { ShopIdentity } from '@/lib/shop-presentation'
+import { ownerShopPreview } from '@/lib/shop-profile-api'
 import type { ShopPreview } from '@/types/shop'
 
 import { FinancialSettings } from './financial-settings'
@@ -80,6 +83,40 @@ function ChangeDialog({
   const [currentPassword, setCurrentPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [passwordSubmitted, setPasswordSubmitted] = useState(false)
+  const submitting = useRef(false)
+  const validPassword =
+    Boolean(currentPassword) &&
+    validSignupPassword(value) &&
+    confirmation === value
+  async function savePassword() {
+    if (submitting.current || passwordSubmitted || !validPassword) return
+    submitting.current = true
+    setSaving(true)
+    setSaveError('')
+    try {
+      const result = await requestPasswordChange({
+        currentPassword,
+        password: value,
+        confirmation,
+      })
+      if (result.passwordUpdated !== false) setPasswordSubmitted(true)
+      if (result.passwordUpdated === true && result.otherSessionsRevoked)
+        onClose()
+      else
+        setSaveError(
+          result.error ||
+            'Unable to confirm the password change. Check by signing in before retrying.'
+        )
+    } catch (reason) {
+      setSaveError(
+        reason instanceof Error ? reason.message : 'Unable to change password.'
+      )
+    } finally {
+      submitting.current = false
+      setSaving(false)
+    }
+  }
   const [cooldownBlocked, setCooldownBlocked] = useState(false)
   async function saveUsername() {
     setSaving(true)
@@ -224,8 +261,7 @@ function ChangeDialog({
       )}
       {kind === 'password' && (
         <p className={styles.notice} role="status">
-          Password changes are currently unavailable. Your password has not been
-          changed.
+          Enter your current password to confirm this change.
         </p>
       )}
       {saveError && (
@@ -247,14 +283,14 @@ function ChangeDialog({
           variant="green"
           footer={true}
           disabled={
-            kind === 'password' ||
             saving ||
-            cooldown ||
-            cooldownBlocked ||
-            availability !== true
+            (kind === 'password'
+              ? !validPassword || passwordSubmitted
+              : cooldown || cooldownBlocked || availability !== true)
           }
           onClick={() => {
-            saveUsername()
+            if (kind === 'password') savePassword()
+            else saveUsername()
           }}
         >
           {saving ? 'Saving...' : 'Save'}
@@ -275,13 +311,15 @@ export function ProfileOverview({
   onFinancialSettings,
   shopPreview,
   onShopSave,
+  ownShop,
 }: {
+  ownShop?: OwnShopProfile
   shopPreview?: ShopPreview
   onShopSave?: (patch: Partial<ShopIdentity>) => Promise<void>
   settings?: boolean
   sessionAction?: ReactNode
   avatarImage?: string
-  onAvatarSave: (file: File) => void
+  onAvatarSave: (file: File) => Promise<void> | void
   onFinancialSettings?: () => void
   showHeading?: boolean
   onUsername?: (username: string | null) => void
@@ -327,6 +365,11 @@ export function ProfileOverview({
       active = false
     }
   }, [onUsername])
+  let settingsShop = shopPreview
+  if (ownShop)
+    settingsShop = ownShop.shop
+      ? ownerShopPreview(ownShop.shop, account?.username ?? null)
+      : undefined
   return (
     <>
       <section
@@ -472,9 +515,12 @@ export function ProfileOverview({
         <FinancialSettings settings={settings} onManage={onFinancialSettings} />
         {settings && (
           <ShopSettings
-            shop={shopPreview}
+            shop={settingsShop}
             username={account?.username ?? null}
-            onSave={onShopSave}
+            status={ownShop?.status}
+            version={ownShop?.etag ?? undefined}
+            live={Boolean(ownShop)}
+            onSave={ownShop ? ownShop.save : onShopSave}
           />
         )}
         {settings && <NotificationSettings />}

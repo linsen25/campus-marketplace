@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'crypto'
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 
+import { drainStripeOrderPayments } from '@/lib/server/stripe-order-reconciliation'
 import { drainStripeEvents } from '@/lib/server/stripe-setup'
 
 export default async function handler(
@@ -22,7 +23,13 @@ export default async function handler(
     timingSafeEqual(actualBytes, expectedBytes)
   if (req.method !== 'POST' || !authorized) return res.status(403).end()
   try {
-    return res.status(200).json(await drainStripeEvents())
+    const setup = await drainStripeEvents()
+    const orderPayments = await drainStripeOrderPayments()
+    return res.status(200).json({
+      processed: setup.processed + orderPayments.processed,
+      setup,
+      orderPayments,
+    })
   } catch {
     return res
       .status(503)

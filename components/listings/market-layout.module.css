@@ -78,6 +78,14 @@
   min-width: 0;
 }
 
+@media (max-width: 539px) {
+  /* The shared Welcome brand can override the desktop heading's display:none.
+     Keep the existing mobile brand above, leaving room for all toolbar controls. */
+  .toolbar > .brandHeading {
+    display: none;
+  }
+}
+
 .controls {
   --market-control-height: 48px;
 
@@ -278,7 +286,7 @@
     background: rgb(8 5 14 / 18%);
   }
 
-  .listingOverlay > [role="dialog"] {
+  .listingOverlay > [role='dialog'] {
     max-height: var(--mobile-dialog-max-height, 100%);
   }
 }

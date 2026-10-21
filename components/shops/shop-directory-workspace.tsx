@@ -16,7 +16,9 @@ import type { CSSProperties, MouseEvent, ReactNode } from 'react'
 
 import { MarketPagination } from '@/components/listings/market-pagination'
 import card from '@/components/listings/welcome-demo-cards.module.css'
+import { usePublicShopRead } from '@/hooks/use-public-shop-read'
 import { listingLayoutTransition } from '@/lib/listing-layout-motion'
+import { readPublicShopDirectory } from '@/lib/public-shop-api'
 import { browseShops, defaultShopDirectoryQuery } from '@/lib/shop-directory'
 import type { ShopDirectoryQuery } from '@/lib/shop-directory'
 import type { ShopPreview } from '@/types/shop'
@@ -56,7 +58,7 @@ function WorkspacePanel({
     </m.div>
   )
 }
-export function ShopDirectoryWorkspace({
+function DemoShopDirectoryWorkspace({
   directoryHeader,
   query = defaultShopDirectoryQuery,
   shops = [],
@@ -356,6 +358,148 @@ export function ShopDirectoryWorkspace({
           </AnimatePresence>
         </>
       )}
+    </m.section>
+  )
+}
+
+/** Demo remains explicit; a successful empty live query never selects fixtures. */
+export function ShopDirectoryWorkspace(
+  props: Parameters<typeof DemoShopDirectoryWorkspace>[0] & { demo?: boolean }
+) {
+  return props.demo ? (
+    <DemoShopDirectoryWorkspace {...props} />
+  ) : (
+    <PublicShopDirectoryWorkspace {...props} />
+  )
+}
+function PublicShopDirectoryWorkspace({
+  directoryHeader,
+  query = defaultShopDirectoryQuery,
+  shops = [],
+  onOverlayActiveChange,
+  overlayClassName,
+  overlayStyle,
+}: Parameters<typeof DemoShopDirectoryWorkspace>[0]) {
+  const reduced = useReducedMotion()
+  const [expanded, setExpanded] = useState(false)
+  const [page, setPage] = useState(1)
+  const heading = useRef<HTMLHeadingElement>(null)
+  const scroll = useShopSectionScroll(heading)
+  const filterKey = JSON.stringify(query)
+  useEffect(() => setPage(1), [filterKey, expanded])
+  const request = {
+    page,
+    pageSize: expanded ? 16 : 8,
+    categories: query.categories,
+    sort: 'newest' as const,
+  }
+  const result = usePublicShopRead(
+    JSON.stringify(request),
+    (signal) => readPublicShopDirectory(request, signal),
+    shops.length
+      ? { shops, page: 1, hasNextPage: false, refreshAfterMs: 30000 }
+      : undefined
+  )
+  useEffect(() => {
+    if (page > 1 && result.data?.shops.length === 0) setPage(1)
+  }, [page, result.data])
+  return (
+    <m.section
+      layout={true}
+      className={styles.workspace}
+      data-shop-workspace="list"
+      transition={listingLayoutTransition(reduced)}
+    >
+      <div data-shop-directory-content={true}>
+        {directoryHeader}
+        <section
+          className={discovery.recommended}
+          aria-label="Recommended Shops"
+        >
+          <header className={discovery.heading}>
+            <h2>Recommended Shops</h2>
+            <p>Discover storefronts from the UU community.</p>
+          </header>
+          <p role="status">Recommendations will appear here.</p>
+        </section>
+        <div className={styles.workspaceHeading}>
+          <h2
+            ref={heading}
+            tabIndex={-1}
+            className={discovery.allTitle}
+            style={{ marginBottom: 0 }}
+          >
+            All Shops
+          </h2>
+        </div>
+        <section aria-label="All Shops" data-shop-expanded={expanded}>
+          <button
+            type="button"
+            className={`${discovery.sectionLink} dynamic-arrow-row`}
+            onClick={() => {
+              setExpanded((v) => !v)
+              scroll()
+            }}
+          >
+            {expanded ? (
+              <>
+                <ArrowLeft size={15} /> Back to Shop Overview
+              </>
+            ) : (
+              <>
+                View All Shops <ArrowRight size={15} />
+              </>
+            )}
+          </button>
+          {result.loading && <p role="status">Loading Shops...</p>}
+          {result.error && (
+            <p role="alert">
+              {result.error}{' '}
+              <button type="button" onClick={() => result.retry()}>
+                Retry
+              </button>
+            </p>
+          )}
+          {!result.loading && !result.error && !result.data?.shops.length && (
+            <p className={styles.demoNote} role="status">
+              No shops found in these categories.
+            </p>
+          )}
+          <div className={styles.allShopsGrid} data-all-shops-grid={true}>
+            {result.data?.shops.map((shop) => (
+              <div
+                key={shop.id || shop.sellerProfileId}
+                className={styles.demoEntry}
+                data-directory-shop={shop.sellerProfileId}
+              >
+                <ShopCard shop={shop} />
+              </div>
+            ))}
+          </div>
+          {expanded && (page > 1 || result.data?.hasNextPage) && (
+            <MarketPagination
+              page={page}
+              pageCount={page + (result.data?.hasNextPage ? 1 : 0)}
+              unknownTotal={Boolean(result.data?.hasNextPage)}
+              label="Shop pages"
+              className={discovery.sectionPagination}
+              onChange={(value) => {
+                setPage(value)
+                scroll()
+              }}
+              onReturnToTop={scroll}
+            />
+          )}
+        </section>
+        <ShopProducts
+          allowDemo={false}
+          favorites={{}}
+          overlayClassName={overlayClassName}
+          overlayStyle={overlayStyle}
+          onFavorite={() => undefined}
+          onOverlayActiveChange={onOverlayActiveChange}
+        />
+      </div>
     </m.section>
   )
 }

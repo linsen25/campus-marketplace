@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { ListingApiError } from '@/lib/listing-validation'
 import {
   createListing,
+  createShopListing,
   finalizeListing,
   abandonListing,
   deleteListing,
@@ -57,6 +58,7 @@ const listingActions = {
   sold: markListingSold,
 }
 
+// eslint-disable-next-line complexity -- Preserve existing route actions and add only the explicit Shop-create namespace with its strict envelope.
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -66,7 +68,8 @@ export default async function handler(
   const [id, action] = parts
   let allowed: string[] = []
   if (parts.length === 0) allowed = ['GET', 'POST']
-  else if (parts.length === 1) allowed = ['GET', 'PATCH', 'DELETE']
+  else if (parts.length === 1)
+    allowed = id === 'shop' ? ['POST'] : ['GET', 'PATCH', 'DELETE']
   else if (
     parts.length === 2 &&
     ['sold', 'finalize', 'abandon'].includes(action)
@@ -81,6 +84,23 @@ export default async function handler(
   try {
     if (req.method !== 'GET') requireSameOriginWrite(req)
     const context = { req, res }
+    if (id === 'shop' && parts.length === 1) {
+      if (
+        !req.body ||
+        typeof req.body !== 'object' ||
+        Array.isArray(req.body) ||
+        Object.keys(req.body).sort().join(',') !== 'actionId,input' ||
+        typeof req.body.actionId !== 'string'
+      )
+        throw new ListingApiError(
+          'Provide only product input and creation action ID.'
+        )
+      return res
+        .status(201)
+        .json(
+          await createShopListing(req.body.input, req.body.actionId, context)
+        )
+    }
     if (!id) {
       if (req.method === 'POST')
         return res.status(201).json(await createListing(req.body, context))
@@ -108,6 +128,7 @@ export default async function handler(
     }
     return res.status(200).json(await getListing(id, context))
   } catch (error) {
+    recordCleanupFailure(action, id, error)
     if (error instanceof ListingApiError)
       return res.status(error.status).json({ error: error.message })
     return res.status(500).json({
@@ -117,6 +138,15 @@ export default async function handler(
 }
 
 export const config = { api: { bodyParser: { sizeLimit: '32kb' } } }
+
+function recordCleanupFailure(action: string, id: string, error: unknown) {
+  if (action !== 'abandon' || !/^[0-9a-f-]{36}$/i.test(id)) return
+  // eslint-disable-next-line no-console -- Trace only the listing identifier and status.
+  console.warn('Listing draft cleanup unconfirmed', {
+    listingId: id,
+    status: error instanceof ListingApiError ? error.status : 500,
+  })
+}
 
 function requestSegments(req: NextApiRequest) {
   const segments = req.query.segments || []

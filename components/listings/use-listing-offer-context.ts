@@ -20,7 +20,11 @@ function blockedReason(context: Context, status: ListingStatus | undefined) {
     return 'This listing is no longer available for new offers.'
   return ''
 }
-export function useListingOfferContext(listingId: string, sellerId: string) {
+export function useListingOfferContext(
+  listingId: string,
+  sellerId: string,
+  allowed = true
+) {
   const { seller } = useMarketplaceSession()
   const messaging = useMessageSeller(listingId)
   const [context, setContext] = useState<Context | null>(null)
@@ -29,6 +33,7 @@ export function useListingOfferContext(listingId: string, sellerId: string) {
   const [checking, setChecking] = useState(false)
   const opening = useRef(false)
   const enabled =
+    allowed &&
     Boolean(seller && seller.id !== sellerId) &&
     process.env.NEXT_PUBLIC_MESSAGES_ENV === 'staging' &&
     process.env.NEXT_PUBLIC_SUPABASE_URL ===

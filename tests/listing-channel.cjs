@@ -156,7 +156,22 @@ function load(file) {
       if (name === '@/components/listings/market-layout')
         return { MarketLayout: () => null }
       if (name === '@/lib/server/public-shop')
-        return { getPublicShops: () => [] }
+        return {
+          getPublicShops: async () => ({ shops: [] }),
+          getPublicShopProducts: async () => ({
+            listings: rows
+              .filter(
+                (row) => row.listing_channel === 'shop' && row.published_at
+              )
+              .map((row) =>
+                load('lib/supabase/listing-mapper.ts').mapListing(
+                  row,
+                  (path) => 'https://legacy/' + path
+                )
+              ),
+          }),
+          getPublicShopListing: async () => ({ state: 'not_found' }),
+        }
       return name.startsWith('@/')
         ? load(
             name.slice(2) + '.ts' + (name.includes('listing-form') ? 'x' : '')
@@ -191,11 +206,11 @@ async function request(query = {}, method = 'GET', body) {
 async function main() {
   assert.deepEqual(
     (await repo.getListings()).map((r) => r.listingChannel),
-    ['resale', 'shop']
+    ['resale']
   )
   assert(
-    !last.some((op) => op[1] === 'listing_channel'),
-    'no global Resale default'
+    last.some((op) => op[1] === 'listing_channel' && op[2] === 'resale'),
+    'unscoped public reads cannot inherit private owner Shop visibility; Shop reads use the public projection'
   )
   for (const channel of ['resale', 'shop']) {
     assert.deepEqual(

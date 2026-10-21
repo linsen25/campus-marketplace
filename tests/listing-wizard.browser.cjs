@@ -1,4 +1,4 @@
-/* global window, document */
+/* global window, document, localStorage */
 // Real shared form/publication pipeline with local API fixtures; no hosted writes.
 const fs = require('node:fs'),
   path = require('node:path'),
@@ -28,11 +28,11 @@ mock(
 )
 mock(
   '@/lib/listings-api',
-  `export async function createListing(input){window.creates.push(input);window.item={...input,id:'created',listingChannel:'resale',seller:{id:'owner',displayName:'Fixture'},status:'available',publishedAt:null,createdAt:'2026-10-17',photoUrls:[]};return window.item};export async function uploadListingImage(id,file){window.uploads.push([id,file.name]);};export async function finalizeListing(id){window.finalizes.push(id);if(window.failPublish)throw Error('Fixture failure');window.item={...window.item,publishedAt:'2026-10-17'};return window.item};export async function getCreationListing(){return window.item};export async function abandonListing(){throw Error('Unexpected abandonment')};export async function updateListing(id,patch){window.editPatch=patch;return {...window.editOriginal,...patch,id}};export async function marketplaceRequest(){throw Error('Unexpected API')}`
+  `export async function createListing(input){window.creates.push(input);window.slotFiles={};window.item={...input,id:'created',listingChannel:'resale',seller:{id:'owner',displayName:'Fixture'},status:'available',publishedAt:null,createdAt:'2026-10-17',photoUrls:[]};return window.item};export async function uploadListingImage(id,file,slot){if(window.failUpload&&slot===2)throw Error('Fixture upload failure');if(window.slotFiles[slot]===file.name)return;window.slotFiles[slot]=file.name;window.uploads.push([id,file.name]);};export async function finalizeListing(id){window.finalizes.push(id);if(window.failPublish)throw Error('Fixture failure');window.item={...window.item,publishedAt:'2026-10-17'};return window.item};export async function getCreationListing(){return window.item};export async function abandonListing(){window.abandons=(window.abandons||0)+1;throw Error('Fixture cleanup failure')};export async function updateListing(id,patch){window.editPatch=patch;return {...window.editOriginal,...patch,id}};export async function marketplaceRequest(){throw Error('Unexpected API')}`
 )
 fs.writeFileSync(
   path.join(root, 'entry.tsx'),
-  `import 'tailwindcss/src/css/preflight.css';import React from'react';import{createRoot}from'react-dom/client';import{LazyMotion,domAnimation}from'framer-motion';import{ListingForm}from'@/components/listings/listing-form';const root=createRoot(document.getElementById('root'));window.renderCase=(mode='resale',previewOnly=false,listing=undefined)=>root.render(<LazyMotion features={domAnimation}><main style={{padding:24}}><ListingForm key={mode+previewOnly+listing?.id} listing={listing} mode={mode} previewOnly={previewOnly} onSaved={()=>{}}/></main></LazyMotion>);`
+  `import 'tailwindcss/src/css/preflight.css';import React from'react';import{createRoot}from'react-dom/client';import{LazyMotion,domAnimation}from'framer-motion';import{ListingForm}from'@/components/listings/listing-form';const root=createRoot(document.getElementById('root'));window.requestExit=()=>window.leaveGuard(()=>root.render(null));window.renderCase=(mode='resale',previewOnly=false,listing=undefined)=>root.render(<LazyMotion features={domAnimation}><main style={{padding:24}}><ListingForm key={mode+previewOnly+listing?.id} listing={listing} mode={mode} previewOnly={previewOnly} onSaved={()=>{}} onGuardChange={guard=>{window.leaveGuard=guard}}/></main></LazyMotion>);`
 )
 fs.writeFileSync(
   path.join(root, 'index.html'),
@@ -59,14 +59,25 @@ async function main() {
     for (const reduced of [false, true])
       for (const width of process.env.WIZARD_SHOP_ONLY
         ? []
-        : [390, 430, 820, 1280, 1536]) {
+        : (process.env.WIZARD_WIDTHS || '390,430,820,1280,1536')
+            .split(',')
+            .map(Number)) {
         const p = await browser.newPage({
           viewport: { width, height: 1000 },
           reducedMotion: reduced ? 'reduce' : 'no-preference',
         })
         p.setDefaultTimeout(12000)
-        const errors = []
+        const errors = [],
+          cleanupRecords = []
         p.on('pageerror', (e) => errors.push(e.message))
+        p.on('console', (message) => {
+          if (
+            message
+              .text()
+              .includes('Listing draft cleanup unconfirmed after Discard')
+          )
+            cleanupRecords.push(message.text())
+        })
         await p.route('**/*', (r) => {
           const u = new URL(r.request().url())
           assert.equal(u.origin, 'http://localhost:4177')
@@ -247,6 +258,10 @@ async function main() {
         )
         if (width === 390 && !reduced)
           await p.evaluate(() => (window.failPublish = true))
+        if ([430, 820].includes(width) && !reduced)
+          await p.evaluate(() => {
+            window.failUpload = true
+          })
         await p
           .getByRole('button', { name: 'Confirm & Publish', exact: true })
           .click()
@@ -256,6 +271,64 @@ async function main() {
             .filter({ hasText: /Continue publication/ })
             .waitFor()
           await p.evaluate(() => (window.failPublish = false))
+          await p
+            .getByRole('button', { name: /Retry|Confirm & Publish/ })
+            .last()
+            .click()
+        }
+        if ([430, 820].includes(width) && !reduced) {
+          await p
+            .getByRole('alert')
+            .filter({ hasText: /Continue publication/ })
+            .waitFor()
+          assert.equal(await p.evaluate(() => window.creates.length), 1)
+          if (width === 820) {
+            await p.evaluate(() => window.requestExit())
+            const discard = p.getByRole('dialog', {
+              name: 'Discard this listing?',
+              exact: true,
+            })
+            await discard
+              .getByRole('button', { name: 'Discard', exact: true })
+              .click()
+            await p.locator('form').waitFor({ state: 'detached' })
+            assert.equal(await p.evaluate(() => window.abandons), 1)
+            assert.equal(
+              cleanupRecords.length,
+              1,
+              'cleanup failure remains traceable'
+            )
+            await p.evaluate(() => window.renderCase())
+            await step(0)
+            assert.equal(
+              await p.locator('form').getAttribute('data-photo-count'),
+              '0'
+            )
+            await p.locator('input[type=file]').setInputFiles(photo('new.png'))
+            await next(1)
+            assert.equal(
+              await p
+                .getByRole('textbox', { name: 'Title', exact: true })
+                .inputValue(),
+              ''
+            )
+            assert.equal(await p.evaluate(() => window.creates.length), 1)
+            assert(
+              !(await p.evaluate(() =>
+                Object.keys(localStorage).some((key) =>
+                  /draft|publication/i.test(key)
+                )
+              ))
+            )
+            console.log(
+              'PASS B05 Discard after cleanup failure: empty fields/photos on reopen; no automatic creation'
+            )
+            await p.close()
+            continue
+          }
+          await p.evaluate(() => {
+            window.failUpload = false
+          })
           await p
             .getByRole('button', { name: /Retry|Confirm & Publish/ })
             .last()
@@ -302,11 +375,13 @@ async function main() {
     )
     await p.goto('http://localhost:4177/')
     await p.evaluate(() => window.renderCase('shop'))
-    await p.getByText("Your Shop isn't active yet.", { exact: true }).waitFor()
-    assert.equal(await p.locator('[data-multi-step-form]').count(), 0)
+    await p.locator('[data-multi-step-form="0"]').waitFor()
+    assert.equal(await p.locator('input[type=file]').count(), 1)
     assert.equal(await p.evaluate(() => window.creates.length), 0)
     await p.close()
-    console.log('PASS Add Product runtime remains fail-closed')
+    console.log(
+      'PASS Add Product reuses wizard; no creation before explicit valid publication'
+    )
     const edit = await browser.newPage({
       viewport: { width: 1280, height: 1000 },
     })

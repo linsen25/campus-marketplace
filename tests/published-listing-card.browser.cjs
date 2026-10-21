@@ -55,6 +55,11 @@ mock(
 )
 mock('card-head', `export default function Head(){return null}`, ['next/head'])
 mock(
+  'card-public-shop',
+  `export async function readPublicShop(){return {state:'available',shop:{username:'alex',sellerProfileId:'seller',shopName:'Example Shop',category:'Home',description:'Shop description'},listings:[{...window.listing,listingChannel:'shop'}],page:1,hasNextPage:false,refreshAfterMs:30000}}`,
+  ['@/lib/public-shop-api']
+)
+mock(
   'card-link',
   `import React from 'react';export const Link=props=><a {...props}/>`,
   ['@ui/link/link']
@@ -128,7 +133,10 @@ async function main() {
         }, surface)
         const shell = p.locator('[data-published-listing]'),
           trigger = shell.locator('[data-slot="expandable-card"]')
-        await trigger.waitFor()
+        await trigger.waitFor({ timeout: 10000 }).catch((error) => {
+          console.error({ surface, errors })
+          throw error
+        })
         await p.waitForTimeout(150)
         assert.equal(await shell.count(), 1, surface + ' uses shared card')
         assert.equal(
@@ -159,7 +167,7 @@ async function main() {
         assert.equal(geo.radius, '16px')
         assert.equal(geo.bg, 'rgba(0, 0, 0, 0)')
         assert.equal(geo.fit, 'cover')
-        const owner = ['resale', 'profile'].includes(surface),
+        const owner = ['resale', 'profile', 'shop'].includes(surface),
           heart = shell.getByRole('button', { name: /favorites/ })
         assert.equal(await heart.count(), owner ? 0 : 1)
         if (!owner) {
@@ -268,7 +276,7 @@ async function main() {
           Math.abs(rowGeometry.price.x - rowGeometry.row.x) < 1,
           'price left aligned'
         )
-        if (['resale', 'profile'].includes(surface))
+        if (['resale', 'profile', 'shop'].includes(surface))
           assert.equal(rowGeometry.heart, null, 'owner visibility unchanged')
         else {
           const h = rowGeometry.heart,

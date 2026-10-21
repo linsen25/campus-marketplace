@@ -1,4 +1,4 @@
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { Check, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
 import ShiningButton from '@/components/animata/button/shining-button'
@@ -18,10 +18,14 @@ function DeleteMenu({
   title,
   disabled,
   onDelete,
+  onMarkSold,
+  onCost,
 }: {
   title: string
   disabled: boolean
   onDelete: () => void
+  onMarkSold?: () => void
+  onCost?: () => void
 }) {
   const [open, setOpen] = useState(false)
   const toggle = useCallback((value: boolean) => setOpen(value), [])
@@ -29,16 +33,49 @@ function DeleteMenu({
     <FilterInteraction
       label={`Listing actions for ${title}`}
       appearance="select"
-      disabled={disabled}
+      disabled={disabled && !onCost}
       triggerClassName={styles.more}
       triggerContent={<MoreHorizontal size={18} aria-hidden="true" />}
       isOpen={open}
       onOpenChange={toggle}
     >
       <div role="menu" aria-label={`Listing actions for ${title}`}>
+        {onCost && (
+          <button
+            type="button"
+            role="menuitem"
+            data-sort-option={true}
+            className={sortStyles.option}
+            onClick={(event) => {
+              event.stopPropagation()
+              setOpen(false)
+              onCost()
+            }}
+          >
+            Product cost
+          </button>
+        )}
+        {onMarkSold && (
+          <button
+            type="button"
+            role="menuitem"
+            disabled={disabled}
+            data-sort-option={true}
+            className={sortStyles.option}
+            onClick={(event) => {
+              event.stopPropagation()
+              setOpen(false)
+              onMarkSold()
+            }}
+          >
+            <Check size={16} aria-hidden="true" />
+            Mark as sold
+          </button>
+        )}
         <button
           type="button"
           role="menuitem"
+          disabled={disabled}
           data-sort-option={true}
           className={`${sortStyles.option} ${styles.delete}`}
           onClick={(event) => {
@@ -60,7 +97,11 @@ export function ResaleManagementCard({
   onDelete,
   channel = 'resale',
   demo = false,
+  onMarkSold,
+  onCost,
 }: {
+  onMarkSold?: () => void
+  onCost?: () => void
   demo?: boolean
   channel?: 'resale' | 'shop'
   listing: Listing
@@ -147,6 +188,8 @@ export function ResaleManagementCard({
           title={listing.title}
           disabled={!available}
           onDelete={onDelete}
+          onMarkSold={channel === 'shop' ? onMarkSold : undefined}
+          onCost={channel === 'shop' && !demo ? onCost : undefined}
         />
       </div>
     </article>

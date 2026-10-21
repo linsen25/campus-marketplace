@@ -27,7 +27,6 @@ import {
 } from '@/lib/market-search'
 import type { SearchSuggestion } from '@/lib/market-search'
 import { marketSorts } from '@/lib/market-taxonomy'
-import { recordMarketplaceView } from '@/lib/record-marketplace-view'
 import { defaultShopDirectoryQuery } from '@/lib/shop-directory'
 import type { Listing } from '@/types/listing'
 import type { ShopPreview } from '@/types/shop'
@@ -474,7 +473,6 @@ export function MarketLayout({
                   '--market-header-height': `${headerHeight}px`,
                 } as CSSProperties
               }
-              onIntentionalOpen={() => recordMarketplaceView(listing.id)}
               onOverlayActiveChange={cardPresence}
             />
           ) : (

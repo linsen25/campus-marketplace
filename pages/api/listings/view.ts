@@ -30,9 +30,13 @@ export default async function handler(
     const listingId = messageUuid(req.body.listingId)
     const eventId = messageUuid(req.body.eventId)
     const client = createMarketplaceClient({ req, res })
-    const { error: authError } = await client.auth.getUser()
+    const {
+      data: { user },
+      error: authError,
+    } = await client.auth.getUser()
     if (authError && authError.name !== 'AuthSessionMissingError')
       throw new ListingApiError('Unable to validate session.', 401)
+    if (!user) return res.status(200).json({ recorded: false })
     const { data, error } = await client.rpc(
       'marketplace_record_listing_view',
       { p_listing_id: listingId, p_event_id: eventId }

@@ -48,6 +48,12 @@ export const getServerSideProps: GetServerSideProps<
   const page =
     Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
   const pageSize = 20
+  let shops: ShopPreview[] = []
+  try {
+    shops = (await getPublicShops({ pageSize: 8 })).shops
+  } catch {
+    /* Client read owns the independent Shop loading/error state. */
+  }
   try {
     const listings = error
       ? []
@@ -58,7 +64,7 @@ export const getServerSideProps: GetServerSideProps<
     return {
       props: {
         listings,
-        shops: getPublicShops(),
+        shops,
         values,
         error,
         page,
@@ -71,7 +77,7 @@ export const getServerSideProps: GetServerSideProps<
     return {
       props: {
         listings: [],
-        shops: getPublicShops(),
+        shops,
         values,
         page,
         hasNextPage: false,

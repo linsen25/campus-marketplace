@@ -18,7 +18,6 @@ import styles from './pricing-card.module.css'
 const plans = {
   plus: {
     name: 'Plus',
-    price: 2.99,
     subtitle: 'Run your shop',
     features: [
       'Your own storefront',
@@ -30,7 +29,6 @@ const plans = {
   },
   pro: {
     name: 'Pro',
-    price: 5.99,
     subtitle: 'Grow your shop',
     features: [
       'Everything in Plus',
@@ -38,6 +36,10 @@ const plans = {
       'Promotion performance analytics',
     ],
   },
+} as const
+const billingPrices = {
+  plus: { auto: 1.99, 'one-time': 2.99 },
+  pro: { auto: 4.99, 'one-time': 5.99 },
 } as const
 const TRANSITION = {
   type: 'spring' as const,
@@ -60,9 +62,11 @@ export default function PricingCard({
   const id = useId()
   const reduced = useReducedMotion()
   const [selectedPlan, setSelectedPlan] = useState<keyof typeof plans>('plus')
+  const [billingMode, setBillingMode] = useState<'auto' | 'one-time'>('auto')
   const plan = plans[selectedPlan]
+  const price = billingPrices[selectedPlan][billingMode]
   const showTrial = showTrialPreview || trialEligibility === 'eligible'
-  const displayPrice = `CA$${plan.price.toFixed(2)}`
+  const displayPrice = `CA$${price.toFixed(2)}`
   return (
     <LayoutGroup id={id}>
       <section
@@ -95,6 +99,57 @@ export default function PricingCard({
             </button>
           ))}
         </div>
+        <fieldset className={styles.billing}>
+          <legend>Billing option</legend>
+          {(
+            [
+              ['auto', 'Auto-renew', 'Save CA$1 every month'],
+              ['one-time', 'One month', 'Pay once · No automatic renewal'],
+            ] as const
+          ).map(([value, label, description]) => (
+            <motion.label
+              key={value}
+              className={styles.billingRow}
+              initial={false}
+              data-selected={billingMode === value}
+              animate={{
+                backgroundColor:
+                  billingMode === value
+                    ? 'rgba(255,255,255,0.10)'
+                    : 'rgba(255,255,255,0)',
+                borderColor:
+                  billingMode === value
+                    ? 'rgba(255,255,255,0.45)'
+                    : 'rgba(255,255,255,0.141176)',
+              }}
+              transition={{ duration: reduced ? 0 : 0.18 }}
+            >
+              <input
+                type="radio"
+                name={`${id}-billing`}
+                value={value}
+                checked={billingMode === value}
+                aria-labelledby={`${id}-${value}-label`}
+                aria-describedby={`${id}-${value}-description`}
+                onChange={() => setBillingMode(value)}
+              />
+              <span className={styles.billingCircle} aria-hidden="true">
+                <motion.span
+                  initial={false}
+                  animate={{
+                    opacity: billingMode === value ? 1 : 0,
+                    scale: reduced || billingMode === value ? 1 : 0.6,
+                  }}
+                  transition={{ duration: reduced ? 0 : 0.18 }}
+                />
+              </span>
+              <span className={styles.billingText}>
+                <span id={`${id}-${value}-label`}>{label}</span>
+                <small id={`${id}-${value}-description`}>{description}</small>
+              </span>
+            </motion.label>
+          ))}
+        </fieldset>
         <div
           className={styles.plan}
           id={`${id}-details`}
@@ -112,7 +167,7 @@ export default function PricingCard({
                 <span>CA$</span>
                 <NumberFlow
                   data-plan-price={true}
-                  value={plan.price}
+                  value={price}
                   locales="en-CA"
                   format={{
                     minimumFractionDigits: 2,
@@ -121,7 +176,7 @@ export default function PricingCard({
                   animated={!reduced}
                 />
               </span>
-              <small>/ month</small>
+              <small>{billingMode === 'auto' ? '/ month' : 'one-time'}</small>
             </div>
           </header>
           <div className={styles.divider} />
@@ -180,7 +235,8 @@ export default function PricingCard({
             </>
           )}
           <button type="button" className={styles.continue}>
-            Continue with {plan.name} &middot; {displayPrice}/mo
+            Continue with {plan.name} &middot; {displayPrice}
+            {billingMode === 'auto' ? '/mo' : ' one-time'}
           </button>
           {showTrial && (
             <p className={styles.note}>

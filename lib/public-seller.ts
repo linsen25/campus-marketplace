@@ -20,7 +20,7 @@ export type PublicSellerListing = Listing
 export type PublicSeller = {
   identifier: string
   username: string
-  // No persisted public avatar exists yet. Never publish local blob previews.
+  // Current canonical avatar API URL only; never a local blob or arbitrary URL.
   avatarUrl: string | null
   listings: PublicSellerListing[]
   page: number

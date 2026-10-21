@@ -10,12 +10,15 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
   })
   const output = `${process.env.TEMP}/profile-avatar-qa`
   fs.mkdirSync(output, { recursive: true })
+  const fixtureWebp = await require('sharp')({
+    create: { width: 100, height: 100, channels: 3, background: '#664780' },
+  })
+    .webp()
+    .toBuffer()
   const image = (name) => ({
     name,
-    mimeType: 'image/svg+xml',
-    buffer: Buffer.from(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#664780"/><circle cx="50" cy="50" r="24" fill="white"/></svg>'
-    ),
+    mimeType: 'image/webp',
+    buffer: fixtureWebp,
   })
   try {
     for (const width of [390, 430, 1280, 1536]) {
@@ -24,6 +27,9 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
         serviceWorkers: 'block',
       })
       const errors = []
+      let persistedAvatar = null
+      const persistedURL =
+        '/api/profile/avatar/11111111-1111-4111-8111-111111111111?v=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
       page.on('pageerror', (error) => errors.push(error.message))
       await page.addInitScript(() => delete Navigator.prototype.serviceWorker)
       await page.route(
@@ -31,12 +37,21 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
         (route) => route.abort()
       )
       await page.route('**/api/**', (route) => {
-        assert.equal(
-          route.request().method(),
-          'GET',
-          'no avatar persistence request'
-        )
         const path = new URL(route.request().url()).pathname
+        if (path === '/api/profile/avatar') {
+          assert.equal(route.request().method(), 'POST')
+          assert.equal(route.request().headers()['content-type'], 'image/webp')
+          persistedAvatar = persistedURL
+          return route.fulfill({
+            json: {
+              avatarUrl: persistedAvatar,
+              avatarVersion: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            },
+          })
+        }
+        if (path.startsWith('/api/profile/avatar/'))
+          return route.fulfill({ contentType: 'image/webp', body: fixtureWebp })
+        assert.equal(route.request().method(), 'GET')
         if (path === '/api/auth/session')
           return route.fulfill({
             json: { seller: { id: 'owner', displayName: 'Fixture' } },
@@ -49,6 +64,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
               emailVerified: true,
               createdAt: '2026-10-01',
               nextUsernameChangeAt: null,
+              avatarUrl: persistedAvatar,
+              avatarVersion: persistedAvatar
+                ? 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+                : null,
             },
           })
         return route.fulfill({ json: [] })
@@ -173,12 +192,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
       })
       await dialog.getByRole('alert').waitFor()
       assert(await save.isDisabled())
-      await fileInput.setInputFiles(image('first.svg'))
+      await fileInput.setInputFiles(image('first.webp'))
       await page.waitForFunction(
         () => !document.querySelector('dialog button[disabled]')
       )
-      await fileInput.setInputFiles(image('replacement.svg'))
-      await dialog.getByText('replacement.svg', { exact: true }).waitFor()
+      await fileInput.setInputFiles(image('replacement.webp'))
+      await dialog.getByText('replacement.webp', { exact: true }).waitFor()
       assert.equal(
         await dialog.locator('img').count(),
         1,
@@ -204,12 +223,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
       })
       await dialog.getByRole('alert').waitFor()
       assert(await save.isDisabled(), 'multiple dropped files rejected')
-      await fileInput.setInputFiles(image('saved.svg'))
+      await fileInput.setInputFiles(image('saved.webp'))
       await page.waitForTimeout(200)
       await save.click()
       await dialog.waitFor({ state: 'detached' })
       const savedURL = await row.locator('img').getAttribute('src')
-      assert(savedURL.startsWith('blob:'))
+      assert.equal(savedURL, persistedURL)
       await capture('settings-saved')
       await select('Profile')
       assert.equal(await row.locator('img').getAttribute('src'), savedURL)
@@ -225,7 +244,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
       await capture('overview-saved')
       await select('Settings')
       await open()
-      await fileInput.setInputFiles(image('cancel-unsaved.svg'))
+      await fileInput.setInputFiles(image('cancel-unsaved.webp'))
       await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
       await dialog.waitFor({ state: 'detached' })
       assert.equal(
@@ -234,7 +253,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
         'Cancel preserves saved avatar'
       )
       await open()
-      await fileInput.setInputFiles(image('unsaved.svg'))
+      await fileInput.setInputFiles(image('unsaved.webp'))
       await page.keyboard.press('Escape')
       await dialog.waitFor({ state: 'detached' })
       assert.equal(
@@ -243,7 +262,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
         'Escape preserves saved avatar'
       )
       await open()
-      await fileInput.setInputFiles(image('outside-unsaved.svg'))
+      await fileInput.setInputFiles(image('outside-unsaved.webp'))
       await page.mouse.click(5, 5)
       await dialog.waitFor({ state: 'detached' })
       assert.equal(
@@ -259,7 +278,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE)
       await page.getByRole('dialog').waitFor({ state: 'detached' })
       assert.deepEqual(errors, [])
       console.log(
-        `PASS ${width}: circular purple default, one-file replacement, Cancel/Escape/outside, local Save synchronization, existing password modal`
+        `PASS ${width}: circular purple default, one-file replacement, Cancel/Escape/outside, canonical async Save synchronization, existing password modal (mocked API)`
       )
       await page.close()
     }

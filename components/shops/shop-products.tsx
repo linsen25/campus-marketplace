@@ -6,7 +6,7 @@ import { DemoListingCard } from '@/components/listings/demo-listing-card'
 import { MarketPagination } from '@/components/listings/market-pagination'
 import { PublishedListingCard } from '@/components/listings/published-listing-card'
 import { ListingSkeletonGrid } from '@/components/ui/workspace-skeletons'
-import { getListings } from '@/lib/listings-api'
+import { readPublicShopProducts } from '@/lib/public-shop-api'
 import type { Listing } from '@/types/listing'
 
 import { demoShopProducts } from './shop-demo-data'
@@ -64,36 +64,29 @@ export function ShopProducts({
   }, [productPage, result, scrollToProducts])
   useEffect(() => {
     let active = true
+    let timer: ReturnType<typeof setTimeout> | undefined
     setResult({ status: 'loading', listings: [], demo: false, hasNext: false })
     const load = async () => {
       try {
-        const rows = await getListings({
-          channel: 'shop',
-          status: 'available',
+        const response = await readPublicShopProducts({
           sort: 'newest',
           page: productPage,
           pageSize,
         })
+        const rows = response.listings
         if (!active) return
         if (!rows.length && productPage > 1) {
           setProductPage(1)
           setKnownPages(1)
           return
         }
-        // The existing API has no total. A one-row probe proves the next page exists,
-        // without fetching every product or offering a fabricated empty page.
-        const next =
-          rows.length === pageSize
-            ? await getListings({
-                channel: 'shop',
-                status: 'available',
-                sort: 'newest',
-                page: productPage + 1,
-                pageSize: 1,
-              })
-            : []
+        // The database probes pageSize+1 before slicing, preserving page offsets.
         if (!active) return
-        const hasNext = next.some(eligible)
+        const hasNext = response.hasNextPage
+        timer = setTimeout(
+          () => setRetry((value) => value + 1),
+          Math.max(100, Math.min(30000, response.refreshAfterMs))
+        )
         loadedPage.current = productPage
         setKnownPages(productPage + (hasNext ? 1 : 0))
         setResult({
@@ -113,8 +106,12 @@ export function ShopProducts({
       }
     }
     load()
+    const refresh = () => setRetry((value) => value + 1)
+    window.addEventListener('focus', refresh)
     return () => {
       active = false
+      clearTimeout(timer)
+      window.removeEventListener('focus', refresh)
     }
   }, [productPage, retry, allowDemo])
   const demoProducts = demoShopProducts
@@ -124,12 +121,12 @@ export function ShopProducts({
   return (
     <section
       className={styles.products}
-      aria-label="Popular Shop Products"
+      aria-label="Shop Products"
       data-shop-products={result.status}
       data-product-page={productPage}
     >
       <h2 ref={heading} tabIndex={-1} className={styles.allTitle}>
-        Popular Shop Products
+        Shop Products
       </h2>
       {result.status === 'loading' && (
         <ListingSkeletonGrid

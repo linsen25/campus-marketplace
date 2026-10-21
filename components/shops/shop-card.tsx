@@ -1,8 +1,11 @@
 import { ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/router'
 
+import { useMarketplaceSession } from '@/components/listings/marketplace-session'
 import card from '@/components/listings/welcome-demo-cards.module.css'
 import { StatefulButton } from '@/components/velora/stateful-button'
+import { useShopFavorite } from '@/hooks/use-shop-favorites'
+import { recordShopView } from '@/lib/record-marketplace-view'
 import type { ShopPreview } from '@/types/shop'
 
 import { ShopCardPresentation } from './shop-card-presentation'
@@ -16,8 +19,23 @@ export function ShopCard({
   preview?: boolean
 }) {
   const router = useRouter()
+  const { seller } = useMarketplaceSession()
+  const favorite = useShopFavorite(preview ? undefined : shop.id)
   return (
     <ShopCardPresentation
+      favorite={favorite.liked}
+      confirmFavorite={true}
+      favoriteDisabled={favorite.disabled}
+      favoriteError={
+        favorite.error ? (
+          <p role="alert">
+            {favorite.error}{' '}
+            <button type="button" onClick={() => favorite.retry()}>
+              Retry
+            </button>
+          </p>
+        ) : undefined
+      }
       shop={{
         name: shop.shopName,
         tagline: shop.category,
@@ -47,6 +65,8 @@ export function ShopCard({
                 .then((navigated) => {
                   if (navigated === false)
                     throw new Error('Shop navigation cancelled')
+                  if (seller && seller.id !== shop.sellerProfileId && shop.id)
+                    recordShopView(shop.id)
                 })
             }
           >
@@ -56,6 +76,7 @@ export function ShopCard({
           </StatefulButton>
         )
       }
+      onFavorite={preview ? undefined : favorite.change}
     />
   )
 }

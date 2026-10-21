@@ -116,7 +116,7 @@ async function invoke(handler, req) {
   assert.equal(r.headers['Cache-Control'], 'private, no-store')
   return r
 }
-(async () => {
+async function main() {
   for (const period of ['1D', '7D', '30D']) {
     const r = await invoke(get, { method: 'GET', query: { period } })
     assert.equal(r.code, 200)
@@ -143,9 +143,9 @@ async function invoke(handler, req) {
     eventId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
   }
   assert.equal(
-    (await invoke(view, { method: 'POST', body })).code,
-    200,
-    'anonymous accepted'
+    (await invoke(view, { method: 'POST', body })).body.recorded,
+    false,
+    'B17 anonymous browsing does not persist a view'
   )
   user = true
   assert.equal((await invoke(view, { method: 'POST', body })).code, 200)
@@ -181,7 +181,8 @@ async function invoke(handler, req) {
   console.log(
     'PASS Activity/View APIs: methods, own account, exact periods/body, anonymous/authenticated, CSRF, staging guard, sanitized failures, no-store, aggregated contract; zero network'
   )
-})().catch((e) => {
+}
+main().catch((e) => {
   console.error(e)
   process.exitCode = 1
 })

@@ -116,7 +116,9 @@ export function ShopDirectoryControls({
       <FilterInteraction
         label="Sort"
         value={query.sort}
-        options={[...shopDirectorySorts]}
+        options={shopDirectorySorts.filter(
+          (option) => option.value === 'newest'
+        )}
         isOpen={panel === 'sort'}
         isClosing={closing}
         onOpenChange={openSort}

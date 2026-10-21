@@ -1,3 +1,4 @@
+/* global Blob, structuredClone */
 const { readTestPictureJpeg } = require('../scripts/lib/test-pictures.cjs')
 const assert = require('assert/strict'),
   fs = require('fs'),
@@ -47,6 +48,7 @@ function harness() {
       assets: [1, 2, 3].map((n) => ({
         id: String(n),
         source_path: 'source/' + n,
+        source_bucket: n === 1 ? 'listing-images-private' : 'listing-images',
         path: 'batch/' + n,
       })),
     }
@@ -89,7 +91,10 @@ function harness() {
           return { data: { path: p } }
         },
         download: async (p) => {
-          const body = b === 'listing-images' ? input : objects.get(p)
+          calls.push(['download', b, p])
+          const body = ['listing-images', 'listing-images-private'].includes(b)
+            ? input
+            : objects.get(p)
           return body
             ? {
                 data: new Blob(
@@ -110,6 +115,16 @@ function harness() {
   const exports = {}
   const deps = {
     crypto: crypto,
+    '@/lib/listing-media': {
+      listingImageBucket: (image) => {
+        assert(
+          ['listing-images', 'listing-images-private'].includes(
+            image.storage_bucket
+          )
+        )
+        return image.storage_bucket
+      },
+    },
     '@/lib/listing-images': {
       hasImageSignature: () => true,
       listingImageRules: { maxBytes: 3145728 },
@@ -147,7 +162,7 @@ function harness() {
     setDeleteFailure: () => (failDelete = true),
   }
 }
-;(async () => {
+(async () => {
   let h = harness()
   h.setFail('batch/2')
   await assert.rejects(
@@ -165,6 +180,12 @@ function harness() {
     'prepared'
   )
   assert.equal(h.objects.size, 3)
+  assert(
+    h.calls.some(
+      (c) => c[0] === 'download' && c[1] === 'listing-images-private'
+    )
+  )
+  assert(h.calls.some((c) => c[0] === 'download' && c[1] === 'listing-images'))
   await h.service.prepareOrderSnapshotMedia({}, 'offer', 'command')
   assert.equal(h.objects.size, 3)
   h = harness()

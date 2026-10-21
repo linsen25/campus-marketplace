@@ -91,10 +91,10 @@ module.exports = withNextPlugins([withBundleAnalyzer, withPWA], {
         urlPattern: ({ url }) =>
           url.origin === self.location.origin &&
           (url.pathname === '/' ||
-            /^\/(api\/(auth|stripe|listings|listing-images|profile|messages|offers|order-requests|orders|financial-capabilities)(\/|$)|home(\/|$)|auth(\/|$)|profile\/listings(\/|$)|listings(\/|$))/.test(
+            /^\/(api\/(auth|stripe|listings|listing-images|listing-media|public-shops|shop-favorites|shops|shop|profile|messages|offers|order-requests|orders|financial-capabilities)(\/|$)|home(\/|$)|auth(\/|$)|shop(\/|$)|profile\/listings(\/|$)|listings(\/|$))/.test(
               url.pathname
             ) ||
-            /^\/_next\/data\/[^/]+\/(home(?:\/|\.json)|index\.json|listings(?:\/|\.json)|profile\/listings\.json|auth\/)/.test(
+            /^\/_next\/data\/[^/]+\/(home(?:\/|\.json)|index\.json|listings(?:\/|\.json)|shop(?:\/|\.json)|profile\/listings\.json|auth\/)/.test(
               url.pathname
             )),
         handler: 'NetworkOnly',

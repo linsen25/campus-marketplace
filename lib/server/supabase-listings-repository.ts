@@ -2,11 +2,17 @@ import { listingFulfillmentEnabled } from '@/lib/listing-fulfillment'
 import { listingConditions, listingSorts } from '@/lib/listing-metadata'
 import {
   ListingApiError,
+  listingInputRecord,
   validateListingPatch,
   validateListingInput,
 } from '@/lib/listing-validation'
 import { isMarketFilterPair } from '@/lib/market-taxonomy'
+import { removeListingImageObjects } from '@/lib/server/listing-image-storage'
 import { requireMarketplaceUser } from '@/lib/server/marketplace-auth'
+import {
+  getPublicShopListing,
+  getPublicShopProducts,
+} from '@/lib/server/public-shop'
 import type { ListingRow } from '@/lib/supabase/listing-mapper'
 import { mapListing } from '@/lib/supabase/listing-mapper'
 import type { MarketplaceContext } from '@/lib/supabase/server'
@@ -20,7 +26,7 @@ import type {
 } from '@/types/listing'
 
 const selection: string =
-  '*,profiles!listings_seller_id_fkey(id,display_name),listing_images(path,slot,ready)'
+  '*,profiles!listings_seller_id_fkey(id,display_name),listing_images(id,path,slot,ready,storage_bucket)'
 export const listingBucket = 'listing-images'
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -28,6 +34,10 @@ export function databaseError(
   error: { code?: string; message?: string } | null
 ): void {
   if (!error) return
+  if (error.message === 'Shop active product limit reached.')
+    throw new ListingApiError(error.message, 409)
+  if (error.message === 'Shop publishing requires an operating membership.')
+    throw new ListingApiError(error.message, 403)
   if (error.code === '42501')
     throw new ListingApiError(
       'You do not have permission to change this listing.',
@@ -108,6 +118,30 @@ function validateQuery(query: ListingQuery) {
   return { page, pageSize }
 }
 
+async function publicShopRows(
+  query: ListingQuery,
+  page: number,
+  pageSize: number
+) {
+  if (
+    query.status === 'sold' ||
+    query.pickupArea ||
+    query.condition ||
+    query.subcategory ||
+    query.minPrice !== undefined ||
+    query.maxPrice !== undefined
+  )
+    throw new ListingApiError('Unsupported public Shop product filter.')
+  return (
+    await getPublicShopProducts({
+      page,
+      pageSize,
+      ...(query.search ? { search: query.search } : {}),
+      ...(query.category ? { category: query.category } : {}),
+      sort: query.sort || 'newest',
+    })
+  ).listings
+}
 export function createSupabaseListingsRepository(context: MarketplaceContext) {
   const client = createMarketplaceClient(context)
   const toListing = (row: unknown) =>
@@ -130,6 +164,12 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
     if (publicOnly) request = request.filter('published_at', 'not.is', 'null')
     const { data, error } = await request.maybeSingle()
     databaseError(error)
+    if (publicOnly && (!data || data.listing_channel === 'shop')) {
+      const result = await getPublicShopListing(id)
+      if (result.state === 'unavailable')
+        throw new ListingApiError('This shop is temporarily unavailable.', 404)
+      return result.state === 'available' ? result.listing : null
+    }
     return data ? toListing(data) : null
   }
 
@@ -147,6 +187,9 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
     favoriteUserId: string | undefined = undefined
   ) {
     const { page, pageSize } = validateQuery(query)
+    if (query.channel === 'shop' && !favoriteUserId) {
+      return publicShopRows(query, page, pageSize)
+    }
     let request = client
       .from('listings')
       .select<string, ListingRow>(
@@ -161,6 +204,7 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
         .eq('listing_favorites.user_id', favoriteUserId)
         .eq('status', 'available')
     if (query.channel) request = request.eq('listing_channel', query.channel)
+    else if (!favoriteUserId) request = request.eq('listing_channel', 'resale')
     if (query.pickupArea) request = request.eq('pickup_area', query.pickupArea)
     if (query.category) request = request.eq('category', query.category)
     if (query.subcategory)
@@ -192,6 +236,56 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
   }
 
   return {
+    async createShopListing(input: CreateListingInput, actionId: string) {
+      await requireMarketplaceUser(client)
+      if (!uuid.test(actionId))
+        throw new ListingApiError('A valid creation action ID is required.')
+      const metadata = listingInputRecord(input)
+      const allowed = [
+        'title',
+        'description',
+        'price',
+        'currency',
+        'category',
+        'subcategory',
+        'condition',
+        'pickupArea',
+        'preferredFulfillment',
+        'preferredPaymentMode',
+        'meetingLocation',
+        'estimatedDeliveryFeeCents',
+        'expectedImageCount',
+        'photoUrls',
+      ]
+      if (Object.keys(metadata).some((key) => !allowed.includes(key)))
+        throw new ListingApiError('Only product metadata is accepted.')
+      const validated = validateListingInput(metadata)
+      if (validated.photoUrls.length)
+        throw new ListingApiError('Upload images after creating the listing.')
+      const { data, error } = await client.rpc(
+        'marketplace_create_shop_listing',
+        {
+          p_client_action_id: actionId,
+          p_input: {
+            ...fields(validated),
+            preferred_payment_mode: validated.preferredPaymentMode,
+            preferred_fulfillment: validated.preferredFulfillment,
+            meeting_location: validated.meetingLocation?.label,
+            meeting_location_provider:
+              validated.meetingLocation?.provider ?? null,
+            meeting_place_id: validated.meetingLocation?.placeId ?? null,
+            estimated_delivery_fee_cents:
+              validated.estimatedDeliveryFeeCents ?? 0,
+          },
+        }
+      )
+      if (error?.code === '23505')
+        throw new ListingApiError('Conflicting product creation retry.', 409)
+      databaseError(error)
+      if (data !== actionId)
+        throw new ListingApiError('Unable to confirm Shop draft.', 503)
+      return owned(actionId)
+    },
     getListing: (id: string) => readListing(id),
     getCreationListing: owned,
     getListings,
@@ -245,7 +339,7 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
         listing_id: id,
       })
       databaseError(error)
-      const listing = await readListing(id)
+      const listing = await readListing(id, false)
       if (!listing)
         throw new ListingApiError('Unable to confirm publication.', 503)
       return listing
@@ -254,7 +348,7 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
       await owned(id)
       const { data: images, error: imageError } = await client
         .from('listing_images')
-        .select('path')
+        .select('path,storage_bucket')
         .eq('listing_id', id)
       databaseError(imageError)
       // Atomic predicate: a lost finalize response must never delete a published listing.
@@ -272,9 +366,7 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
           409
         )
       if (images?.length) {
-        const { error: cleanupError } = await client.storage
-          .from(listingBucket)
-          .remove(images.map((image) => image.path))
+        const cleanupError = await removeListingImageObjects(client, images)
         if (cleanupError)
           throw new ListingApiError(
             'Unpublished row removed; storage cleanup requires retry.',
@@ -370,7 +462,7 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
       await owned(id)
       const { data: images, error: imageError } = await client
         .from('listing_images')
-        .select('path')
+        .select('path,storage_bucket')
         .eq('listing_id', id)
       databaseError(imageError)
       // Delete DB state first. Storage ownership is encoded in the path and remains valid.
@@ -383,9 +475,7 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
       databaseError(error)
       if (!data) throw new ListingApiError('Listing not found.', 404)
       if (images?.length) {
-        const { error: cleanupError } = await client.storage
-          .from(listingBucket)
-          .remove(images.map((image) => image.path))
+        const cleanupError = await removeListingImageObjects(client, images)
         if (cleanupError)
           // eslint-disable-next-line no-console -- Identify failed storage cleanup for operators.
           console.warn(

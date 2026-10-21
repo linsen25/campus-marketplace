@@ -12,10 +12,30 @@ class ListingApiError extends Error {
 }
 let authenticated = true,
   leak = false,
+  webhookPersistenceFailure = false,
   calls = []
 const dependencies = {
   '@/lib/listing-validation': { ListingApiError },
-  '@/lib/server/stripe-environment': { stripeConfiguration: () => ({}) },
+  '@/lib/server/stripe-environment': {
+    stripeConfiguration: () => ({}),
+    stripeRequested: () => process.env.STRIPE_PROVIDER_ENABLED === 'true',
+  },
+  '@/lib/server/stripe-order-payment': {
+    assertStripeOrderPaymentsEnabled: () => {
+      throw new ListingApiError('Order payments remain disabled.', 503)
+    },
+    prepareOrderPaymentConfirmation: async () => {
+      throw new ListingApiError('Order payments remain disabled.', 503)
+    },
+  },
+  '@/lib/server/stripe-order-reconciliation': {
+    drainStripeOrderPayments: async () => ({
+      processed: 0,
+      recovered: 0,
+      pending: 0,
+      exceptions: 0,
+    }),
+  },
   '@/lib/server/marketplace-auth': {
     requireMarketplaceUser: async () => {
       if (!authenticated) throw new ListingApiError('Log in.', 401)
@@ -53,6 +73,8 @@ const dependencies = {
     },
     drainStripeEvents: async () => ({ processed: 0 }),
     receiveStripeEvent: async (raw, signature, channel) => {
+      if (webhookPersistenceFailure)
+        throw new Error('synthetic database failure')
       new Stripe('sk_test_Synthetic').webhooks.constructEvent(
         raw,
         signature,
@@ -180,6 +202,17 @@ async function main() {
   await rawHandler(raw, res)
   assert.equal(res.code, 200)
   assert.equal(calls.at(-1)[1], payload)
+  webhookPersistenceFailure = true
+  res = response()
+  const failedPersistence = Readable.from([payload])
+  Object.assign(failedPersistence, {
+    method: 'POST',
+    headers: { 'stripe-signature': signature },
+  })
+  await rawHandler(failedPersistence, res)
+  assert.equal(res.code, 503)
+  assert.equal(res.value.error, 'Unable to record Stripe event.')
+  webhookPersistenceFailure = false
   res = response()
   const large = Readable.from([Buffer.alloc(262145)])
   Object.assign(large, {
@@ -210,31 +243,80 @@ async function main() {
   if (old === undefined) delete process.env.STRIPE_WORKER_SECRET
   else process.env.STRIPE_WORKER_SECRET = old
   // Enabling account setup cannot accidentally route an Order through the simulator.
-  let rpcCalls=0
-  const blockedClient={rpc:async()=>{rpcCalls++;throw Error('Unexpected simulator RPC')}}
-  dependencies['@/lib/server/financial-capabilities-service']={requireFinancialEnvironment:()=>{},createTrustedFinancialClient:()=>blockedClient}
-  dependencies['@/lib/supabase/server']={createMarketplaceClient:()=>blockedClient}
-  dependencies['@/lib/server/messages-environment']={messageUuid:value=>value}
-  dependencies['@/lib/server/handoff-error']={HandoffApiError:ListingApiError,handoffRpcError:()=>{}}
-  dependencies['@/lib/order-payout-error']={SellerPayoutNotReadyError:ListingApiError,sellerPayoutNotReady:()=>false}
-  dependencies['@/lib/order-financial-error']={OrderFinancialError:ListingApiError}
-  dependencies['@/lib/server/offers-service']={mapTerms:value=>value}
-  dependencies['@/lib/server/order-request-service']={mapRequest:value=>value,requireOrderRequestEnvironment:()=>{}}
-  dependencies['@/lib/server/order-snapshot-media']={signOrderSnapshotMedia:async()=>[]}
-  const previousFlag=process.env.STRIPE_PROVIDER_ENABLED
-  process.env.STRIPE_PROVIDER_ENABLED='true'
+  let rpcCalls = 0
+  const blockedClient = {
+    rpc: async () => {
+      rpcCalls++
+      throw Error('Unexpected simulator RPC')
+    },
+  }
+  dependencies['@/lib/server/financial-capabilities-service'] = {
+    requireFinancialEnvironment: () => {},
+    createTrustedFinancialClient: () => blockedClient,
+  }
+  dependencies['@/lib/supabase/server'] = {
+    createMarketplaceClient: () => blockedClient,
+  }
+  dependencies['@/lib/server/messages-environment'] = {
+    messageUuid: (value) => value,
+  }
+  dependencies['@/lib/server/handoff-error'] = {
+    HandoffApiError: ListingApiError,
+    handoffRpcError: () => {},
+  }
+  dependencies['@/lib/order-payout-error'] = {
+    SellerPayoutNotReadyError: ListingApiError,
+    sellerPayoutNotReady: () => false,
+  }
+  dependencies['@/lib/order-financial-error'] = {
+    OrderFinancialError: ListingApiError,
+  }
+  dependencies['@/lib/server/offers-service'] = { mapTerms: (value) => value }
+  dependencies['@/lib/server/order-request-service'] = {
+    mapRequest: (value) => value,
+    requireOrderRequestEnvironment: () => {},
+  }
+  dependencies['@/lib/server/order-snapshot-media'] = {
+    signOrderSnapshotMedia: async () => [],
+  }
+  const previousFlag = process.env.STRIPE_PROVIDER_ENABLED
+  process.env.STRIPE_PROVIDER_ENABLED = 'true'
   try {
-    const domain=load('lib/server/order-domain-service.ts').createOrderDomainService({})
-    await assert.rejects(()=>domain.write('order','payment',{clientActionId:'action'}),e=>e.status===503)
-    const legacy=load('lib/server/orders-service.ts').createOrdersService({})
-    await assert.rejects(()=>legacy.campusAction('order','payment',{clientActionId:'action'}),e=>e.status===503)
-    dependencies['@/lib/server/orders-service']={mapOrder:value=>value}
-    const simulate=load('lib/server/order-financial-service.ts').simulateOrderPaymentSuccess
-    await assert.rejects(()=>simulate({},'order',{}),e=>e.status===503)
-    const testState=load('pages/api/financial-capabilities/test-state.ts').default
-    const blockedResponse=response();await testState(request('test-state',{capability:'payment_method',status:'set'}),blockedResponse);assert.equal(blockedResponse.code,503)
-    assert.equal(rpcCalls,0)
-  } finally {if(previousFlag===undefined)delete process.env.STRIPE_PROVIDER_ENABLED;else process.env.STRIPE_PROVIDER_ENABLED=previousFlag}
+    const domain = load(
+      'lib/server/order-domain-service.ts'
+    ).createOrderDomainService({})
+    await assert.rejects(
+      () => domain.write('order', 'payment', { clientActionId: 'action' }),
+      (e) => e.status === 503
+    )
+    const legacy = load('lib/server/orders-service.ts').createOrdersService({})
+    await assert.rejects(
+      () =>
+        legacy.campusAction('order', 'payment', { clientActionId: 'action' }),
+      (e) => e.status === 503
+    )
+    dependencies['@/lib/server/orders-service'] = { mapOrder: (value) => value }
+    const simulate = load(
+      'lib/server/order-financial-service.ts'
+    ).simulateOrderPaymentSuccess
+    await assert.rejects(
+      () => simulate({}, 'order', {}),
+      (e) => e.status === 503
+    )
+    const testState = load(
+      'pages/api/financial-capabilities/test-state.ts'
+    ).default
+    const blockedResponse = response()
+    await testState(
+      request('test-state', { capability: 'payment_method', status: 'set' }),
+      blockedResponse
+    )
+    assert.equal(blockedResponse.code, 503)
+    assert.equal(rpcCalls, 0)
+  } finally {
+    if (previousFlag === undefined) delete process.env.STRIPE_PROVIDER_ENABLED
+    else process.env.STRIPE_PROVIDER_ENABLED = previousFlag
+  }
   console.log(
     'PASS Setup/Connect/reconcile APIs: session-derived owner, field injection, auth/CSRF, no-store, sanitized errors; raw signed body/size cap; worker authorization; all simulator paths blocked before RPC'
   )

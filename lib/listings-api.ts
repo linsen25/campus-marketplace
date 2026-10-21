@@ -79,6 +79,15 @@ export async function createListing(
     return (await repository(context)).createListing(input)
   return marketplaceRequest('/api/listings', 'POST', input)
 }
+export async function createShopListing(
+  input: CreateListingInput,
+  actionId: string,
+  context?: MarketplaceContext
+): Promise<Listing> {
+  if (typeof window === 'undefined')
+    return (await repository(context)).createShopListing(input, actionId)
+  return marketplaceRequest('/api/listings/shop', 'POST', { input, actionId })
+}
 export async function updateListing(
   id: string,
   input: UpdateListingInput,
@@ -138,14 +147,17 @@ export async function getMyListings(
 
 export async function uploadListingImage(
   id: string,
-  file: File
+  file: File,
+  slot?: number
 ): Promise<Listing> {
   const { validateListingImage } = await import(
     /* webpackChunkName: 'listing-image-validation' */ '@/lib/listing-images'
   )
   validateListingImage(file)
   const response = await fetch(
-    `/api/listing-images/${encodeURIComponent(id)}`,
+    `/api/listing-images/${encodeURIComponent(id)}${
+      slot === undefined ? '' : `?slot=${slot}`
+    }`,
     {
       method: 'POST',
       credentials: 'same-origin',

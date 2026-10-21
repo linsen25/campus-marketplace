@@ -15,6 +15,7 @@ import type { ReactNode } from 'react'
 
 import { HomeListings } from '@/components/listings/home-listings'
 import type { ListingLeaveGuard } from '@/components/listings/listing-form'
+import { useMarketplaceSession } from '@/components/listings/marketplace-session'
 import { ShopManagementTitle } from '@/components/listings/shop-management-title'
 import {
   useDesktopRouteTransition,
@@ -32,6 +33,8 @@ import {
   SidebarBody,
   SidebarLink,
 } from '@/components/velora/animated-sidebar'
+import { useOwnShopProfile } from '@/hooks/use-own-shop-profile'
+import { useProfileAvatar } from '@/hooks/use-profile-avatar'
 import { Link } from '@ui/link/link'
 
 import { AccountAnalysis } from './account-analysis'
@@ -138,15 +141,8 @@ export function AnimatedSidebarDemo() {
   const [analysisHeaderTarget, setAnalysisHeaderTarget] =
     useState<HTMLDivElement | null>(null)
   const [username, setUsername] = useState<string | null>(null)
-  const [avatarImage, setAvatarImage] = useState<string>()
-  const saveAvatar = useCallback((file: File) => {
-    setAvatarImage(URL.createObjectURL(file))
-  }, [])
-  useEffect(() => {
-    return () => {
-      if (avatarImage) URL.revokeObjectURL(avatarImage)
-    }
-  }, [avatarImage])
+  const { seller } = useMarketplaceSession()
+  const { avatarImage, saveAvatar } = useProfileAvatar(seller?.id)
   const [chartReplayToken, setChartReplayToken] = useState(0)
   const chartReplayHistory = useRef<ChartReplayHistory>({
     activity: 0,
@@ -192,6 +188,7 @@ export function AnimatedSidebarDemo() {
   const [active, setActive] = useState<Group | 'notifications' | 'settings'>(
     'profile'
   )
+  const ownShop = useOwnShopProfile(active === 'settings')
   useEffect(() => {
     if (pendingDestination === '/home') {
       arrivingFromMarket.current = true
@@ -448,6 +445,8 @@ export function AnimatedSidebarDemo() {
           {!desktop && active === 'settings' && (
             <ProfileOverview
               settings={true}
+              key={seller?.id || 'anonymous-settings'}
+              ownShop={ownShop}
               avatarImage={avatarImage}
               sessionAction={
                 <SettingsLogout onConfirm={() => logout(username)} />
@@ -615,6 +614,8 @@ export function AnimatedSidebarDemo() {
           {desktop && active === 'settings' && (
             <ProfileOverview
               settings={true}
+              key={seller?.id || 'anonymous-settings'}
+              ownShop={ownShop}
               avatarImage={avatarImage}
               sessionAction={
                 <SettingsLogout onConfirm={() => logout(username)} />

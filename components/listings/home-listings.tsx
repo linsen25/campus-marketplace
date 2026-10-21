@@ -4,7 +4,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import FluidTabs from '@/components/animata/tabs/fluid-tabs'
-import { demoShopProducts } from '@/components/shops/shop-demo-data'
+import {
+  ProductCostDialog,
+  ShopExpenses,
+} from '@/components/shops/shop-costs-manager'
+import { ShopFavorites } from '@/components/shops/shop-favorites'
 import { useContentReveal } from '@/components/ui/content-reveal'
 import { LocalTabContent } from '@/components/ui/local-tab-content'
 import { ListingSkeletonGrid } from '@/components/ui/workspace-skeletons'
@@ -24,6 +28,7 @@ import type { ListingLeaveGuard } from './listing-form'
 import { ListingSortFilter } from './listing-sort-filter'
 import styles from './listing-workspace.module.css'
 import type { MarketFilterValues } from './market-filter'
+import { useMarketplaceSession } from './marketplace-session'
 import { ResaleManagementCard } from './resale-management-card'
 import resaleStyles from './resale-management.module.css'
 import shopStyles from './shop-management.module.css'
@@ -31,7 +36,7 @@ import { WorkspaceEmpty } from './workspace-empty'
 
 const auxiliaryPages = new Map([
   ['favorites', <Favorites key="favorites" channel="resale" />],
-  ['shop-favorites', <Favorites key="shop-favorites" channel="shop" />],
+  ['shop-favorites', <ShopFavorites key="shop-favorites" />],
 ])
 
 const scopes = {
@@ -72,14 +77,21 @@ function managementEmptyMessage(
   return tab === 0 ? 'No active listings yet.' : 'No sold listings yet.'
 }
 
-/** Temporary local preview only after a successful empty Shop inventory read. */
+/** Explicit isolated demo injection only; real empty inventory stays empty. */
 function shouldShowShopDemo(
   channel: string,
   loading: boolean,
   error: string,
-  items: Listing[]
+  items: Listing[],
+  demoProducts?: Listing[]
 ) {
-  return channel === 'shop' && !loading && !error && items.length === 0
+  return Boolean(
+    demoProducts?.length &&
+      channel === 'shop' &&
+      !loading &&
+      !error &&
+      items.length === 0
+  )
 }
 
 function ProductSearch({
@@ -219,12 +231,47 @@ function ManagementEditSheet({
     </AnimatePresence>
   )
 }
-export function HomeListings({
+function OwnerExpenses({ channel, demo }: { channel: string; demo: boolean }) {
+  return channel === 'shop' && !demo ? <ShopExpenses /> : null
+}
+
+function productCostAction(
+  channel: string,
+  demo: boolean,
+  listing: Listing,
+  select: (listing: Listing) => void
+) {
+  return channel === 'shop' && !demo ? () => select(listing) : undefined
+}
+
+function OwnerProductCost({
+  listing,
+  onClose,
+}: {
+  listing: Listing | null
+  onClose: () => void
+}) {
+  return (
+    <AnimatePresence>
+      {listing && (
+        <ProductCostDialog
+          key={listing.id}
+          listing={listing}
+          onClose={onClose}
+        />
+      )}
+    </AnimatePresence>
+  )
+}
+
+function OwnerListings({
   page,
   onSelect,
   onGuardChange,
+  demoProducts,
 }: {
   page: string
+  demoProducts?: Listing[]
   onSelect: (page: string) => void
   onGuardChange: (guard: ListingLeaveGuard | null) => void
 }) {
@@ -238,6 +285,7 @@ export function HomeListings({
     condition: '',
   })
   const [edit, setEdit] = useState<Listing | null>(null)
+  const [costProduct, setCostProduct] = useState<Listing | null>(null)
   const [confirmation, setConfirmation] = useState<{
     listing: Listing
     action: 'delete' | 'sold'
@@ -357,10 +405,14 @@ export function HomeListings({
   }
   const auxiliary = auxiliaryPages.get(page)
   if (auxiliary) return auxiliary
-  const showShopDemo = shouldShowShopDemo(channel, loading, error, items)
-  const managementItems = showShopDemo
-    ? demoShopProducts.slice(0, 6).map((product) => product.listing)
-    : items
+  const showShopDemo = shouldShowShopDemo(
+    channel,
+    loading,
+    error,
+    items,
+    demoProducts
+  )
+  const managementItems = showShopDemo ? demoProducts || [] : items
   const visible = managementItems
     .filter(
       (item) =>
@@ -409,6 +461,7 @@ export function HomeListings({
         <ProductSearch value={search} onChange={setSearch} />
       )}
       <LocalTabContent tab={tab}>
+        <OwnerExpenses channel={channel} demo={showShopDemo} />
         {showShopDemo && (
           <p className={shopStyles.demoNotice} data-shop-management-demo={true}>
             Demo products - Preview only. These are sample products, not your
@@ -440,6 +493,12 @@ export function HomeListings({
               listing={listing}
               channel={channel}
               demo={showShopDemo}
+              onCost={productCostAction(
+                channel,
+                showShopDemo,
+                listing,
+                setCostProduct
+              )}
               onEdit={() => {
                 if (!showShopDemo) setEdit(listing)
               }}
@@ -448,6 +507,14 @@ export function HomeListings({
                 setError('')
                 setConfirmation({ listing, action: 'delete' })
               }}
+              onMarkSold={
+                channel === 'shop' && !showShopDemo
+                  ? () => {
+                      setError('')
+                      setConfirmation({ listing, action: 'sold' })
+                    }
+                  : undefined
+              }
             />
           ))}
         </div>
@@ -458,6 +525,10 @@ export function HomeListings({
         onClose={() => setEdit(null)}
         onSaved={saved}
         onGuardChange={onGuardChange}
+      />
+      <OwnerProductCost
+        listing={costProduct}
+        onClose={() => setCostProduct(null)}
       />
       <AnimatePresence>
         {creationOpen && (
@@ -494,4 +565,10 @@ export function HomeListings({
       </AnimatePresence>
     </section>
   )
+}
+
+/** Reset private inventory/dialogs when the authenticated owner changes. */
+export function HomeListings(props: Parameters<typeof OwnerListings>[0]) {
+  const { seller } = useMarketplaceSession()
+  return <OwnerListings key={seller?.id || 'anonymous'} {...props} />
 }

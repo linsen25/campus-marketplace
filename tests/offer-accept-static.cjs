@@ -55,9 +55,10 @@ const detail = fs.readFileSync(
   'components/home/formal-v2-order-detail.tsx',
   'utf8'
 )
-assert(!/\<OrderProgress|\<OrderCountdown|\<FormalOrderPayment/.test(detail))
-assert(detail.includes('OfferTermsSummary'))
-assert(detail.includes('OrderCancellation'))
+assert(detail.includes('<OrderProgress'))
+assert(!/<OrderCountdown|<FormalOrderPayment/.test(detail))
+assert(detail.includes('<OrderStageDetails'))
+assert(detail.includes('<OrderFlowCancellation'))
 const hook = fs.readFileSync('hooks/use-formal-offers.ts', 'utf8')
 assert(hook.includes('markAcceptSucceeded'))
 assert(hook.includes('accepted.current !== null'))

@@ -1,5 +1,5 @@
 import { AnimatePresence } from 'framer-motion'
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 import FilterInteraction from '@/components/filter-interaction'
 import profile from '@/components/home/profile.module.css'
@@ -9,7 +9,6 @@ import { shopCategories, shopIdentityError } from '@/lib/shop-presentation'
 import type { ShopIdentity } from '@/lib/shop-presentation'
 import type { ShopPreview } from '@/types/shop'
 
-import { ShopProBadge } from './shop-pro-badge'
 import { ShopPublicURL } from './shop-profile'
 import styles from './shop-surfaces.module.css'
 
@@ -25,31 +24,40 @@ function ShopEditor({
   shop,
   onSave,
   onClose,
+  live,
 }: {
   field: Field
   shop: ShopPreview
   onSave: (patch: Partial<ShopIdentity>) => Promise<void>
   onClose: () => void
+  live: boolean
 }) {
   const [value, setValue] = useState(shop[field])
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
+  const saving = useRef(false)
   const [open, setOpen] = useState(false)
   const [portal, setPortal] = useState<HTMLDivElement | null>(null)
   const titleId = useId()
   const validation = shopIdentityError({ ...shop, [field]: value })
   const save = async () => {
-    if (validation || pending) return
+    if (validation || saving.current) return
+    saving.current = true
     setPending(true)
     setError('')
     try {
       await onSave({ [field]: value.trim() })
       onClose()
-    } catch {
-      setError('Unable to save this Shop change. Please retry.')
+    } catch (reason) {
+      setError(
+        live && reason instanceof Error
+          ? reason.message
+          : 'Unable to save this Shop change. Please retry.'
+      )
       throw Error('Unable to save Shop change')
     } finally {
       setPending(false)
+      saving.current = false
     }
   }
   return (
@@ -101,7 +109,9 @@ function ShopEditor({
       )}
       <div ref={setPortal} />
       <p className={profile.caption}>
-        UI fixture editor · Changes are not saved to a real Shop.
+        {live
+          ? 'Changes are saved to your Shop profile.'
+          : 'UI fixture editor · Changes are not saved to a real Shop.'}
       </p>
       {validation && <p className={profile.error}>{validation}</p>}
       {error && (
@@ -129,18 +139,40 @@ function ShopEditor({
   )
 }
 
-/** Active editing is injected only by isolated UI fixtures until authority exists. */
+/** Private owner editing; explicit fixture injection stays separate from live data. */
 export function ShopSettings({
   shop,
   username,
   onSave,
+  status,
+  version,
+  live = false,
 }: {
   shop?: ShopPreview
   username: string | null
-  onSave?: (patch: Partial<ShopIdentity>) => Promise<void>
+  onSave?: (patch: Partial<ShopIdentity>, version?: string) => Promise<void>
+  status?: 'absent' | 'anonymous' | 'error' | 'loading' | 'ready'
+  version?: string
+  live?: boolean
 }) {
-  const [editing, setEditing] = useState<Field | null>(null)
-  const active = Boolean(shop && username && onSave)
+  const [editing, setEditing] = useState<{
+    field: Field
+    shop: ShopPreview
+    version?: string
+  } | null>(null)
+  const active = Boolean(
+    shop && onSave && (!live || status === 'ready' || status === 'error')
+  )
+  useEffect(() => {
+    if (status === 'anonymous') setEditing(null)
+  }, [status])
+  const feedback = {
+    loading: 'Loading Shop settings…',
+    anonymous: 'Log in to manage your Shop.',
+    error: 'Unable to load Shop settings. Reopen Settings to retry.',
+    ready: '',
+    absent: 'Your account does not have a Shop yet.',
+  }[status || 'absent']
   return (
     <section
       className={`${profile.panel} ${profile.settings} ${styles.area}`}
@@ -150,7 +182,6 @@ export function ShopSettings({
     >
       <header className={profile.panelHeader}>
         <h3>Shop</h3>
-        <ShopProBadge />
       </header>
       {(Object.keys(labels) as Field[]).map((field) => (
         <div key={field} className={profile.accountRow}>
@@ -168,7 +199,9 @@ export function ShopSettings({
             <StatefulButton
               className={styles.action}
               aria-label={`Change ${labels[field].toLowerCase()}`}
-              onClick={() => setEditing(field)}
+              onClick={() => {
+                if (shop) setEditing({ field, shop, version })
+              }}
             >
               Change
             </StatefulButton>
@@ -184,14 +217,17 @@ export function ShopSettings({
           {active && <p className={profile.caption}>Based on your username</p>}
         </div>
       </div>
-      {!active && <p className={styles.inactive}>Available with Shop Pro</p>}
+      {(!active || status === 'error') && (
+        <p className={styles.inactive}>{feedback}</p>
+      )}
       <AnimatePresence>
         {editing && shop && onSave && active && (
           <ShopEditor
-            key={editing}
-            field={editing}
-            shop={shop}
-            onSave={onSave}
+            key={editing.field}
+            field={editing.field}
+            shop={editing.shop}
+            live={live}
+            onSave={(patch) => onSave(patch, editing.version)}
             onClose={() => setEditing(null)}
           />
         )}

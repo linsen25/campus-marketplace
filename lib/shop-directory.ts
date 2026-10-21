@@ -13,6 +13,7 @@ export const SHOP_CATEGORIES = [
 ] as const
 export type ShopCategory = typeof SHOP_CATEGORIES[number]
 export const shopDirectorySorts = [
+  { value: 'newest', label: 'Newest shops' },
   { value: 'recommended', label: 'Recommended' },
   { value: 'highest-rated', label: 'Highest Rated' },
   { value: 'best-selling', label: 'Best Selling' },
@@ -22,7 +23,7 @@ export type ShopDirectoryQuery = {
   categories: ShopCategory[]
 }
 export const defaultShopDirectoryQuery: ShopDirectoryQuery = {
-  sort: 'recommended',
+  sort: 'newest',
   categories: [],
 }
 
@@ -49,7 +50,7 @@ export function browseShops<
         (category) => category === shopDirectoryCategory(shop.category)
       )
   )
-  if (query.sort === 'recommended') return filtered
+  if (query.sort === 'recommended' || query.sort === 'newest') return filtered
   return filtered.sort((a, b) => {
     const rating =
       Number(b.figures?.rating ?? 0) - Number(a.figures?.rating ?? 0)

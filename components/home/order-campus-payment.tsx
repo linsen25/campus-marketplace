@@ -5,6 +5,7 @@ import { CardAction } from '@/components/listings/card-actions'
 import { useFinancialCapabilities } from '@/hooks/use-financial-capabilities'
 import { offerAmount } from '@/lib/offer-amount'
 import { mutateCampusOrder } from '@/lib/orders-api'
+import { getStripeClient } from '@/lib/stripe-client'
 import type { FormalOrder } from '@/types/order'
 
 import detail from './order-detail-preview.module.css'
@@ -90,7 +91,32 @@ export function OrderCampusPayment({
         command.current.key
       )
       onUpdated(result.order, result.serverTime)
-      command.current = undefined
+      if (result.paymentConfirmation?.nextAction === 'confirm') {
+        const stripe = await getStripeClient()
+        if (!stripe)
+          throw new Error('Secure payment confirmation is unavailable.')
+        const confirmation = await stripe.confirmCardPayment(
+          result.paymentConfirmation.clientSecret
+        )
+        if (confirmation.error)
+          throw new Error(
+            confirmation.error.type === 'card_error'
+              ? 'Your card could not be confirmed. Review it and retry.'
+              : 'Payment confirmation is uncertain. Refresh before retrying.'
+          )
+        if (
+          !confirmation.paymentIntent ||
+          confirmation.paymentIntent.id !==
+            result.paymentConfirmation.paymentIntentId
+        )
+          throw new Error(
+            'Payment confirmation is uncertain. Refresh before retrying.'
+          )
+        // Stripe.js is not Order payment evidence. B22 must reconcile the
+        // bound PaymentIntent before the server can display Paid or Failed.
+      } else if (!result.paymentConfirmation) {
+        command.current = undefined
+      }
       await onRefresh()
       setBlocked(false)
     } catch (e) {
@@ -190,9 +216,7 @@ export function OrderCampusPayment({
             </>
           ) : (
             <CardAction variant="green" disabled={blocked} onClick={pay}>
-              {order.paymentStatus === 'failed'
-                ? 'Retry test payment'
-                : 'Pay (staging test)'}
+              {order.paymentStatus === 'failed' ? 'Retry payment' : 'Pay by UU'}
             </CardAction>
           )}
         </>

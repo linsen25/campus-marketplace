@@ -1,5 +1,7 @@
 # UI V1 handoff ? Usual & Unusual
 
+> Business audit follow-up, 2026-10-18: see [BUSINESS-V1-LOGIC-AUDIT.md](BUSINESS-V1-LOGIC-AUDIT.md) and [BUSINESS-V1-TASK-BREAKDOWN.md](BUSINESS-V1-TASK-BREAKDOWN.md) for persistence/authority status. Avatar Save is local-only; Settings Change password is disabled; Shop owner GET/PATCH does not provision/activate Shops. Shop Favorites currently persists product Listing favorites, not Shop entities or a Master–Detail Shop system. Prior UI acceptance work corrected the Resale-only desktop grid to five columns and synchronized the Shop return-position test with existing scrolling; that test now passes all five widths/both motion modes. These are preceding UI changes, not business implementation in this audit. The earlier dated evidence below is retained.
+
 Date: 2026-10-18. Authority: current LOCAL WORKTREE, not only HEAD or GitHub. This is a conditional UI handoff, not a production-readiness certification. Existing unrelated working-tree changes were preserved. No commit/push or production access.
 
 ## Scope and actual changes

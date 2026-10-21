@@ -5,6 +5,7 @@ import { useAuthModal } from '@/components/auth/auth-modal'
 import { ExpandableCard } from '@/components/velora/expandable-card'
 import { favoriteState, setFavorite } from '@/lib/favorites-api'
 import { listingConditions } from '@/lib/listing-metadata'
+import { recordMarketplaceView } from '@/lib/record-marketplace-view'
 import type { Listing } from '@/types/listing'
 import { formatListingPrice } from '@/utils/format-listing-price'
 
@@ -92,9 +93,15 @@ export function PublishedListingCard({
     overlayListener.current?.(active)
   }, [])
   const messaging = useMessageSeller(listing.id)
-  const offerContext = useListingOfferContext(listing.id, listing.seller.id)
+  const shopReadOnly = listing.listingChannel === 'shop'
+  const canInteract = !own && !shopReadOnly
+  const offerContext = useListingOfferContext(
+    listing.id,
+    listing.seller.id,
+    !shopReadOnly
+  )
   useEffect(() => {
-    if (!seller || own || initiallyFavorited) return undefined
+    if (!seller || own || initiallyFavorited || shopReadOnly) return undefined
     let active = true
     const version = favoriteVersion.current
     favoriteState(listing.id)
@@ -109,7 +116,7 @@ export function PublishedListingCard({
     return () => {
       active = false
     }
-  }, [listing.id, seller, own, initiallyFavorited])
+  }, [listing.id, seller, own, initiallyFavorited, shopReadOnly])
   async function toggle(liked: boolean) {
     if (saving.current) return
     if (!seller) {
@@ -135,7 +142,7 @@ export function PublishedListingCard({
     }
   }
   const favoriteControl =
-    !own && listing.status === 'available' ? (
+    canInteract && listing.status === 'available' ? (
       <ListingFavoriteControl
         liked={favorite}
         disabled={busy}
@@ -184,7 +191,7 @@ export function PublishedListingCard({
           .join(' ')}
         overlayStyle={overlayStyle}
         primaryAction={
-          !own ? (
+          canInteract ? (
             <>
               <ShiningButton
                 variant="green"
@@ -213,7 +220,14 @@ export function PublishedListingCard({
           ) : undefined
         }
         onOverlayActiveChange={overlayChanged}
-        onIntentionalOpen={own ? undefined : onIntentionalOpen}
+        onIntentionalOpen={
+          own
+            ? undefined
+            : () => {
+                if (seller) recordMarketplaceView(listing.id)
+                onIntentionalOpen?.()
+              }
+        }
       >
         <PublishedListingDetails listing={listing} />
         {messaging.error && <p role="alert">{messaging.error}</p>}

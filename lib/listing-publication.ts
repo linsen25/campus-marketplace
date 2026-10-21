@@ -3,6 +3,7 @@ import { validateListingInput } from '@/lib/listing-validation'
 import {
   abandonListing,
   createListing,
+  createShopListing,
   finalizeListing,
   getCreationListing,
   uploadListingImage,
@@ -18,6 +19,15 @@ const defaultOperations = {
 }
 
 type PublicationOperations = typeof defaultOperations
+/** Same upload/finalize pipeline; only the trusted creation command differs. */
+export function shopPublicationOperations(
+  actionId: string
+): PublicationOperations {
+  return {
+    ...defaultOperations,
+    createListing: (input) => createShopListing(input, actionId),
+  }
+}
 export type PublicationResult =
   | {
       state: 'unknown' | 'unpublished'
@@ -70,8 +80,27 @@ export async function reconcileListingPublication(
 /** Retry/finalize the SAME listing; this function never creates or abandons one. */
 export async function continueListingPublication(
   listingId: string,
-  operations: PublicationOperations = defaultOperations
+  operations: PublicationOperations = defaultOperations,
+  files: File[] | undefined = undefined
 ): Promise<PublicationResult> {
+  if (files) {
+    const state = await reconcileListingPublication(listingId, operations)
+    if (state.state !== 'unpublished') return state
+    try {
+      const listing = await operations.getCreationListing(listingId)
+      if (
+        listing.id !== listingId ||
+        listing.publishedAt !== null ||
+        listing.expectedImageCount !== files.length
+      )
+        return reconcileListingPublication(listingId, operations)
+      files.forEach(validateListingImage)
+      for (let index = 0; index < files.length; index += 1)
+        await operations.uploadListingImage(listingId, files[index], index + 1)
+    } catch (error) {
+      return reconcileListingPublication(listingId, operations, error)
+    }
+  }
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       const listing = await operations.finalizeListing(listingId)
@@ -99,23 +128,12 @@ export async function createPublishedListing(
   })
   files.forEach(validateListingImage)
   const listing = await operations.createListing(validated)
+  if (listing.publishedAt) return published(listing)
   try {
-    for (const file of files)
-      await operations.uploadListingImage(listing.id, file)
+    for (let index = 0; index < files.length; index += 1)
+      await operations.uploadListingImage(listing.id, files[index], index + 1)
   } catch (error) {
-    const state = await reconcileListingPublication(
-      listing.id,
-      operations,
-      error
-    )
-    if (state.state !== 'unpublished') return state
-    // Confirmed unpublished only; the server also uses an atomic NULL predicate.
-    try {
-      await operations.abandonListing(listing.id)
-    } catch {
-      /* Best-effort cleanup; no caller state is mutated. */
-    }
-    throw error
+    return reconcileListingPublication(listing.id, operations, error)
   }
   return continueListingPublication(listing.id, operations)
 }

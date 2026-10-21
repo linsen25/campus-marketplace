@@ -33,7 +33,7 @@ mock(
 )
 fs.writeFileSync(
   path.join(root, 'entry.tsx'),
-  `import 'tailwindcss/src/css/preflight.css';import '@/components/animata/button/shining-button.css';import React,{useState}from'react';import{createRoot}from'react-dom/client';import{LazyMotion,domAnimation}from'framer-motion';import{HomeListings}from'@/components/listings/home-listings';import{SectionHeader}from'@/components/home/section-header';import{ShopManagementTitle}from'@/components/listings/shop-management-title';const root=createRoot(document.getElementById('root'));const guard=()=>{};function App({initial}){const[page,setPage]=useState(initial);return <LazyMotion features={domAnimation}><main style={{padding:24}}><SectionHeader title={initial==='my-shop'?<ShopManagementTitle/>:'Manage Resale'} /><HomeListings page={page} onSelect={setPage} onGuardChange={guard}/></main></LazyMotion>};let v=0;window.renderCase=(initial)=>root.render(<App key={++v} initial={initial}/>);`
+  `import 'tailwindcss/src/css/preflight.css';import '@/components/animata/button/shining-button.css';import React,{useState}from'react';import{createRoot}from'react-dom/client';import{LazyMotion,domAnimation}from'framer-motion';import{HomeListings}from'@/components/listings/home-listings';import{demoShopProducts}from'@/components/shops/shop-demo-data';import{SectionHeader}from'@/components/home/section-header';import{ShopManagementTitle}from'@/components/listings/shop-management-title';const root=createRoot(document.getElementById('root'));const guard=()=>{};function App({initial}){const[page,setPage]=useState(initial);return <LazyMotion features={domAnimation}><main style={{padding:24}}><SectionHeader title={initial==='my-shop'?<ShopManagementTitle/>:'Manage Resale'} /><HomeListings demoProducts={window.explicitDemo?demoShopProducts.slice(0,6).map(p=>p.listing):undefined} page={page} onSelect={setPage} onGuardChange={guard}/></main></LazyMotion>};let v=0;window.renderCase=(initial)=>root.render(<App key={++v} initial={initial}/>);`
 )
 fs.writeFileSync(
   path.join(root, 'index.html'),
@@ -279,14 +279,12 @@ async function run() {
       await p.waitForTimeout(300)
       await add.click()
       const create = p.getByRole('dialog', { name: 'Add Product', exact: true })
-      await create
-        .getByText("Your Shop isn't active yet.", { exact: true })
-        .waitFor()
+      await create.locator('[data-multi-step-form="0"]').waitFor()
       assert.equal(
         await create.getAttribute('data-listing-creation-sheet'),
         'shop'
       )
-      assert.equal(await create.locator('input[type=file]').count(), 0)
+      assert.equal(await create.locator('input[type=file]').count(), 1)
       await create
         .getByRole('button', { name: 'Close Add Product', exact: true })
         .click()
@@ -373,6 +371,7 @@ async function run() {
       )
       assert.equal(await resale.getByRole('searchbox').count(), 0)
       await p.evaluate(() => {
+        window.explicitDemo = true
         window.items = window.items.filter(
           (item) => item.listingChannel === 'resale'
         )
@@ -385,7 +384,7 @@ async function run() {
       await demo.locator('[data-shop-management-demo]').waitFor()
       assert(
         (await p.evaluate(() => window.reads)).includes('shop'),
-        'normal route reads Shop authority before preview fallback'
+        'explicit fixture reads Shop authority before isolated demo projection'
       )
       assert.equal(await demo.locator('[data-shop-management-card]').count(), 6)
       for (const button of await demo
@@ -422,9 +421,7 @@ async function run() {
         })
         .click()
       const locked = p.getByRole('dialog', { name: 'Add Product', exact: true })
-      await locked
-        .getByText("Your Shop isn't active yet.", { exact: true })
-        .waitFor()
+      await locked.locator('[data-multi-step-form="0"]').waitFor()
       await locked
         .getByRole('button', { name: 'Close Add Product', exact: true })
         .click()
@@ -459,7 +456,7 @@ async function run() {
       console.log(
         'PASS Manage Products',
         width,
-        'shared geometry; green identity; shop-only search/filter; fail-closed Add; Shop UPDATE modal; Resale isolation'
+        'shared geometry; green identity; shop-only search/filter; shared Add wizard; Shop UPDATE modal; Resale isolation'
       )
       await p.close()
     }

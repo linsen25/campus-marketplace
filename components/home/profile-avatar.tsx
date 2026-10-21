@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import actionStyles from '@/components/animata/button/action-button-sizing.module.css'
 import { ActionRow } from '@/components/ui/action-row'
@@ -8,6 +8,7 @@ import { DynamicAction } from '@/components/ui/dynamic-action'
 import { FadingDialog } from '@/components/ui/fading-dialog'
 import { UserAvatar } from '@/components/ui/user-avatar'
 import { FileDrop } from '@/components/velora/file-drop'
+import { profileAvatarRules } from '@/lib/profile-avatar'
 
 import styles from './profile.module.css'
 
@@ -34,12 +35,20 @@ export function AvatarDialog({
 }: {
   username: string
   onClose: () => void
-  onSave: (file: File) => void
+  onSave: (file: File) => Promise<void> | void
 }) {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string>()
   const [error, setError] = useState('')
   const [ready, setReady] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
   useEffect(() => {
     if (!file) return undefined
     const url = URL.createObjectURL(file)
@@ -67,13 +76,19 @@ export function AvatarDialog({
         <FileDrop
           inputId="profile-avatar-file"
           inputLabel="Avatar image"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           multiple={false}
           showFiles={false}
           files={file ? [file] : []}
           onFiles={(files) => {
-            if (files.length !== 1 || !files[0].type.startsWith('image/')) {
-              setError('Select one image only.')
+            if (saving) return
+            if (
+              files.length !== 1 ||
+              !profileAvatarRules.mimeTypes.includes(files[0].type) ||
+              files[0].size <= 0 ||
+              files[0].size > profileAvatarRules.maxBytes
+            ) {
+              setError('Choose a JPEG, PNG, or WebP image up to 3 MB.')
               return
             }
             setError('')
@@ -110,11 +125,24 @@ export function AvatarDialog({
         <DynamicAction
           variant="green"
           footer={true}
-          disabled={!file || !ready}
-          onClick={() => {
+          disabled={!file || !ready || saving}
+          onClick={async () => {
             if (!file) return
-            onSave(file)
-            onClose()
+            setSaving(true)
+            setError('')
+            try {
+              await onSave(file)
+              if (mounted.current) onClose()
+            } catch (reason) {
+              if (mounted.current)
+                setError(
+                  reason instanceof Error
+                    ? reason.message
+                    : 'Unable to save your avatar. Please retry.'
+                )
+            } finally {
+              if (mounted.current) setSaving(false)
+            }
           }}
         >
           Save

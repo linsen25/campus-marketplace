@@ -445,13 +445,12 @@ async function main() {
   sequence.length = 0
   failUpload = true
   failCleanup = true
-  await assert.rejects(
-    createPublishedListing(input, files, ops),
-    /upload failure/
-  )
+  const uploadPending = await createPublishedListing(input, files, ops)
+  assert.equal(uploadPending.state, 'unpublished')
+  assert.equal(uploadPending.listingId, ids[3])
   assert.deepEqual(
     sequence.map((s) => s[0]),
-    ['create', 'upload', 'reconcile', 'abandon']
+    ['create', 'upload', 'reconcile']
   )
   assert.equal(files.length, 2)
   assert.equal(input.title, 'Item')
@@ -587,6 +586,7 @@ async function main() {
   await removeImageReservation(cleanupClient, {
     id: 'image',
     path: 'owner/listing/image',
+    storage_bucket: 'listing-images',
   })
   assert.deepEqual(cleanup, ['metadata', 'Storage API'])
   cleanup.length = 0
@@ -595,6 +595,7 @@ async function main() {
     removeImageReservation(cleanupClient, {
       id: 'image',
       path: 'owner/listing/image',
+      storage_bucket: 'listing-images',
     })
   )
   assert.deepEqual(cleanup, ['metadata'])
@@ -605,6 +606,7 @@ async function main() {
     removeImageReservation(cleanupClient, {
       id: 'image',
       path: 'owner/listing/image',
+      storage_bucket: 'listing-images',
     }),
     /orphan object/
   )

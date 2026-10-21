@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 import { ListingApiError } from '@/lib/listing-validation'
+import { profileAvatarProjection } from '@/lib/profile-avatar'
 import { requireMarketplaceUser } from '@/lib/server/marketplace-auth'
 import { createMarketplaceClient } from '@/lib/supabase/server'
 
@@ -19,7 +20,7 @@ export default async function handler(
     const user = await requireMarketplaceUser(client)
     const { data, error } = await client
       .from('profiles')
-      .select('username')
+      .select('username,avatar_path')
       .eq('id', user.id)
       .single()
     if (error || !data)
@@ -31,6 +32,7 @@ export default async function handler(
       createdAt: user.created_at,
       // No read-only canonical next-change timestamp RPC exists yet.
       nextUsernameChangeAt: null,
+      ...profileAvatarProjection(user.id, data.avatar_path ?? null),
     })
   } catch (error) {
     return res

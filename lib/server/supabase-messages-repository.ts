@@ -130,7 +130,7 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
     const { data, error } = await client
       .from('listings')
       .select(
-        '*,profiles!listings_seller_id_fkey(id,display_name),listing_images(path,slot,ready)'
+        '*,profiles!listings_seller_id_fkey(id,display_name),listing_images(id,path,slot,ready,storage_bucket)'
       )
       .eq('id', id)
       .not('published_at', 'is', null)

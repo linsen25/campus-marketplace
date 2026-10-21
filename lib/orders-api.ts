@@ -1,6 +1,15 @@
 import { marketplaceRequest } from '@/lib/listings-api'
 import type { FormalOrder, FormalOrders } from '@/types/order'
 
+export type PaymentConfirmation = {
+  orderId: string
+  attemptId: string
+  paymentIntentId: string
+} & (
+  | { clientSecret: string; nextAction: 'confirm' }
+  | { nextAction: 'reconcile' }
+)
+
 export const getOrders = (workspace: 'purchases' | 'sales') =>
   marketplaceRequest<FormalOrders>(`/api/orders?workspace=${workspace}`, 'GET')
 
@@ -37,7 +46,11 @@ export const mutateCampusOrder = (
   action: 'inspection' | 'payment',
   clientActionId: string
 ) =>
-  marketplaceRequest<{ order: FormalOrder; serverTime: string }>(
+  marketplaceRequest<{
+    order: FormalOrder
+    serverTime: string
+    paymentConfirmation?: PaymentConfirmation
+  }>(
     `/api/orders/${encodeURIComponent(id)}/${action}/${
       action === 'inspection' ? 'confirm' : 'start'
     }`,

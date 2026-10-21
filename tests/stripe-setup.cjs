@@ -13,7 +13,8 @@ class ListingApiError extends Error {
 }
 const bindings = new Map(),
   operations = new Map(),
-  events = []
+  events = [],
+  orderEvents = []
 const customers = new Map(),
   setups = new Map(),
   methods = new Map(),
@@ -144,6 +145,12 @@ async function dbRpc(name, p) {
         e.status = p.p_action === 'done' ? 'done' : 'pending'
         e.retry = p.p_action === 'retry'
       }
+      return { data: {} }
+    }
+    if (name === 'marketplace_order_payment_reconciliation') {
+      assert.equal(p.p_action, 'enqueue')
+      if (!orderEvents.some((event) => event.id === p.p_value.id))
+        orderEvents.push({ ...p.p_value })
       return { data: {} }
     }
     throw Error('Unexpected RPC')
@@ -462,6 +469,37 @@ async function main() {
       Buffer.from(e.payload + ' '),
       e.header,
       'platform'
+    )
+  )
+  const payment = await event('payment_intent.succeeded', {
+    id: 'pi_OrderSynthetic',
+    object: 'payment_intent',
+    metadata: { uu_kind: 'marketplace_order' },
+  })
+  await service.receiveStripeEvent(
+    Buffer.from(payment.payload),
+    payment.header,
+    'platform'
+  )
+  assert.equal(orderEvents.length, 1)
+  assert.equal(orderEvents[0].providerReference, 'pi_OrderSynthetic')
+  assert.equal(orderEvents[0].scope, platform)
+  await event('payment_intent.succeeded', {
+    id: 'pi_MembershipSynthetic',
+    object: 'payment_intent',
+    metadata: { uu_kind: 'shop_membership' },
+  })
+  assert.equal(orderEvents.length, 1)
+  await assert.rejects(() =>
+    event(
+      'payment_intent.succeeded',
+      {
+        id: 'pi_Connected',
+        object: 'payment_intent',
+        metadata: { uu_kind: 'marketplace_order' },
+      },
+      'platform',
+      { account: 'acct_Connected' }
     )
   )
   const live = JSON.stringify({

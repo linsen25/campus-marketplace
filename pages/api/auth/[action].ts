@@ -4,6 +4,7 @@ import { passwordRules, validSignupPassword } from '@/lib/auth-password'
 import { usernameTakenMessage } from '@/lib/auth-username'
 import { ListingApiError, listingInputRecord } from '@/lib/listing-validation'
 import { isWesternEmail } from '@/lib/marketplace-auth'
+import { changeAuthenticatedPassword } from '@/lib/server/auth-change-password'
 import {
   confirmUsername,
   requireUsername,
@@ -22,13 +23,22 @@ import {
 } from '@/lib/server/pending-signup'
 import { createMarketplaceClient } from '@/lib/supabase/server'
 
-function authFailure(res: NextApiResponse, error: unknown) {
+function authFailure(
+  res: NextApiResponse,
+  error: unknown,
+  passwordChange = false
+) {
   const status = error instanceof ListingApiError ? error.status : 500
   const message =
     error instanceof ListingApiError
       ? error.message
       : 'Authentication is temporarily unavailable.'
-  return res.status(status).json({ error: message })
+  return res.status(status).json({
+    error: message,
+    ...(passwordChange && error instanceof ListingApiError
+      ? { passwordUpdated: false, otherSessionsRevoked: false }
+      : {}),
+  })
 }
 
 function signupDiagnosticMessage(message: string, secrets: unknown[]) {
@@ -107,6 +117,7 @@ export default async function handler(
       'verify-signup',
       'recover',
       'reset-password',
+      'change-password',
       'username-availability',
     ].includes(String(action))
   )
@@ -135,6 +146,10 @@ export default async function handler(
         .json({ available: await usernameAvailable(client, candidate) })
     }
     requireSameOriginWrite(req)
+    if (action === 'change-password')
+      return res
+        .status(200)
+        .json(await changeAuthenticatedPassword({ req, res }, req.body))
     if (action === 'pending-signup-state')
       return res
         .status(200)
@@ -399,7 +414,7 @@ export default async function handler(
     }
     return res.status(200).json(null)
   } catch (error) {
-    return authFailure(res, error)
+    return authFailure(res, error, action === 'change-password')
   }
 }
 

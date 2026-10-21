@@ -123,7 +123,10 @@ async function run() {
         false
       )
       await page.evaluate(() => window.showExternalAgreement())
-      await page
+      const agreementCard = page.locator('[data-agreement-status="open"]')
+      await agreementCard.waitFor({ state: 'visible' })
+      assert.equal(await agreementCard.count(), 1)
+      await agreementCard
         .getByText('Paid outside UU \u00b7 No UU payment protection', {
           exact: true,
         })

@@ -1,3 +1,4 @@
+import { listingImageUrl } from '@/lib/listing-media'
 import type { Listing } from '@/types/listing'
 
 export type ListingRow = {
@@ -24,7 +25,13 @@ export type ListingRow = {
   published_at: string | null
   expected_image_count: number
   profiles: { id: string; display_name: string }
-  listing_images: Array<{ path: string; slot: number; ready: boolean }>
+  listing_images: Array<{
+    id?: string
+    path: string
+    slot: number
+    ready: boolean
+    storage_bucket?: string
+  }>
 }
 
 export function mapListing(
@@ -57,7 +64,7 @@ export function mapListing(
     photoUrls: row.listing_images
       .filter((image) => image.ready)
       .sort((a, b) => a.slot - b.slot)
-      .map((image) => publicImageUrl(image.path)),
+      .map((image) => listingImageUrl(image, publicImageUrl)),
     seller: { id: row.profiles.id, displayName: row.profiles.display_name },
     createdAt: row.created_at,
     updatedAt: row.updated_at,

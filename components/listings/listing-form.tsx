@@ -11,7 +11,6 @@ import { AccessibleAction } from '@/components/accessible-action'
 import WorkButton from '@/components/animata/button/work-button'
 import MultiStepForm from '@/components/multi-step-form'
 import wizard from '@/components/multi-step-form.module.css'
-import { ShopListingWorkspace } from '@/components/shops/shop-listing-workspace'
 import GlideSelect from '@/components/ui/GlideSelect'
 import { ActionRow } from '@/components/ui/action-row'
 import { DynamicAction } from '@/components/ui/dynamic-action'
@@ -33,6 +32,7 @@ import { validateListingImage } from '@/lib/listing-images'
 import { listingCategories, listingConditions } from '@/lib/listing-metadata'
 import {
   createPublishedListing,
+  shopPublicationOperations,
   continueListingPublication,
   reconcileListingPublication,
 } from '@/lib/listing-publication'
@@ -116,7 +116,7 @@ export function ListingForm({
     heading:
       channel === 'resale' ? createLabel : listingWizardModes.shop.heading,
   }
-  const shopBlocked = !listing && channel === 'shop'
+  const shopCreationId = useRef<string | null>(null)
   const [stepError, setStepError] = useState('')
   form.register('title', {
     validate: (value) =>
@@ -306,18 +306,15 @@ export function ListingForm({
     seller: listing?.seller ?? seller ?? { id: '', displayName: 'You' },
   }
   const complete = (saved: Listing) => {
+    shopCreationId.current = null
+    setPending(null)
     onGuardChange?.(null)
     window.dispatchEvent(new Event('marketplace-listings-changed'))
     if (onSaved) onSaved(saved)
     else window.location.assign(context.destination)
   }
   async function save() {
-    if (shopBlocked) {
-      setError(
-        'Shop product publication is not available without authoritative eligibility.'
-      )
-      return false
-    }
+    if (previewOnly) return false
     if (submitting.current || disabled || !input || created) return false
     submitting.current = true
     setBusy(true)
@@ -342,10 +339,25 @@ export function ListingForm({
         } else complete(saved)
         return true
       }
-      const result = pending
-        ? await continueListingPublication(pending.listingId)
-        : await createPublishedListing(input, files)
+      if (channel === 'shop' && !shopCreationId.current)
+        shopCreationId.current = crypto.randomUUID()
+      let result: PublicationResult
+      if (channel === 'shop')
+        result = await createPublishedListing(
+          input,
+          files,
+          shopPublicationOperations(shopCreationId.current!)
+        )
+      else if (pending)
+        result = await continueListingPublication(
+          pending.listingId,
+          undefined,
+          files
+        )
+      else result = await createPublishedListing(input, files)
       if (result.state === 'published') {
+        shopCreationId.current = null
+        setPending(null)
         if (presentation === 'sheet') complete(result.listing)
         else setCreated(result.listing)
         return true
@@ -355,6 +367,18 @@ export function ListingForm({
         `${result.error} Continue publication to retry this same listing.`
       )
     } catch (reason) {
+      if (!listing && channel === 'shop' && shopCreationId.current) {
+        const state = await reconcileListingPublication(
+          shopCreationId.current,
+          undefined,
+          reason
+        )
+        if (state.state === 'published') {
+          complete(state.listing)
+          return true
+        }
+        setPending(state)
+      }
       setError(message(reason))
     } finally {
       submitting.current = false
@@ -364,6 +388,7 @@ export function ListingForm({
   }
   async function discard() {
     if (!leave || submitting.current) return
+    let publicationCompleted = false
     submitting.current = true
     setBusy(true)
     setError('')
@@ -371,21 +396,33 @@ export function ListingForm({
       if (pending) {
         const state = await reconcileListingPublication(pending.listingId)
         if (state.state === 'published') {
+          publicationCompleted = true
           complete(state.listing)
           return
         }
-        if (state.state === 'unknown')
-          throw new Error(
-            'Publication is still unknown. Continue publication before leaving.'
-          )
         await abandonListing(pending.listingId)
       }
-      leaveAfterExit.current = leave
+    } catch (reason) {
+      // No form persistence: Discard leaves even if remote cleanup is unconfirmed.
+      // eslint-disable-next-line no-console -- Run/listing identifier only, no fields or files.
+      console.warn('Listing draft cleanup unconfirmed after Discard', {
+        listingId: pending?.listingId,
+      })
+    } finally {
+      if (!listing) {
+        form.reset(initial)
+        setFiles([])
+        setUrls([])
+        setPending(null)
+        shopCreationId.current = null
+        setError('')
+        setPhotoError('')
+        setCreated(null)
+        setPhotoIndex(0)
+      }
+      if (!publicationCompleted) leaveAfterExit.current = leave
       setLeave(null)
       onGuardChange?.(null)
-    } catch (reason) {
-      setError(message(reason))
-    } finally {
       submitting.current = false
       setBusy(false)
     }
@@ -880,7 +917,7 @@ export function ListingForm({
     <StatefulButton
       key={createGeneration}
       className={wizard.publish}
-      disabled={disabled || Boolean(created) || shopBlocked}
+      disabled={disabled || Boolean(created) || previewOnly}
       resetAfter={2000}
       successText={listing ? 'Saved' : 'Published'}
       errorText="Retry"
@@ -951,7 +988,6 @@ export function ListingForm({
       onContinue={(step) => validateStep(wizardStepIndices[step])}
     />
   )
-  if (shopBlocked && !previewOnly) return <ShopListingWorkspace create={true} />
   if (sessionLoading)
     return (
       <div
