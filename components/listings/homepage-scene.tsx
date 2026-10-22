@@ -1,12 +1,11 @@
 import { useTransform, useViewportScroll } from 'framer-motion'
 import { motion } from 'motion/react'
 import dynamic from 'next/dynamic'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useAuthModal } from '@/components/auth/auth-modal'
 import { HeroParallax } from '@/components/ui/hero-parallax'
-import type { HeroParallaxProduct } from '@/components/ui/hero-parallax'
-import type { Listing } from '@/types/listing'
+import { heroParallaxDemoProducts } from '@/lib/fixtures/hero-parallax-demo-products'
 
 import { HomepageFooter } from './homepage-footer'
 import { HomepageListingDemo } from './homepage-listing-demo'
@@ -42,30 +41,7 @@ const TearTicket = dynamic(
     import(/* webpackChunkName: 'tear-ticket' */ '@/components/ui/TearTicket'),
   { ssr: false }
 )
-export function HomepageScene({
-  listings,
-  demoProducts,
-}: {
-  listings: Listing[]
-  demoProducts?: HeroParallaxProduct[]
-}) {
-  const products = useMemo(() => {
-    if (demoProducts) return demoProducts
-    const real = listings.flatMap((listing) =>
-      listing.photoUrls.slice(0, 1).map((image) => ({
-        title: listing.title,
-        image,
-        href: `/listings/${encodeURIComponent(listing.id)}`,
-      }))
-    )
-    // Keep all three rows populated even while the real catalog is small.
-    return real.length
-      ? Array.from(
-          { length: Math.max(3, real.length) },
-          (_, i) => real[i % real.length]
-        )
-      : []
-  }, [listings, demoProducts])
+export function HomepageScene() {
   const { openAuth } = useAuthModal()
   const join = () => openAuth({ mode: 'signup', intent: 'join' })
   const [ticketReset, setTicketReset] = useState(0)
@@ -134,7 +110,7 @@ export function HomepageScene({
         />
       </div>
       <HeroParallax
-        products={products}
+        products={heroParallaxDemoProducts}
         drift={mobile ? 120 : 480}
         className={styles.parallax}
         copyClassName={styles.heroCopy}
@@ -210,9 +186,6 @@ export function HomepageScene({
           }
         />
       </HeroParallax>
-      {products.length === 0 && (
-        <p className={styles.empty}>No listing photos are available yet.</p>
-      )}
       <HomepageListingDemo />
       <HomepageShopDemo />
       <HomepageTransactionDemo />

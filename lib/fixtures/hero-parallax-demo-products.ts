@@ -1,7 +1,6 @@
 import { TEST_PICTURES } from './test-pictures'
 
-// Visual development only; imported by the homepage SSR function in development.
-// Reuse local sample photographs. These are layout samples, not real listings.
+// Fixed Welcome-page visuals. These are layout samples, not real listings.
 const items = [
   ['Laptop and study essentials', TEST_PICTURES.laptop],
   ['24-inch monitor', TEST_PICTURES.monitor],
