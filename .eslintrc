@@ -1,13 +1,6 @@
 {
-  "extends": [
-    "algolia",
-    "algolia/react",
-    "algolia/typescript",
-    "next",
-    "next/core-web-vitals",
-    "prettier"
-  ],
-  "plugins": ["unused-imports"],
+  "extends": ["next", "next/core-web-vitals", "prettier"],
+  "plugins": ["@typescript-eslint", "prettier", "unused-imports"],
   "parserOptions": {
     "project": "./tsconfig.json"
   },
@@ -33,7 +26,43 @@
         "ignorePropertyModificationsFor": ["accu"]
       }
     ],
-    "@typescript-eslint/naming-convention": "error"
+    "@typescript-eslint/naming-convention": [
+      "error",
+      {
+        "selector": "default",
+        "format": ["camelCase"],
+        "leadingUnderscore": "allow",
+        "trailingUnderscore": "allow"
+      },
+      {
+        "selector": "variable",
+        "format": ["camelCase", "PascalCase", "UPPER_CASE"],
+        "leadingUnderscore": "allow"
+      },
+      {
+        "selector": "function",
+        "format": ["camelCase", "PascalCase"]
+      },
+      {
+        "selector": "parameter",
+        "format": ["camelCase", "PascalCase"],
+        "leadingUnderscore": "allow"
+      },
+      {
+        "selector": "property",
+        "format": ["camelCase", "PascalCase", "UPPER_CASE", "snake_case"],
+        "leadingUnderscore": "allowSingleOrDouble"
+      },
+      {
+        "selector": "property",
+        "modifiers": ["requiresQuotes"],
+        "format": null
+      },
+      {
+        "selector": "typeLike",
+        "format": ["PascalCase"]
+      }
+    ]
   },
   "overrides": [
     {

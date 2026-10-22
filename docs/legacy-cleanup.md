@@ -78,31 +78,24 @@ The three deleted stylesheets only target removed retail tag/refinement/load-mor
 - `components/refinements-panel/refinements-panel.css`
 - `components/@instantsearch/widgets/load-more/load-more.css`
 
-## Algolia and retained infrastructure
+## Algolia removal
 
-Marketplace result queries use Supabase through the existing listing boundary.
-The active search uses @algolia/autocomplete-js and its theme, with the existing
-animated-placeholder/clear/focus/search-button plugins. These were preserved byte
-for byte, along with all marketplace components. AutocompleteBasic and popular
-retail suggestions were removed because the marketplace adapter does not import them.
+Marketplace result queries and suggestions continue to use the existing Supabase
+listing boundary and `lib/market-search.ts`. The unused Algolia client, Insights,
+InstantSearch state, legacy Autocomplete component chain, CLI, environment
+placeholders, styles, typings and direct npm dependencies have been removed.
 
-AppLayout still invokes useSearchClient/useSearchInsights, reads configAtom and
-creates searchClientAtom. utils/env still validates InstantSearch variables.
-Consequently algoliasearch, search-insights, configuration and env placeholders
-remain. The CLI, dev pane, unused recent-search/voice adapters, legacy typings,
-virtual-state-results and some hooks remain because retained source refers to them.
-A follow-up runtime/CLI decision is needed before removing this interconnected code.
-Global CSS still imports InstantSearch package styles; they were not removed as a
-side effect of deleting components. The shared .aa-ItemContentTitle stylesheet was
-retained because it uses an Autocomplete-wide selector.
+AppLayout retains its Jotai, motion and responsive providers without injecting an
+Algolia client. The page loader now depends only on the existing route transition
+state. Current Market search, filtering, sorting and pagination code was not changed.
 
 ## Other retention and scope
 
 ProductImage is used by ListingCard. UI primitives, Banner/demo kit routes, motion,
-Jotai providers, responsive utilities, PWA artwork and public assets remain. No
-packages, lockfiles, env/config files, or image/icon assets were modified or removed.
-The original README is retained as historical template reference with a notice
-pointing to the current setup. No visual redesign or marketplace implementation
-edits were performed during cleanup. Existing working-tree changes predated it.
+Jotai providers, responsive utilities, PWA artwork and public assets remain. The
+package manifest, lockfile and environment sample changed only to remove the retired
+Algolia integration. Image and icon assets were not modified or removed. The original
+README remains as a historical template reference. No visual redesign or marketplace
+business logic edits were performed during cleanup.
 
 Validation and limitations are recorded in PROJECT_STATUS.md.

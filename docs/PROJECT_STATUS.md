@@ -1283,14 +1283,11 @@ cleanup. Existing uncommitted work was treated as the baseline and preserved.
 Algolia status:
 
 - Marketplace listing results come through getListings/Supabase, not an Algolia index.
-- Active marketplace search reuses Algolia Autocomplete UI/theme and original
-  animation/search-button plugins. These remain required.
-- AppLayout still initializes the Algolia client and search-insights, and utils/env
-  still requires the InstantSearch variables. This retained shared setup means
-  Algolia packages and environment placeholders are not yet safe to remove wholesale.
-- CLI/config/dev tooling, some retained hooks/types, and global CSS still reference
-  retail infrastructure/packages. They are explicitly deferred rather than severed
-  speculatively. No dependencies, environment variables, or config were removed.
+- Active marketplace search uses the current DiscoverButton/MarketLayout interaction
+  and `lib/market-search.ts`; it has no Algolia runtime or network dependency.
+- AppLayout no longer initializes an Algolia client or Insights. InstantSearch
+  environment placeholders, CLI/config tooling, hooks/types, styles and direct npm
+  dependencies were removed in the 2026-10-21 follow-up cleanup.
 - No image/icon assets were deleted. Shared artwork and assets reachable through
   dynamic/CLI configuration remain pending a dedicated asset audit. Current manifest
   and document metadata already use Campus Marketplace; no icon redesign was needed.
@@ -3071,3 +3068,16 @@ them as the current product contract. Local sorting/unread checks now live in
 [conversation-state helper tests](../tests/conversation-state.cjs) and
 [Messages unread browser checks](../tests/messages-unread.browser.cjs). These verify
 demo state only; they do not establish backend persistence or realtime behavior.
+
+## 2026-10-21 Algolia legacy removal
+
+The unused Algolia online-search integration has been removed from the application
+runtime and build. AppLayout keeps the Jotai, motion and responsive providers, while
+the Loader keeps its existing route-loading threshold and animation behavior without
+the retired InstantSearch stalled state. The obsolete client/Insights hooks,
+Autocomplete and InstantSearch component chains, CLI, styles, typings, environment
+placeholders, ESLint preset and direct npm dependencies were deleted.
+
+The active UU Market path remains `MarketLayout` / `DiscoverButton` with
+`lib/market-search.ts`, `lib/listing-filters.ts` and Supabase-backed listing data.
+No Stripe, Supabase migration, payment, refund or other Business V1 logic changed.

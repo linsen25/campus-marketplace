@@ -1,10 +1,8 @@
 import { useAtom } from 'jotai'
-import { useAtomValue } from 'jotai/utils'
 import { useRouter } from 'next/router'
 import { useEffect, useRef } from 'react'
 import { Pane as Tweakpane } from 'tweakpane'
 
-import { configAtom } from '@/config/config'
 import { debugLayerEnabledAtom } from '@dev/debug-layer/debug-layer'
 import { gridsHiddenAtom } from '@dev/grids/grids'
 
@@ -13,11 +11,6 @@ export function Pane() {
   const router = useRouter()
 
   const [gridsHidden, setGridsHidden] = useAtom(gridsHiddenAtom)
-  const { refinementsLayoutAtom } = useAtomValue(configAtom)
-
-  const [refinementsLayout, setRefinementsLayout] = useAtom(
-    refinementsLayoutAtom
-  )
   const [debugLayerEnabled, setDebugLayerEnabled] = useAtom(
     debugLayerEnabledAtom
   )
@@ -44,20 +37,6 @@ export function Pane() {
       })
       .on('change', (ev) => {
         router.push(ev.value)
-      })
-
-    // Refinements
-    const refinementsFolder = pane.addFolder({ title: 'Refinements' })
-    refinementsFolder
-      .addInput({ refinementsLayout }, 'refinementsLayout', {
-        label: 'Layout',
-        options: {
-          bar: 'bar',
-          panel: 'panel',
-        },
-      })
-      .on('change', (ev) => {
-        setRefinementsLayout(ev.value)
       })
 
     // Grids

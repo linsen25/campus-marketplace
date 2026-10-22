@@ -1,10 +1,8 @@
 import classNames from 'classnames'
 import { atom } from 'jotai'
-import { useAtomValue, useUpdateAtom } from 'jotai/utils'
+import { useUpdateAtom } from 'jotai/utils'
 import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
-
-import { isSearchStalledAtom } from '@instantsearch/widgets/virtual-state-results/virtual-state-results'
 
 export type LoaderProps = {
   layout?: 'bar' | 'overlay'
@@ -67,8 +65,7 @@ export function Loader({ layout = 'overlay' }: LoaderProps) {
     }
   }, [router?.events, setLoaderFinished])
 
-  const isSearchStalled = useAtomValue(isSearchStalledAtom)
-  const isLoading = Boolean(isSearchStalled || isRouteLoading)
+  const isLoading = isRouteLoading
   useEffect(() => {
     if (routePending || isLoading || !router.isReady) {
       setLoaderFinished(false)

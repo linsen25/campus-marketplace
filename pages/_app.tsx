@@ -38,7 +38,6 @@ import '@/components/ui/TextType.css'
 import '@/components/ui/Lanyard.css'
 import '@/components/ui/TearTicket.css'
 import '@/components/animata/button/shining-button.css'
-import '@/components/animata/button/algolia-white-button.css'
 
 function MarketplaceApp({ Component, pageProps, router }: AppProps) {
   const isCatalogPage = useMemo(
