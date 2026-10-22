@@ -245,22 +245,88 @@ async function main() {
     await page.route(/https:\/\/fonts\.(googleapis|gstatic)\.com\//, (r) =>
       r.abort()
     )
-    await page.route('**/api/auth/session', (r) =>
-      r.fulfill({ json: { seller: null } })
-    )
-    await page.goto(base + '/auth/sign-in', { waitUntil: 'domcontentloaded' })
+    let signedIn = false
+    await page.route('**/api/auth/**', (route) => {
+      const action = new URL(route.request().url()).pathname.split('/').pop()
+      if (action === 'sign-in') signedIn = true
+      return route.fulfill({
+        json:
+          action === 'session'
+            ? {
+                seller: signedIn
+                  ? {
+                      id: '11111111-1111-4111-8111-111111111111',
+                      displayName: 'Protected route member',
+                    }
+                  : null,
+              }
+            : null,
+      })
+    })
+    for (const protectedPath of [
+      '/profile/listings',
+      '/listings/11111111-1111-4111-8111-111111111111/edit',
+    ]) {
+      await page.goto(base + protectedPath, { waitUntil: 'domcontentloaded' })
+      await page.waitForURL((url) => url.pathname === '/listings')
+      const protectedAuth = page.locator('dialog[aria-labelledby="auth-title"]')
+      await protectedAuth.waitFor()
+      assert.equal(
+        await page
+          .getByRole('heading', { name: 'Western email required.' })
+          .count(),
+        0
+      )
+      await protectedAuth
+        .getByRole('button', { name: 'Close authentication', exact: true })
+        .click()
+      await protectedAuth.waitFor({ state: 'hidden' })
+      assert.equal(new URL(page.url()).pathname, '/listings')
+      assert.equal(new URL(page.url()).search, '')
+      await page.waitForTimeout(250)
+      assert.equal(await page.getByRole('dialog').count(), 0)
+    }
+    await page.goto(base + '/auth/sign-in?next=https://evil.test', {
+      waitUntil: 'domcontentloaded',
+    })
     await page.waitForFunction(() => window.next?.router?.isReady)
+    await page.waitForURL((url) => url.pathname === '/listings')
+    assert.equal(
+      await page
+        .getByRole('heading', { name: 'Western email required.' })
+        .count(),
+      0
+    )
     await page
       .getByRole('button', { name: 'Close authentication', exact: true })
       .click()
     await page.getByRole('dialog').waitFor({ state: 'hidden' })
-    await page
-      .getByRole('navigation', { name: 'Main navigation' })
-      .getByRole('link', { name: 'Home', exact: true })
+    assert.equal(new URL(page.url()).pathname, '/listings')
+    assert.equal(new URL(page.url()).search, '')
+    await page.waitForTimeout(250)
+    assert.equal(await page.getByRole('dialog').count(), 0)
+    await page.goto(base + '/listings/new', {
+      waitUntil: 'domcontentloaded',
+    })
+    const auth = page.locator('dialog[aria-labelledby="auth-title"]')
+    await auth.waitFor()
+    await auth
+      .getByLabel('Western email', { exact: true })
+      .fill('protected-route@uwo.ca')
+    await auth.getByLabel('Password', { exact: true }).fill('Password1!')
+    await auth
+      .getByRole('button', { name: 'Log in', exact: true })
+      .last()
       .click()
-    await page.locator('[data-slot="home-sidebar-demo"]').waitFor()
-    assert.equal(new URL(page.url()).pathname, '/home')
-    console.log('PASS shared Auth header -> Home normal link navigation')
+    await page.waitForURL(
+      (url) =>
+        url.pathname === '/home' &&
+        url.searchParams.get('section') === 'create-listing',
+      { timeout: 60000 }
+    )
+    console.log(
+      'PASS all three protected routes and the legacy Auth bookmark safely forward to the public Market modal; dismissal stays on the clean public URL without reopening; successful create intent resumes at /home?section=create-listing'
+    )
   } finally {
     await browser.close()
   }

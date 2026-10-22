@@ -1,5 +1,6 @@
 import type { GetServerSideProps } from 'next'
 
+import { marketplaceAuthEntry } from '@/lib/marketplace-auth'
 import { getMarketplaceSession } from '@/lib/server/marketplace-auth'
 /** Legacy entry resolves to the single management-owned creation sheet. */
 export default function NewListingPage() {
@@ -10,7 +11,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   if (!seller)
     return {
       redirect: {
-        destination: '/auth/sign-in?next=/listings/new',
+        destination: marketplaceAuthEntry('/listings/new'),
         permanent: false,
       },
     }

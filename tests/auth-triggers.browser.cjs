@@ -3,6 +3,9 @@
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
 const assert = require('node:assert/strict')
 const base = process.env.BASE_URL || 'http://localhost:3100'
+const widths = process.env.TEST_WIDTHS
+  ? process.env.TEST_WIDTHS.split(',').map(Number)
+  : [390, 768, 834, 1280, 1536]
 ;(async () => {
   const browser = await chromium.launch({
     executablePath: process.env.BROWSER_EXECUTABLE,
@@ -10,7 +13,7 @@ const base = process.env.BASE_URL || 'http://localhost:3100'
     args: ['--enable-unsafe-swiftshader'],
   })
   try {
-    for (const width of [390, 768, 834, 1280, 1536]) {
+    for (const width of widths) {
       const page = await browser.newPage({
         viewport: { width, height: 900 },
         serviceWorkers: 'block',
@@ -84,7 +87,7 @@ const base = process.env.BASE_URL || 'http://localhost:3100'
         width < 1200
           ? page.getByRole('button', { name: 'Tear ticket to log in' })
           : page.getByRole('button', {
-              name: 'Join Campus Marketplace',
+              name: 'Join Usual & Unusual',
               exact: true,
             })
       await join.waitFor()
@@ -162,7 +165,10 @@ const base = process.env.BASE_URL || 'http://localhost:3100'
       await auth.locator('#auth-title').scrollIntoViewIfNeeded()
       assert(await auth.locator('#auth-title').isVisible())
       await auth
-        .getByRole('button', { name: /^Create account/ })
+        .getByRole('button', { name: /^Hold to create account/ })
+        .waitFor({ state: 'visible' })
+      await auth
+        .getByRole('button', { name: /^Hold to create account/ })
         .scrollIntoViewIfNeeded()
       await auth.locator('section > p').scrollIntoViewIfNeeded()
       const dimensions = await auth.evaluate((e) => ({

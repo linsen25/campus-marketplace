@@ -22,6 +22,10 @@ import { useMarketplaceSession } from '@/components/listings/marketplace-session
 import { AuthSignupCard } from '@/components/velora/auth-signup-card'
 import styles from '@/components/velora/auth-signup-card.module.css'
 import { waitForMarketReady } from '@/hooks/use-market-ready'
+import {
+  marketplaceAuthDestination,
+  safeMarketplaceNext,
+} from '@/lib/marketplace-auth'
 import { getScrollLockPadding } from '@/utils/browser'
 
 type AuthMode = 'signin' | 'signup'
@@ -38,6 +42,42 @@ const AuthContext = createContext<{
 }>({
   openAuth: () => {},
 })
+
+function AuthRouteEntry() {
+  const router = useRouter()
+  const { openAuth } = useAuthModal()
+  const handled = useRef<string | null>(null)
+  const auth = Array.isArray(router.query.auth)
+    ? router.query.auth[0]
+    : router.query.auth
+  useEffect(() => {
+    if (!router.isReady || auth !== 'signin') {
+      if (auth !== 'signin') handled.current = null
+      return
+    }
+    const next = safeMarketplaceNext(router.query.next)
+    const key = `${router.pathname}:${next}`
+    if (handled.current === key) return
+    handled.current = key
+    openAuth({ mode: 'signin', intent: 'navigate', next })
+    const query = { ...router.query }
+    delete query.auth
+    delete query.next
+    router
+      .replace({ pathname: router.pathname, query }, undefined, {
+        shallow: true,
+      })
+      .catch(() => {})
+  }, [
+    auth,
+    openAuth,
+    router,
+    router.isReady,
+    router.pathname,
+    router.query.next,
+  ])
+  return null
+}
 
 function AuthDialog({
   initialMode,
@@ -190,7 +230,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
     const next: AuthIntent = {
       mode: request.mode || 'signin',
       intent: request.intent || 'navigate',
-      next: request.next || '/listings',
+      next: safeMarketplaceNext(request.next || '/listings'),
       onDismiss: request.onDismiss,
     }
     pendingIntent.current = next
@@ -215,7 +255,8 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
       if (pendingIntent.current !== request) return
       pendingIntent.current = null
       setIntent(null)
-      if (next.intent !== 'contact-seller') await router.push(next.next)
+      if (next.intent !== 'contact-seller')
+        await router.push(marketplaceAuthDestination(next.next))
       return
     }
     await new Promise<void>((resolve) => {
@@ -223,7 +264,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
       setIntent(null)
       pendingIntent.current = null
       const startedAt = performance.now()
-      const preparation = prepareMarket(next)
+      const preparation = prepareDestination(next)
       setSuccess({
         request: next,
         username: undefined,
@@ -235,7 +276,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
       })
     })
   }
-  function prepareMarket(request: AuthIntent): Promise<void> {
+  function prepareDestination(request: AuthIntent): Promise<void> {
     const controller = new AbortController()
     let timer: ReturnType<typeof setTimeout>
     const timeout = new Promise<never>((_, reject) => {
@@ -255,10 +296,12 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
           ? { ...current, username: seller.displayName, usernameReady: true }
           : current
       )
-      const navigated = await router.push('/listings')
-      if (!navigated || window.location.pathname !== '/listings')
+      const target = marketplaceAuthDestination(request.next)
+      const pathname = target.split('?')[0]
+      const navigated = await router.push(target)
+      if (!navigated || window.location.pathname !== pathname)
         throw new Error('Navigation cancelled.')
-      await waitForMarketReady(controller.signal)
+      if (target === '/listings') await waitForMarketReady(controller.signal)
     })()
     const preparation = Promise.race([destination, timeout]).finally(() => {
       clearTimeout(timer)
@@ -273,6 +316,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
   }
   return (
     <AuthContext.Provider value={{ openAuth }}>
+      <AuthRouteEntry />
       {children}
       {!success && (
         <AnimatePresence
@@ -303,7 +347,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
           onRetry={() =>
             setSuccess({
               ...success,
-              preparation: prepareMarket(success.request),
+              preparation: prepareDestination(success.request),
               startedAt: performance.now(),
               attempt: success.attempt + 1,
             })

@@ -9,6 +9,7 @@ import {
   getMyListings,
   markListingSold,
 } from '@/lib/listings-api'
+import { marketplaceAuthEntry } from '@/lib/marketplace-auth'
 import { getMarketplaceSession } from '@/lib/server/marketplace-auth'
 import type { Listing } from '@/types/listing'
 import { Button } from '@ui/button/button'
@@ -164,7 +165,7 @@ export const getServerSideProps: GetServerSideProps<
   if (!seller)
     return {
       redirect: {
-        destination: '/auth/sign-in?next=/profile/listings',
+        destination: marketplaceAuthEntry('/profile/listings'),
         permanent: false,
       },
     }

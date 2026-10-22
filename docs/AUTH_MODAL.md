@@ -10,9 +10,10 @@ decorative backgrounds were removed.
 
 `components/auth/auth-modal.tsx` provides one shared card. Welcome Log in,
 unauthenticated demo Contact seller and protected listing-management entries
-use it. Existing protected
-route redirects to `/auth/sign-in?next=...` open the same card through a compatibility
-entry. Welcome opens above the existing page. Native `dialog.showModal()` supplies
+use it. Protected routes keep their server-side session checks, then send anonymous
+users to `/listings?auth=signin&next=...`; the shared provider consumes and removes
+those query parameters before opening the card. Welcome opens above the existing
+page. Native `dialog.showModal()` supplies
 top-layer modal semantics and background interaction blocking; a local Tab loop
 keeps focus inside the card. Escape, backdrop dismissal and focus restoration are
 supported. Scroll locks restore previous values, including when an expanded
@@ -27,12 +28,13 @@ URL: without an explicit `href` or handler, it opens the shared Sign in modal.
 X, Escape and backdrop dismissal only clear the modal/pending intent and restore
 focus and scroll locks; they never navigate or use browser history.
 
-`/auth/sign-in` remains an isolated compatibility entry for direct links and
-server redirects from `/listings/new`, `/listings/[id]/edit` and
-`/profile/listings`. Its minimal underlying page is visible if that route is
-visited directly and its modal is dismissed. Normal Welcome/listing auth triggers
-must not navigate there. Password recovery uses code entry inside the shared
-modal and does not require this compatibility route.
+`/auth/sign-in` remains only as a server-side compatibility redirect for old
+bookmarks. It validates `next` against the marketplace route allowlist, forwards
+to the public Market modal entry and renders no independent login UI. Dismissal
+removes the entry parameters and stays on Market without reopening. Successful
+authentication restores allowed destinations; `/listings/new` resolves to the
+existing `/home?section=create-listing` creation workspace. Password recovery uses
+code entry inside the shared modal and does not require this compatibility route.
 
 `tests/auth-dismissal.browser.cjs` records before/open/after URLs and verifies
 X/Escape/backdrop dismissal and original context/focus restoration at

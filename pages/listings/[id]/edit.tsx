@@ -5,6 +5,7 @@ import { Container } from '@/components/container/container'
 import { BackButton } from '@/components/listings/back-button'
 import { ListingForm } from '@/components/listings/listing-form'
 import { getListing, getMyListings } from '@/lib/listings-api'
+import { marketplaceAuthEntry } from '@/lib/marketplace-auth'
 import { getMarketplaceSession } from '@/lib/server/marketplace-auth'
 import type { Listing } from '@/types/listing'
 
@@ -39,9 +40,7 @@ export const getServerSideProps: GetServerSideProps<
   if (!seller)
     return {
       redirect: {
-        destination: `/auth/sign-in?next=${encodeURIComponent(
-          `/listings/${params?.id}/edit`
-        )}`,
+        destination: marketplaceAuthEntry(`/listings/${params?.id}/edit`),
         permanent: false,
       },
     }

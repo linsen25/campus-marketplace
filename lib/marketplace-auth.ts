@@ -10,3 +10,16 @@ export function safeMarketplaceNext(value: unknown): string {
     ? value
     : '/home'
 }
+
+export function marketplaceAuthEntry(next: unknown): string {
+  return `/listings?auth=signin&next=${encodeURIComponent(
+    safeMarketplaceNext(next)
+  )}`
+}
+
+export function marketplaceAuthDestination(next: unknown): string {
+  const destination = safeMarketplaceNext(next)
+  return destination === '/listings/new'
+    ? '/home?section=create-listing'
+    : destination
+}

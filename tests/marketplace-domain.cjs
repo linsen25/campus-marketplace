@@ -22,7 +22,12 @@ function load(file) {
   cache.set(full, module.exports)
   return module.exports
 }
-const { isWesternEmail, safeMarketplaceNext } = load('lib/marketplace-auth.ts')
+const {
+  isWesternEmail,
+  marketplaceAuthDestination,
+  marketplaceAuthEntry,
+  safeMarketplaceNext,
+} = load('lib/marketplace-auth.ts')
 for (const value of ['student@uwo.ca', 'STUDENT@UWO.CA', ' student@uwo.ca '])
   assert(isWesternEmail(value))
 for (const value of [
@@ -172,6 +177,22 @@ for (const route of [
   '/home?next=https://evil.test',
 ])
   assert.equal(safeMarketplaceNext(route), '/home')
+assert.equal(
+  marketplaceAuthEntry('/listings/new'),
+  '/listings?auth=signin&next=%2Flistings%2Fnew'
+)
+assert.equal(
+  marketplaceAuthEntry('https://evil.test'),
+  '/listings?auth=signin&next=%2Fhome'
+)
+assert.equal(
+  marketplaceAuthDestination('/listings/new'),
+  '/home?section=create-listing'
+)
+assert.equal(
+  marketplaceAuthDestination('/profile/listings'),
+  '/profile/listings'
+)
 console.log(
   'PASS: Home and listing return paths allowed; retired personal, unknown and unsafe paths fall back to Home.'
 )
