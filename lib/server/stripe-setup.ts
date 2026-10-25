@@ -9,7 +9,10 @@ import {
   createTrustedFinancialClient,
   projectFinancialCapabilities,
 } from '@/lib/server/financial-capabilities-service'
-import { stripeConfiguration } from '@/lib/server/stripe-environment'
+import {
+  stripeConfiguration,
+  stripeRequested,
+} from '@/lib/server/stripe-environment'
 import {
   enqueueStripeOrderPaymentEvent,
   orderPaymentEventTypes,
@@ -18,6 +21,18 @@ import {
   enqueueStripeOrderRefundEvent,
   orderRefundEventTypes,
 } from '@/lib/server/stripe-order-refund'
+import {
+  enqueueStripeOrderTransferEvent,
+  orderTransferEventTypes,
+} from '@/lib/server/stripe-order-transfer'
+import {
+  connectedPayoutEventTypes,
+  enqueueStripeConnectedPayoutEvent,
+} from '@/lib/server/stripe-connected-payout'
+import {
+  enqueueStripeOrderDisputeEvent,
+  orderDisputeEventTypes,
+} from '@/lib/server/stripe-order-dispute'
 import { stripeClient, stripeRuntime } from '@/lib/server/stripe-runtime'
 import { sellerOnboardingProfile } from '@/lib/server/stripe-seller-profile'
 
@@ -482,6 +497,46 @@ type OrderRefundNotice = {
   eventType: typeof orderRefundEventTypes[number]
   refundId: string
 }
+type OrderTransferNotice = {
+  eventId: string
+  eventType: typeof orderTransferEventTypes[number]
+  transferId: string
+}
+type ConnectedPayoutNotice = {
+  connectedAccount: string
+  eventId: string
+  eventType: typeof connectedPayoutEventTypes[number]
+  payoutId: string
+}
+type OrderDisputeNotice = {
+  disputeId: string
+  eventId: string
+  eventType: typeof orderDisputeEventTypes[number]
+}
+
+function connectedFinancialNotice(event: Stripe.Event, type: string) {
+  if (
+    !connectedPayoutEventTypes.includes(
+      type as typeof connectedPayoutEventTypes[number]
+    )
+  )
+    return null
+  if (!event.account?.startsWith('acct_'))
+    throw new Error('Missing connected Payout account scope')
+  const object = event.data.object as unknown as {
+    id: string
+    object?: string
+  }
+  if (object.object !== 'payout' || !object.id?.startsWith('po_'))
+    throw new Error('Invalid connected Payout event')
+  const payout: ConnectedPayoutNotice = {
+    connectedAccount: event.account,
+    eventId: event.id,
+    eventType: type as typeof connectedPayoutEventTypes[number],
+    payoutId: object.id,
+  }
+  return payout
+}
 
 function platformFinancialNotice(event: Stripe.Event, type: string) {
   if (event.account) throw new Error('Unexpected connected financial event')
@@ -489,6 +544,35 @@ function platformFinancialNotice(event: Stripe.Event, type: string) {
     id: string
     object?: string
     metadata?: Record<string, string>
+  }
+  if (
+    orderDisputeEventTypes.includes(
+      type as typeof orderDisputeEventTypes[number]
+    )
+  ) {
+    if (object.object !== 'dispute' || !object.id?.startsWith('du_'))
+      throw new Error('Invalid Stripe Dispute event')
+    const orderDispute: OrderDisputeNotice = {
+      disputeId: object.id,
+      eventId: event.id,
+      eventType: type as typeof orderDisputeEventTypes[number],
+    }
+    return { orderDispute }
+  }
+  if (
+    orderTransferEventTypes.includes(
+      type as typeof orderTransferEventTypes[number]
+    )
+  ) {
+    if (object.object !== 'transfer' || !object.id?.startsWith('tr_'))
+      throw new Error('Invalid transfer event')
+    if (object.metadata?.uu_kind !== 'marketplace_order_transfer') return null
+    const orderTransfer: OrderTransferNotice = {
+      eventId: event.id,
+      eventType: type as typeof orderTransferEventTypes[number],
+      transferId: object.id,
+    }
+    return { orderTransfer }
   }
   if (
     orderRefundEventTypes.includes(type as typeof orderRefundEventTypes[number])
@@ -534,6 +618,9 @@ export async function receiveStripeEvent(
   let scope = config.platform
   let orderPayment: OrderPaymentNotice | undefined
   let orderRefund: OrderRefundNotice | undefined
+  let orderTransfer: OrderTransferNotice | undefined
+  let connectedPayout: ConnectedPayoutNotice | undefined
+  let orderDispute: OrderDisputeNotice | undefined
   try {
     if (channel === 'account') {
       const event = stripe.parseEventNotification(
@@ -567,13 +654,21 @@ export async function receiveStripeEvent(
           channel === 'platform' ? platformSetupEvents : connectedSetupEvents
         ).includes(type)
       ) {
-        if (channel !== 'platform') return
+        if (channel === 'connected') {
+          const notice = connectedFinancialNotice(event, type)
+          if (!notice) return
+          connectedPayout = notice
+        } else if (channel !== 'platform') return
         // Signed metadata is only a purpose router. Consumers retrieve the
         // current provider object and verify every immutable financial binding.
-        const notice = platformFinancialNotice(event, type)
-        if (!notice) return
-        orderPayment = notice.orderPayment
-        orderRefund = notice.orderRefund
+        if (channel === 'platform') {
+          const notice = platformFinancialNotice(event, type)
+          if (!notice) return
+          orderPayment = notice.orderPayment
+          orderRefund = notice.orderRefund
+          orderTransfer = notice.orderTransfer
+          orderDispute = notice.orderDispute
+        }
       }
       const object = event.data.object as unknown as {
         id: string
@@ -605,6 +700,18 @@ export async function receiveStripeEvent(
     await enqueueStripeOrderRefundEvent(orderRefund)
     return
   }
+  if (orderTransfer) {
+    await enqueueStripeOrderTransferEvent(orderTransfer)
+    return
+  }
+  if (connectedPayout) {
+    await enqueueStripeConnectedPayoutEvent(connectedPayout)
+    return
+  }
+  if (orderDispute) {
+    await enqueueStripeOrderDisputeEvent(orderDispute)
+    return
+  }
   await rpc('marketplace_stripe_events', {
     p_action: 'enqueue',
     p_platform: config.platform,
@@ -612,6 +719,7 @@ export async function receiveStripeEvent(
   })
 }
 export async function drainStripeEvents(limit = 20) {
+  if (!stripeRequested()) return { enabled: false, processed: 0 }
   const config = stripeConfiguration()
   let processed = 0
   for (let n = 0; n < Math.min(limit, 20); n++) {
@@ -643,5 +751,5 @@ export async function drainStripeEvents(limit = 20) {
       })
     }
   }
-  return { processed }
+  return { enabled: true, processed }
 }

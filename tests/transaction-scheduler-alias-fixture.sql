@@ -25,6 +25,10 @@ create table marketplace_private.delivery_checkouts(
   order_id uuid, checkout_started_at timestamptz,
   checkout_claim_deadline_at timestamptz, payment_deadline_at timestamptz
 );
+create table marketplace_private.order_protection(
+  order_id uuid, expires_at timestamptz, completed_at timestamptz
+);
+create table marketplace_private.protection_cases(order_id uuid);
 create table marketplace_private.notification_events(
   id uuid primary key default gen_random_uuid(), source_key text unique,
   event_type text, created_at timestamptz, destination jsonb

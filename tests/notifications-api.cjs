@@ -12,6 +12,12 @@ let environment = true,
   rows = [],
   lastResponse
 const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+const categoryOf = (item) => {
+  if (item.event_type === 'new_message') return 'message'
+  if (item.event_type === 'price_drop') return 'listing'
+  if (item.event_type === 'notification_test') return 'system'
+  return 'order'
+}
 function load(file) {
   const full = path.resolve(file)
   if (cache.has(full)) return cache.get(full)
@@ -47,14 +53,32 @@ function load(file) {
             return {
               async rpc(name, params) {
                 calls.push({ name, params })
+                if (name !== 'marketplace_notifications_filtered')
+                  return {
+                    data: { ok: true, unreadCount: rows.length },
+                    error: rpcError,
+                  }
+                const filtered = rows.filter(
+                  (n) =>
+                    (!params.p_before_id || n.id < params.p_before_id) &&
+                    (!params.p_category ||
+                      categoryOf(n) === params.p_category) &&
+                    (!params.p_status ||
+                      (params.p_status === 'read'
+                        ? Boolean(n.read_at)
+                        : !n.read_at))
+                )
+                const notifications = filtered.slice(0, 50)
+                const last = notifications.at(-1)
                 return {
                   data: {
-                    notifications: rows
-                      .filter(
-                        (n) => !params.p_before_id || n.id < params.p_before_id
-                      )
-                      .slice(0, 50),
-                    unreadCount: rows.length,
+                    notifications,
+                    unreadCount: rows.filter((n) => !n.read_at).length,
+                    hasMore: filtered.length > 50,
+                    nextCursor:
+                      filtered.length > 50
+                        ? { before: last.created_at, beforeId: last.id }
+                        : null,
                   },
                   error: rpcError,
                 }
@@ -103,8 +127,13 @@ async function request(method, query = {}, body = {}) {
 async function main() {
   assert.equal(await request('GET'), 200)
   assert.deepEqual(calls[0], {
-    name: 'marketplace_notifications',
-    params: { p_before: null, p_before_id: null },
+    name: 'marketplace_notifications_filtered',
+    params: {
+      p_before: null,
+      p_before_id: null,
+      p_category: null,
+      p_status: null,
+    },
   })
   assert.equal(await request('GET', { userId: id }), 400)
   assert.equal(calls.length, 0)
@@ -198,7 +227,7 @@ async function main() {
   }))
   assert.equal(await request('GET', { category: 'order' }), 200)
   assert.equal(lastResponse.body.notifications.length, 50)
-  assert.equal(calls.length, 3)
+  assert.equal(calls.length, 1)
   assert.equal(lastResponse.body.unreadCount, 155)
   const first = lastResponse.body.notifications.map((n) => n.id)
   let cursor = lastResponse.body.nextCursor
@@ -211,7 +240,7 @@ async function main() {
   assert.equal(lastResponse.body.hasMore, false)
   assert.equal(await request('GET', { category: 'listing' }), 200)
   assert.equal(lastResponse.body.notifications.length, 0)
-  assert.equal(calls.length, 4)
+  assert.equal(calls.length, 1)
   assert.equal(lastResponse.body.hasMore, false)
   assert.equal(await request('GET', { category: 'system' }), 200)
   assert.equal(lastResponse.body.notifications.length, 4)
@@ -302,7 +331,7 @@ async function main() {
     'PASS status/category combinations and continuation, batch bounds/deduplication, exact RPC contract, authentication and CSRF'
   )
   console.log(
-    'PASS full-feed category filtering: scans nonmatching pages, stable equal-time UUID cursors, no skipped/duplicate matches, global unread, empty categories, invalid input; zero network'
+    'PASS database-filtered pagination: one bounded RPC, stable equal-time UUID cursors, no skipped/duplicate matches, global unread, empty categories, invalid input; zero network'
   )
   console.log(
     'PASS Notifications API: exact staging guard, session, no-store, CSRF, identity rejection, cursor, safe errors; no network'

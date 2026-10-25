@@ -78,6 +78,7 @@ Deno.serve(async (request) => {
     }
     return response.json()
   }
+  let auditToken: string | null = null
   try {
     const token = request.headers
       .get('Authorization')
@@ -95,14 +96,62 @@ Deno.serve(async (request) => {
     const body = raw.trim() ? JSON.parse(raw) : {}
     if (!validBody(body))
       return reply(400, { error: 'No client-selected email content allowed.' })
+    const audit = await rpc('marketplace_worker_observability', {
+      p_action: 'start',
+      p_worker: 'notification_email',
+      p_platform: null,
+      p_token: null,
+      p_value: { enabled: true, stage: 'delivery' },
+    })
+    if (!audit?.acquired)
+      return reply(200, { runtimeStatus: 'busy', claimed: 0, sent: 0 })
+    auditToken = audit.token
+    if (!auditToken) throw new WorkerDatabaseError('database_worker_audit')
+    const finishAudit = (
+      status: string,
+      values: {
+        claimed?: number
+        sent?: number
+        failed?: number
+        errors?: string[]
+      }
+    ) =>
+      rpc('marketplace_worker_observability', {
+        p_action: 'finish',
+        p_worker: 'notification_email',
+        p_platform: null,
+        p_token: auditToken,
+        p_value: {
+          status,
+          processedCount: values.sent || 0,
+          retryCount: values.failed || 0,
+          needsAttentionCount: values.failed || 0,
+          skippedDueToLease: false,
+          budgetInterrupted: false,
+          errorCodes: values.errors || [],
+          phases: {
+            delivery: {
+              claimed: values.claimed || 0,
+              sent: values.sent || 0,
+              failed: values.failed || 0,
+            },
+          },
+        },
+      })
     const key = Deno.env.get('RESEND_API_KEY')
     const from = Deno.env.get('EMAIL_FROM')
-    if (!key || !from)
+    if (!key || !from) {
+      await finishAudit('failed', { errors: ['email_configuration_missing'] })
+      auditToken = null
       return reply(503, { error: 'Email configuration required.' })
+    }
     // Explicit deployment configuration only; never infer an origin from caller headers.
     const origin = Deno.env.get('NOTIFICATION_APP_ORIGIN')
-    if (!validOrigin(origin))
+    if (!validOrigin(origin)) {
+      await finishAudit('failed', { errors: ['email_origin_invalid'] })
+      auditToken = null
       return reply(503, { error: 'App origin configuration required.' })
+    }
     const result = await runEmailBatch({
       rpc,
       from,
@@ -121,8 +170,49 @@ Deno.serve(async (request) => {
           signal: timeout(),
         }),
     })
-    return reply('blocked' in result ? 503 : 200, result)
+    const blocked = 'blocked' in result
+    await finishAudit(
+      blocked
+        ? 'failed'
+        : result.failed > 0
+        ? 'degraded'
+        : result.claimed > 0
+        ? 'completed'
+        : 'idle',
+      {
+        claimed: 'claimed' in result ? result.claimed : 0,
+        sent: result.sent,
+        failed: 'failed' in result ? result.failed : blocked ? 1 : 0,
+        errors: blocked
+          ? ['email_delivery_blocked']
+          : result.failureReasons || [],
+      }
+    )
+    auditToken = null
+    return reply(blocked ? 503 : 200, result)
   } catch (error) {
+    if (auditToken) {
+      try {
+        await rpc('marketplace_worker_observability', {
+          p_action: 'finish',
+          p_worker: 'notification_email',
+          p_platform: null,
+          p_token: auditToken,
+          p_value: {
+            status: 'failed',
+            processedCount: 0,
+            retryCount: 0,
+            needsAttentionCount: 1,
+            skippedDueToLease: false,
+            budgetInterrupted: false,
+            errorCodes: ['email_worker_failed'],
+            phases: { delivery: { status: 'failed' } },
+          },
+        })
+      } catch {
+        // Expiration records interruption if the database cannot accept finish.
+      }
+    }
     return reply(503, {
       error: 'Email worker temporarily unavailable.',
       classification:

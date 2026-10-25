@@ -108,6 +108,7 @@ async function main() {
           '202610130007_staging_due_work_schedule.sql',
           '202610190003_shop_membership_authority.sql',
           '202610190005_public_shop_projection.sql',
+          '20261023173802_authoritative_shop_provider_notifications.sql',
           '202610150006_notification_scheduler_transport_privacy.sql',
         ].includes(file)
       )
@@ -142,6 +143,12 @@ async function main() {
     sql(
       fs.readFileSync(
         'supabase/migrations/202610190005_public_shop_projection.sql',
+        'utf8'
+      )
+    )
+    sql(
+      fs.readFileSync(
+        'supabase/migrations/20261023173802_authoritative_shop_provider_notifications.sql',
         'utf8'
       )
     )

@@ -19,8 +19,10 @@ export function notificationTarget(value: unknown): string | null {
     return `/home?section=messages&destination=${d.destination}&conversation=${d.conversationId}`
   if (d.section === 'listing' && id('listingId'))
     return `/listings/${d.listingId}`
+  if (d.section === 'shop' && d.destination === 'my-shop')
+    return '/home?section=my-shop'
   if (d.section === 'settings' && d.panel === 'payments-payouts')
-    return '/home?section=settings'
+    return '/home?section=settings&focus=payments-payouts'
   return null
 }
 
@@ -186,6 +188,70 @@ const copy: Record<string, [string, string]> = {
   new_message: [
     'New message',
     'You have a new message. Open the conversation to read it.',
+  ],
+  shop_trial_activated: [
+    'Shop trial activated',
+    'Your Shop trial benefits are now available. This does not start automatic renewal.',
+  ],
+  shop_membership_access_started: [
+    'Shop membership active',
+    'Your current Shop membership access is now available. This notice does not confirm a future renewal.',
+  ],
+  shop_membership_access_upgraded: [
+    'Shop membership upgraded',
+    'Your upgraded Shop benefits are now available. This notice does not confirm a future renewal.',
+  ],
+  shop_suspended: [
+    'Shop temporarily suspended',
+    'Your Shop is temporarily suspended because membership access ended. Your UU account remains active.',
+  ],
+  shop_reopened: [
+    'Shop reopened',
+    'Your Shop membership access is active again and your Shop can operate.',
+  ],
+  order_refund_succeeded: [
+    'Refund confirmed',
+    'Stripe confirmed the authorized refund for this Order.',
+  ],
+  order_refund_failed: [
+    'Refund unsuccessful',
+    'Stripe did not complete the authorized refund. Open the Order to review its current status.',
+  ],
+  order_refund_unresolved: [
+    'Refund status needs review',
+    'The refund result could not be confirmed. Open the Order to review its current status.',
+  ],
+  seller_transfer_succeeded: [
+    'Seller transfer confirmed',
+    'Funds were transferred to your Stripe Connected Account. This does not confirm a bank payout.',
+  ],
+  seller_transfer_failed: [
+    'Seller transfer unsuccessful',
+    'Stripe did not complete the transfer to your Connected Account. Open the Order to review its status.',
+  ],
+  seller_transfer_unresolved: [
+    'Seller transfer status needs review',
+    'The transfer result could not be confirmed. Open the Order to review its current status.',
+  ],
+  seller_transfer_reversed: [
+    'Seller transfer reversed',
+    'Stripe reports that the transfer to your Connected Account was reversed. This does not change bank payout facts.',
+  ],
+  seller_transfer_partially_reversed: [
+    'Seller transfer partly reversed',
+    'Stripe reports that part of the transfer to your Connected Account was reversed. This does not change bank payout facts.',
+  ],
+  connected_bank_payout_paid: [
+    'Bank payout marked paid',
+    'Stripe reports this Connected Account bank payout as paid.',
+  ],
+  connected_bank_payout_failed: [
+    'Bank payout failed',
+    'Stripe reports that this Connected Account bank payout failed. Review Payments & Payouts.',
+  ],
+  connected_bank_payout_canceled: [
+    'Bank payout canceled',
+    'Stripe reports that this Connected Account bank payout was canceled.',
   ],
 }
 

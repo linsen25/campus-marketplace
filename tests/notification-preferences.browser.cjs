@@ -440,7 +440,7 @@ async function main() {
       await p.waitForFunction(() => window.actions.length === 3)
       assert.equal(
         await p.evaluate(() => window.actions.at(-1)),
-        '/home?section=settings'
+        '/home?section=settings&focus=payments-payouts'
       )
       await p
         .getByRole('button', {

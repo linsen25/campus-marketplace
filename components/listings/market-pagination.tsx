@@ -1,4 +1,5 @@
 import { ArrowUp } from 'lucide-react'
+import { Fragment } from 'react'
 
 import WorkButton from '@/components/animata/button/work-button'
 
@@ -22,6 +23,16 @@ export function MarketPagination({
   className?: string
   unknownTotal?: boolean
 }) {
+  const pages =
+    pageCount <= 7
+      ? Array.from({ length: pageCount }, (_, index) => index + 1)
+      : Array.from(
+          new Set(
+            [1, page - 1, page, page + 1, pageCount].filter(
+              (value) => value >= 1 && value <= pageCount
+            )
+          )
+        ).sort((a, b) => a - b)
   return (
     <nav className={`${styles.pagination} ${className}`} aria-label={label}>
       <WorkButton
@@ -32,16 +43,20 @@ export function MarketPagination({
       >
         Previous
       </WorkButton>
-      {Array.from({ length: pageCount }, (_, index) => (
-        <WorkButton
-          key={index + 1}
-          appearance="pagination"
-          aria-label={`Page ${index + 1}`}
-          aria-current={page === index + 1 ? 'page' : undefined}
-          onClick={() => onChange(index + 1)}
-        >
-          {index + 1}
-        </WorkButton>
+      {pages.map((value, index) => (
+        <Fragment key={value}>
+          {index > 0 && value - pages[index - 1] > 1 && (
+            <span aria-hidden="true">…</span>
+          )}
+          <WorkButton
+            appearance="pagination"
+            aria-label={`Page ${value}`}
+            aria-current={page === value ? 'page' : undefined}
+            onClick={() => onChange(value)}
+          >
+            {value}
+          </WorkButton>
+        </Fragment>
       ))}
       <span aria-live="polite">
         Page {page}

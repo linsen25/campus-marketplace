@@ -63,6 +63,14 @@ export type ListingQuery = {
   pageSize?: number
 }
 
+export type ListingPage = {
+  listings: Listing[]
+  /** Exact count for the validated public query at read time. */
+  total: number
+  page: number
+  pageSize: number
+}
+
 // IDs, status, timestamps, and seller identity will be assigned by the backend.
 export type CreateListingInput = Omit<
   Listing,

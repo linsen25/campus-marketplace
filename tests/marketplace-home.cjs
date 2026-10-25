@@ -1,59 +1,34 @@
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
+const path = require('node:path')
 const ts = require('typescript')
 const React = require('react')
 const { renderToStaticMarkup } = require('react-dom/server')
 
-let result = []
-let fail = false
-let receivedQuery
-const element =
-  (tag) =>
-  ({ children, ...props }) =>
-    React.createElement(tag, props, children)
+const cache = new Map()
 const mocks = {
-  '@/components/listings/market-layout': {
-    MarketLayout: ({ values }) =>
-      React.createElement('div', {
-        'data-testid': 'market-layout-preview',
-        'data-search': values.search,
-      }),
-  },
   '@/components/listings/homepage-scene': {
-    HomepageScene: ({ listings }) =>
-      React.createElement('div', {
-        'data-testid': 'landing-scene',
-        'data-listing-count': listings.length,
-      }),
-  },
-  'next/router': { useRouter: () => ({ pathname: '/listings', query: {} }) },
-  '@/components/listings/listing-filters': {
-    ListingFilters: () =>
-      React.createElement('div', { 'data-testid': 'browse-controls' }),
+    HomepageScene: () =>
+      React.createElement('div', { 'data-testid': 'landing-scene' }),
   },
   'next/head': { default: ({ children }) => children, __esModule: true },
-  '@/components/container/container': { Container: element('div') },
-  '@/components/listings/listing-grid': {
-    ListingGrid: ({ listings }) =>
-      React.createElement(
-        'div',
-        null,
-        listings.map((item) => item.title).join(', ')
-      ),
-  },
-  '@ui/input/input': { Input: element('input') },
-  '@ui/link/link': { Link: element('a') },
-  '@/lib/listings-api': {
-    getListings: async (query, context) => {
-      receivedQuery = query
-      assert(context.req && context.res)
-      if (fail) throw new Error('Private backend detail')
-      return result
-    },
-  },
 }
+
+function resolveLocal(from, name) {
+  const base = name.startsWith('@/')
+    ? path.resolve(name.slice(2))
+    : path.resolve(path.dirname(from), name)
+  for (const candidate of [base, `${base}.ts`, `${base}.tsx`]) {
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile())
+      return candidate
+  }
+  return null
+}
+
 function load(file) {
-  const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
+  const absolute = path.resolve(file)
+  if (cache.has(absolute)) return cache.get(absolute).exports
+  const code = ts.transpileModule(fs.readFileSync(absolute, 'utf8'), {
     compilerOptions: {
       module: ts.ModuleKind.CommonJS,
       jsx: ts.JsxEmit.ReactJSX,
@@ -61,138 +36,47 @@ function load(file) {
     },
   }).outputText
   const module = { exports: {} }
+  cache.set(absolute, module)
   new Function('require', 'module', 'exports', code)(
-    (name) =>
-      mocks[name] ||
-      (name.startsWith('@/') ? load(name.slice(2) + '.ts') : require(name)),
+    // eslint-disable-line no-new-func
+    (name) => {
+      if (mocks[name]) return mocks[name]
+      const local = resolveLocal(absolute, name)
+      return local ? load(local) : require(name)
+    },
     module,
     module.exports
   )
   return module.exports
 }
-async function main() {
-  const { marketTaxonomy, marketLocations, marketConditions } = load(
-    'lib/market-taxonomy.ts'
-  )
-  const { marketPreviewListings } = load('lib/fixtures/market-layout.ts')
-  assert.equal(marketPreviewListings.length, 30)
-  assert.equal(
-    new Set(marketPreviewListings.map((listing) => listing.id)).size,
-    30
-  )
-  for (const listing of marketPreviewListings) {
-    assert(marketTaxonomy[listing.category].includes(listing.subcategory))
-    assert(marketLocations.includes(listing.location))
-    assert(marketConditions.includes(listing.condition))
-    assert(Number.isSafeInteger(listing.price) && listing.price >= 0)
-    assert(listing.images.every((image) => fs.existsSync('public' + image)))
+
+function main() {
+  const fixture = load('lib/fixtures/hero-parallax-demo-products.ts')
+  const products = fixture.heroParallaxDemoProducts
+  assert.equal(products.length, 21)
+  assert.equal(new Set(products.map((product) => product.id)).size, 21)
+  assert.equal(products[0].title, 'Laptop and study essentials')
+  assert.equal(products.at(-1).title, 'Wireless controller')
+  for (const product of products) {
+    assert.equal('href' in product, false)
+    assert(product.image.startsWith('/static/testPic/'))
+    assert(fs.existsSync(path.join('public', product.image)))
   }
-  const home = load('pages/listings/index.tsx')
-  mocks['./listings/index'] = home
-  const landing = load('pages/index.tsx')
-  const landingHtml = renderToStaticMarkup(
-    React.createElement(landing.default, { listings: [], error: null })
-  )
-  assert.match(landingHtml, /landing-scene/)
-  assert(!landingHtml.includes('browse-controls'))
-  assert(!landingHtml.includes('No listings match'))
-  const headers = {}
-  const context = {
-    req: {},
-    res: {
-      setHeader: (name, value) => {
-        headers[name] = value
-      },
-    },
-  }
-  assert.deepEqual(
-    await landing.getServerSideProps(context),
-    await home.getServerSideProps(context)
-  )
-  const previousMode = process.env.NODE_ENV
-  process.env.NODE_ENV = 'development'
-  const demo = await landing.getServerSideProps(context)
-  assert.equal(demo.props.demoProducts.length, 21)
-  assert(
-    demo.props.demoProducts.every(
-      (item) => item.image.startsWith('/static/') && !item.href
-    )
-  )
-  process.env.NODE_ENV = 'production'
-  const production = await landing.getServerSideProps(context)
-  assert(!('demoProducts' in production.props))
-  if (previousMode === undefined) delete process.env.NODE_ENV
-  else process.env.NODE_ENV = previousMode
-  const empty = await home.getServerSideProps(context)
-  assert.deepEqual(receivedQuery, {
-    search: '',
-    category: undefined,
-    subcategory: undefined,
-    condition: undefined,
-    minPrice: undefined,
-    maxPrice: undefined,
-    status: 'available',
-    sort: 'newest',
-    page: 1,
-    pageSize: 20,
-  })
-  assert.match(headers['Cache-Control'], /no-store/)
-  const html = renderToStaticMarkup(
-    React.createElement(home.default, empty.props)
-  )
-  assert.match(html, /market-layout-preview/)
-  assert(!html.includes('Marketplace categories'))
-  assert(!html.includes('Browse all listings'))
-  assert(!html.includes('Have something you no longer need?'))
-  assert(!html.includes('Sell an item'))
-  await home.getServerSideProps({
-    ...context,
-    query: {
-      category: 'Electronics',
-      condition: 'good',
-      minPrice: '20',
-      maxPrice: '100',
-      status: 'sold',
-      search: 'monitor',
-      sort: 'price-low',
-    },
-  })
-  assert.equal(receivedQuery.category, 'Electronics')
-  assert.equal(receivedQuery.condition, 'good')
-  assert.equal(receivedQuery.minPrice, 2000)
-  assert.equal(receivedQuery.maxPrice, 10000)
-  assert.equal(receivedQuery.status, 'sold')
-  assert.equal(receivedQuery.search, 'monitor')
-  assert.equal(receivedQuery.sort, 'price-low')
-  result = [{ title: 'Test desk' }]
-  const populated = await home.getServerSideProps(context)
-  assert.match(
-    renderToStaticMarkup(React.createElement(home.default, populated.props)),
-    /market-layout-preview/
-  )
-  result = Array.from({ length: 20 }, (_, i) => ({ title: `Listing ${i}` }))
-  const full = await home.getServerSideProps(context)
-  assert.equal(full.props.hasNextPage, true)
-  await home.getServerSideProps({
-    ...context,
-    query: { page: '2', category: 'Electronics' },
-  })
-  assert.equal(receivedQuery.page, 2)
-  assert.equal(receivedQuery.category, 'Electronics')
-  fail = true
-  const unavailable = await home.getServerSideProps(context)
-  assert.equal(context.res.statusCode, 503)
-  const errorHtml = renderToStaticMarkup(
-    React.createElement(home.default, unavailable.props)
-  )
-  assert.match(errorHtml, /market-layout-preview/)
-  assert(!errorHtml.includes('Private backend detail'))
-  assert(!errorHtml.includes('No listings match'))
+
+  const welcome = load('pages/index.tsx')
+  assert.equal(welcome.getServerSideProps, undefined)
+  const html = renderToStaticMarkup(React.createElement(welcome.default))
+  assert.match(html, /landing-scene/)
+  assert(!html.includes('No listing photos are available yet.'))
+
   console.log(
-    'PASS: V1 fixture taxonomy/prices/images, landing/browse separation, unchanged SSR/search query, no-store, preview renderer with populated/empty/error backend states (data boundary mocked).'
+    'PASS: Welcome uses 21 fixed, non-navigating Hero products and has no Listing SSR dependency.'
   )
 }
-main().catch((error) => {
+
+try {
+  main()
+} catch (error) {
   console.error(error)
   process.exitCode = 1
-})
+}

@@ -141,6 +141,14 @@ function retryClaim(
 
 export async function drainStripeOrderPayments(limit = 20) {
   const bounded = Math.max(1, Math.min(limit, 20))
+  if (process.env.STRIPE_ORDER_PAYMENTS_ENABLED !== 'true')
+    return {
+      enabled: false,
+      processed: 0,
+      recovered: 0,
+      pending: 0,
+      exceptions: 0,
+    }
   const { config, stripe } = await stripeRuntime()
   let processed = 0
   let exceptions = 0
@@ -192,5 +200,5 @@ export async function drainStripeOrderPayments(limit = 20) {
       await retryClaim(config.platform, due)
     }
   }
-  return { processed, recovered, pending, exceptions }
+  return { enabled: true, processed, recovered, pending, exceptions }
 }

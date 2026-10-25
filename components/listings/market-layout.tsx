@@ -19,7 +19,7 @@ import { useMarketScroll } from '@/hooks/use-market-scroll'
 import type { MarketPreviewListing } from '@/lib/fixtures/market-layout'
 import { marketPreviewListings } from '@/lib/fixtures/market-layout'
 import type { ListingFilterValues } from '@/lib/listing-filters'
-import { getListings } from '@/lib/listings-api'
+import { getResaleListingsPage } from '@/lib/listings-api'
 import {
   normalizeSearchQuery,
   searchListings,
@@ -29,6 +29,7 @@ import type { SearchSuggestion } from '@/lib/market-search'
 import { marketSorts } from '@/lib/market-taxonomy'
 import { defaultShopDirectoryQuery } from '@/lib/shop-directory'
 import type { Listing } from '@/types/listing'
+import type { ListingQuery } from '@/types/listing'
 import type { ShopPreview } from '@/types/shop'
 import { formatListingPrice } from '@/utils/format-listing-price'
 import { Link } from '@ui/link/link'
@@ -200,69 +201,26 @@ export function MarketLayout({
   values,
   initialListings,
   initialError,
+  initialPage = 1,
+  initialTotal = 0,
+  initialQuery = {},
   shops = [],
 }: {
   values: ListingFilterValues
   initialListings?: Listing[]
   initialError?: string | null
+  initialPage?: number
+  initialTotal?: number
+  initialQuery?: ListingQuery
   shops?: ShopPreview[]
 }) {
   const navigateHome = useDesktopRouteTransition()
+  const isReal = initialListings !== undefined
   const [realListings, setRealListings] = useState(initialListings)
+  const [totalListings, setTotalListings] = useState(initialTotal)
   const [listingError, setListingError] = useState(initialError || '')
   const [listingPending, setListingPending] = useState(Boolean(initialError))
   const [reload, setReload] = useState(0)
-  useEffect(() => {
-    if (!initialListings) return undefined
-    let active = true
-    let version = 0
-    const refresh = async () => {
-      const request = ++version
-      setListingPending(true)
-      setListingError('')
-      try {
-        const rows: Listing[] = []
-        let page = 1
-        let next: Listing[]
-        do {
-          next = await getListings({
-            page,
-            pageSize: 100,
-            status: 'available',
-            channel: 'resale',
-          })
-          rows.push(...next)
-          page += 1
-          if (!active || request !== version) return
-        } while (next.length === 100)
-        if (active && request === version) {
-          setRealListings(
-            rows.filter(
-              (item) => item.publishedAt && item.status === 'available'
-            )
-          )
-          setListingError('')
-        }
-      } catch (reason) {
-        if (active && request === version)
-          setListingError(
-            reason instanceof Error
-              ? reason.message
-              : 'Marketplace unavailable. Please try again.'
-          )
-      } finally {
-        if (active && request === version) setListingPending(false)
-      }
-    }
-    refresh()
-    window.addEventListener('focus', refresh)
-    window.addEventListener('marketplace-listings-changed', refresh)
-    return () => {
-      active = false
-      window.removeEventListener('focus', refresh)
-      window.removeEventListener('marketplace-listings-changed', refresh)
-    }
-  }, [initialListings, reload])
   const source = useMemo(
     () =>
       realListings
@@ -310,7 +268,8 @@ export function MarketLayout({
       root.classList.remove(styles.desktopViewport, styles.viewportScrolling)
     }
   }, [])
-  const [pageNumber, setPageNumber] = useState(1)
+  const [pageNumber, setPageNumber] = useState(initialPage)
+  const [mobilePage, setMobilePage] = useState(1)
   const toolbar = useRef<HTMLElement>(null)
   const marketRoot = useRef<HTMLElement>(null)
   useMarketReady(marketRoot)
@@ -333,15 +292,12 @@ export function MarketLayout({
     normalizeSearchQuery(values.search)
   )
   const [draftQuery, setDraftQuery] = useState(appliedQuery)
+  const [suggestionListings, setSuggestionListings] = useState<Listing[]>([])
   useEffect(
     () => setAppliedQuery(normalizeSearchQuery(values.search)),
     [values.search]
   )
   const [searchDismissSignal, setSearchDismissSignal] = useState(0)
-  const suggestions = useMemo(
-    () => searchSuggestions(source, draftQuery),
-    [source, draftQuery]
-  )
   const cancelPageScroll = useCallback(() => {
     clearTimeout(pageScroll.current)
     cancelScroll()
@@ -389,9 +345,10 @@ export function MarketLayout({
     return () => query.removeEventListener('change', update)
   }, [cancelPageScroll])
   const [applied, setApplied] = useState<MarketFilterValues>({
-    category: '',
-    subcategory: '',
+    category: values.category,
+    subcategory: values.subcategory,
     place: '',
+    condition: values.condition,
   })
   const [marketMode, setMarketMode] = useState<MarketMode>('resale')
   const activeTab = marketMode === 'resale' ? 'popular' : 'favorites'
@@ -434,67 +391,206 @@ export function MarketLayout({
     },
     [closePanel]
   )
-  const [sort, setSort] = useState('newest')
+  const [sort, setSort] = useState(
+    values.sort === 'price-low'
+      ? 'price-asc'
+      : values.sort === 'price-high'
+      ? 'price-desc'
+      : 'newest'
+  )
+  const pageResetKey = JSON.stringify([
+    applied.condition,
+    category,
+    location,
+    applied.subcategory,
+    sort,
+    appliedQuery,
+  ])
+  const previousPageResetKey = useRef(pageResetKey)
   useEffect(() => {
+    if (previousPageResetKey.current === pageResetKey) return
+    previousPageResetKey.current = pageResetKey
     cancelPageScroll()
     setPageNumber(1)
+    setMobilePage(1)
+  }, [cancelPageScroll, pageResetKey])
+  const queryPage = isApp ? mobilePage : pageNumber
+  useEffect(() => {
+    if (!isReal) return undefined
+    let active = true
+    let version = 0
+    const refresh = async () => {
+      const request = ++version
+      setListingPending(true)
+      setListingError('')
+      try {
+        const result = await getResaleListingsPage({
+          page: queryPage,
+          pageSize: 15,
+          status: 'available',
+          channel: 'resale',
+          search: appliedQuery,
+          category: (category || undefined) as Listing['category'],
+          subcategory: (applied.subcategory ||
+            undefined) as Listing['subcategory'],
+          condition: applied.condition as Listing['condition'],
+          pickupArea: location || undefined,
+          minPrice: initialQuery.minPrice,
+          maxPrice: initialQuery.maxPrice,
+          sort:
+            sort === 'price-asc'
+              ? 'price-low'
+              : sort === 'price-desc'
+              ? 'price-high'
+              : 'newest',
+        })
+        if (!active || request !== version) return
+        const lastPage = Math.max(1, Math.ceil(result.total / 15))
+        if (!isApp && queryPage > lastPage) {
+          setTotalListings(result.total)
+          setPageNumber(lastPage)
+          return
+        }
+        const safeRows = result.listings.filter(
+          (item) =>
+            item.listingChannel === 'resale' &&
+            item.publishedAt &&
+            item.status === 'available'
+        )
+        setRealListings((previous) => {
+          if (!isApp || queryPage === 1) return safeRows
+          const merged = new Map(
+            [...(previous || []), ...safeRows].map((item) => [item.id, item])
+          )
+          return Array.from(merged.values())
+        })
+        setTotalListings(result.total)
+      } catch (reason) {
+        if (active && request === version)
+          setListingError(
+            reason instanceof Error
+              ? reason.message
+              : 'Marketplace unavailable. Please try again.'
+          )
+      } finally {
+        if (active && request === version) setListingPending(false)
+      }
+    }
+    refresh()
+    window.addEventListener('focus', refresh)
+    window.addEventListener('marketplace-listings-changed', refresh)
+    return () => {
+      active = false
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('marketplace-listings-changed', refresh)
+    }
+  }, [
+    applied.condition,
+    applied.subcategory,
+    appliedQuery,
+    category,
+    isApp,
+    isReal,
+    initialQuery.maxPrice,
+    initialQuery.minPrice,
+    location,
+    queryPage,
+    reload,
+    sort,
+  ])
+  useEffect(() => {
+    if (!isReal) return undefined
+    const query = normalizeSearchQuery(draftQuery)
+    if (!query) {
+      setSuggestionListings([])
+      return undefined
+    }
+    let active = true
+    const timer = setTimeout(async () => {
+      try {
+        const result = await getResaleListingsPage({
+          page: 1,
+          pageSize: 5,
+          status: 'available',
+          channel: 'resale',
+          search: query,
+        })
+        if (active) setSuggestionListings(result.listings)
+      } catch {
+        if (active) setSuggestionListings([])
+      }
+    }, 150)
+    return () => {
+      active = false
+      clearTimeout(timer)
+    }
+  }, [draftQuery, isReal])
+  const suggestionSource = useMemo(
+    () =>
+      isReal
+        ? suggestionListings.map((listing) => ({
+            ...listing,
+            images: listing.photoUrls,
+            location: listing.pickupArea as MarketPreviewListing['location'],
+            sellerUsername: listing.seller.displayName,
+          }))
+        : source,
+    [isReal, source, suggestionListings]
+  )
+  const suggestions = useMemo(
+    () => searchSuggestions(suggestionSource, draftQuery),
+    [draftQuery, suggestionSource]
+  )
+  const items = useMemo(() => {
+    const visible = isReal
+      ? source
+      : searchListings(source, appliedQuery)
+          .filter(
+            (listing) =>
+              (!category || listing.category === category) &&
+              (!location || listing.location === location) &&
+              (!applied.subcategory ||
+                listing.subcategory === applied.subcategory)
+          )
+          .sort((a, b) => {
+            if (sort === 'price-asc') return a.price - b.price
+            if (sort === 'price-desc') return b.price - a.price
+            return appliedQuery ? 0 : b.createdAt.localeCompare(a.createdAt)
+          })
+    return visible.map((listing) => ({
+      id: listing.id,
+      title: listing.title,
+      customContent: realListings ? (
+        <PublishedListingCard
+          listing={realListings.find((item) => item.id === listing.id)!}
+          overlayClassName={styles.listingOverlay}
+          overlayStyle={
+            {
+              '--market-header-height': `${headerHeight}px`,
+            } as CSSProperties
+          }
+          onOverlayActiveChange={cardPresence}
+        />
+      ) : (
+        <MarketCard
+          listing={listing as MarketPreviewListing}
+          headerHeight={headerHeight}
+          onOverlayActiveChange={cardPresence}
+        />
+      ),
+    }))
   }, [
     category,
     location,
     applied.subcategory,
     sort,
     appliedQuery,
-    cancelPageScroll,
+    headerHeight,
+    cardPresence,
+    source,
+    realListings,
+    isReal,
   ])
-  const items = useMemo(
-    () =>
-      searchListings(source, appliedQuery)
-        .filter(
-          (listing) =>
-            (!category || listing.category === category) &&
-            (!location || listing.location === location) &&
-            (!applied.subcategory ||
-              listing.subcategory === applied.subcategory)
-        )
-        .sort((a, b) => {
-          if (sort === 'price-asc') return a.price - b.price
-          if (sort === 'price-desc') return b.price - a.price
-          return appliedQuery ? 0 : b.createdAt.localeCompare(a.createdAt)
-        })
-        .map((listing) => ({
-          id: listing.id,
-          title: listing.title,
-          customContent: realListings ? (
-            <PublishedListingCard
-              listing={realListings.find((item) => item.id === listing.id)!}
-              overlayClassName={styles.listingOverlay}
-              overlayStyle={
-                {
-                  '--market-header-height': `${headerHeight}px`,
-                } as CSSProperties
-              }
-              onOverlayActiveChange={cardPresence}
-            />
-          ) : (
-            <MarketCard
-              listing={listing as MarketPreviewListing}
-              headerHeight={headerHeight}
-              onOverlayActiveChange={cardPresence}
-            />
-          ),
-        })),
-    [
-      category,
-      location,
-      applied.subcategory,
-      sort,
-      appliedQuery,
-      headerHeight,
-      cardPresence,
-      source,
-      realListings,
-    ]
-  )
   const browsing = (
     <MarketListingFeed
       isApp={isApp}
@@ -507,6 +603,22 @@ export function MarketLayout({
         cancelPageScroll()
         scrollToBrowsingTop()
       }}
+      serverPaged={isReal}
+      pageCount={Math.max(1, Math.ceil(totalListings / 15))}
+      hasMore={!listingError && (realListings?.length || 0) < totalListings}
+      loading={listingPending}
+      onLoadMore={
+        isReal && isApp
+          ? () => {
+              if (
+                !listingPending &&
+                !listingError &&
+                (realListings?.length || 0) < totalListings
+              )
+                setMobilePage((page) => page + 1)
+            }
+          : undefined
+      }
     />
   )
   return (

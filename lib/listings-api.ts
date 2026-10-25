@@ -2,6 +2,7 @@
 import type {
   CreateListingInput,
   Listing,
+  ListingPage,
   ListingQuery,
   OwnerListingQuery,
   UpdateListingInput,
@@ -62,6 +63,38 @@ export async function getListings(
     if (value !== undefined) params.set(key, String(value))
   })
   return marketplaceRequest(`/api/listings?${params}`, 'GET')
+}
+
+export async function getResaleListingsPage(
+  query: ListingQuery = {},
+  context: MarketplaceContext | undefined = undefined
+): Promise<ListingPage> {
+  if (typeof window === 'undefined')
+    return (await repository(context)).getResaleListingsPage(query)
+  const params = new URLSearchParams({ paged: 'true' })
+  Object.entries(query).forEach(([key, value]) => {
+    if (value !== undefined) params.set(key, String(value))
+  })
+  const response = await fetch(`/api/listings?${params}`, {
+    method: 'GET',
+    cache: 'no-store',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  const body = await response.json().catch(() => null)
+  if (!response.ok || !Array.isArray(body))
+    throw new Error(
+      body?.error || 'Unable to load marketplace listings. Please try again.'
+    )
+  const total = Number(response.headers.get('X-Total-Count'))
+  if (!Number.isSafeInteger(total) || total < 0)
+    throw new Error('The marketplace returned an invalid page count.')
+  return {
+    listings: body,
+    total,
+    page: query.page || 1,
+    pageSize: query.pageSize || 20,
+  }
 }
 export async function getListing(
   id: string,

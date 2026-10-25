@@ -32,9 +32,23 @@ let rows = [
   seed('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'shop'),
 ]
 let last = [],
+  lastRpc = null,
   writes = [],
   authenticated = true
 const client = {
+  async rpc(name, input) {
+    lastRpc = [name, input]
+    const visible = rows.filter(
+      (row) =>
+        row.listing_channel === 'resale' &&
+        row.status === 'available' &&
+        row.published_at
+    )
+    return {
+      data: { ids: visible.map((row) => row.id), total: visible.length },
+      error: null,
+    }
+  },
   from(table) {
     assert.equal(table, 'listings')
     const operations = []
@@ -48,6 +62,8 @@ const client = {
             ? row[key] === val
             : op === 'filter'
             ? row[key] !== null
+            : op === 'in'
+            ? val.includes(row[key])
             : true
         )
       )
@@ -89,6 +105,10 @@ const client = {
         return this
       },
       ilike() {
+        return this
+      },
+      in(key, values) {
+        operations.push(['in', key, values])
         return this
       },
       insert(input) {
@@ -286,14 +306,12 @@ async function main() {
     req: {},
     res: { setHeader() {} },
   })
-  assert(
-    last.some((op) => op[1] === 'listing_channel' && op[2] === 'resale'),
-    'Marketplace SSR fixed resale'
-  )
-  assert(last.some((op) => op[1] === 'status' && op[2] === 'available'))
+  assert.equal(lastRpc[0], 'marketplace_browse_resale')
+  assert.equal(lastRpc[1].p_offset, 0)
+  assert.equal(lastRpc[1].p_limit, 15)
   assert.match(
     fs.readFileSync('components/listings/market-layout.tsx', 'utf8'),
-    /getListings\(\{[^}]*channel:\s*'resale'/s
+    /getResaleListingsPage\(\{[^}]*channel:\s*'resale'/s
   )
   assert.match(
     fs.readFileSync('components/listings/home-listings.tsx', 'utf8'),

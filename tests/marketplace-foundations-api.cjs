@@ -13,6 +13,7 @@ const ids = Array.from(
 const rows = ids.map((id, i) => ({
   id,
   seller_id: i === 4 ? uid : seller,
+  listing_channel: 'resale',
   title: 'Camera',
   description: '',
   price_cents: 100 * (i + 1),
@@ -31,7 +32,8 @@ const rows = ids.map((id, i) => ({
 }))
 const favorites = new Set([ids[0], ids[2], ids[3]])
 let authorized = true,
-  csrf = true
+  csrf = true,
+  publicShopResult = { state: 'not_found' }
 function builder(table) {
   const filters = [],
     orders = []
@@ -157,6 +159,19 @@ const client = {
 }
 const mocks = {
   '@/lib/supabase/server': { createMarketplaceClient: () => client },
+  '@/lib/server/public-shop': {
+    getPublicShopListing: async () => {
+      if (publicShopResult instanceof Error) throw publicShopResult
+      return publicShopResult
+    },
+    getPublicShopProducts: async () => ({
+      state: 'available',
+      listings: [],
+      page: 1,
+      hasNextPage: false,
+      refreshAfterMs: 1000,
+    }),
+  },
   '@/lib/server/marketplace-auth': {
     requireMarketplaceUser: async () => {
       if (!authorized)
@@ -211,6 +226,14 @@ async function main() {
     'lib/server/supabase-listings-repository.ts'
   ).createSupabaseListingsRepository({})
   assert.equal(await repository.getListing(ids[3]), null)
+  publicShopResult = Object.assign(new Error('public Shop unavailable'), {
+    status: 503,
+  })
+  await assert.rejects(
+    repository.getListing(ids[3]),
+    (error) => error.status === 503 && /unavailable/.test(error.message)
+  )
+  publicShopResult = { state: 'not_found' }
   assert.equal((await repository.getListings()).length, 3)
   assert.equal((await repository.getMyListings()).length, 1)
   const created = await repository.createListing({

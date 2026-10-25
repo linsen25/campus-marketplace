@@ -103,6 +103,17 @@ async function main() {
     'payment_intent.canceled',
   ])
 
+  delete process.env.STRIPE_ORDER_PAYMENTS_ENABLED
+  assert.deepEqual(await service.drainStripeOrderPayments(1), {
+    enabled: false,
+    processed: 0,
+    recovered: 0,
+    pending: 0,
+    exceptions: 0,
+  })
+  assert.equal(rpcCalls.length, 0, 'disabled Payment Worker claims no work')
+  process.env.STRIPE_ORDER_PAYMENTS_ENABLED = 'true'
+
   await service.enqueueStripeOrderPaymentEvent({
     eventId: 'evt_B22',
     eventType: 'payment_intent.succeeded',
@@ -127,6 +138,7 @@ async function main() {
   })
   let result = await service.drainStripeOrderPayments(1)
   assert.deepEqual(result, {
+    enabled: true,
     processed: 1,
     recovered: 0,
     pending: 0,

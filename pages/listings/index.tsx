@@ -5,9 +5,10 @@ import { MarketLayout } from '@/components/listings/market-layout'
 import type { ListingFilterValues } from '@/lib/listing-filters'
 import { parseListingFilters } from '@/lib/listing-filters'
 import { ListingApiError } from '@/lib/listing-validation'
-import { getListings } from '@/lib/listings-api'
+import { getResaleListingsPage } from '@/lib/listings-api'
 import { getPublicShops } from '@/lib/server/public-shop'
 import type { Listing } from '@/types/listing'
+import type { ListingQuery } from '@/types/listing'
 import type { ShopPreview } from '@/types/shop'
 
 type ListingsPageProps = {
@@ -15,7 +16,8 @@ type ListingsPageProps = {
   values: ListingFilterValues
   error: string | null
   page: number
-  hasNextPage: boolean
+  total: number
+  query: ListingQuery
   shops: ShopPreview[]
 }
 
@@ -23,6 +25,9 @@ export default function ListingsPage({
   values,
   listings,
   error,
+  page,
+  total,
+  query,
   shops,
 }: ListingsPageProps) {
   return (
@@ -34,6 +39,9 @@ export default function ListingsPage({
         values={values}
         initialListings={listings}
         initialError={error}
+        initialPage={page}
+        initialTotal={total}
+        initialQuery={query}
         shops={shops}
       />
     </>
@@ -44,10 +52,13 @@ export const getServerSideProps: GetServerSideProps<
 > = async ({ query: params, req, res }) => {
   res.setHeader('Cache-Control', 'private, no-store, max-age=0')
   const { values, query, error } = parseListingFilters(params || {})
+  const serializedQuery = Object.fromEntries(
+    Object.entries(query).filter(([, value]) => value !== undefined)
+  ) as ListingQuery
   const requestedPage = Number(params?.page || 1)
   const page =
     Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
-  const pageSize = 20
+  const pageSize = 15
   let shops: ShopPreview[] = []
   try {
     shops = (await getPublicShops({ pageSize: 8 })).shops
@@ -55,20 +66,21 @@ export const getServerSideProps: GetServerSideProps<
     /* Client read owns the independent Shop loading/error state. */
   }
   try {
-    const listings = error
-      ? []
-      : await getListings(
+    const result = error
+      ? { listings: [], total: 0 }
+      : await getResaleListingsPage(
           { ...query, page, pageSize, channel: 'resale', status: 'available' },
           { req, res }
         )
     return {
       props: {
-        listings,
+        listings: result.listings,
         shops,
         values,
         error,
         page,
-        hasNextPage: listings.length === pageSize,
+        total: result.total,
+        query: serializedQuery,
       },
     }
   } catch (cause) {
@@ -80,7 +92,8 @@ export const getServerSideProps: GetServerSideProps<
         shops,
         values,
         page,
-        hasNextPage: false,
+        total: 0,
+        query: serializedQuery,
         error:
           cause instanceof ListingApiError
             ? cause.message

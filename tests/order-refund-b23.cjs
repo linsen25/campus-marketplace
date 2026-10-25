@@ -444,10 +444,15 @@ async function main() {
     assert.deepEqual(discovery.preparedOrders, [claim.order_id, 'order-stale'])
 
     const workerSource = fs.readFileSync('pages/api/stripe/worker.ts', 'utf8')
-    assert(workerSource.includes('drainStripeOrderRefundWork'))
+    const recoverySource = fs.readFileSync(
+      'lib/server/stripe-operational-recovery.ts',
+      'utf8'
+    )
+    assert(workerSource.includes('drainStripeOperationalRecovery'))
+    assert(recoverySource.includes('drainStripeOrderRefundWork'))
     assert(
-      workerSource.indexOf('drainStripeOrderPayments()') <
-        workerSource.indexOf('drainStripeOrderRefundWork()')
+      recoverySource.indexOf("runStep('orderPayments'") <
+        recoverySource.indexOf("runStep('orderRefunds'")
     )
 
     const source = fs.readFileSync('lib/server/stripe-order-refund.ts', 'utf8')

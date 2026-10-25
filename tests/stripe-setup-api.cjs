@@ -13,6 +13,9 @@ class ListingApiError extends Error {
 let authenticated = true,
   leak = false,
   webhookPersistenceFailure = false,
+  recoveryFailure = false,
+  recoveryDegraded = false,
+  workerLimit = null,
   calls = []
 const dependencies = {
   '@/lib/listing-validation': { ListingApiError },
@@ -42,6 +45,69 @@ const dependencies = {
         events: { processed: 0, retried: 0, mismatches: 0 },
         discovery: { prepared: 0, skipped: 0 },
         refunds: { processed: 0, pending: 0, exceptions: 0 },
+      }
+    },
+  },
+  '@/lib/server/stripe-order-transfer': {
+    drainStripeOrderTransferWork: async () => {
+      calls.push(['order-transfers'])
+      return {
+        enabled: false,
+        events: { processed: 0, retried: 0, mismatches: 0 },
+        discovery: { prepared: 0, skipped: 0 },
+        transfers: { processed: 0, exceptions: 0 },
+      }
+    },
+  },
+  '@/lib/server/stripe-connected-payout': {
+    drainStripeConnectedPayoutObservations: async () => {
+      calls.push(['connected-payouts'])
+      return { enabled: false, processed: 0, retried: 0, mismatches: 0 }
+    },
+  },
+  '@/lib/server/stripe-order-dispute': {
+    drainStripeOrderDisputes: async () => {
+      calls.push(['order-disputes'])
+      return { enabled: false, processed: 0, retried: 0, mismatches: 0 }
+    },
+  },
+  '@/lib/server/stripe-operational-recovery': {
+    drainStripeOperationalRecovery: async (limit) => {
+      workerLimit = limit
+      if (recoveryFailure) throw new Error('synthetic recovery failure')
+      for (const name of [
+        'setup-events',
+        'order-payments',
+        'order-disputes',
+        'order-refunds',
+        'order-transfers',
+        'connected-payouts',
+      ])
+        calls.push([name])
+      return {
+        enabled: false,
+        acquired: true,
+        status: recoveryDegraded ? 'degraded' : 'disabled',
+        degraded: recoveryDegraded,
+        processed: 0,
+        successfulSteps: recoveryDegraded ? 5 : 6,
+        failedSteps: recoveryDegraded ? 1 : 0,
+        steps: {},
+        sweep: null,
+        summary: null,
+      }
+    },
+  },
+  '@/lib/server/shop-suspension-lifecycle': {
+    drainShopSuspensionLifecycle: async () => {
+      calls.push(['shop-suspension-lifecycle'])
+      return {
+        enabled: false,
+        busy: false,
+        scanned: 0,
+        offersClosed: 0,
+        messagesInserted: 0,
+        cyclesReopened: 0,
       }
     },
   },
@@ -241,11 +307,18 @@ async function main() {
   const old = process.env.STRIPE_WORKER_SECRET
   process.env.STRIPE_WORKER_SECRET = 'x'.repeat(32)
   res = response()
+  await worker({ method: 'GET', headers: {} }, res)
+  assert.equal(res.code, 405)
+  assert.equal(res.headers.Allow, 'POST')
+  res = response()
+  await worker({ method: 'POST', headers: {} }, res)
+  assert.equal(res.code, 401)
+  res = response()
   await worker(
     { method: 'POST', headers: { authorization: 'Bearer ' + 'é'.repeat(32) } },
     res
   )
-  assert.equal(res.code, 403)
+  assert.equal(res.code, 401)
   res = response()
   await worker(
     { method: 'POST', headers: { authorization: 'Bearer ' + 'x'.repeat(32) } },
@@ -253,10 +326,47 @@ async function main() {
   )
   assert.equal(res.code, 200)
   assert.deepEqual(
-    calls.slice(-3).map((entry) => entry[0]),
-    ['setup-events', 'order-payments', 'order-refunds']
+    calls.slice(-7).map((entry) => entry[0]),
+    [
+      'setup-events',
+      'order-payments',
+      'order-disputes',
+      'order-refunds',
+      'order-transfers',
+      'connected-payouts',
+      'shop-suspension-lifecycle',
+    ]
   )
-  assert.equal(res.value.orderRefunds.enabled, false)
+  assert.equal(res.value.degraded, false)
+  assert.equal(res.value.successfulSteps, 6)
+  assert.equal(res.value.runtimeStatus, 'disabled')
+  assert.equal(res.value.batchLimit, 2)
+  assert.equal(workerLimit, 2)
+  recoveryDegraded = true
+  res = response()
+  await worker(
+    { method: 'POST', headers: { authorization: 'Bearer ' + 'x'.repeat(32) } },
+    res
+  )
+  assert.equal(
+    res.code,
+    503,
+    'partial financial failure is never masked by HTTP 200'
+  )
+  assert.equal(res.value.runtimeStatus, 'degraded')
+  recoveryDegraded = false
+  recoveryFailure = true
+  res = response()
+  await worker(
+    { method: 'POST', headers: { authorization: 'Bearer ' + 'x'.repeat(32) } },
+    res
+  )
+  assert.equal(
+    res.code,
+    503,
+    'a disabled Shop lifecycle step must not mask financial recovery failure'
+  )
+  recoveryFailure = false
   if (old === undefined) delete process.env.STRIPE_WORKER_SECRET
   else process.env.STRIPE_WORKER_SECRET = old
   // Enabling account setup cannot accidentally route an Order through the simulator.

@@ -296,6 +296,7 @@ async function main() {
     )
   } finally {
     if (started) run('pg_ctl', ['-D', data, '-m', 'fast', '-w', 'stop'])
+    fs.rmSync(folder, { recursive: true, force: true })
   }
 }
 main().catch((e) => {

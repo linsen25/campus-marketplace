@@ -381,6 +381,67 @@ and cancellation-race replays preserve their refund-eligible B22 exception evide
 This status does not include Staging deployment, Worker scheduling, webhook provider
 configuration or real Stripe test-mode acceptance.
 
+B24-A status (2026-10-22): **LOCAL DATABASE FOUNDATION COMPLETE**. See
+[B24 plan](BUSINESS-V1-B24-PLAN.md). The private Transfer operation freezes the
+existing post-Protection sale proceeds or finalized cancellation delivery
+compensation, paid PaymentIntent, Seller Connect destination, CAD amount, operation
+identity and fenced lease. Refund/Transfer conservation, ACL/RLS, idempotency and
+concurrent claims pass isolated PostgreSQL tests. No Stripe Transfer, bank Payout,
+remote migration or UI change occurred. B24-B execution remains blocked on approved
+Connect/Merchant-of-Record liability and real provider qualification; B24-C bank
+Payout observation remains separate from Transfer execution.
+
+B24-B status (2026-10-22): **LOCAL EXECUTOR AND RECONCILIATION COMPLETE — REAL
+STRIPE ACCEPTANCE DEFERRED**. The default-off server adapter verifies the original
+PaymentIntent/Charge, current Connect transfer capability, frozen destination and
+amount, refund/dispute conservation, `source_transaction`, transfer group and
+operation metadata. Fenced result/event RPCs preserve unknown outcomes, reject stale
+leases, reconcile reversals and never mark a bank Payout. Provider create additionally
+requires an unconfigured financial-approval attestation. Staging migrations, Stripe
+webhook subscription, worker scheduling, Test Mode provider execution and commercial
+liability approval remain outstanding.
+
+B24-C status (2026-10-22): **LOCAL CONNECTED PAYOUT OBSERVATION COMPLETE — REAL
+STRIPE ACCEPTANCE DEFERRED**. A private account-level record stores trusted Stripe
+Payout facts without assigning a Payout to an Order or Transfer. Connected webhooks
+only enqueue hints; the existing worker retrieves the current Payout in the signed
+connected-account scope and applies fenced observations, including the documented
+`paid -> failed` case. The observer is default-off, has no browser or Payout mutation
+API and never changes Transfer success. Real Accounts v2/Canadian Connect read
+capability, webhook delivery and Test Mode lifecycle remain unverified.
+
+B25-A status (2026-10-22): **LOCAL DISPUTE EVIDENCE AND OPERATIONAL HOLD FOUNDATION
+COMPLETE — REAL STRIPE ACCEPTANCE DEFERRED**. A private, service-role-only observer
+retrieves current Stripe Dispute, Charge and PaymentIntent facts from signed platform
+webhook hints, preserves unattributed/conflicting evidence without guessing, and
+places a sticky fail-closed hold on new Seller Transfer preparation/claims only when
+the Order binding is proven. It does not resolve UU Protection cases, submit provider
+evidence, decide liability or execute Refunds/Reversals/Transfers. Operational actor,
+hold-release, liability and negative-balance policy remain B25-B approval blockers;
+Staging/Stripe Test Mode delivery and recovery remain deferred.
+
+B25-B status (2026-10-22): **LOCAL OPERATIONAL CASE FOUNDATION COMPLETE — HUMAN
+REVIEW AUTHORITY LOCKED**. A private, RLS-protected case index deduplicates trusted
+UU Protection, Stripe Dispute and Payment/Refund/Transfer/Payout exceptions while
+keeping different source types separate. Minimal evidence references and immutable
+system audit preserve provenance without copying messages, addresses or provider
+payloads. Service-role-only sync/read is implemented; review transitions fail closed
+because no approved human Operations identity or financial responsibility policy
+exists. Case state cannot release Protection or execute/change any financial action.
+B25-C Staging/Test Mode recovery qualification and an operator runbook remain
+deferred.
+
+B25-C status (2026-10-22): **LOCAL RECOVERY, RECONCILIATION AND AUDIT INTEGRATION
+COMPLETE — B28/B30 REMOTE ACCEPTANCE DEFERRED**. The existing authenticated Stripe
+Worker now isolates six bounded provider families under an optional, default-off
+global recovery lease. A private append-only run record preserves crashes, sanitized
+step outcomes and stale-token fencing; a bounded case sweep and private summary reuse
+the B25-B case/audit authority. Exhausted Payment creation/reconciliation and
+financial Inbox retries become stable manual-review cases without changing their
+operation/event identity or guessing an Order association. No recovery path
+creates new financial authority, resolves Protection or enables human review. See
+[B25 Operations Runbook](BUSINESS-V1-B25-OPERATIONS-RUNBOOK.md).
+
 | ID / priority | Small deliverable and existing code to reuse                                                                                                                | Dependency / schema                                                                                                                                | Security and staging acceptance                                                                                                                                                                                                                     |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | B20 / P0      | Specify concrete provider operation mapping to existing frozen economics/attempt/settlement authorizations. Confirm actual SDK/docs in implementation task. | B01/B07/B08; existing server-only Stripe setup. Schema:inventory provider refs, unique attempts and operation audit needs.                         | Amount/currency/destination from server records only; external mode never calls Stripe. Exit: exact create/success/failure/unknown/retry transition table without changed fees or timing rules.                                                     |
@@ -392,6 +453,23 @@ configuration or real Stripe test-mode acceptance.
 
 ## Integration, performance and release qualification
 
+B26-A/B status (2026-10-23): **LOCAL SHOP TRANSACTION ADMISSION, SHARED ORDER AND
+SUSPENSION LIFECYCLE INTEGRATION COMPLETE; REMOTE ACCEPTANCE DEFERRED TO B30.** The three B14 INSERT
+triggers remain installed and now call one private, default-disabled database
+admission boundary. Controlled local PostgreSQL qualification passes Shop
+Conversation, Offer revision, one-Order Accept, immutable provenance/economics,
+external zero-Stripe completion, `uu_pay` payout-readiness denial, Resale isolation
+and concurrent membership-expiry/admission-close races. The existing UI controls
+are presentation gated off by default. No Staging/Production activation or real
+provider operation has occurred. B26-B now reuses authoritative B12 cycles to close
+unfinished pre-Order Shop Offers with retained audit history, block suspended Seller
+consultation TEXT/IMAGE sends at database boundaries, preserve Buyer and existing
+Order messaging, and emit idempotent UU System suspension/reminder/reopen messages.
+Native parallel qualification proves Accept cannot create an Order after membership
+expires. Lifecycle processing is separately default-off, bounded and service-role
+only; no scheduler was installed. See
+[B26 plan](BUSINESS-V1-B26-PLAN.md).
+
 | ID / priority          | Small deliverable and existing code to reuse                                                                                                       | Dependency / schema                                                                                  | Security and staging acceptance                                                                                                                                                                                                                         |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | B26 / P2               | Qualify a real Shop product Offer/Order/purchase through existing shared transaction stack.                                                        | B14/B15/B07/B09 and B22 for uu_pay. Schema:none expected beyond earlier tasks.                       | Frozen Shop provenance survives rename/delete/expiry; inventory remains single authority; no second Shop-specific Order state machine. Exit: correct source across Messages/Notifications/history and no Resale mixing.                                 |
@@ -399,6 +477,157 @@ configuration or real Stripe test-mode acceptance.
 | B28 / P0 before launch | Qualify scheduler/email/realtime/webhook worker operations and observability.                                                                      | B01 and dependent implementations. Schema:none unless missing operational audit proven.              | Exact staging environment, claim/lease/retry/idempotency, provider status IDs, sanitized errors, old audit retention; no direct client invocation. Exit: due jobs/events recover after crash/replay; real sandbox send test only separately authorized. |
 | B29 / P2               | Bound Resale discovery/filter/pagination refresh and filtered notification scans; preserve approved UI and search behavior.                        | B05/B15; measure before choosing keyset/search redesign. Schema:indexes/query RPC only if justified. | Public/recipient predicates and stable ties/cursors, concurrent insert/delete, full-text/category semantics and page resets; no silently incomplete feed. Exit: bounded query/memory work with matching results and unchanged scroll/UI contracts.      |
 | B30 / P0 before launch | Final current-worktree qualification and explicit environment rollout plan; update stale test fixtures/loaders without product permission changes. | All enabled scope tasks. Schema:review-only deployment plan, separately authorized execution.        | Own/other/anon, API/RLS/Storage/live two-user journeys/provider test mode; no secrets/artifacts in Git; no ignored new essential source. Exit: known demo gaps disclosed, acceptance results current, user explicitly authorizes deployment separately. |
+
+B27 status (2026-10-23): **LOCAL DEVELOPMENT COMPLETE; REMOTE ACCEPTANCE DEFERRED
+TO B30.** One private forward migration projects
+applied membership access effects, exact Shop Suspension/reopen cycles, verified
+Refund/Transfer results and connected-account bank Payout observations into the
+existing idempotent notification domain. Recipients and safe destinations come from
+trusted records; all 16 new event types now have explicit English presentation,
+SYSTEM/ORDER classification, strict Manage Products/Order/Payments & Payouts targets,
+and focused normal/reduced-motion browser coverage. Existing preference, unread,
+batch, Realtime and popup-deduplication behavior is reused; new types remain in-app
+only. Existing Shop/Resale transaction projection is reused, and B26 UU System
+messages remain excluded from ordinary message alerts. Subscription billing
+failure/action, Grace transition alerts, Stripe Dispute participant disclosure and
+Operational Case disclosure remain unimplemented because no approved authoritative
+producer or recipient policy exists.
+See [B27 plan](BUSINESS-V1-B27-PLAN.md).
+
+B28 status (2026-10-23): **LOCAL DEVELOPMENT COMPLETE (A/B); HOSTED SCHEDULING,
+ALERT POLICY AND PROVIDER ACCEPTANCE DEFERRED TO B30.** The existing Stripe worker
+now has strict POST/bearer handling, a batch-2 scheduled entry, isolated financial
+and Shop-lifecycle results, and explicit disabled/idle/completed/busy/degraded,
+configuration and retry classifications. Disabled Setup and Order Payment families
+claim no work. A forward migration bounds each transaction due-work category to 50
+while preserving the original advisory lock, transaction rules and private ACL.
+Webhook, email, notification retention, Shop lifecycle, Realtime and media-cleanup
+boundaries are inventoried in [B28 plan](BUSINESS-V1-B28-PLAN.md). B28-B adds a
+private fenced runtime receipt, bounded queue/scheduler summary, stable internal
+anomaly identities, Email non-2xx cron failure propagation and the
+[operations runbook](BUSINESS-V1-B28-OPERATIONS-RUNBOOK.md). It adds no public
+dashboard, browser worker action, external alert or financial authority. No hosted
+cron, remote migration, provider action or feature activation occurred. B30 must
+still prove real schedules, webhook channels, secrets, provider behavior and
+approved alert ownership.
+
+B29 status (2026-10-24): **LOCAL DEVELOPMENT COMPLETE; STAGING SCALE ACCEPTANCE
+DEFERRED TO B30.** The Market no longer downloads the
+complete Resale catalog for browser-side filtering. SSR, desktop pagination,
+mobile incremental loading and autocomplete use a bounded public Resale query while
+the HTTP body remains the existing Listing array. A forward migration adds
+RLS-preserving ranked search plus measured partial price/category/trigram indexes;
+newest and Favorites reuse their existing indexes. Search literal escaping,
+word-boundary ranking, stable price/newest ties, empty/last pages, Shop/private-row
+isolation and explicit errors pass isolated tests. Offset pagination is retained for
+the approved numbered UI; its linear deep-page scan is documented for real-data B30
+measurement. Notification Category and Read/Unread filtering now runs before
+pagination in one recipient-derived database RPC instead of unbounded 50-row
+application scans. It preserves the existing cursor/API/UI and global unread
+count, with measured Category and Category+Status indexes and exact TypeScript/SQL
+category parity. See [B29 plan](BUSINESS-V1-B29-PLAN.md). Real-data scale and
+runtime acceptance remain for B30.
+
+B30-A status (2026-10-24): **LOCAL QUALIFICATION COMPLETE WITH EXPLICIT REMOTE AND
+POLICY BLOCKERS; B30-B/C NOT STARTED.** The current dirty worktree is inventoried in
+[B30 Release Inventory](BUSINESS-V1-B30-RELEASE-INVENTORY.md). All 18 B21–B29
+migrations have current SHA-256 values and pass ordered local schema/domain tests;
+Supabase-managed cron/network/vault portions remain remote verification items. The
+three stale B29-A tests were repaired as fixtures without weakening production
+contracts. Focused cross-module service, native PostgreSQL concurrency and local
+five-width browser component matrices pass. A real local `/listings` SSR run found
+and fixed undefined optional query props; focused serialization and empty-data
+navigation now pass 10/10. Populated Staging search/pagination, hosted RLS/ACL,
+Storage/Realtime, schedules and Stripe Test Mode remain B30-B/C work. All financial
+and Shop execution flags remain default-off. See
+[B30 plan](BUSINESS-V1-B30-PLAN.md).
+
+B30-B status (2026-10-24): **STAGING READ-ONLY PREFLIGHT COMPLETE; B30-C NOT
+STARTED.** Explicit project targeting verified `western-marketplace-staging`
+(`pcaqxezdfxofysghssyo`) and every SQL inspection ran in a read-only transaction.
+Staging has 79 registered migrations: the five B21–B23 migrations and their
+expected objects are present; the 13 B24–B29 migrations remain expected pending;
+there are no remote-only versions or version/name mismatches. Remote original SQL
+hashes remain unverified. Current RLS/private ACL, Storage buckets, private
+Realtime Broadcast policies, three active database cron jobs and the active Email
+Edge Function pass metadata review. Real Auth/RLS sessions, Storage bytes,
+WebSockets, Email delivery, Vercel runtime, Stripe webhook registration and all
+provider behavior remain B30-C work. See
+[B30 Staging Preflight](BUSINESS-V1-B30-STAGING-PREFLIGHT.md).
+
+B30-C1 status (2026-10-24): **ROLLOUT PLAN COMPLETE; DEPLOYMENT READINESS
+BLOCKED.** The exact 13 pending migrations, local hashes, dependency order,
+lock risks, batch checkpoints and stop conditions are documented in
+[B30 Staging Rollout Plan](BUSINESS-V1-B30-STAGING-ROLLOUT-PLAN.md). Backup/PITR
+evidence, remote SQL-byte equality, a usable explicit-target CLI dry run and
+Vercel Preview-to-Staging binding are not verified. No remote write, migration,
+provider call or Git mutation occurred. B30-C deployment and runtime acceptance
+remain separately authorized work.
+
+B30-C2 status (2026-10-24): **BLOCKER REVIEW COMPLETE; DEPLOYMENT STILL
+BLOCKED.** The 13-file local hash manifest is recorded and the bundled Supabase
+CLI (`2.120.0`) was made usable with a temporary local profile; its supported
+`db push --dry-run` flag was confirmed without contacting Staging. Backup/PITR
+evidence, Vercel Preview-to-Staging binding and the authorized remote dry-run
+remain outstanding. No remote or Git mutation occurred.
+
+B30-C3 status (2026-10-24): **STAGING BACKUP RISK ACCEPTED (NOT BACKUP PASS);
+DEPLOYMENT STILL BLOCKED.** The user accepts possible loss in rebuildable
+Staging, while Production remains gated on backup/restore evidence. CLI help and
+the 13 local hashes are verified, but explicit Staging linking lacks an access
+token; Vercel binding and the remote 13-version dry-run remain unverified.
+
+B30-C4 status (2026-10-24): **BATCH 1 PASS; NEXT BATCH NOT AUTHORIZED.** Using
+an isolated workspace and an explicit Staging target, migrations 1–6 were dry-run
+matched and applied once. Staging history is 85 applied / 7 pending. Docker/Podman
+prevented schema-diff/dump verification, so post-deployment ACL/RLS/object checks
+remain NOT VERIFIED. No provider, worker, cron, Shop transaction or Vercel action
+was performed.
+
+B30-C4 post-deployment security status: **MIGRATION HISTORY PASS; CATALOG
+SECURITY VERIFICATION NOT VERIFIED.** Static review confirms the six SQL contracts,
+but effective remote object, ACL, RLS, function-owner/search_path and trigger
+state require a usable read-only SQL path. Batch 2 remains stopped.
+
+B30-C4 post-deployment security closure: **BATCH 1 POST-DEPLOYMENT SECURITY PASS
+FOR REVIEWED STATIC CATALOG SCOPE.** Connected Supabase read-only evidence verified
+85 unique migrations, nine reviewed RLS/ACL tables, 13 enabled triggers, healthy
+reviewed indexes/constraints, restricted provider RPC EXECUTE grants and fixed
+`search_path` on reviewed SECURITY DEFINER functions. Runtime user isolation,
+runtime feature-flag values, complete helper ownership/definition parity and
+provider behavior remain NOT VERIFIED; Batch 2 still needs separate approval.
+
+B30 FREE BETA scope (2026-10-24): **PAID-LAUNCH FUNCTIONS DEFERRED.** The next
+candidate review is limited to Migrations #7–#9. Shop admission and notification
+projection remain default-off; Shop suspension migration execution/scheduling is
+deferred so trial expiry cannot suspend free-beta Shops. Payment, Refund,
+Transfer, Payout, Dispute and paid-membership acceptance are explicitly
+**DEFERRED FOR PAID LAUNCH**.
+
+B30-C5 status (2026-10-24): **BATCH 2 MIGRATION APPLY PASS; CATALOG ACCEPTANCE
+PENDING.** Migrations #7–#9 were dry-run matched and applied once to Staging;
+history is 88 applied / 4 pending. Admission/lifecycle/provider gates remain
+off and no Worker/Cron or provider action ran. Remote post-deployment object,
+RLS/ACL, scheduler and function-security verification remains NOT VERIFIED.
+
+B30-C6 status (2026-10-24): **BATCH 3 MIGRATION APPLY PASS; CATALOG ACCEPTANCE
+PENDING.** Worker migrations #10–#11 were exact-dry-run matched and applied once;
+history is 90 applied / 2 pending. No new scheduler, Worker invocation, Cron,
+provider or financial action ran. Static security review passed; remote catalog
+verification of worker objects, RLS/ACL, function permissions/search_path and
+Cron metadata remains NOT VERIFIED.
+
+B30-C7 status (2026-10-24): **READY FOR EXPLICIT MIGRATION APPROVAL — NOT
+APPLIED.** The final two B29 migrations were hash-checked and exact-dry-run
+matched against Staging history 90. Static search/notification bounds and
+recipient isolation pass review; populated-data index lock and later browser
+acceptance remain deployment/runtime checks.
+
+B30-C7 deployment status (2026-10-24): **BATCH 4 MIGRATION APPLY PASS; CATALOG
+AND RUNTIME ACCEPTANCE PENDING.** The final two B29 migrations were applied once
+with bounded lock/statement timeouts; history is 92/92. No other SQL or provider
+operation ran. RPC/index/ACL/RLS/Cron catalog checks and real browser/API tests
+remain outstanding.
 
 ## Product decisions still needed, only when relevant task starts
 

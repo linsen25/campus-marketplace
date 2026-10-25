@@ -10,6 +10,7 @@ import {
   getListing,
   getCreationListing,
   getListings,
+  getResaleListingsPage,
   getMyListings,
   markListingSold,
   updateListing,
@@ -104,16 +105,28 @@ export default async function handler(
     if (!id) {
       if (req.method === 'POST')
         return res.status(201).json(await createListing(req.body, context))
+      if (req.query.paged !== undefined && req.query.paged !== 'true')
+        throw new ListingApiError('Invalid paged query mode.')
+      if (req.query.mine === 'true')
+        return res
+          .status(200)
+          .json(
+            await getMyListings(
+              { channel: queryFromRequest(req).channel },
+              context
+            )
+          )
+      if (req.query.paged === 'true') {
+        const result = await getResaleListingsPage(
+          queryFromRequest(req),
+          context
+        )
+        res.setHeader('X-Total-Count', String(result.total))
+        return res.status(200).json(result.listings)
+      }
       return res
         .status(200)
-        .json(
-          req.query.mine === 'true'
-            ? await getMyListings(
-                { channel: queryFromRequest(req).channel },
-                context
-              )
-            : await getListings(queryFromRequest(req), context)
-        )
+        .json(await getListings(queryFromRequest(req), context))
     }
     if (action) {
       const actionHandler =

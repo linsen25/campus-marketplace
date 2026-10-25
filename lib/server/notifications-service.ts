@@ -1,9 +1,6 @@
 // Server-only; no privileged key or client-selected recipient is used.
 import { ListingApiError } from '@/lib/listing-validation'
-import {
-  notificationCategories,
-  notificationCategory,
-} from '@/lib/notification-category'
+import { notificationCategories } from '@/lib/notification-category'
 import type { NotificationItem } from '@/lib/notification-category'
 import { requireFinancialEnvironment } from '@/lib/server/financial-capabilities-service'
 import { requireMarketplaceUser } from '@/lib/server/marketplace-auth'
@@ -98,7 +95,6 @@ export function createNotificationsService(context: MarketplaceContext) {
     }
   }
   return {
-    // eslint-disable-next-line complexity -- Cursor validation and two independent filters retain the existing recipient-scoped paging contract.
     async list(
       before: unknown,
       beforeId: unknown,
@@ -123,46 +119,13 @@ export function createNotificationsService(context: MarketplaceContext) {
           !Number.isFinite(Date.parse(before)))
       )
         throw new ListingApiError('Invalid notification cursor.')
-      let cursor = {
+      const cursor = {
         p_before: before ?? null,
         p_before_id: missingId ? null : messageUuid(beforeId),
+        p_category: category ?? null,
+        p_status: status ?? null,
       }
-      if (category === undefined && status === undefined)
-        return enrich(await call('marketplace_notifications', cursor))
-      // Scan authoritative recipient-scoped pages, not just the visible page.
-      const notifications: NotificationItem[] = []
-      let unreadCount = 0
-      const result = () => {
-        const hasMore = notifications.length > 50
-        const last = notifications[Math.min(notifications.length, 50) - 1]
-        return {
-          notifications: notifications.slice(0, 50),
-          unreadCount,
-          hasMore,
-          nextCursor: hasMore
-            ? { before: last.created_at, beforeId: last.id }
-            : null,
-        }
-      }
-      for (;;) {
-        const page = await call('marketplace_notifications', cursor)
-        unreadCount = page.unreadCount
-        for (let i = 0; i < page.notifications.length; i++) {
-          const item: NotificationItem = page.notifications[i]
-          cursor = { p_before: item.created_at, p_before_id: item.id }
-          if (
-            (category === undefined ||
-              notificationCategory(item) === category) &&
-            (status === undefined ||
-              (status === 'read' ? Boolean(item.read_at) : !item.read_at))
-          )
-            notifications.push(item)
-          // One matching lookahead avoids a misleading Load more for a tail
-          // containing only other categories. Resume at the 50th match.
-          if (notifications.length === 51) return enrich(result())
-        }
-        if (page.notifications.length < 50) return enrich(result())
-      }
+      return enrich(await call('marketplace_notifications_filtered', cursor))
     },
     markRead(id: unknown) {
       return call('marketplace_mark_notification_read', {

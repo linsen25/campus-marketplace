@@ -8,8 +8,11 @@ const { spawn, spawnSync } = require('node:child_process')
 const historical = 'supabase/migrations/202610160005_dual_payment_paths.sql'
 const migration =
   'supabase/migrations/202610180001_transaction_scheduler_alias_fix.sql'
+const runtimeMigration =
+  'supabase/migrations/20261023190043_worker_runtime_reliability.sql'
 const oldSql = fs.readFileSync(historical, 'utf8')
 const nextSql = fs.readFileSync(migration, 'utf8')
+const runtimeSql = fs.readFileSync(runtimeMigration, 'utf8')
 const extract = (sql) =>
   sql.match(
     /create or replace function marketplace_private\.run_transaction_due_work\(\)[\s\S]*?end;\$\$;/
@@ -161,6 +164,20 @@ async function main() {
       'PASS local migration: expiry selection, settlement order, all reminder branches, external guard, retry deduplication, private ACL and search_path'
     )
 
+    sql(runtimeSql)
+    assert.equal(
+      metadata(),
+      baseline,
+      'B28 CREATE OR REPLACE retains identity/owner/ACL/settings'
+    )
+    const runtimeDefinition = extract(runtimeSql)
+    assert(runtimeDefinition, 'B28 scheduler definition must exist')
+    assert.equal(
+      runtimeDefinition.match(/limit batch_limit/g)?.length,
+      3,
+      'Each existing due-work category must have its own bound'
+    )
+
     holder = spawn(executable('psql'), args, {
       env,
       windowsHide: true,
@@ -194,7 +211,7 @@ async function main() {
     const overlap = JSON.parse(
       sql('select marketplace_private.run_transaction_due_work();')
     )
-    assert.deepEqual(overlap, { overlapSkipped: true })
+    assert.deepEqual(overlap, { overlapSkipped: true, batchLimit: 50 })
     assert.equal(
       sql(
         "select count(*) from marketplace_private.test_calls where operation='notify';"
@@ -208,15 +225,110 @@ async function main() {
     sql(
       'truncate public.order_requests,public.orders,marketplace_private.notification_reminders;'
     )
-    sql(nextSql)
-    assert.equal(
-      JSON.parse(sql('select marketplace_private.run_transaction_due_work();'))
-        .ordersChecked,
-      0
+    sql(runtimeSql)
+    const empty = JSON.parse(
+      sql('select marketplace_private.run_transaction_due_work();')
     )
+    assert.equal(empty.ordersChecked, 0)
+    assert.equal(empty.offersChecked, 0)
+    assert.equal(empty.remindersChecked, 0)
+    assert.equal(empty.batchLimit, 50)
     assert.equal(metadata(), baseline)
     console.log(
       'PASS local overlap guard, empty scan and CREATE OR REPLACE replay'
+    )
+
+    // Each category is independently bounded. Domain functions remain the
+    // authority for state transitions; this test only counts selected work.
+    sql(`truncate marketplace_private.test_calls,marketplace_private.notification_events,
+      marketplace_private.notification_reminders,marketplace_private.delivery_checkouts,
+      marketplace_private.order_protection,marketplace_private.protection_cases,
+      marketplace_private.test_external_started,public.order_meetup_revisions,
+      public.orders,public.order_requests,public.conversations,public.listings;
+      insert into public.listings
+      select md5('listing-'||n)::uuid from generate_series(1,55) n;
+      insert into public.conversations
+      select md5('conversation-'||n)::uuid,md5('listing-'||n)::uuid
+      from generate_series(1,55) n;
+      insert into public.order_requests
+      select md5('conversation-'||n)::uuid,2,'active',
+       jsonb_build_object('fulfillment','on_campus','scheduled_at',clock_timestamp()-interval '1 hour')
+      from generate_series(1,55) n;`)
+    const offerBound = JSON.parse(
+      sql('select marketplace_private.run_transaction_due_work();')
+    )
+    assert.equal(offerBound.offersChecked, 50)
+    assert.equal(
+      sql(
+        "select count(*) from marketplace_private.test_calls where operation='expire';"
+      ),
+      '50'
+    )
+
+    sql(`truncate marketplace_private.test_calls,public.order_requests,public.conversations;
+      insert into public.orders
+      select md5('order-'||n)::uuid,md5('listing-'||n)::uuid,2,'open',true,'pending'
+      from generate_series(1,55) n;
+      insert into marketplace_private.delivery_checkouts
+      select md5('order-'||n)::uuid,null,clock_timestamp()-interval '1 hour',clock_timestamp()+interval '1 hour'
+      from generate_series(1,55) n;`)
+    const orderBound = JSON.parse(
+      sql('select marketplace_private.run_transaction_due_work();')
+    )
+    assert.equal(orderBound.ordersChecked, 50)
+    assert.equal(
+      sql(
+        "select count(*) from marketplace_private.test_calls where operation='delivery';"
+      ),
+      '50'
+    )
+    sql(`truncate marketplace_private.test_calls;
+      update marketplace_private.delivery_checkouts
+      set checkout_claim_deadline_at=clock_timestamp()+interval '1 hour';
+      update marketplace_private.delivery_checkouts checkout
+      set checkout_claim_deadline_at=clock_timestamp()-interval '1 hour'
+      where checkout.order_id in(
+       select due_order.id from public.orders due_order
+       order by due_order.listing_id desc limit 5);`)
+    const dueOnly = JSON.parse(
+      sql('select marketplace_private.run_transaction_due_work();')
+    )
+    assert.equal(dueOnly.ordersChecked, 5)
+    assert.equal(
+      sql(
+        "select count(*) from marketplace_private.test_calls where operation='delivery';"
+      ),
+      '5',
+      'future Orders cannot consume the bounded due-work batch'
+    )
+
+    sql(`truncate marketplace_private.test_calls,public.orders;
+      insert into public.orders
+      values(md5('reminder-order')::uuid,md5('listing-1')::uuid,2,'open',true,'pending');
+      insert into marketplace_private.delivery_checkouts
+      values(md5('reminder-order')::uuid,null,clock_timestamp()+interval '1 hour',clock_timestamp()+interval '1 hour');
+      insert into marketplace_private.notification_reminders(identity,order_id,recipient,kind,due_at)
+      select 'bounded-'||lpad(n::text,2,'0'),md5('reminder-order')::uuid,
+       md5('recipient-'||n)::uuid,'delivery_claim_1h',clock_timestamp()-interval '1 hour'
+      from generate_series(1,55) n;`)
+    const reminderBound = JSON.parse(
+      sql('select marketplace_private.run_transaction_due_work();')
+    )
+    assert.equal(reminderBound.remindersChecked, 50)
+    assert.equal(
+      sql(
+        'select count(*) from marketplace_private.notification_reminders where delivered_at is not null;'
+      ),
+      '50'
+    )
+    assert.equal(
+      sql(
+        'select count(*) from marketplace_private.notification_reminders where delivered_at is null;'
+      ),
+      '5'
+    )
+    console.log(
+      'PASS B28 scheduler bounds: Offers 50, due Orders 50 without future-order starvation, Reminders 50 per invocation'
     )
   } finally {
     holder?.kill()

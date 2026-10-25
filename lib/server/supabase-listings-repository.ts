@@ -20,6 +20,7 @@ import { createMarketplaceClient } from '@/lib/supabase/server'
 import type {
   CreateListingInput,
   Listing,
+  ListingPage,
   ListingQuery,
   OwnerListingQuery,
   UpdateListingInput,
@@ -235,6 +236,76 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
     return (data || []).map(toListing)
   }
 
+  async function getResaleListingsPage(
+    query: ListingQuery = {}
+  ): Promise<ListingPage> {
+    const { page, pageSize } = validateQuery(query)
+    if (
+      (query.channel && query.channel !== 'resale') ||
+      (query.status && query.status !== 'available')
+    )
+      throw new ListingApiError(
+        'The public Resale feed only supports available Resale listings.'
+      )
+    const offset = (page - 1) * pageSize
+    if (!Number.isSafeInteger(offset))
+      throw new ListingApiError(
+        'The requested page is outside the supported range.'
+      )
+    const { data: browse, error: browseError } = await client.rpc(
+      'marketplace_browse_resale',
+      {
+        p_search: query.search || null,
+        p_category: query.category || null,
+        p_subcategory: query.subcategory || null,
+        p_condition: query.condition || null,
+        p_pickup_area: query.pickupArea || null,
+        p_min_price: query.minPrice ?? null,
+        p_max_price: query.maxPrice ?? null,
+        p_sort: query.sort || 'newest',
+        p_offset: offset,
+        p_limit: pageSize,
+      }
+    )
+    databaseError(browseError)
+    const result = browse as { ids?: unknown; total?: unknown } | null
+    const rawIds = result?.ids
+    const ids = Array.isArray(rawIds)
+      ? rawIds.filter(
+          (id): id is string => typeof id === 'string' && uuid.test(id)
+        )
+      : []
+    const total = Number(result?.total)
+    if (
+      ids.length > pageSize ||
+      !Number.isSafeInteger(total) ||
+      total < 0 ||
+      ids.length !== (rawIds as unknown[])?.length
+    )
+      throw new ListingApiError('The Resale browse response was invalid.', 503)
+    if (!ids.length) return { listings: [], total, page, pageSize }
+    const { data, error } = await client
+      .from('listings')
+      .select<string, ListingRow>(selection)
+      .in('id', ids)
+    databaseError(error)
+    const byId = new Map((data || []).map((row) => [row.id, toListing(row)]))
+    if (byId.size !== ids.length)
+      throw new ListingApiError(
+        'The marketplace changed while this page was loading. Please retry.',
+        409
+      )
+    return {
+      listings: ids.flatMap((id) => {
+        const listing = byId.get(id)
+        return listing ? [listing] : []
+      }),
+      total,
+      page,
+      pageSize,
+    }
+  }
+
   return {
     async createShopListing(input: CreateListingInput, actionId: string) {
       await requireMarketplaceUser(client)
@@ -287,6 +358,7 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
       return owned(actionId)
     },
     getListing: (id: string) => readListing(id),
+    getResaleListingsPage,
     getCreationListing: owned,
     getListings,
     async getFavoriteListings(query: ListingQuery = {}) {

@@ -15,7 +15,10 @@ const bindings = new Map(),
   operations = new Map(),
   events = [],
   orderEvents = [],
-  refundEvents = []
+  refundEvents = [],
+  transferEvents = [],
+  connectedPayoutEvents = []
+const disputeEvents = []
 const customers = new Map(),
   setups = new Map(),
   methods = new Map(),
@@ -158,6 +161,24 @@ async function dbRpc(name, p) {
       assert.equal(p.p_action, 'enqueue')
       if (!refundEvents.some((event) => event.id === p.p_value.id))
         refundEvents.push({ ...p.p_value })
+      return { data: {} }
+    }
+    if (name === 'marketplace_order_transfer_events') {
+      assert.equal(p.p_action, 'enqueue')
+      if (!transferEvents.some((event) => event.id === p.p_value.id))
+        transferEvents.push({ ...p.p_value })
+      return { data: {} }
+    }
+    if (name === 'marketplace_connected_payout_events') {
+      assert.equal(p.p_action, 'enqueue')
+      if (!connectedPayoutEvents.some((event) => event.id === p.p_value.id))
+        connectedPayoutEvents.push({ ...p.p_value })
+      return { data: {} }
+    }
+    if (name === 'marketplace_stripe_dispute_events') {
+      assert.equal(p.p_action, 'enqueue')
+      if (!disputeEvents.some((event) => event.id === p.p_value.id))
+        disputeEvents.push({ ...p.p_value })
       return { data: {} }
     }
     throw Error('Unexpected RPC')
@@ -371,6 +392,8 @@ Object.assign(process.env, {
   STRIPE_WEBHOOK_SECRET: 'whsec_SyntheticOnly',
   STRIPE_CONNECT_WEBHOOK_SECRET: 'whsec_SyntheticConnected',
   STRIPE_ACCOUNT_WEBHOOK_SECRET: 'whsec_SyntheticAccount',
+  STRIPE_CONNECTED_PAYOUT_OBSERVATION_ENABLED: 'true',
+  STRIPE_ORDER_DISPUTE_OBSERVATION_ENABLED: 'true',
 })
 const config = load('lib/server/stripe-environment.ts'),
   service = load('lib/server/stripe-setup.ts')
@@ -393,6 +416,13 @@ async function event(type, object, channel = 'platform', extra = {}) {
   return { payload, header }
 }
 async function main() {
+  process.env.STRIPE_PROVIDER_ENABLED = 'false'
+  assert.deepEqual(await service.drainStripeEvents(), {
+    enabled: false,
+    processed: 0,
+  })
+  assert.equal(events.length, 0, 'disabled Setup Worker claims no work')
+  process.env.STRIPE_PROVIDER_ENABLED = 'true'
   for (const [key, value] of [
     ['STRIPE_SECRET_KEY', 'sk_live_Synthetic'],
     ['NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY', 'pk_live_Synthetic'],
@@ -499,12 +529,71 @@ async function main() {
   assert.equal(refundEvents.length, 3)
   assert(refundEvents.every((item) => item.scope === platform))
   assert(refundEvents.every((item) => item.providerReference.startsWith('re_')))
+  for (const type of [
+    'transfer.created',
+    'transfer.updated',
+    'transfer.reversed',
+  ]) {
+    await event(type, {
+      id: `tr_${type.replace(/[^a-z]/g, '')}`,
+      object: 'transfer',
+      metadata: { uu_kind: 'marketplace_order_transfer' },
+    })
+  }
+  assert.equal(transferEvents.length, 3)
+  assert(transferEvents.every((item) => item.scope === platform))
+  assert(
+    transferEvents.every((item) => item.providerReference.startsWith('tr_'))
+  )
+  await event('transfer.updated', {
+    id: 'tr_Unrelated',
+    object: 'transfer',
+    metadata: { uu_kind: 'other_transfer' },
+  })
+  assert.equal(transferEvents.length, 3)
   await event('refund.updated', {
     id: 're_Membership',
     object: 'refund',
     metadata: { uu_kind: 'shop_membership_refund' },
   })
   assert.equal(refundEvents.length, 3)
+  for (const type of [
+    'payout.created',
+    'payout.updated',
+    'payout.paid',
+    'payout.failed',
+    'payout.canceled',
+    'payout.reconciliation_completed',
+  ]) {
+    await event(
+      type,
+      { id: `po_${type.replace(/[^a-z]/g, '')}`, object: 'payout' },
+      'connected',
+      { account: 'acct_ConnectedSeller' }
+    )
+  }
+  assert.equal(connectedPayoutEvents.length, 6)
+  assert(
+    connectedPayoutEvents.every(
+      (item) =>
+        item.scope === 'acct_ConnectedSeller' &&
+        item.providerReference.startsWith('po_')
+    )
+  )
+  for (const type of [
+    'charge.dispute.created',
+    'charge.dispute.updated',
+    'charge.dispute.closed',
+    'charge.dispute.funds_withdrawn',
+    'charge.dispute.funds_reinstated',
+  ]) {
+    await event(type, {
+      id: `du_${type.replace(/[^a-z]/g, '')}`,
+      object: 'dispute',
+    })
+  }
+  assert.equal(disputeEvents.length, 5)
+  assert(disputeEvents.every((item) => item.scope === platform))
   await assert.rejects(() =>
     event(
       'refund.updated',

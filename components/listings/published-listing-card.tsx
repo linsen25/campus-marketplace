@@ -94,11 +94,15 @@ export function PublishedListingCard({
   }, [])
   const messaging = useMessageSeller(listing.id)
   const shopReadOnly = listing.listingChannel === 'shop'
-  const canInteract = !own && !shopReadOnly
+  const shopTransactionsEnabled =
+    !shopReadOnly ||
+    process.env.NEXT_PUBLIC_SHOP_TRANSACTIONS_ENABLED === 'true'
+  const canTransact = !own && shopTransactionsEnabled
+  const canFavorite = !own && !shopReadOnly
   const offerContext = useListingOfferContext(
     listing.id,
     listing.seller.id,
-    !shopReadOnly
+    shopTransactionsEnabled
   )
   useEffect(() => {
     if (!seller || own || initiallyFavorited || shopReadOnly) return undefined
@@ -142,7 +146,7 @@ export function PublishedListingCard({
     }
   }
   const favoriteControl =
-    canInteract && listing.status === 'available' ? (
+    canFavorite && listing.status === 'available' ? (
       <ListingFavoriteControl
         liked={favorite}
         disabled={busy}
@@ -191,7 +195,7 @@ export function PublishedListingCard({
           .join(' ')}
         overlayStyle={overlayStyle}
         primaryAction={
-          canInteract ? (
+          canTransact ? (
             <>
               <ShiningButton
                 variant="green"

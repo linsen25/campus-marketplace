@@ -92,6 +92,41 @@ assert.equal(
   target({ section: 'listing', listingId: orderId }, 'price_drop'),
   `/listings/${orderId}`
 )
+for (const event of [
+  'shop_trial_activated',
+  'shop_membership_access_started',
+  'shop_membership_access_upgraded',
+  'shop_suspended',
+  'shop_reopened',
+])
+  assert.equal(
+    target({ section: 'shop', destination: 'my-shop' }, event),
+    '/home?section=my-shop'
+  )
+for (const destination of ['purchases', 'sales'])
+  for (const event of [
+    'order_refund_succeeded',
+    'order_refund_failed',
+    'order_refund_unresolved',
+    'seller_transfer_succeeded',
+    'seller_transfer_failed',
+    'seller_transfer_unresolved',
+    'seller_transfer_reversed',
+    'seller_transfer_partially_reversed',
+  ])
+    assert.equal(
+      target({ section: 'orders', destination, orderId }, event),
+      `/home?section=orders&destination=${destination}&order=${orderId}`
+    )
+for (const event of [
+  'connected_bank_payout_paid',
+  'connected_bank_payout_failed',
+  'connected_bank_payout_canceled',
+])
+  assert.equal(
+    target({ section: 'settings', panel: 'payments-payouts' }, event),
+    '/home?section=settings&focus=payments-payouts'
+  )
 assert.equal(
   target(
     { section: 'listing', listingId: 'invalid?token=private' },
@@ -104,6 +139,8 @@ for (const invalid of [
   {},
   'https://malicious.invalid',
   { section: 'orders', destination: 'sales', orderId: 'bad' },
+  { section: 'shop', destination: 'my-shop&redirect=https://evil.invalid' },
+  { section: 'settings', panel: 'payments-payouts&token=private' },
   { section: 'auth', token: 'private' },
 ])
   assert.equal(target(invalid, 'new_message'), null)

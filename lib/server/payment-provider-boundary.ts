@@ -52,6 +52,22 @@ export type ProviderPaymentOperationRequest =
   | MembershipPaymentOperationRequest
   | OrderPaymentOperationRequest
 
+export type SellerTransferKind = 'delivery_compensation' | 'sale_proceeds'
+
+export type SellerTransferOperation = ProviderOperationIdentity & {
+  purpose: 'marketplace_order'
+  orderId: string
+  paymentAttemptId: string
+  sellerId: string
+  kind: SellerTransferKind
+  paymentIntentId: string
+  destinationAccountId: string
+  transferGroup: string
+  amountCents: number
+  currency: 'CAD'
+  providerReference: string | null
+}
+
 export type ProviderOperationOutcome =
   | 'FAILURE'
   | 'RECONCILIATION_REQUIRED'

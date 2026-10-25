@@ -16,6 +16,9 @@ let row = {
   subcategory: 'Furniture',
   condition: null,
   pickup_area: 'Campus',
+  meeting_location: 'Outside library',
+  meeting_location_provider: null,
+  meeting_place_id: null,
   status: 'available',
   created_at: '2026-10-04',
   updated_at: '2026-10-04',
@@ -83,9 +86,13 @@ function load(file) {
     },
   }).outputText
   new Function('require', 'module', 'exports', code)(
-    (name) =>
-      mocks[name] ||
-      (name.startsWith('@/') ? load(name.slice(2) + '.ts') : require(name)),
+    (name) => {
+      if (mocks[name]) return mocks[name]
+      if (name.startsWith('@/')) return load(name.slice(2) + '.ts')
+      if (name.startsWith('.'))
+        return load(path.resolve(path.dirname(full), name) + '.ts')
+      return require(name)
+    },
     module,
     module.exports
   )
@@ -103,6 +110,7 @@ const base = {
   price: 0,
   currency: 'CAD',
   pickupArea: 'Campus',
+  meetingLocation: { label: 'Outside library' },
   photoUrls: [],
   expectedImageCount: 1,
 }

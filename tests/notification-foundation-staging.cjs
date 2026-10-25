@@ -151,7 +151,7 @@ async function run() {
       assert(p.url().endsWith('/home?section=notifications'))
       const feed = p.getByRole('region', { name: 'Notifications feed' })
       await feed.getByRole('button', { name: /Staging email test/ }).click()
-      await p.waitForURL('**/home?section=settings')
+      await p.waitForURL('**/home?section=settings&focus=payments-payouts')
       await p
         .getByRole('button', { name: 'Notifications, 0 unread', exact: true })
         .waitFor()

@@ -44,13 +44,28 @@ function load(file) {
       return {
         createMarketplaceClient: () => ({
           rpc: async (name, p) => {
-            assert.equal(name, 'marketplace_notifications')
+            assert.equal(name, 'marketplace_notifications_filtered')
+            const filtered = rows.filter(
+              (n) =>
+                (!p.p_before_id || n.id < p.p_before_id) &&
+                (!p.p_category ||
+                  (p.p_category === 'order' &&
+                    n.event_type !== 'new_message' &&
+                    n.event_type !== 'price_drop')) &&
+                (!p.p_status ||
+                  (p.p_status === 'read' ? Boolean(n.read_at) : !n.read_at))
+            )
+            const notifications = filtered.slice(0, 50)
+            const last = notifications.at(-1)
             return {
               data: {
-                notifications: rows
-                  .filter((n) => !p.p_before_id || n.id < p.p_before_id)
-                  .slice(0, 50),
+                notifications,
                 unreadCount: 77,
+                hasMore: filtered.length > 50,
+                nextCursor:
+                  filtered.length > 50
+                    ? { before: last.created_at, beforeId: last.id }
+                    : null,
                 metadata: 'preserved',
               },
               error: null,

@@ -18,9 +18,33 @@ export type NotificationItem = {
   original_price_cents?: number | null
   latest_price_cents?: number | null
 }
+
+const b27SystemEvents = new Set([
+  'shop_trial_activated',
+  'shop_membership_access_started',
+  'shop_membership_access_upgraded',
+  'shop_suspended',
+  'shop_reopened',
+  'connected_bank_payout_paid',
+  'connected_bank_payout_failed',
+  'connected_bank_payout_canceled',
+])
+const b27OrderEvents = new Set([
+  'order_refund_succeeded',
+  'order_refund_failed',
+  'order_refund_unresolved',
+  'seller_transfer_succeeded',
+  'seller_transfer_failed',
+  'seller_transfer_unresolved',
+  'seller_transfer_reversed',
+  'seller_transfer_partially_reversed',
+])
+
 export function notificationCategory(
   item: Pick<NotificationItem, 'destination' | 'event_type'>
 ): NotificationCategory {
+  if (b27SystemEvents.has(item.event_type)) return 'system'
+  if (b27OrderEvents.has(item.event_type)) return 'order'
   if (item.event_type === 'new_message') return 'message'
   if (
     item.event_type === 'price_drop' ||

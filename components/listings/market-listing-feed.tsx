@@ -14,6 +14,11 @@ export function MarketListingFeed({
   pageNumber,
   onChangePage,
   onReturnToTop,
+  serverPaged = false,
+  pageCount,
+  hasMore,
+  loading,
+  onLoadMore,
 }: {
   isApp: boolean
   items: GridItem[]
@@ -22,9 +27,21 @@ export function MarketListingFeed({
   pageNumber: number
   onChangePage: (page: number) => void
   onReturnToTop: () => void
+  serverPaged?: boolean
+  pageCount?: number
+  hasMore?: boolean
+  loading?: boolean
+  onLoadMore?: () => void
 }) {
   return isApp ? (
-    <InfiniteGrid key={feedKey} items={items} repeat={repeat} />
+    <InfiniteGrid
+      key={feedKey}
+      items={items}
+      repeat={repeat}
+      hasMore={hasMore}
+      loading={loading}
+      onLoadMore={onLoadMore}
+    />
   ) : (
     <>
       <div
@@ -33,7 +50,10 @@ export function MarketListingFeed({
         data-browsing="pagination"
       >
         <div className={`${gridStyles.grid} ${styles.resaleGrid}`}>
-          {items.slice((pageNumber - 1) * 15, pageNumber * 15).map((item) => (
+          {(serverPaged
+            ? items
+            : items.slice((pageNumber - 1) * 15, pageNumber * 15)
+          ).map((item) => (
             <div
               key={item.id}
               className={gridStyles.item}
@@ -46,7 +66,7 @@ export function MarketListingFeed({
       </div>
       <MarketPagination
         page={pageNumber}
-        pageCount={Math.ceil(items.length / 15)}
+        pageCount={pageCount ?? Math.ceil(items.length / 15)}
         onChange={onChangePage}
         onReturnToTop={onReturnToTop}
       />
