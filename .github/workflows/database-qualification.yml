@@ -28,8 +28,51 @@ jobs:
         with:
           version: 2.120.0
       - name: Start disposable Supabase Local Stack
-        run: >-
-          supabase db start --ignore-health-check
+        id: start-local
+        shell: bash
+        run: |
+          set +e
+          {
+            echo '=== supabase version ==='
+            supabase --version
+            echo '=== docker version ==='
+            docker version
+            echo '=== start command ==='
+            supabase db start --ignore-health-check
+          } > supabase-start.raw.log 2>&1
+          rc=$?
+          sed -E 's/((PASSWORD|TOKEN|SECRET|API[_-]?KEY|JWT|SERVICE_ROLE)[=:][^[:space:]]+)/\2=[REDACTED]/Ig' supabase-start.raw.log | tee supabase-start.log
+          rm -f supabase-start.raw.log
+          echo "start_exit_code=$rc" >> supabase-start.log
+          exit "$rc"
+      - name: Diagnose failed Supabase Local Stack start
+        if: failure() && steps.start-local.outcome == 'failure'
+        shell: bash
+        run: |
+          set +e
+          {
+            echo '=== supabase version ==='
+            supabase --version
+            echo '=== docker version ==='
+            docker version
+            echo '=== all supabase containers ==='
+            docker ps -a --no-trunc --filter name=supabase
+            echo '=== supabase container state ==='
+            for id in $(docker ps -aq --filter name=supabase); do
+              docker inspect --format '{{.Name}} status={{.State.Status}} exit={{.State.ExitCode}} error={{.State.Error}}' "$id"
+              echo "--- logs $id (tail 80) ---"
+              docker logs --tail 80 "$id" 2>&1 | sed -E 's/((PASSWORD|TOKEN|SECRET|API[_-]?KEY|JWT|SERVICE_ROLE)[=:][^[:space:]]+)/\2=[REDACTED]/Ig'
+            done
+          } 2>&1 | tee supabase-start-diagnostics.log
+      - name: Upload Supabase start diagnostics
+        if: failure() && steps.start-local.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-start-diagnostics
+          path: |
+            supabase-start.log
+            supabase-start-diagnostics.log
+          retention-days: 1
       - name: Apply the complete migration chain
         run: supabase db reset --local
       - name: Verify filtered notification definition and privileges
