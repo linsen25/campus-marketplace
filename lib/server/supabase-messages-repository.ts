@@ -165,7 +165,7 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
         ? source.buyer_last_read_sequence
         : source.seller_last_read_sequence
     )
-    const [profile, latest, unread, live] = await Promise.all([
+    const [profile, badge, latest, unread, live] = await Promise.all([
       counterpart
         ? client
             .from('profiles')
@@ -173,6 +173,11 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
             .eq('id', counterpart)
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
+      counterpart
+        ? client.rpc('marketplace_uwo_identity_badge', {
+            p_user_id: counterpart,
+          })
+        : Promise.resolve({ data: false, error: null }),
       client
         .from('messages')
         .select('*')
@@ -193,12 +198,14 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
     checked(profile.error)
     checked(latest.error)
     checked(unread.error)
+    checked(badge.error)
     return {
       id: source.id,
       role,
       person: {
         id: counterpart || 'former-member',
         name: profile.data?.display_name || 'Former member',
+        ...(badge.data === true ? { uwoEmailVerified: true } : {}),
       },
       listing: {
         provenance: conversationProvenance(

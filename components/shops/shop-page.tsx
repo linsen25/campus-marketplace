@@ -65,6 +65,11 @@ export function ShopPage(initial: PublicShop) {
               <div className={styles.headingRow}>
                 <h1>{shop.shopName}</h1>
                 {shop.badgeTier && <ShopProBadge tier={shop.badgeTier} />}
+                {shop.uwoEmailVerified && (
+                  <span aria-label="UWO Email Verified">
+                    UWO Email Verified
+                  </span>
+                )}
                 <div className="ml-auto shrink-0">
                   <PulseHeart
                     confirmOnChange={true}

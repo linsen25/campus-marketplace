@@ -87,6 +87,9 @@ export function ConversationList({
           </span>
           <span className={styles.rowText}>
             <strong>{conversation.person.name}</strong>
+            {conversation.person.uwoEmailVerified && (
+              <small aria-label="UWO Email Verified">UWO Email Verified</small>
+            )}
             <span>{conversation.listing.title}</span>
             <ConversationListingProvenance
               provenance={conversation.listing.provenance}

@@ -12,6 +12,7 @@ export type ListingChannel = 'resale' | 'shop'
 export type SellerSummary = {
   id: string
   displayName: string
+  uwoEmailVerified?: boolean
 }
 
 export type Listing = {

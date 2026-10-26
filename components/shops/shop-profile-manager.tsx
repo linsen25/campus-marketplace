@@ -68,13 +68,18 @@ export function ShopProfileManager({
   const fieldValid = currentField === 'review' || !fieldError(currentField)
 
   useEffect(() => {
-    if (ownShop.status === 'absent' && !editing && !dismissed.current) {
+    if (
+      ownShop.status === 'absent' &&
+      ownShop.applicationStatus === 'approved' &&
+      !editing &&
+      !dismissed.current
+    ) {
       setDraft(emptyIdentity())
       setStep(0)
       setError('')
       setEditing(true)
     }
-  }, [ownShop.status, editing])
+  }, [ownShop.status, ownShop.applicationStatus, editing])
 
   const open = (create: boolean) => {
     dismissed.current = false
@@ -141,7 +146,13 @@ export function ShopProfileManager({
       )}
       {ownShop.status === 'absent' && (
         <p className={styles.inactive}>
-          Create your Shop profile to get started.
+          {ownShop.applicationStatus === 'pending'
+            ? 'Your Shop application is pending review.'
+            : ownShop.applicationStatus === 'rejected'
+            ? 'Your Shop application was not approved.'
+            : ownShop.applicationStatus === 'approved'
+            ? 'Create your Shop profile to get started.'
+            : 'Shop approval is required before you can create a Shop.'}
         </p>
       )}
       {ownShop.shop && (
@@ -152,11 +163,13 @@ export function ShopProfileManager({
           {username && <ShopPublicURL username={username} />}
         </div>
       )}
-      {ownShop.status === 'absent' && !editing && (
-        <StatefulButton className={styles.action} onClick={() => open(true)}>
-          <Plus size={16} aria-hidden="true" /> Create Shop Profile
-        </StatefulButton>
-      )}
+      {ownShop.status === 'absent' &&
+        ownShop.applicationStatus === 'approved' &&
+        !editing && (
+          <StatefulButton className={styles.action} onClick={() => open(true)}>
+            <Plus size={16} aria-hidden="true" /> Create Shop Profile
+          </StatefulButton>
+        )}
       {error && (
         <p className={profile.error} role="alert">
           {error}

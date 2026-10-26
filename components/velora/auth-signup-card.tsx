@@ -21,7 +21,7 @@ import {
   validUsername,
 } from '@/lib/auth-username'
 import { marketplaceRequest } from '@/lib/listings-api'
-import { isWesternEmail } from '@/lib/marketplace-auth'
+import { isValidEmail } from '@/lib/marketplace-auth'
 
 import styles from './auth-signup-card.module.css'
 
@@ -59,7 +59,7 @@ const standards = [
 const modeCopy = {
   signin: {
     title: 'Welcome back',
-    subtitle: 'Log in with your Western email.',
+    subtitle: 'Log in with your UU account.',
     submit: 'Log in',
     action: 'sign-in',
     minLength: undefined,
@@ -464,7 +464,7 @@ export function AuthSignupCard({
   const normalizedEmail = email.trim().toLowerCase()
   const sent = sentEmail === normalizedEmail && Boolean(sentEmail)
   const missing = [
-    !isWesternEmail(email) && 'Use a valid Western email.',
+    !isValidEmail(email) && 'Use a valid email address.',
     (!validUsername(username) || reservedUsername(username)) &&
       'Choose a valid, non-reserved username.',
     !sent &&
@@ -497,8 +497,8 @@ export function AuthSignupCard({
     registration.current = undefined
   }
   function validateEmail() {
-    if (!isWesternEmail(email))
-      throw new Error('Use your Western email to continue.')
+    if (!isValidEmail(email))
+      throw new Error('Enter a valid email address to continue.')
   }
   function validateSignup(checkAvailability = true) {
     if (!validUsername(username)) throw new Error(usernameInvalidMessage)
@@ -745,7 +745,7 @@ export function AuthSignupCard({
             </p>
           )}
           <div className={styles.field}>
-            <label htmlFor={`${fieldPrefix}-email`}>Western email</label>
+            <label htmlFor={`${fieldPrefix}-email`}>Email</label>
             <input
               className={styles.input}
               id={`${fieldPrefix}-email`}
@@ -759,7 +759,7 @@ export function AuthSignupCard({
                   recovery: 'email',
                 }[mode]
               }
-              placeholder="you@uwo.ca"
+              placeholder="you@example.com"
               value={email}
               disabled={formDisabled || (mode === 'signup' && sent)}
               aria-describedby={`${id}-access`}
@@ -769,10 +769,10 @@ export function AuthSignupCard({
               }}
             />
             <p id={`${id}-access`} className={styles.helper}>
-              Access is limited to verified Western email addresses.
+              Verify your email before using protected UU features.
             </p>
-            {mode === 'signup' && attempted && !isWesternEmail(email) && (
-              <p className={styles.error}>Use a valid Western email.</p>
+            {mode === 'signup' && attempted && !isValidEmail(email) && (
+              <p className={styles.error}>Use a valid email address.</p>
             )}
           </div>
           <UsernameField
@@ -1064,10 +1064,10 @@ export function AuthSignupCard({
         </motion.form>
       </div>
       <p className={styles.privacy}>
-        Western email required.
+        Email verification required.
         <br />
-        Your Western email is used to verify access and secure your account. It
-        is not displayed publicly.
+        Verify your email to secure your UU account. An optional UWO email can
+        be verified separately in Settings and is not displayed publicly.
       </p>
       {showStandards && (
         <CommunityStandards onClose={() => setShowStandards(false)} />

@@ -28,6 +28,7 @@ export type ShopPreview = {
   shopName: string
   category: string
   description: string
+  uwoEmailVerified?: boolean
   imageUrl?: string
   avatarUrl?: string
 }

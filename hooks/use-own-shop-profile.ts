@@ -11,12 +11,20 @@ import {
 import type { ShopProfileResult } from '@/lib/shop-profile-api'
 
 type Status = 'absent' | 'anonymous' | 'error' | 'loading' | 'ready'
+export type ShopApplicationStatus = 'none' | 'pending' | 'approved' | 'rejected'
 type State = ShopProfileResult & {
   ownerId?: string
   status: Status
   error: string
+  applicationStatus: ShopApplicationStatus
 }
-const empty: State = { shop: null, etag: null, status: 'loading', error: '' }
+const empty: State = {
+  shop: null,
+  etag: null,
+  status: 'loading',
+  error: '',
+  applicationStatus: 'none',
+}
 const conflict =
   'Your Shop changed elsewhere. Close and reopen this editor to review the latest information.'
 
@@ -57,6 +65,18 @@ export function useOwnShopProfile(enabled: boolean) {
       scopeRef.current === scope
     try {
       const result = valid(await requestOwnShop())
+      let applicationStatus: ShopApplicationStatus = 'none'
+      try {
+        const application = await fetch('/api/shop/application', {
+          credentials: 'same-origin',
+          cache: 'no-store',
+        })
+        if (application.ok) {
+          const value = (await application.json()).status
+          if (['none', 'pending', 'approved', 'rejected'].includes(value))
+            applicationStatus = value
+        }
+      } catch {}
       if (!current()) return
       confirmed.current = result
       setState({
@@ -64,6 +84,7 @@ export function useOwnShopProfile(enabled: boolean) {
         ownerId,
         status: result.shop ? 'ready' : 'absent',
         error: '',
+        applicationStatus,
       })
     } catch (error) {
       if (!current()) return
@@ -77,6 +98,7 @@ export function useOwnShopProfile(enabled: boolean) {
             ? 'anonymous'
             : 'error',
         error: 'Unable to load Shop settings. Reopen Settings to retry.',
+        applicationStatus: confirmed.current ? 'approved' : 'none',
       })
     }
   }, [enabled, ownerId, loading, scope, valid])
@@ -145,6 +167,7 @@ export function useOwnShopProfile(enabled: boolean) {
           ownerId,
           status: result.shop ? 'ready' : 'absent',
           error: '',
+          applicationStatus: 'approved',
         })
       }
       const reconcile = async () => {
@@ -229,6 +252,7 @@ export function useOwnShopProfile(enabled: boolean) {
         ownerId,
         status: result.shop ? 'ready' : 'absent',
         error: '',
+        applicationStatus: 'approved',
       })
       return result
     },

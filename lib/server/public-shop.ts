@@ -52,7 +52,12 @@ export function shopProjection(input: unknown): ShopPreview {
     !uuid.test(text(s.sellerProfileId))
   )
     throw unavailable()
-  if (!['plus', 'pro'].includes(text(s.badgeTier))) throw unavailable()
+  if (
+    s.badgeTier !== undefined &&
+    s.badgeTier !== null &&
+    !['plus', 'pro'].includes(text(s.badgeTier))
+  )
+    throw unavailable()
   const image = (value: unknown) => {
     const result = text(value)
     if (
@@ -70,7 +75,8 @@ export function shopProjection(input: unknown): ShopPreview {
     shopName: text(s.shopName),
     category: text(s.category),
     description: text(s.description),
-    badgeTier: s.badgeTier as 'plus' | 'pro',
+    ...(s.uwoEmailVerified === true ? { uwoEmailVerified: true } : {}),
+    ...(s.badgeTier ? { badgeTier: s.badgeTier as 'plus' | 'pro' } : {}),
     ...(s.imageUrl ? { imageUrl: image(s.imageUrl) } : {}),
     ...(s.avatarUrl ? { avatarUrl: image(s.avatarUrl) } : {}),
   }
@@ -115,7 +121,11 @@ export function publicShopListingProjection(input: unknown): Listing {
     estimatedDeliveryFeeCents: number(v.estimatedDeliveryFeeCents),
     photoUrls: photos,
     status: 'available',
-    seller: { id: seller.id as string, displayName: text(seller.displayName) },
+    seller: {
+      id: seller.id as string,
+      displayName: text(seller.displayName),
+      ...(seller.uwoEmailVerified === true ? { uwoEmailVerified: true } : {}),
+    },
     createdAt: text(v.createdAt),
     updatedAt: text(v.updatedAt),
     publishedAt: text(v.publishedAt),

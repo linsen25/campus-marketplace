@@ -3,7 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { passwordRules, validSignupPassword } from '@/lib/auth-password'
 import { usernameTakenMessage } from '@/lib/auth-username'
 import { ListingApiError, listingInputRecord } from '@/lib/listing-validation'
-import { isWesternEmail } from '@/lib/marketplace-auth'
+import { isValidEmail } from '@/lib/marketplace-auth'
 import { changeAuthenticatedPassword } from '@/lib/server/auth-change-password'
 import {
   confirmUsername,
@@ -171,8 +171,8 @@ export default async function handler(
       return res.status(200).json(null)
     }
     const body = listingInputRecord(req.body)
-    if (!isWesternEmail(body.email))
-      throw new ListingApiError('Use your Western email to continue.')
+    if (!isValidEmail(body.email))
+      throw new ListingApiError('Enter a valid email address.')
     const email = body.email.trim().toLowerCase()
     const failAuth = (
       error: { status?: number; code?: string } | null,

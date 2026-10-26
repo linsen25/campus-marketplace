@@ -184,7 +184,7 @@ async function main() {
   for (const password of ['Ab1!', 'password1!', 'Password!!', 'Password12'])
     assert(!validSignupPassword(password))
   for (const body of [
-    { ...input, email: 'test@example.com' },
+    { ...input, email: 'not-an-email' },
     { ...input, password: 'short' },
     { ...input, agreement: false },
   ]) {

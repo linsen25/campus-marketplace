@@ -19,6 +19,7 @@ import { reservedUsername, validUsername } from '@/lib/auth-username'
 import { marketplaceRequest } from '@/lib/listings-api'
 
 import { FinancialSettings } from './financial-settings'
+import { UwoEmailVerification } from './uwo-email-verification'
 import financialStyles from './financial-settings.module.css'
 import { AvatarDialog, ProfileAvatar } from './profile-avatar'
 import styles from './profile.module.css'
@@ -477,6 +478,7 @@ export function ProfileOverview({
           )}
           {settings && (
             <>
+              <UwoEmailVerification />
               <div className={styles.accountRow}>
                 <div>
                   <span className={styles.fieldLabel}>Password</span>
