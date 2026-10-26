@@ -39,6 +39,25 @@ and Resend verification code; server-side rate limiting remains authoritative.
 It still reports only the server's verification result; no mail provider was
 configured or contacted.
 
+## Follow-up correction (2026-10-26)
+
+`202610260009_notification_verified_permissions.sql` explicitly redefines
+`marketplace_notifications_filtered(timestamptz,uuid,text,text)` with
+`is_verified_user()`. It preserves the recipient binding, 90-day cutoff,
+cursor validation, 51-row bounded query, fixed `search_path` and the original
+authenticated-only EXECUTE ACL. This corrects the B29 RPC that was not included
+in 008's target list.
+
+`tests/notification-filtered-permission.cjs` identifies the old B29 predicate,
+proves 008 did not cover that signature, and checks the 009 replacement.
+
+The reproducible database entry is documented in
+`docs/OPEN-REGISTRATION-DATABASE-QUALIFICATION.md` and prepared in
+`.github/workflows/database-qualification.yml`. It has not been triggered;
+`tests/sql/permissions-008-009-assertions.sql` now covers confirmed,
+unconfirmed, anonymous and cross-account database behavior. The workflow has
+not been triggered; database execution remains NOT TESTED.
+
 ## Focused acceptance (2026-10-26)
 
 - `tests/verified-account-008-static.cjs`: PASS. All 23 targets are checked by

@@ -1,0 +1,42 @@
+name: Isolated database qualification
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - b30-staging-acceptance-20261024
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'tests/sql/**'
+      - 'tests/notification-filtered-permission.cjs'
+      - '.github/workflows/database-qualification.yml'
+
+jobs:
+  supabase-local:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      - name: Start disposable Supabase Local Stack
+        run: supabase start
+      - name: Apply the complete migration chain
+        run: supabase db reset --local
+      - name: Verify filtered notification definition and privileges
+        run: supabase db psql --local -f tests/sql/notification-filtered-assertions.sql
+      - name: Run 008/009 authenticated and cross-account SQL assertions
+        run: supabase db psql --local -f tests/sql/permissions-008-009-assertions.sql
+      - name: Run static migration omission regression
+        run: node tests/notification-filtered-permission.cjs
+      - name: Stop and destroy the disposable stack
+        if: always()
+        run: supabase stop --no-backup
