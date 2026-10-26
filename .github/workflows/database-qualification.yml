@@ -35,22 +35,33 @@ jobs:
           set -euo pipefail
           baseline="$RUNNER_TEMP/supabase-baseline"
           echo "BASELINE_DIR=$baseline" >> "$GITHUB_ENV"
-          mkdir -p "$baseline/supabase/migrations"
-          cp supabase/config.toml "$baseline/supabase/config.toml"
-          if [[ -f supabase/seed.sql ]]; then cp supabase/seed.sql "$baseline/supabase/seed.sql"; fi
-          while IFS= read -r file; do
-            base=$(basename "$file")
-            if [[ "$base" < "202610260008" ]]; then cp "$file" "$baseline/supabase/migrations/$base"; fi
-          done < <(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort)
-          mapfile -t migrations < <(find "$baseline/supabase/migrations" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort)
-          printf '%s\n' "${migrations[@]}" | tee "$RUNNER_TEMP/pre-008-migrations.txt"
-          for migration in "${migrations[@]}"; do
-            if [[ "$migration" >= "202610260008" ]]; then
-              echo "pre-008 workspace contains a post-007 migration: $migration" >&2
-              exit 1
-            fi
-          done
-          test "${#migrations[@]}" -gt 0
+          python - "$baseline" <<'PY'
+          from pathlib import Path
+          import os
+          import shutil
+          import sys
+
+          root = Path.cwd()
+          baseline = Path(sys.argv[1])
+          migrations_dir = baseline / "supabase" / "migrations"
+          migrations_dir.mkdir(parents=True, exist_ok=True)
+          shutil.copy2(root / "supabase" / "config.toml", baseline / "supabase" / "config.toml")
+          seed = root / "supabase" / "seed.sql"
+          if seed.exists():
+              shutil.copy2(seed, baseline / "supabase" / "seed.sql")
+          migrations = sorted((root / "supabase" / "migrations").glob("*.sql"))
+          selected = [p for p in migrations if p.name < "202610260008"]
+          if not selected:
+              raise SystemExit("no pre-008 migrations found")
+          for source in selected:
+              shutil.copy2(source, migrations_dir / source.name)
+          actual = sorted(p.name for p in migrations_dir.glob("*.sql"))
+          unexpected = [name for name in actual if name >= "202610260008"]
+          if unexpected:
+              raise SystemExit(f"pre-008 workspace contains post-007 migrations: {unexpected}")
+          Path(os.environ["RUNNER_TEMP"], "pre-008-migrations.txt").write_text("\n".join(actual) + "\n")
+          print("\n".join(actual))
+          PY
           {
             echo '### Pre-008 workspace migration manifest'
             echo '```text'
