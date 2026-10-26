@@ -44,10 +44,12 @@ jobs:
           done < <(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort)
           mapfile -t migrations < <(find "$baseline/supabase/migrations" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort)
           printf '%s\n' "${migrations[@]}" | tee "$RUNNER_TEMP/pre-008-migrations.txt"
-          if printf '%s\n' "${migrations[@]}" | grep -Eq '^20261026000(8|9)|^2026102[1-9]|^2026103'; then
-            echo 'pre-008 workspace contains a post-007 migration' >&2
-            exit 1
-          fi
+          for migration in "${migrations[@]}"; do
+            if [[ "$migration" >= "202610260008" ]]; then
+              echo "pre-008 workspace contains a post-007 migration: $migration" >&2
+              exit 1
+            fi
+          done
           test "${#migrations[@]}" -gt 0
           {
             echo '### Pre-008 workspace migration manifest'
