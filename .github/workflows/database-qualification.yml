@@ -29,8 +29,7 @@ jobs:
           version: 2.120.0
       - name: Start disposable Supabase Local Stack
         run: >-
-          supabase start --ignore-health-check
-          -x gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+          supabase db start --ignore-health-check
       - name: Apply the complete migration chain
         run: supabase db reset --local
       - name: Verify filtered notification definition and privileges
