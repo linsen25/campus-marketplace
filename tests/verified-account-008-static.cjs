@@ -17,6 +17,8 @@ const sourceFiles = [
   '202610160001_notification_inbox_management.sql',
   '202610160002_notification_preferences.sql',
   '202610190006_shop_favorites.sql',
+  // This later migration is authoritative for the two conversation targets.
+  '202610260004_verified_shop_contact_seller.sql',
 ]
 const source = sourceFiles
   .map((file) => fs.readFileSync(`supabase/migrations/${file}`, 'utf8'))
@@ -51,6 +53,10 @@ const targets = [
   ['public', 'marketplace_shop_favorite_states', 'uuid[]'],
   ['public', 'marketplace_set_shop_favorite', 'uuid,boolean'],
 ]
+const previouslyConverted = new Set([
+  'marketplace_private.protect_conversation_identity()',
+  'public.marketplace_find_or_create_conversation(uuid)',
+])
 
 const manifestBlock = migration.match(
   /from \(values(.*?)\) v\(signature,expected\)/s
@@ -68,10 +74,11 @@ assert.equal(
 for (const [schema, name, args] of targets) {
   const escapedSchema = schema.replace(/[.]/g, '\\.')
   const declaration = new RegExp(
-    `create function\\s+${escapedSchema}\\.${name}\\s*\\(([^)]*)\\)`,
-    'i'
+    `create(?: or replace)? function\\s+${escapedSchema}\\.${name}\\s*\\(([^)]*)\\)`,
+    'gi'
   )
-  const sourceMatch = source.match(declaration)
+  const matches = [...source.matchAll(declaration)]
+  const sourceMatch = matches.at(-1)
   assert(sourceMatch, `historical definition missing: ${schema}.${name}`)
   const signature = `${schema}.${name}(${args.replaceAll(' ', '')})`
   const entry = manifest.find(
@@ -79,7 +86,9 @@ for (const [schema, name, args] of targets) {
   )
   assert(entry, `008 manifest missing: ${signature}`)
   const start = sourceMatch.index
-  const next = source.slice(start + 1).search(/\ncreate function\s/i)
+  const next = source
+    .slice(start + 1)
+    .search(/\ncreate(?: or replace)? function\s/i)
   const body = source.slice(start, next < 0 ? undefined : start + 1 + next)
   assert(
     /set search_path\s*=\s*''/i.test(body),
@@ -98,9 +107,25 @@ for (const [schema, name, args] of targets) {
       `PASS ${schema}.${name}(${args}): expected legacy predicates=${oldCount}`
     )
   } else {
-    console.log(
-      `PASS ${schema}.${name}(${args}): no legacy predicate; manifest is explicit`
-    )
+    if (previouslyConverted.has(signature)) {
+      assert(
+        occurrences > 0,
+        `${schema}.${name} has no legacy predicate but must retain the verified predicate`
+      )
+      console.log(
+        `PASS ${schema}.${name}(${args}): already converted; verified predicate present`
+      )
+    } else {
+      assert.equal(entry.expected, 0)
+      assert.equal(
+        occurrences,
+        0,
+        `${schema}.${name} unexpectedly gained a verified predicate`
+      )
+      console.log(
+        `PASS ${schema}.${name}(${args}): no legacy predicate; no replacement required`
+      )
+    }
   }
 }
 

@@ -21,9 +21,11 @@ begin
     from (values
       ('public.marketplace_confirm_username(text)',1),
       ('public.marketplace_change_username(text)',1),
-      ('marketplace_private.protect_conversation_identity()',1),
+      -- 202610260004 already converted these definitions; verify the new
+      -- predicate instead of expecting a legacy occurrence.
+      ('marketplace_private.protect_conversation_identity()',0),
       ('marketplace_private.prepare_text_message()',1),
-      ('public.marketplace_find_or_create_conversation(uuid)',1),
+      ('public.marketplace_find_or_create_conversation(uuid)',0),
       ('public.marketplace_send_text(uuid,uuid,text)',1),
       ('public.marketplace_mark_conversation_read(uuid,bigint)',1),
       ('marketplace_private.guard_image_submission()',1),
@@ -33,7 +35,7 @@ begin
       ('public.marketplace_finalize_image_message(uuid)',0),
       ('public.marketplace_abandon_image_message(uuid)',0),
       ('public.marketplace_expire_image_submissions(integer)',0),
-      ('public.marketplace_notifications(timestamptz,uuid)',1),
+      ('public.marketplace_notifications(timestamptz,uuid)',2),
       ('public.marketplace_mark_notification_read(uuid)',1),
       ('public.marketplace_mark_all_notifications_read()',1),
       ('public.marketplace_mutate_notifications(uuid[],text)',1),
@@ -62,6 +64,18 @@ begin
   end loop;
   if changed = 0 then
     raise exception 'Verified-account permission migration matched no legacy function definitions.'
+      using errcode = 'P0001';
+  end if;
+  if exists (
+    select 1
+    from (values
+      ('marketplace_private.protect_conversation_identity()'),
+      ('public.marketplace_find_or_create_conversation(uuid)')
+    ) v(signature)
+    where pg_catalog.pg_get_functiondef(v.signature::regprocedure::oid)
+      not like '%marketplace_private.is_verified_user()%'
+  ) then
+    raise exception 'Previously converted conversation function is missing the verified predicate.'
       using errcode = 'P0001';
   end if;
   if exists (

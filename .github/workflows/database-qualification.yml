@@ -81,6 +81,8 @@ jobs:
         run: supabase db psql --local -f tests/sql/permissions-008-009-assertions.sql
       - name: Run static migration omission regression
         run: node tests/notification-filtered-permission.cjs
+      - name: Run verified-account 008 static manifest regression
+        run: node tests/verified-account-008-static.cjs
       - name: Stop and destroy the disposable stack
         if: always()
         run: supabase stop --no-backup
