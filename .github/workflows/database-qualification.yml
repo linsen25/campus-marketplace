@@ -30,7 +30,7 @@ jobs:
       - name: Start disposable Supabase Local Stack
         run: >-
           supabase start --ignore-health-check
-          -x studio -x imgproxy -x vector -x logflare -x edge-runtime
+          -x gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
       - name: Apply the complete migration chain
         run: supabase db reset --local
       - name: Verify filtered notification definition and privileges
