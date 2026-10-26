@@ -10,7 +10,7 @@ create temporary table verified_account_008_baseline(
  security_definer boolean,
  config text,
  acl text
-) on commit drop;
+);
 
 do $$
 declare
