@@ -28,7 +28,9 @@ jobs:
         with:
           version: 2.120.0
       - name: Start disposable Supabase Local Stack
-        run: supabase start
+        run: >-
+          supabase start --ignore-health-check
+          -x studio -x imgproxy -x vector -x logflare -x edge-runtime
       - name: Apply the complete migration chain
         run: supabase db reset --local
       - name: Verify filtered notification definition and privileges
