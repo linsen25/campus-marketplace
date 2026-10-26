@@ -1,25 +1,59 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { StatefulButton } from '@/components/velora/stateful-button'
+import { useMarketplaceSession } from '@/components/listings/marketplace-session'
 import { marketplaceRequest } from '@/lib/listings-api'
 
 export function UwoEmailVerification() {
+  const { seller } = useMarketplaceSession()
   const [verified, setVerified] = useState<boolean | null>(null)
+  const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  useEffect(() => {
-    marketplaceRequest<{ verified: boolean }>(
-      '/api/profile/uwo-verification',
-      'GET'
-    )
-      .then((result) => setVerified(result.verified))
-      .catch(() => setVerified(null))
+  const generation = useRef(0)
+  const load = useCallback(async () => {
+    const current = ++generation.current
+    setLoading(true)
+    setError('')
+    try {
+      const result = await marketplaceRequest<{ verified: boolean }>(
+        '/api/profile/uwo-verification',
+        'GET'
+      )
+      if (current === generation.current) setVerified(result.verified)
+    } catch (reason) {
+      if (current === generation.current) {
+        setVerified(null)
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : 'Unable to load UWO verification status.'
+        )
+      }
+    } finally {
+      if (current === generation.current) setLoading(false)
+    }
   }, [])
+  useEffect(() => {
+    generation.current++
+    const effectGeneration = generation.current
+    setVerified(null)
+    setError('')
+    setEmail('')
+    setSent(false)
+    setCode('')
+    void load()
+    return () => {
+      if (generation.current === effectGeneration)
+        generation.current = effectGeneration + 1
+    }
+  }, [load, seller?.id])
   async function send() {
-    if (busy) return
+    if (busy || loading) return
+    const operationGeneration = generation.current
     setBusy(true)
     setError('')
     try {
@@ -27,19 +61,21 @@ export function UwoEmailVerification() {
         action: 'send',
         email,
       })
-      setSent(true)
+      if (operationGeneration === generation.current) setSent(true)
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : 'Unable to send verification code.'
-      )
+      if (operationGeneration === generation.current)
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : 'Unable to send verification code.'
+        )
     } finally {
-      setBusy(false)
+      if (operationGeneration === generation.current) setBusy(false)
     }
   }
   async function verify() {
-    if (busy) return
+    if (busy || loading) return
+    const operationGeneration = generation.current
     setBusy(true)
     setError('')
     try {
@@ -47,25 +83,43 @@ export function UwoEmailVerification() {
         action: 'verify',
         code,
       })
-      setVerified(true)
-      setSent(false)
-      setCode('')
+      if (operationGeneration === generation.current) {
+        setVerified(true)
+        setSent(false)
+        setCode('')
+      }
     } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : 'Unable to verify UWO email.'
-      )
+      if (operationGeneration === generation.current)
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : 'Unable to verify UWO email.'
+        )
     } finally {
-      setBusy(false)
+      if (operationGeneration === generation.current) setBusy(false)
     }
   }
-  if (verified === null) return null
   return (
     <section aria-label="UWO Email Verification">
       <div>
         <span>UWO Email Verified</span>
-        <p>{verified ? 'Verified' : 'Optional identity confirmation'}</p>
+        <p>
+          {loading
+            ? 'Loading verification status...'
+            : verified === true
+            ? 'Verified'
+            : 'Optional identity confirmation'}
+        </p>
       </div>
-      {!verified && (
+      {error && (
+        <div>
+          <p role="alert">{error}</p>
+          <StatefulButton disabled={busy || loading} onClick={load}>
+            Retry
+          </StatefulButton>
+        </div>
+      )}
+      {!loading && verified === false && !error && (
         <>
           {!sent ? (
             <>
@@ -85,6 +139,19 @@ export function UwoEmailVerification() {
             </>
           ) : (
             <>
+              <StatefulButton
+                disabled={busy}
+                onClick={() => {
+                  setSent(false)
+                  setCode('')
+                  setError('')
+                }}
+              >
+                Change UWO email
+              </StatefulButton>
+              <StatefulButton disabled={busy} onClick={send}>
+                {busy ? 'Sending...' : 'Resend verification code'}
+              </StatefulButton>
               <label>
                 Verification code
                 <input
@@ -106,7 +173,6 @@ export function UwoEmailVerification() {
           )}
         </>
       )}
-      {error && <p role="alert">{error}</p>}
     </section>
   )
 }

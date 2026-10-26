@@ -35,6 +35,7 @@ export function ShopProfileManager({
   const [draft, setDraft] = useState<ShopIdentity>(emptyIdentity)
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
+  const [applicationPending, setApplicationPending] = useState(false)
   const dismissed = useRef(false)
   const identity = useMemo<ShopIdentity>(
     () =>
@@ -118,6 +119,22 @@ export function ShopProfileManager({
       setPending(false)
     }
   }
+  const requestApplication = async () => {
+    if (applicationPending) return
+    setApplicationPending(true)
+    setError('')
+    try {
+      await ownShop.requestApplication()
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : 'Unable to submit Shop application.'
+      )
+    } finally {
+      setApplicationPending(false)
+    }
+  }
 
   return (
     <section
@@ -154,6 +171,17 @@ export function ShopProfileManager({
             ? 'Create your Shop profile to get started.'
             : 'Shop approval is required before you can create a Shop.'}
         </p>
+      )}
+      {ownShop.status === 'absent' && ownShop.applicationStatus === 'none' && (
+        <StatefulButton
+          className={styles.action}
+          onClick={requestApplication}
+          disabled={applicationPending}
+        >
+          {applicationPending
+            ? 'Submitting application...'
+            : 'Apply to open a Shop'}
+        </StatefulButton>
       )}
       {ownShop.shop && (
         <div className={styles.identity}>

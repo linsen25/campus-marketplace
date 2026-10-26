@@ -16,6 +16,7 @@ let saved = { ...row },
   fault = null,
   email = 'fixture@uwo.ca',
   confirmed = true,
+  approved = false,
   loseCreateResponse = false,
   emptyCreateResponse = false
 let beforeUpdate = null
@@ -45,6 +46,11 @@ const client = {
       async single() {
         if (fault) return { data: null, error: fault }
         if (emptyCreateResponse) return { data: null, error: null }
+        if (!approved)
+          return {
+            data: null,
+            error: { code: '42501', message: 'PRIVATE_APPROVAL_REQUIRED' },
+          }
         if (actor === saved.owner_id || created.has(actor))
           return {
             data: null,
@@ -380,6 +386,7 @@ async function main() {
     description: '\ufeffA real description\n',
   }
   const existingBefore = { ...saved }
+  approved = true
   assert.equal((await request('POST', valid)).code, 409)
   assert.deepEqual(saved, existingBefore)
   actor = 'owner-b'
@@ -443,13 +450,21 @@ async function main() {
   actor = null
   assert.equal((await request('POST', valid)).code, 401)
   actor = 'owner-b'
+  approved = false
   confirmed = false
   assert.equal((await request('POST', valid)).code, 403)
   confirmed = true
   email = 'outside@example.com'
   assert.equal((await request('POST', valid)).code, 403)
-  email = 'fixture@uwo.ca'
-  assert.equal(rpcCalls.length, initialCalls)
+  // A confirmed ordinary email is still blocked until the authoritative
+  // Shop application is approved; the old fixture incorrectly used UWO
+  // email as a proxy for approval.
+  approved = true
+  assert.equal(
+    rpcCalls.length,
+    initialCalls + 1,
+    'confirmed-but-unapproved attempt reaches the authoritative approval RPC'
+  )
   response = await request('POST', valid)
   assert.equal(response.code, 201)
   assert.equal(response.body.name, 'New Shop')

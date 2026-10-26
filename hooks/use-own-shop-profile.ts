@@ -259,6 +259,29 @@ export function useOwnShopProfile(enabled: boolean) {
     [enabled, ownerId, loading, valid]
   )
 
+  const requestApplication = useCallback(async () => {
+    if (!enabled || !ownerId || loading || ended.current)
+      throw new ShopProfileError('Log in to manage your Shop.', 401)
+    const response = await fetch('/api/shop/application', {
+      method: 'POST',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Marketplace-Request': '1',
+      },
+      body: '{}',
+    })
+    const body = await response.json().catch(() => null)
+    if (!response.ok)
+      throw new ShopProfileError(
+        body?.error || 'Unable to submit Shop application.',
+        response.status
+      )
+    await refresh()
+    return body?.status as ShopApplicationStatus
+  }, [enabled, ownerId, loading, refresh])
+
   const visible =
     enabled && ownerId && state.ownerId === ownerId ? state : empty
   let status: Status = visible.status
@@ -269,11 +292,13 @@ export function useOwnShopProfile(enabled: boolean) {
     status: Status
     save: typeof save
     create: typeof create
+    requestApplication: typeof requestApplication
   } = {
     ...visible,
     status,
     save,
     create,
+    requestApplication,
   }
   return result
 }
