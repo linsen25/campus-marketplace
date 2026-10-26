@@ -47,7 +47,7 @@ const baselineExpected = new Map([
     previouslyConverted.has(`${schema}.${name}(${args.replaceAll(' ', '')})`)
       ? 0
       : name === 'marketplace_notifications'
-      ? 2
+      ? 1
       : [
           'marketplace_record_verified_chat_image',
           'marketplace_finalize_image_message',

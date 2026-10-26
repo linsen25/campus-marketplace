@@ -35,7 +35,7 @@ begin
       ('public.marketplace_finalize_image_message(uuid)',0),
       ('public.marketplace_abandon_image_message(uuid)',0),
       ('public.marketplace_expire_image_submissions(integer)',0),
-      ('public.marketplace_notifications(timestamptz,uuid)',2),
+      ('public.marketplace_notifications(timestamptz,uuid)',1),
       ('public.marketplace_mark_notification_read(uuid)',1),
       ('public.marketplace_mark_all_notifications_read()',1),
       ('public.marketplace_mutate_notifications(uuid[],text)',1),
