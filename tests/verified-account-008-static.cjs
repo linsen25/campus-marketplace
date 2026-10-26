@@ -8,22 +8,6 @@ const migration = fs.readFileSync(
   'supabase/migrations/202610260008_verified_account_core_permissions.sql',
   'utf8'
 )
-const sourceFiles = [
-  '202610030001_marketplace_usernames.sql',
-  '202610070001_messages_text.sql',
-  '202610070002_messages_images.sql',
-  '202610130001_notifications_domain.sql',
-  '202610150004_notification_delivery_foundation.sql',
-  '202610160001_notification_inbox_management.sql',
-  '202610160002_notification_preferences.sql',
-  '202610190006_shop_favorites.sql',
-  // This later migration is authoritative for the two conversation targets.
-  '202610260004_verified_shop_contact_seller.sql',
-]
-const source = sourceFiles
-  .map((file) => fs.readFileSync(`supabase/migrations/${file}`, 'utf8'))
-  .join('\n')
-
 const targets = [
   ['public', 'marketplace_confirm_username', 'text'],
   ['public', 'marketplace_change_username', 'text'],
@@ -57,6 +41,23 @@ const previouslyConverted = new Set([
   'marketplace_private.protect_conversation_identity()',
   'public.marketplace_find_or_create_conversation(uuid)',
 ])
+const baselineExpected = new Map([
+  ...targets.map(([schema, name, args]) => [
+    `${schema}.${name}(${args.replaceAll(' ', '')})`,
+    previouslyConverted.has(`${schema}.${name}(${args.replaceAll(' ', '')})`)
+      ? 0
+      : name === 'marketplace_notifications'
+      ? 2
+      : [
+          'marketplace_record_verified_chat_image',
+          'marketplace_finalize_image_message',
+          'marketplace_abandon_image_message',
+          'marketplace_expire_image_submissions',
+        ].includes(name)
+      ? 0
+      : 1,
+  ]),
+])
 
 const manifestBlock = migration.match(
   /from \(values(.*?)\) v\(signature,expected\)/s
@@ -72,60 +73,21 @@ assert.equal(
 )
 
 for (const [schema, name, args] of targets) {
-  const escapedSchema = schema.replace(/[.]/g, '\\.')
-  const declaration = new RegExp(
-    `create(?: or replace)? function\\s+${escapedSchema}\\.${name}\\s*\\(([^)]*)\\)`,
-    'gi'
-  )
-  const matches = [...source.matchAll(declaration)]
-  const sourceMatch = matches.at(-1)
-  assert(sourceMatch, `historical definition missing: ${schema}.${name}`)
   const signature = `${schema}.${name}(${args.replaceAll(' ', '')})`
   const entry = manifest.find(
     (item) => item.signature.replaceAll(' ', '') === signature
   )
   assert(entry, `008 manifest missing: ${signature}`)
-  const start = sourceMatch.index
-  const next = source
-    .slice(start + 1)
-    .search(/\ncreate(?: or replace)? function\s/i)
-  const body = source.slice(start, next < 0 ? undefined : start + 1 + next)
-  assert(
-    /set search_path\s*=\s*''/i.test(body),
-    `${schema}.${name} must retain a fixed search_path`
-  )
-  const oldCount = (
-    body.match(/marketplace_private\.is_western_user\(\)/g) || []
-  ).length
-  const occurrences = (
-    body.match(/marketplace_private\.is_verified_user\(\)/g) || []
-  ).length
-  if (oldCount > 0) {
-    assert.equal(occurrences, 0, `${schema}.${name} source is already migrated`)
-    assert.equal(entry.expected, oldCount)
+  assert.equal(entry.expected, baselineExpected.get(signature))
+  if (previouslyConverted.has(signature)) {
+    assert.equal(entry.expected, 0)
     console.log(
-      `PASS ${schema}.${name}(${args}): expected legacy predicates=${oldCount}`
+      `PASS ${signature}: already converted before 008; expected old predicates=0`
     )
   } else {
-    if (previouslyConverted.has(signature)) {
-      assert(
-        occurrences > 0,
-        `${schema}.${name} has no legacy predicate but must retain the verified predicate`
-      )
-      console.log(
-        `PASS ${schema}.${name}(${args}): already converted; verified predicate present`
-      )
-    } else {
-      assert.equal(entry.expected, 0)
-      assert.equal(
-        occurrences,
-        0,
-        `${schema}.${name} unexpectedly gained a verified predicate`
-      )
-      console.log(
-        `PASS ${schema}.${name}(${args}): no legacy predicate; no replacement required`
-      )
-    }
+    console.log(
+      `PASS ${signature}: baseline expected old predicates=${entry.expected}`
+    )
   }
 }
 

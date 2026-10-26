@@ -73,6 +73,31 @@ jobs:
             supabase-start.log
             supabase-start-diagnostics.log
           retention-days: 1
+      - name: Read real catalog baseline before 008
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive=$(mktemp -d)
+          restore() {
+            shopt -s nullglob
+            for f in "$archive"/*.sql; do mv "$f" supabase/migrations/; done
+            rmdir "$archive"
+          }
+          trap restore EXIT
+          shopt -s nullglob
+          for f in supabase/migrations/*.sql; do
+            base=$(basename "$f")
+            if [[ "$base" > "202610260007" ]]; then mv "$f" "$archive/"; fi
+          done
+          supabase db reset --local
+          supabase db psql --local -f tests/sql/verified-account-008-baseline.sql \
+            | tee verified-account-008-baseline.txt
+          {
+            echo '### 008 pre-migration catalog baseline'
+            echo '```text'
+            sed -E 's/((PASSWORD|TOKEN|SECRET|API[_-]?KEY|JWT|SERVICE_ROLE)[=:][^[:space:]]+)/\2=[REDACTED]/Ig' verified-account-008-baseline.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Apply the complete migration chain
         run: supabase db reset --local
       - name: Verify filtered notification definition and privileges
