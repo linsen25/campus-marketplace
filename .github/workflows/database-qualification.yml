@@ -38,7 +38,7 @@ jobs:
             echo '=== docker version ==='
             docker version
             echo '=== start command ==='
-            supabase db start --ignore-health-check
+            supabase db start
           } > supabase-start.raw.log 2>&1
           rc=$?
           sed -E 's/((PASSWORD|TOKEN|SECRET|API[_-]?KEY|JWT|SERVICE_ROLE)[=:][^[:space:]]+)/\2=[REDACTED]/Ig' supabase-start.raw.log | tee supabase-start.log
