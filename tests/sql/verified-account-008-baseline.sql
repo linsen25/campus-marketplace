@@ -30,13 +30,14 @@ with targets(signature, expected_old) as (
     p.oid,p.prosecdef,p.proowner,p.proacl,p.proconfig,
     pg_get_functiondef(p.oid) as definition
   from targets t
-  join pg_proc p on p.oid=t.signature::regprocedure
+  left join pg_proc p on p.oid=to_regprocedure(t.signature)
 )
 select signature,expected_old,
-  (length(definition)-length(replace(definition,'marketplace_private.is_western_user()','')))
+  (length(coalesce(definition,''))-length(replace(coalesce(definition,''),'marketplace_private.is_western_user()','')))
     / length('marketplace_private.is_western_user()') as old_predicates,
-  (length(definition)-length(replace(definition,'marketplace_private.is_verified_user()','')))
+  (length(coalesce(definition,''))-length(replace(coalesce(definition,''),'marketplace_private.is_verified_user()','')))
     / length('marketplace_private.is_verified_user()') as new_predicates,
+  (oid is not null) as present,
   pg_get_userbyid(proowner) as owner,
   prosecdef as security_definer,
   coalesce(array_to_string(proconfig,','),'') as config,
