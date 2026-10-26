@@ -83,10 +83,9 @@ async function main() {
       'components/home/animated-sidebar-demo.tsx',
       'utf8'
     )
-    assert.equal(
-      (sidebar.match(/useOwnShopProfile\(active === 'settings'\)/g) || [])
-        .length,
-      1
+    assert.match(
+      sidebar,
+      /useOwnShopProfile\(active === 'settings' \|\| active === 'shop'\)/
     )
     assert.equal((sidebar.match(/ownShop=\{ownShop\}/g) || []).length, 2)
     assert.equal(

@@ -67,6 +67,18 @@ async function run() {
     'export function ProfileOverview(){return <section aria-label="Profile account">Existing account information</section>}'
   )
   mock(
+    '@/hooks/use-own-shop-profile',
+    'export function useOwnShopProfile(){return {shop:{id:"shop",ownerId:"owner",name:"Fixture Shop",category:"Electronics",description:"Fixture",createdAt:"2026-01-01",updatedAt:"2026-01-01"},status:"ready",etag:"v1",save:async()=>{},create:async()=>{}}}'
+  )
+  mock(
+    '@/components/shops/shop-profile-manager',
+    'export function ShopProfileManager(){return null}'
+  )
+  mock(
+    '@/components/shops/shop-favorites',
+    'import {useEffect,useState} from "react";export function ShopFavorites(){const [item,setItem]=useState(null);useEffect(()=>{window.favoriteRead("/api/shop-favorites?channel=shop").then(rows=>setItem(rows[0]))},[]);return <section role="region" aria-label="Shop Favorites">{item&&<p>{item.title}</p>}</section>}'
+  )
+  mock(
     '@/components/home/profile-analytics',
     'export function ProfileAnalytics(){return <section aria-label="Account chart">Your Activity</section>};export function AnalyticsPeriodControl(){return null}'
   )
@@ -77,7 +89,7 @@ async function run() {
     )
   mock(
     '@/components/listings/listing-form',
-    'export function ListingForm({mode}){return mode==="shop"?<p>Your Shop isn&apos;t active yet.</p>:<form aria-label="Create Resale">Existing ListingForm</form>}'
+    'export function ListingForm({mode}){return mode==="shop"?<form aria-label="Create Shop Product">Existing Shop ListingForm</form>:<form aria-label="Create Resale">Existing ListingForm</form>}'
   )
   mock(
     '@/components/listings/published-listing-card',
@@ -422,8 +434,8 @@ const root=createRoot(document.getElementById('root'));let key=0;window.setSecti
             'rgb(74, 222, 128)'
           )
           assert.equal(
-            await shopTitle.locator('[data-shop-pro-badge]').isVisible(),
-            width >= 640
+            await shopTitle.locator('[data-shop-pro-badge]').count(),
+            0
           )
           assert(
             await shopTitle.evaluate((n) => n.scrollWidth <= n.clientWidth),
@@ -689,7 +701,7 @@ const root=createRoot(document.getElementById('root'));let key=0;window.setSecti
           : [
               'Profile',
               'My Resale',
-              'My ShopPLUS+',
+              'My Shop',
               'Messages',
               'Orders',
               'Settings',
@@ -719,35 +731,25 @@ const root=createRoot(document.getElementById('root'));let key=0;window.setSecti
       await content
         .getByRole('region', { name: 'Manage Resale', exact: true })
         .waitFor()
-      const names = ['Manage Products', 'Shop Favorites', 'Shop Analysis']
+      const names = [
+        'Shop Profile',
+        'Manage Products',
+        'Shop Favorites',
+        'Shop Analysis',
+      ]
       for (const name of names) await child(name).waitFor({ state: 'visible' })
-      const badge = parent('My Shop').locator('[data-shop-pro-badge]')
-      assert.equal((await badge.textContent()).trim(), 'PLUS+')
-      assert.equal(
-        await badge
-          .locator('svg')
-          .evaluate((n) => n.getBoundingClientRect().width),
-        14
-      )
       assert.equal(
         await child('Shop Analysis').locator('[data-shop-pro-badge]').count(),
         0
       )
-      assert.equal(await nav.locator('[data-shop-pro-badge]').count(), 1)
+      assert.equal(await nav.locator('[data-shop-pro-badge]').count(), 0)
       await page.waitForTimeout(300)
       await page.screenshot({ path: path.join(root, `nav-${width}.png`) })
-      // Geometry: badges stay within their own row and viewport, without growing rows.
+      // Geometry: the complete child list stays within the navigation viewport.
       for (const row of [parent('My Shop')]) {
         const box = await row.boundingBox(),
-          b = await row.locator('[data-shop-pro-badge]').boundingBox()
-        assert(
-          b.x >= box.x && b.x + b.width <= box.x + box.width + 1,
-          'badge fits row'
-        )
-        assert(
-          b.y >= box.y - 1 && b.y + b.height <= box.y + box.height + 1,
-          'badge fits row height'
-        )
+          b = await row.boundingBox()
+        assert(b.x >= 0 && b.x + b.width <= width + 1, 'shop row fits viewport')
         const reference = await ((await row.getAttribute('aria-label')) ===
         'My Shop'
           ? parent('My Resale')
@@ -831,14 +833,21 @@ const root=createRoot(document.getElementById('root'));let key=0;window.setSecti
         )
       }
       await open()
-      await parent('My Shop').click()
+      if ((await parent('My Shop').getAttribute('aria-expanded')) !== 'true')
+        await parent('My Shop').click()
       await child('Manage Products').click()
       await content
-        .getByRole('button', { name: 'Add Product', exact: true })
+        .getByRole('region', { name: 'Manage Products', exact: true })
+        .waitFor()
+      await content
+        .getByRole('button', {
+          name: width < 1024 ? 'Add' : 'Add Product',
+          exact: true,
+        })
         .click()
       await page
         .getByRole('dialog', { name: 'Add Product', exact: true })
-        .getByText("Your Shop isn't active yet.", { exact: true })
+        .getByRole('form', { name: 'Create Shop Product', exact: true })
         .waitFor()
       assert.equal(
         await content.locator('form').count(),

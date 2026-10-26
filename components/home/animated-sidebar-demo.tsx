@@ -25,7 +25,7 @@ import { NotificationBell } from '@/components/notifications/notification-bell'
 import { NotificationsView } from '@/components/notifications/notifications-view'
 import shopAnalysisStyles from '@/components/shops/shop-analysis.module.css'
 import { ShopAnalysis } from '@/components/shops/shop-analytics'
-import { ShopProBadge } from '@/components/shops/shop-pro-badge'
+import { ShopProfileManager } from '@/components/shops/shop-profile-manager'
 import MenuInteraction from '@/components/smooth-dropdown'
 import { LocalTabContent } from '@/components/ui/local-tab-content'
 import {
@@ -95,8 +95,8 @@ const groups: Array<{
     id: 'shop',
     label: 'My Shop',
     icon: <Store />,
-    badge: <ShopProBadge tier="plus" />,
     children: [
+      { id: 'shop-profile', label: 'Shop Profile', heading: 'Shop Profile' },
       { id: 'my-shop', label: 'Manage Products', heading: 'Manage Products' },
       {
         id: 'shop-favorites',
@@ -188,7 +188,6 @@ export function AnimatedSidebarDemo() {
   const [active, setActive] = useState<Group | 'notifications' | 'settings'>(
     'profile'
   )
-  const ownShop = useOwnShopProfile(active === 'settings')
   useEffect(() => {
     if (pendingDestination === '/home') {
       arrivingFromMarket.current = true
@@ -206,6 +205,16 @@ export function AnimatedSidebarDemo() {
     messages: 'buying',
     orders: 'purchases',
   })
+  const ownShop = useOwnShopProfile(active === 'settings' || active === 'shop')
+  useEffect(() => {
+    if (
+      active === 'shop' &&
+      ownShop.status === 'absent' &&
+      selected.shop !== 'shop-profile'
+    ) {
+      setSelected((current) => ({ ...current, shop: 'shop-profile' }))
+    }
+  }, [active, ownShop.status, selected.shop])
   const [expanded, setExpanded] = useState<Group | null>(null)
   // Preview navigation follows Home's existing local destination pattern. No route/API request.
   useEffect(() => {
@@ -446,7 +455,6 @@ export function AnimatedSidebarDemo() {
             <ProfileOverview
               settings={true}
               key={seller?.id || 'anonymous-settings'}
-              ownShop={ownShop}
               avatarImage={avatarImage}
               sessionAction={
                 <SettingsLogout onConfirm={() => logout(username)} />
@@ -465,8 +473,13 @@ export function AnimatedSidebarDemo() {
               />
             )}
           {!desktop &&
+            active === 'shop' &&
+            selected.shop === 'shop-profile' && (
+              <ShopProfileManager ownShop={ownShop} username={username} />
+            )}
+          {!desktop &&
             (active === 'resale' || active === 'shop') &&
-            selected[active] !== 'shop-analysis' && (
+            !['shop-analysis', 'shop-profile'].includes(selected[active]) && (
               <HomeListings
                 key={active}
                 page={selected[active]}
@@ -615,7 +628,6 @@ export function AnimatedSidebarDemo() {
             <ProfileOverview
               settings={true}
               key={seller?.id || 'anonymous-settings'}
-              ownShop={ownShop}
               avatarImage={avatarImage}
               sessionAction={
                 <SettingsLogout onConfirm={() => logout(username)} />
@@ -624,6 +636,9 @@ export function AnimatedSidebarDemo() {
               onAvatarSave={saveAvatar}
               onUsername={setUsername}
             />
+          )}
+          {desktop && active === 'shop' && selected.shop === 'shop-profile' && (
+            <ShopProfileManager ownShop={ownShop} username={username} />
           )}
           {desktop &&
             active === 'shop' &&
@@ -635,7 +650,7 @@ export function AnimatedSidebarDemo() {
             )}
           {desktop &&
             (active === 'resale' || active === 'shop') &&
-            selected[active] !== 'shop-analysis' && (
+            !['shop-analysis', 'shop-profile'].includes(selected[active]) && (
               <HomeListings
                 key={active}
                 page={selected[active]}

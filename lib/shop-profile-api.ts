@@ -39,6 +39,28 @@ export async function requestOwnShop(
   return { shop: body, etag: response.headers.get('ETag') }
 }
 
+export async function createOwnShop(
+  input: import('@/types/shop').CreateShopProfileInput
+): Promise<ShopProfileResult> {
+  const response = await fetch('/api/shop', {
+    method: 'POST',
+    credentials: 'same-origin',
+    cache: 'no-store',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Marketplace-Request': '1',
+    },
+    body: JSON.stringify(input),
+  })
+  const body = await response.json()
+  if (!response.ok)
+    throw new ShopProfileError(
+      body?.error || 'Shop profile unavailable. Please retry.',
+      response.status
+    )
+  return { shop: body, etag: response.headers.get('ETag') }
+}
+
 export function ownerShopPreview(
   shop: OwnerShop,
   username: string | null

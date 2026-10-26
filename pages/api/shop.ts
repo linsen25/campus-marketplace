@@ -26,8 +26,11 @@ export default async function handler(
     if (req.method === 'POST' || req.method === 'PATCH')
       requireSameOriginWrite(req)
     const repository = createShopProfileRepository({ req, res })
-    if (req.method === 'POST')
-      return res.status(201).json(await repository.createOwnShop(req.body))
+    if (req.method === 'POST') {
+      const created = await repository.createOwnShop(req.body)
+      if (created) res.setHeader('ETag', ownerShopETag(created))
+      return res.status(201).json(created)
+    }
     let condition: string | undefined
     if (req.headers['if-match'] !== undefined)
       condition =

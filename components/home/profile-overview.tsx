@@ -7,21 +7,16 @@ import { useEffect, useRef, useState } from 'react'
 import actionStyles from '@/components/animata/button/action-button-sizing.module.css'
 import { CardAction } from '@/components/listings/card-actions'
 import { NotificationSettings } from '@/components/notifications/notification-settings'
-import { ShopSettings } from '@/components/shops/shop-settings'
 import { ActionRow } from '@/components/ui/action-row'
 import { useContentReveal } from '@/components/ui/content-reveal'
 import { DynamicAction } from '@/components/ui/dynamic-action'
 import { FadingDialog } from '@/components/ui/fading-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatefulButton } from '@/components/velora/stateful-button'
-import type { OwnShopProfile } from '@/hooks/use-own-shop-profile'
 import { requestPasswordChange } from '@/lib/auth-change-password'
 import { passwordRules, validSignupPassword } from '@/lib/auth-password'
 import { reservedUsername, validUsername } from '@/lib/auth-username'
 import { marketplaceRequest } from '@/lib/listings-api'
-import type { ShopIdentity } from '@/lib/shop-presentation'
-import { ownerShopPreview } from '@/lib/shop-profile-api'
-import type { ShopPreview } from '@/types/shop'
 
 import { FinancialSettings } from './financial-settings'
 import financialStyles from './financial-settings.module.css'
@@ -309,13 +304,7 @@ export function ProfileOverview({
   avatarImage,
   onAvatarSave,
   onFinancialSettings,
-  shopPreview,
-  onShopSave,
-  ownShop,
 }: {
-  ownShop?: OwnShopProfile
-  shopPreview?: ShopPreview
-  onShopSave?: (patch: Partial<ShopIdentity>) => Promise<void>
   settings?: boolean
   sessionAction?: ReactNode
   avatarImage?: string
@@ -365,11 +354,6 @@ export function ProfileOverview({
       active = false
     }
   }, [onUsername])
-  let settingsShop = shopPreview
-  if (ownShop)
-    settingsShop = ownShop.shop
-      ? ownerShopPreview(ownShop.shop, account?.username ?? null)
-      : undefined
   return (
     <>
       <section
@@ -513,16 +497,6 @@ export function ProfileOverview({
           )}
         </section>
         <FinancialSettings settings={settings} onManage={onFinancialSettings} />
-        {settings && (
-          <ShopSettings
-            shop={settingsShop}
-            username={account?.username ?? null}
-            status={ownShop?.status}
-            version={ownShop?.etag ?? undefined}
-            live={Boolean(ownShop)}
-            onSave={ownShop ? ownShop.save : onShopSave}
-          />
-        )}
         {settings && <NotificationSettings />}
         {settings && (
           <div className={`${styles.accountRow} ${styles.sessionRow}`}>

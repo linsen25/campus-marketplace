@@ -4,6 +4,7 @@ import { useMarketplaceSession } from '@/components/listings/marketplace-session
 import type { ShopIdentity } from '@/lib/shop-presentation'
 import {
   requestOwnShop,
+  createOwnShop,
   shopIdentityPatch,
   ShopProfileError,
 } from '@/lib/shop-profile-api'
@@ -215,18 +216,41 @@ export function useOwnShopProfile(enabled: boolean) {
     [enabled, ownerId, loading, scope, valid]
   )
 
+  const create = useCallback(
+    async (identity: import('@/types/shop').CreateShopProfileInput) => {
+      if (!enabled || !ownerId || loading || ended.current)
+        throw new ShopProfileError('Log in to manage your Shop.', 401)
+      const result = valid(await createOwnShop(identity))
+      if (result.shop && result.shop.ownerId !== ownerId)
+        throw new ShopProfileError('Unable to load Shop settings.', 503)
+      confirmed.current = result
+      setState({
+        ...result,
+        ownerId,
+        status: result.shop ? 'ready' : 'absent',
+        error: '',
+      })
+      return result
+    },
+    [enabled, ownerId, loading, valid]
+  )
+
   const visible =
     enabled && ownerId && state.ownerId === ownerId ? state : empty
   let status: Status = visible.status
   if (!enabled || loading) status = 'loading'
   else if (sessionError) status = 'error'
   else if (!ownerId) status = 'anonymous'
-  const result: Omit<State, 'status'> & { status: Status; save: typeof save } =
-    {
-      ...visible,
-      status,
-      save,
-    }
+  const result: Omit<State, 'status'> & {
+    status: Status
+    save: typeof save
+    create: typeof create
+  } = {
+    ...visible,
+    status,
+    save,
+    create,
+  }
   return result
 }
 
