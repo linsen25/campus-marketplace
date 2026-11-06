@@ -29,6 +29,16 @@ jobs:
         with:
           version: 2.120.0
 
+      - name: Verify SQL CLI syntax (2.120.0)
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase --version
+          supabase db --help
+          supabase db query --help | tee "$RUNNER_TEMP/db-query-help.txt"
+          grep -q -- '--local' "$RUNNER_TEMP/db-query-help.txt"
+          grep -q -- '--file' "$RUNNER_TEMP/db-query-help.txt"
+
       - name: Prepare isolated pre-008 workspace
         shell: bash
         run: |
@@ -87,7 +97,7 @@ jobs:
         working-directory: ${{ env.BASELINE_DIR }}
         run: |
           set -euo pipefail
-          supabase db psql --local -f "$GITHUB_WORKSPACE/tests/sql/verified-account-008-baseline.sql" \
+          supabase db query --local -f "$GITHUB_WORKSPACE/tests/sql/verified-account-008-baseline.sql" \
             | tee "$RUNNER_TEMP/verified-account-008-baseline.txt"
           {
             echo '### Real catalog baseline before 008'
@@ -127,10 +137,22 @@ jobs:
         run: supabase db reset --local
       - name: Verify filtered notification definition and privileges
         if: steps.start-full.outcome == 'success'
-        run: supabase db psql --local -f tests/sql/notification-filtered-assertions.sql
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Multi-statement assertions require one session for transaction and SET ROLE.
+          db_container="$(docker ps --format '{{.Names}}' | grep -E '^supabase_db_' | head -n 1)"
+          test -n "$db_container" || { echo 'Disposable local Postgres container not found' >&2; exit 1; }
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < tests/sql/notification-filtered-assertions.sql
       - name: Run 008/009 authenticated and cross-account SQL assertions
         if: steps.start-full.outcome == 'success'
-        run: supabase db psql --local -f tests/sql/permissions-008-009-assertions.sql
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Multi-statement assertions require one session for transaction and SET ROLE.
+          db_container="$(docker ps --format '{{.Names}}' | grep -E '^supabase_db_' | head -n 1)"
+          test -n "$db_container" || { echo 'Disposable local Postgres container not found' >&2; exit 1; }
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < tests/sql/permissions-008-009-assertions.sql
       - name: Run static migration omission regression
         if: steps.start-full.outcome == 'success'
         run: node tests/notification-filtered-permission.cjs
