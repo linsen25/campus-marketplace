@@ -165,21 +165,22 @@ async function main() {
   assert.equal(ctx.res.statusCode, 503)
   assert(!JSON.stringify(ctx.res.body).includes('PRIVATE_DATABASE_DIAGNOSTIC'))
   profileFailure = false
-  for (const [email, verified] of [
-    ['offline@uwo.ca', null],
-    ['offline@uwo.ca.evil.test', '2026-10-01T00:00:00Z'],
-  ]) {
-    user.email = email
-    user.email_confirmed_at = verified
-    const count = calls.filter((call) => call.path.endsWith('/profiles')).length
-    ctx = context()
-    await account(ctx.req, ctx.res)
-    assert.equal(ctx.res.statusCode, 403)
-    assert.equal(
-      calls.filter((call) => call.path.endsWith('/profiles')).length,
-      count
-    )
-  }
+  user.email = 'offline@uwo.ca'
+  user.email_confirmed_at = null
+  let count = calls.filter((call) => call.path.endsWith('/profiles')).length
+  ctx = context()
+  await account(ctx.req, ctx.res)
+  assert.equal(ctx.res.statusCode, 403)
+  assert.equal(calls.filter((call) => call.path.endsWith('/profiles')).length, count)
+
+  user.email = 'offline@uwo.ca.evil.test'
+  user.email_confirmed_at = '2026-10-01T00:00:00Z'
+  count = calls.filter((call) => call.path.endsWith('/profiles')).length
+  ctx = context()
+  await account(ctx.req, ctx.res)
+  assert.equal(ctx.res.statusCode, 200)
+  assert.equal(ctx.res.body.email, user.email)
+  assert.equal(calls.filter((call) => call.path.endsWith('/profiles')).length, count + 1)
   user.email = 'offline@uwo.ca'
   user.email_confirmed_at = '2026-10-01T00:00:00Z'
   revoked = true

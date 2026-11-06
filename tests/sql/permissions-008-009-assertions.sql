@@ -32,6 +32,18 @@ begin
   update public.listing_images set ready=true where id=image_id;
 end $$;
 
+-- Separate unpublished Resale fixture for verified ordinary-account owner reads.
+insert into public.listings(
+ id,seller_id,title,description,price_cents,currency,category,subcategory,pickup_area,
+ status,published_at,expected_image_count,listing_channel)
+values (
+ '00000000-0000-0000-0000-0000000000e4','00000000-0000-0000-0000-0000000000a1',
+ 'Unpublished Fixture','A private draft for permission tests',1000,'CAD',
+ 'Electronics','Computers & Tablets','Campus','available',null,1,'resale');
+insert into public.listing_images(listing_id,owner_id,slot)
+values ('00000000-0000-0000-0000-0000000000e4',
+        '00000000-0000-0000-0000-0000000000a1',1);
+
 -- Publication is an authenticated state transition, not an INSERT value.
 set role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
@@ -76,6 +88,12 @@ begin
   insert into fixture_conversation values(conversation_id);
   perform public.marketplace_send_text(conversation_id,gen_random_uuid(),'hello from ordinary account');
   perform public.marketplace_mark_conversation_read(conversation_id,1);
+  if (select count(*) from public.listings
+      where id='00000000-0000-0000-0000-0000000000e4')<>1
+     or (select count(*) from public.listing_images
+      where listing_id='00000000-0000-0000-0000-0000000000e4')<>1 then
+    raise exception 'ordinary confirmed account own draft read failed';
+  end if;
 end $$;
 
 -- A cannot see B's notification or B's favorite; its own favorite is visible.
@@ -105,6 +123,12 @@ begin
   exception when others then rejected:=true;
   end;
   if not rejected then raise exception 'unconfirmed username confirmation was accepted'; end if;
+  if (select count(*) from public.listings
+      where id='00000000-0000-0000-0000-0000000000e4')<>0
+     or (select count(*) from public.listing_images
+      where listing_id='00000000-0000-0000-0000-0000000000e4')<>0 then
+    raise exception 'unconfirmed unpublished listing read was accepted';
+  end if;
 end $$;
 
 -- Anonymous role cannot call the protected filtered RPC.
@@ -120,6 +144,16 @@ begin
   exception when others then rejected:=true;
   end;
   if not rejected then raise exception 'anonymous notification access was accepted'; end if;
+  begin
+    perform 1 from public.listings where id='00000000-0000-0000-0000-0000000000e4';
+    if found then raise exception 'anonymous unpublished listing read was accepted'; end if;
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform 1 from public.listing_images where listing_id='00000000-0000-0000-0000-0000000000e4';
+    if found then raise exception 'anonymous unpublished image read was accepted'; end if;
+  exception when insufficient_privilege then null;
+  end;
 end $$;
 
 -- B cannot claim A's username and cannot use A's conversation as an outsider.
@@ -132,6 +166,12 @@ declare rejected boolean:=false; conversation_id uuid;
 begin
   begin perform public.marketplace_confirm_username('Ordinary_A'); exception when others then rejected:=true; end;
   if not rejected then raise exception 'username collision was accepted'; end if;
+  if (select count(*) from public.listings
+      where id='00000000-0000-0000-0000-0000000000e4')<>0
+     or (select count(*) from public.listing_images
+      where listing_id='00000000-0000-0000-0000-0000000000e4')<>0 then
+    raise exception 'cross-account unpublished listing read was accepted';
+  end if;
   select id into conversation_id from fixture_conversation limit 1;
   perform public.marketplace_send_text(conversation_id,gen_random_uuid(),'seller reply');
 end $$;
