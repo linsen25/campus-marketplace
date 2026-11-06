@@ -56,12 +56,11 @@ select '00000000-0000-0000-0000-0000000000b2','00000000-0000-0000-0000-000000000
 insert into public.shop_favorites(user_id,shop_id)
 select '00000000-0000-0000-0000-0000000000a1','00000000-0000-0000-0000-0000000000e3';
 
-create temp table fixture_conversation(id uuid) on commit drop;
-
 -- A confirmed ordinary email can confirm a username and use the filtered RPC.
 set role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000a1',true);
+create temp table fixture_conversation(id uuid) on commit drop;
 select public.marketplace_confirm_username('Ordinary_A');
 do $$
 declare result jsonb; conversation_id uuid;
