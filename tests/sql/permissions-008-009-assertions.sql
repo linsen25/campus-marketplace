@@ -12,10 +12,10 @@ insert into public.shops(owner_id,name,category,description)
 values ('00000000-0000-0000-0000-0000000000b2','Fixture Shop','Electronics','Fixture shop for permission tests');
 
 insert into public.listings(
- seller_id,title,description,price_cents,currency,category,subcategory,pickup_area,
+ id,seller_id,title,description,price_cents,currency,category,subcategory,pickup_area,
  status,published_at,expected_image_count,listing_channel)
 values (
- '00000000-0000-0000-0000-0000000000b2','Fixture Listing','A listing for permission tests',1000,'CAD',
+ '00000000-0000-0000-0000-0000000000d4','00000000-0000-0000-0000-0000000000b2','Fixture Listing','A listing for permission tests',1000,'CAD',
  'Electronics','Computers & Tablets','Campus','available',null,1,'resale');
 
 -- Prepare the synthetic image metadata before the authenticated publication RPC.
@@ -36,7 +36,9 @@ end $$;
 set role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000b2',true);
-select public.marketplace_finalize_listing((select id from public.listings where title='Fixture Listing'));
+select public.marketplace_finalize_listing(
+  '00000000-0000-0000-0000-0000000000d4'::uuid
+);
 reset role;
 
 insert into marketplace_private.notification_events(id,source_key,event_type,destination)
