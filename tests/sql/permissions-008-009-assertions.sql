@@ -16,7 +16,7 @@ insert into public.listings(
  status,published_at,expected_image_count,listing_channel)
 values (
  '00000000-0000-0000-0000-0000000000b2','Fixture Listing','A listing for permission tests',1000,'CAD',
- 'Electronics','Computers & Tablets','Campus','available',null,1,'resale');
+ 'Electronics','Computers & Tablets','Campus','available',null,0,'resale');
 
 -- Publication is an authenticated state transition, not an INSERT value.
 set role authenticated;
