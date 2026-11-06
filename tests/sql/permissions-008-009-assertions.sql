@@ -53,6 +53,8 @@ values
 
 insert into public.shop_favorites(user_id,shop_id)
 select '00000000-0000-0000-0000-0000000000b2',id from public.shops where owner_id='00000000-0000-0000-0000-0000000000b2';
+insert into public.shop_favorites(user_id,shop_id)
+select '00000000-0000-0000-0000-0000000000a1',id from public.shops where owner_id='00000000-0000-0000-0000-0000000000b2';
 
 -- A confirmed ordinary email can confirm a username and use the filtered RPC.
 set role authenticated;
@@ -75,8 +77,6 @@ begin
 end $$;
 
 -- A cannot see B's notification or B's favorite; its own favorite is visible.
-insert into public.shop_favorites(user_id,shop_id)
-select '00000000-0000-0000-0000-0000000000a1',id from public.shops where owner_id='00000000-0000-0000-0000-0000000000b2';
 do $$
 declare result jsonb; shop_id uuid;
 begin
