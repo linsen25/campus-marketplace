@@ -16,7 +16,21 @@ insert into public.listings(
  status,published_at,expected_image_count,listing_channel)
 values (
  '00000000-0000-0000-0000-0000000000b2','Fixture Listing','A listing for permission tests',1000,'CAD',
- 'Electronics','Computers & Tablets','Campus','available',null,0,'resale');
+ 'Electronics','Computers & Tablets','Campus','available',null,1,'resale');
+
+-- Prepare the synthetic image metadata before the authenticated publication RPC.
+-- This is disposable SQL fixture data, not a Storage API upload.
+do $$
+declare listing_id uuid; image_id uuid; object_path text;
+begin
+  select id into listing_id from public.listings where title='Fixture Listing';
+  insert into public.listing_images(listing_id,owner_id,slot)
+    values(listing_id,'00000000-0000-0000-0000-0000000000b2',1)
+    returning id,path into image_id,object_path;
+  insert into storage.objects(bucket_id,name,metadata)
+    values('listing-images-private',object_path,'{"mimetype":"image/jpeg","size":100}');
+  update public.listing_images set ready=true where id=image_id;
+end $$;
 
 -- Publication is an authenticated state transition, not an INSERT value.
 set role authenticated;
