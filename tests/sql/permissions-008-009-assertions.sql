@@ -4,9 +4,9 @@ begin;
 
 insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data)
 values
- ('00000000-0000-0000-0000-0000000000a1','ordinary-a@example.com',now(),'{}'::jsonb),
- ('00000000-0000-0000-0000-0000000000b2','ordinary-b@example.com',now(),'{}'::jsonb),
- ('00000000-0000-0000-0000-0000000000c3','unconfirmed@example.com',null,'{}'::jsonb);
+ ('00000000-0000-0000-0000-0000000000a1','ordinary-a@example.com',now(),'{"username":"Ordinary_A"}'::jsonb),
+ ('00000000-0000-0000-0000-0000000000b2','ordinary-b@example.com',now(),'{"username":"Ordinary_B"}'::jsonb),
+ ('00000000-0000-0000-0000-0000000000c3','unconfirmed@example.com',null,'{"username":"Unconfirmed_C"}'::jsonb);
 
 insert into public.shops(owner_id,name,category,description)
 values ('00000000-0000-0000-0000-0000000000b2','Fixture Shop','Electronics','Fixture shop for permission tests');
