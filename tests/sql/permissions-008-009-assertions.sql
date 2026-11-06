@@ -8,8 +8,8 @@ values
  ('00000000-0000-0000-0000-0000000000b2','ordinary-b@example.com',now(),'{"username":"Ordinary_B"}'::jsonb),
  ('00000000-0000-0000-0000-0000000000c3','unconfirmed@example.com',null,'{"username":"Unconfirmed_C"}'::jsonb);
 
-insert into public.shops(owner_id,name,category,description)
-values ('00000000-0000-0000-0000-0000000000b2','Fixture Shop','Electronics','Fixture shop for permission tests');
+insert into public.shops(id,owner_id,name,category,description)
+values ('00000000-0000-0000-0000-0000000000e3','00000000-0000-0000-0000-0000000000b2','Fixture Shop','Electronics','Fixture shop for permission tests');
 
 insert into public.listings(
  id,seller_id,title,description,price_cents,currency,category,subcategory,pickup_area,
@@ -52,9 +52,11 @@ values
  ('00000000-0000-0000-0000-0000000000f2','00000000-0000-0000-0000-0000000000b2','00000000-0000-0000-0000-0000000000e2','new_message','INFORMATIONAL',now(),now(),'{"section":"messages"}');
 
 insert into public.shop_favorites(user_id,shop_id)
-select '00000000-0000-0000-0000-0000000000b2',id from public.shops where owner_id='00000000-0000-0000-0000-0000000000b2';
+select '00000000-0000-0000-0000-0000000000b2','00000000-0000-0000-0000-0000000000e3';
 insert into public.shop_favorites(user_id,shop_id)
-select '00000000-0000-0000-0000-0000000000a1',id from public.shops where owner_id='00000000-0000-0000-0000-0000000000b2';
+select '00000000-0000-0000-0000-0000000000a1','00000000-0000-0000-0000-0000000000e3';
+
+create temp table fixture_conversation(id uuid) on commit drop;
 
 -- A confirmed ordinary email can confirm a username and use the filtered RPC.
 set role authenticated;
@@ -72,6 +74,7 @@ begin
   select id into conversation_id from public.marketplace_find_or_create_conversation(
     (select id from public.listings where title='Fixture Listing')
   );
+  insert into fixture_conversation values(conversation_id);
   perform public.marketplace_send_text(conversation_id,gen_random_uuid(),'hello from ordinary account');
   perform public.marketplace_mark_conversation_read(conversation_id,1);
 end $$;
@@ -80,7 +83,7 @@ end $$;
 do $$
 declare result jsonb; shop_id uuid;
 begin
-  select id into shop_id from public.shops where owner_id='00000000-0000-0000-0000-0000000000b2';
+  shop_id:='00000000-0000-0000-0000-0000000000e3';
   result:=public.marketplace_shop_favorite_states(array[shop_id]);
   if result->'favoriteShopIds' <> jsonb_build_array(shop_id) then
     raise exception 'ordinary confirmed account favorite read failed';
@@ -130,7 +133,7 @@ declare rejected boolean:=false; conversation_id uuid;
 begin
   begin perform public.marketplace_confirm_username('Ordinary_A'); exception when others then rejected:=true; end;
   if not rejected then raise exception 'username collision was accepted'; end if;
-  select id into conversation_id from public.conversations limit 1;
+  select id into conversation_id from fixture_conversation limit 1;
   perform public.marketplace_send_text(conversation_id,gen_random_uuid(),'seller reply');
 end $$;
 
@@ -139,7 +142,7 @@ select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000c3'
 do $$
 declare rejected boolean:=false; conversation_id uuid;
 begin
-  select id into conversation_id from public.conversations limit 1;
+  select id into conversation_id from fixture_conversation limit 1;
   begin perform public.marketplace_mark_conversation_read(conversation_id,1); exception when others then rejected:=true; end;
   if not rejected then raise exception 'nonparticipant conversation read was accepted'; end if;
 end $$;
