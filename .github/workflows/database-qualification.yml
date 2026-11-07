@@ -362,7 +362,19 @@ jobs:
             perform marketplace_private.settle_order_protection('$refund_listing'::uuid);
           end \$\$;
           SQL
-          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -c "select case when lifecycle_status='open' then 1 else 1/0 end from public.orders where id='$refund_order'::uuid;"
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
+          do \$\$
+          declare s text; p text; c timestamptz; r text;
+          begin
+            select lifecycle_status,payout_status into s,p from public.orders where id='$refund_order'::uuid;
+            select completed_at into c from marketplace_private.order_protection where order_id='$refund_order'::uuid;
+            select state into r from marketplace_private.order_refund_operations where order_id='$refund_order'::uuid;
+            if s is distinct from 'open' or p is distinct from 'not_eligible' or c is not null
+              or r not in('prepared','in_flight','reconciling') then
+              raise exception 'Refund release gate invariant failed: lifecycle=%, payout=%, protection_completed_at=%, refund_state=%',s,p,c,r;
+            end if;
+          end \$\$;
+          SQL
           echo 'PASS B31 Refund Pending release gate'
 
           docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
@@ -382,7 +394,7 @@ jobs:
             cat > "$RUNNER_TEMP/${tag}-a.sql" <<SQL
           begin; set local application_name='${tag}_a';
           set local request.jwt.claims='{"role":"service_role","ref":"pcaqxezdfxofysghssyo"}';
-          select marketplace_private.settle_order_protection('$order'::uuid);
+            select marketplace_private.settle_order_protection('$listing'::uuid);
           commit;
           SQL
             cat > "$RUNNER_TEMP/${tag}-b.sql" <<SQL
@@ -397,7 +409,17 @@ jobs:
             wait "$a"; local ra=$?; wait "$b"; local rb=$?; set -e
             cat "$RUNNER_TEMP/${tag}-a.log" "$RUNNER_TEMP/${tag}-b.log"
             test "$ra" -eq 0 -a "$rb" -eq 0
-            docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -c "select case when lifecycle_status='open' then 'PASS $tag blocked' else 'FAIL $tag released' end from public.orders where id='$order'::uuid;"
+            docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
+            do \$\$
+            declare s text; p text; c timestamptz;
+            begin
+              select lifecycle_status,payout_status into s,p from public.orders where id='$order'::uuid;
+              select completed_at into c from marketplace_private.order_protection where order_id='$order'::uuid;
+              if s is distinct from 'open' or p is distinct from 'not_eligible' or c is not null then
+                raise exception '$tag release race invariant failed: lifecycle=%, payout=%, protection_completed_at=%',s,p,c;
+              end if;
+            end \$\$;
+            SQL
           }
           race_blocked_release b31_refund_race "$refund_order" "$refund_listing"
           race_blocked_release b31_case_race "$case_order" "$case_listing"
