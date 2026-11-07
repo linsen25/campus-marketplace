@@ -27,6 +27,10 @@ begin
   perform set_config('request.jwt.claims', '{"role":"service_role","ref":"pcaqxezdfxofysghssyo"}', true);
   perform public.marketplace_resolve_campus_payment((payment->>'attemptId')::uuid, true);
   select * into o from public.orders where id=o.id;
+  -- Seller-delivery handoff credentials are unavailable until the seller
+  -- records the authoritative delivery-start milestone.
+  perform pg_temp.bc_actor((select seller from bc_people));
+  perform public.marketplace_start_seller_delivery(o.id, gen_random_uuid());
   return o;
 end; $$;
 
