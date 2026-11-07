@@ -277,6 +277,92 @@ jobs:
           SQL
           echo 'PASS B31 Buyer Receipt independent-session idempotency'
 
+          # Two independent workers claim the same mature order through the
+          # real due-work entry point. The database gate must complete it once.
+          cat > "$RUNNER_TEMP/b31-due-a.sql" <<SQL
+          begin;
+          set local application_name='b31_due_a';
+          set local request.jwt.claims='{"role":"service_role","ref":"pcaqxezdfxofysghssyo"}';
+          select marketplace_private.run_transaction_due_work();
+          commit;
+          SQL
+          cat > "$RUNNER_TEMP/b31-due-b.sql" <<SQL
+          begin;
+          set local application_name='b31_due_b';
+          set local request.jwt.claims='{"role":"service_role","ref":"pcaqxezdfxofysghssyo"}';
+          select marketplace_private.run_transaction_due_work();
+          commit;
+          SQL
+          set +e
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$RUNNER_TEMP/b31-due-a.sql" > "$RUNNER_TEMP/b31-due-a.log" 2>&1 & pid_a=$!
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$RUNNER_TEMP/b31-due-b.sql" > "$RUNNER_TEMP/b31-due-b.log" 2>&1 & pid_b=$!
+          wait "$pid_a"; rc_a=$?
+          wait "$pid_b"; rc_b=$?
+          set -e
+          cat "$RUNNER_TEMP/b31-due-a.log" "$RUNNER_TEMP/b31-due-b.log"
+          test "$rc_a" -eq 0 -a "$rc_b" -eq 0 || { echo 'Due-work concurrent workers failed' >&2; exit 1; }
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
+          do \$\$
+          begin
+            if not exists(select 1 from public.orders where id='$settle_order'::uuid and lifecycle_status='completed' and payout_status='eligible') then raise exception 'Due-work did not complete mature order'; end if;
+            if (select count(*) from public.transaction_events where order_id='$settle_order'::uuid and event_type='order_completed')<>1 then raise exception 'Due-work duplicate completion event'; end if;
+          end \$\$;
+          SQL
+          echo 'PASS B31 Due-work independent workers'
+
+          # Transfer operation identity is durable and unique before any
+          # provider request. Duplicate operation identity must be rejected.
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
+          do \$\$
+          declare a uuid; op uuid := '00000000-0000-0000-0000-00000000b311'; begin
+            select id into a from marketplace_private.campus_payment_attempts where order_id='$settle_order'::uuid and status='paid';
+            insert into marketplace_private.order_transfer_operations(
+              order_id,payment_attempt_id,seller_id,transfer_kind,authority_kind,authority_at,
+              provider,provider_mode,provider_platform,payment_intent_ref,destination_account_ref,
+              amount_cents,currency,transfer_group,operation_id,idempotency_key)
+            values('$settle_order'::uuid,a,'$settle_seller'::uuid,'sale_proceeds','protection_completed',clock_timestamp(),
+              'stripe','test','acct_b31platform','pi_b31payment','acct_b31seller',1,'CAD',
+              'uu_order_$settle_order',op,'uu:test:acct_b31platform:transfer:'||op::text);
+            begin
+              insert into marketplace_private.order_transfer_operations(
+                order_id,payment_attempt_id,seller_id,transfer_kind,authority_kind,authority_at,
+                provider,provider_mode,provider_platform,payment_intent_ref,destination_account_ref,
+                amount_cents,currency,transfer_group,operation_id,idempotency_key)
+              values('$settle_order'::uuid,a,'$settle_seller'::uuid,'sale_proceeds','protection_completed',clock_timestamp(),
+                'stripe','test','acct_b31platform','pi_b31payment','acct_b31seller',1,'CAD',
+                'uu_order_$settle_order',op,'uu:test:acct_b31platform:transfer:'||op::text);
+              raise exception 'duplicate transfer operation unexpectedly accepted';
+            exception when unique_violation then null;
+            end;
+          end \$\$;
+          SQL
+          echo 'PASS B31 Transfer operation identity uniqueness'
+
+          # A prepared refund operation blocks release; a protection case
+          # remains an independent hold even when the provider is not called.
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
+          do \$\$
+          declare a uuid; op uuid := '00000000-0000-0000-0000-00000000b312'; begin
+            select id into a from marketplace_private.campus_payment_attempts where order_id='$receipt_order'::uuid and status='paid';
+            insert into marketplace_private.order_refund_operations(
+              order_id,payment_attempt_id,provider,provider_mode,provider_platform,payment_intent_ref,
+              amount_cents,currency,operation_id,idempotency_key,state)
+            values('$receipt_order'::uuid,a,'stripe','test','acct_b31platform','pi_b31refund',1,'CAD',op,
+              'uu:test:acct_b31platform:refund:'||op::text,'prepared');
+            update marketplace_private.order_protection p
+              set started_at=c.t-interval '48 hours 1 second',expires_at=c.t-interval '1 second',
+                  buyer_confirmed_at=c.t-interval '48 hours 1 second',release_eligible_at=c.t-interval '1 second'
+              from (select clock_timestamp() t) c where p.order_id='$receipt_order'::uuid;
+            perform marketplace_private.settle_order_protection('$receipt_listing'::uuid);
+            if exists(select 1 from public.orders where id='$receipt_order'::uuid and lifecycle_status='completed') then raise exception 'prepared refund did not block release'; end if;
+            perform set_config('request.jwt.claims',jsonb_build_object('sub','$receipt_buyer','role','authenticated')::text,true);
+            perform public.marketplace_open_protection_case('$receipt_order'::uuid,'WRONG_ITEM',gen_random_uuid());
+            perform marketplace_private.settle_order_protection('$receipt_listing'::uuid);
+            if exists(select 1 from public.orders where id='$receipt_order'::uuid and lifecycle_status='completed') then raise exception 'protection case did not block release'; end if;
+          end \$\$;
+          SQL
+          echo 'PASS B31 Refund Pending and Protection Case release gates'
+
           cat > "$RUNNER_TEMP/b31-settle-a.sql" <<SQL
           begin;
           set local application_name='b31_settle_a';
