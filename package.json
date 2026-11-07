@@ -18,6 +18,7 @@
     "demo:dev:staging": "node scripts/staging-demo.cjs dev",
     "test:v2:staging": "node tests/v2-smoke-staging.cjs",
     "test:b32:offline": "node tests/b32-offline.cjs",
+    "check:b32:env": "node scripts/b32-env-check.cjs",
     "demo:reset:v2:staging": "node scripts/demo-reset-v2-staging.cjs"
   },
   "dependencies": {

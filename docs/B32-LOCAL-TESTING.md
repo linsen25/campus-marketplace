@@ -2,6 +2,16 @@
 
 本流程只允许隔离的 Test Mode。不要把 `.env.staging.local`、Secret、Webhook Secret 或 Service Role Key 提交到 Git。
 
+## 环境预检
+
+创建仅存在于仓库外的 `.env.b32.test.local`，然后运行：
+
+```powershell
+npm run check:b32:env
+```
+
+预检会拒绝已知 Staging/Production 项目 `pcaqxezdfxofysghssyo`、不匹配的测试 Project Ref、Live Key、以及把 Migration 011 纳入白名单的情况。它不会连接 Supabase 或 Stripe，也不会打印密钥。
+
 ## 离线验收
 
 不需要 Supabase 或 Stripe 网络连接：
