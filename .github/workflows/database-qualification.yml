@@ -204,6 +204,15 @@ jobs:
           db_container="$(docker ps --format '{{.Names}}' | grep -E '^supabase_db_' | head -n 1)"
           test -n "$db_container" || { echo 'Disposable local Postgres container not found' >&2; exit 1; }
           docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < tests/sql/b31-protection-assertions.sql
+      - name: Run B31 runtime protection lifecycle assertions
+        if: steps.start-full.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_container="$(docker ps --format '{{.Names}}' | grep -E '^supabase_db_' | head -n 1)"
+          test -n "$db_container" || { echo 'Disposable local Postgres container not found' >&2; exit 1; }
+          cat tests/delivery-area-economics-staging.sql tests/sql/b31-runtime-assertions.sql \
+            | docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres
       - name: Verify filtered notification definition and privileges
         if: steps.start-full.outcome == 'success'
         shell: bash
