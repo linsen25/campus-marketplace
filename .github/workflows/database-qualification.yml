@@ -186,13 +186,13 @@ jobs:
           test -n "$db_container" || { echo 'Disposable local Postgres container not found' >&2; exit 1; }
           docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<'SQL'
           begin read only;
-          do $$
+          do \$\$
           begin
             if (select count(*) from supabase_migrations.schema_migrations where version='202611060001') <> 1 then raise exception 'B31 migration missing or duplicated'; end if;
             if exists(select 1 from supabase_migrations.schema_migrations where version='202610260011') then raise exception 'Migration 011 was executed'; end if;
             if not exists(select 1 from information_schema.columns where table_schema='marketplace_private' and table_name='order_protection' and column_name='release_eligible_at') then raise exception 'release gate column missing'; end if;
             if not exists(select 1 from pg_trigger where tgname='order_transfer_b31_release_gate') then raise exception 'transfer release gate missing'; end if;
-          end $$;
+          end \$\$;
           rollback;
           SQL
           node "$GITHUB_WORKSPACE/tests/b31-protection-static.cjs"
@@ -217,6 +217,100 @@ jobs:
             sed -n '36,$p' tests/delivery-area-economics-staging.sql
             cat tests/sql/b31-runtime-assertions.sql
           } | docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres
+
+      - name: Run B31 independent-session concurrency assertions
+        if: steps.start-full.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_container="$(docker ps --format '{{.Names}}' | grep -E '^supabase_db_' | head -n 1)"
+          test -n "$db_container" || { echo 'Disposable local Postgres container not found' >&2; exit 1; }
+          {
+            sed -n '1,35p' tests/delivery-area-economics-staging.sql
+            cat tests/sql/b31-runtime-seed.sql
+            sed -n '36,$p' tests/delivery-area-economics-staging.sql
+            cat tests/sql/b31-concurrency-setup.sql
+          } | docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres
+
+          read -r receipt_order receipt_listing receipt_buyer receipt_seller receipt_cmd < <(
+            docker exec -i "$db_container" psql -X -At -F ' ' -U postgres -d postgres \
+              -c "select order_id,listing_id,buyer_id,seller_id,command_id from public.b31_concurrency_fixture where name='receipt';"
+          )
+          read -r settle_order settle_listing settle_buyer settle_seller settle_cmd < <(
+            docker exec -i "$db_container" psql -X -At -F ' ' -U postgres -d postgres \
+              -c "select order_id,listing_id,buyer_id,seller_id,command_id from public.b31_concurrency_fixture where name='settlement';"
+          )
+          test -n "$receipt_order" -a -n "$settle_order" || { echo 'Concurrency fixtures missing' >&2; exit 1; }
+
+          cat > "$RUNNER_TEMP/b31-receipt-a.sql" <<SQL
+          begin;
+          set local application_name='b31_receipt_a';
+          set local request.jwt.claims='{"sub":"$receipt_buyer","role":"authenticated"}';
+          select pg_advisory_xact_lock(hashtextextended('$receipt_buyer'::text||'courier_received'||'$receipt_cmd'::text,0));
+          select pg_sleep(2);
+          select public.marketplace_confirm_buyer_receipt('$receipt_order'::uuid,'$receipt_cmd'::uuid);
+          commit;
+          SQL
+          cat > "$RUNNER_TEMP/b31-receipt-b.sql" <<SQL
+          begin;
+          set local application_name='b31_receipt_b';
+          set local request.jwt.claims='{"sub":"$receipt_buyer","role":"authenticated"}';
+          select public.marketplace_confirm_buyer_receipt('$receipt_order'::uuid,'$receipt_cmd'::uuid);
+          commit;
+          SQL
+          set +e
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$RUNNER_TEMP/b31-receipt-a.sql" > "$RUNNER_TEMP/b31-receipt-a.log" 2>&1 & pid_a=$!
+          sleep 0.3
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$RUNNER_TEMP/b31-receipt-b.sql" > "$RUNNER_TEMP/b31-receipt-b.log" 2>&1 & pid_b=$!
+          wait "$pid_a"; rc_a=$?
+          wait "$pid_b"; rc_b=$?
+          set -e
+          cat "$RUNNER_TEMP/b31-receipt-a.log" "$RUNNER_TEMP/b31-receipt-b.log"
+          test "$rc_a" -eq 0 -a "$rc_b" -eq 0 || { echo 'Buyer Receipt concurrent sessions failed' >&2; exit 1; }
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
+          do \$\$
+          declare n integer; t timestamptz; begin
+            select count(*),max(buyer_confirmed_at) into n,t from marketplace_private.buyer_receipt_commands where order_id='$receipt_order'::uuid;
+            if n<>1 or t is null then raise exception 'Buyer Receipt concurrency invariant failed'; end if;
+            if (select count(*) from public.transaction_events where order_id='$receipt_order'::uuid and event_type='buyer_receipt_confirmed')<>1 then raise exception 'Duplicate Buyer Receipt event'; end if;
+          end \$\$;
+          SQL
+          echo 'PASS B31 Buyer Receipt independent-session idempotency'
+
+          cat > "$RUNNER_TEMP/b31-settle-a.sql" <<SQL
+          begin;
+          set local application_name='b31_settle_a';
+          set local request.jwt.claims='{"role":"service_role","ref":"pcaqxezdfxofysghssyo"}';
+          select 1 from public.listings where id='$settle_listing'::uuid for update;
+          select pg_sleep(2);
+          select marketplace_private.settle_order_protection('$settle_listing'::uuid);
+          commit;
+          SQL
+          cat > "$RUNNER_TEMP/b31-settle-b.sql" <<SQL
+          begin;
+          set local application_name='b31_settle_b';
+          set local request.jwt.claims='{"role":"service_role","ref":"pcaqxezdfxofysghssyo"}';
+          select marketplace_private.settle_order_protection('$settle_listing'::uuid);
+          commit;
+          SQL
+          set +e
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$RUNNER_TEMP/b31-settle-a.sql" > "$RUNNER_TEMP/b31-settle-a.log" 2>&1 & pid_a=$!
+          sleep 0.3
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$RUNNER_TEMP/b31-settle-b.sql" > "$RUNNER_TEMP/b31-settle-b.log" 2>&1 & pid_b=$!
+          wait "$pid_a"; rc_a=$?
+          wait "$pid_b"; rc_b=$?
+          set -e
+          cat "$RUNNER_TEMP/b31-settle-a.log" "$RUNNER_TEMP/b31-settle-b.log"
+          test "$rc_a" -eq 0 -a "$rc_b" -eq 0 || { echo 'Protection settlement concurrent sessions failed' >&2; exit 1; }
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
+          do $$
+          begin
+            if not exists(select 1 from public.orders where id='$settle_order'::uuid and lifecycle_status='completed' and payout_status='eligible') then raise exception 'Settlement did not complete'; end if;
+            if (select count(*) from public.transaction_events where order_id='$settle_order'::uuid and event_type='order_completed')<>1 then raise exception 'Duplicate settlement event'; end if;
+          end $$;
+          drop table public.b31_concurrency_fixture;
+          SQL
+          echo 'PASS B31 Protection Settlement independent-session idempotency'
       - name: Verify filtered notification definition and privileges
         if: steps.start-full.outcome == 'success'
         shell: bash
