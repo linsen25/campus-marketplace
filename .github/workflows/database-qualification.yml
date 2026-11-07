@@ -240,7 +240,15 @@ jobs:
             docker exec -i "$db_container" psql -X -At -F ' ' -U postgres -d postgres \
               -c "select order_id,listing_id,buyer_id,seller_id,command_id from public.b31_concurrency_fixture where name='settlement';"
           )
-          test -n "$receipt_order" -a -n "$settle_order" || { echo 'Concurrency fixtures missing' >&2; exit 1; }
+          read -r case_order case_listing case_buyer case_seller case_cmd < <(
+            docker exec -i "$db_container" psql -X -At -F ' ' -U postgres -d postgres \
+              -c "select order_id,listing_id,buyer_id,seller_id,command_id from public.b31_concurrency_fixture where name='case';"
+          )
+          read -r refund_order refund_listing refund_buyer refund_seller refund_cmd < <(
+            docker exec -i "$db_container" psql -X -At -F ' ' -U postgres -d postgres \
+              -c "select order_id,listing_id,buyer_id,seller_id,command_id from public.b31_concurrency_fixture where name='refund';"
+          )
+          test -n "$receipt_order" -a -n "$settle_order" -a -n "$case_order" -a -n "$refund_order" || { echo 'Concurrency fixtures missing' >&2; exit 1; }
 
           cat > "$RUNNER_TEMP/b31-receipt-a.sql" <<SQL
           begin;
@@ -343,25 +351,58 @@ jobs:
           docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
           do \$\$
           declare a uuid; op uuid := '00000000-0000-0000-0000-00000000b312'; begin
-            select id into a from marketplace_private.campus_payment_attempts where order_id='$receipt_order'::uuid and status='paid';
+            select id into a from marketplace_private.campus_payment_attempts where order_id='$refund_order'::uuid and status='paid';
             insert into marketplace_private.order_refund_operations(
               order_id,payment_attempt_id,provider,provider_mode,provider_platform,payment_intent_ref,
               amount_cents,currency,operation_id,idempotency_key,state)
-            values('$receipt_order'::uuid,a,'stripe','test','acct_b31platform','pi_b31refund',1,'CAD',op,
+            values('$refund_order'::uuid,a,'stripe','test','acct_b31platform','pi_b31refund',1,'CAD',op,
               'uu:test:acct_b31platform:refund:'||op::text,'prepared');
             update marketplace_private.order_protection p
               set started_at=c.t-interval '48 hours 1 second',expires_at=c.t-interval '1 second',
                   buyer_confirmed_at=c.t-interval '48 hours 1 second',release_eligible_at=c.t-interval '1 second'
-              from (select clock_timestamp() t) c where p.order_id='$receipt_order'::uuid;
-            perform marketplace_private.settle_order_protection('$receipt_listing'::uuid);
-            if exists(select 1 from public.orders where id='$receipt_order'::uuid and lifecycle_status='completed') then raise exception 'prepared refund did not block release'; end if;
-            perform set_config('request.jwt.claims',jsonb_build_object('sub','$receipt_buyer','role','authenticated')::text,true);
-            perform public.marketplace_open_protection_case('$receipt_order'::uuid,'WRONG_ITEM',gen_random_uuid());
-            perform marketplace_private.settle_order_protection('$receipt_listing'::uuid);
-            if exists(select 1 from public.orders where id='$receipt_order'::uuid and lifecycle_status='completed') then raise exception 'protection case did not block release'; end if;
+              from (select clock_timestamp() t) c where p.order_id='$refund_order'::uuid;
+            perform marketplace_private.settle_order_protection('$refund_listing'::uuid);
+            if exists(select 1 from public.orders where id='$refund_order'::uuid and lifecycle_status='completed') then raise exception 'prepared refund did not block release'; end if;
           end \$\$;
           SQL
-          echo 'PASS B31 Refund Pending and Protection Case release gates'
+          echo 'PASS B31 Refund Pending release gate'
+
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
+          do \$\$
+          begin
+            perform set_config('request.jwt.claims',jsonb_build_object('sub','$case_buyer','role','authenticated')::text,true);
+            perform public.marketplace_open_protection_case('$case_order'::uuid,'WRONG_ITEM',gen_random_uuid());
+            perform set_config('request.jwt.claims','{"role":"service_role","ref":"pcaqxezdfxofysghssyo"}',true);
+            perform marketplace_private.settle_order_protection('$case_listing'::uuid);
+            if exists(select 1 from public.orders where id='$case_order'::uuid and lifecycle_status='completed') then raise exception 'protection case did not block release'; end if;
+          end \$\$;
+          SQL
+          echo 'PASS B31 Protection Case release gate'
+
+          race_blocked_release() {
+            local tag="$1" order="$2" listing="$3"
+            cat > "$RUNNER_TEMP/${tag}-a.sql" <<SQL
+          begin; set local application_name='${tag}_a';
+          set local request.jwt.claims='{"role":"service_role","ref":"pcaqxezdfxofysghssyo"}';
+          select marketplace_private.settle_order_protection('$order'::uuid);
+          commit;
+          SQL
+            cat > "$RUNNER_TEMP/${tag}-b.sql" <<SQL
+          begin; set local application_name='${tag}_b';
+          set local request.jwt.claims='{"role":"service_role","ref":"pcaqxezdfxofysghssyo"}';
+          select marketplace_private.settle_order_protection('$listing'::uuid);
+          commit;
+          SQL
+            set +e
+            docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$RUNNER_TEMP/${tag}-a.sql" > "$RUNNER_TEMP/${tag}-a.log" 2>&1 & local a=$!
+            docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$RUNNER_TEMP/${tag}-b.sql" > "$RUNNER_TEMP/${tag}-b.log" 2>&1 & local b=$!
+            wait "$a"; local ra=$?; wait "$b"; local rb=$?; set -e
+            cat "$RUNNER_TEMP/${tag}-a.log" "$RUNNER_TEMP/${tag}-b.log"
+            test "$ra" -eq 0 -a "$rb" -eq 0
+            docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -c "select case when lifecycle_status='open' then 'PASS $tag blocked' else 'FAIL $tag released' end from public.orders where id='$order'::uuid;"
+          }
+          race_blocked_release b31_refund_race "$refund_order" "$refund_listing"
+          race_blocked_release b31_case_race "$case_order" "$case_listing"
 
           cat > "$RUNNER_TEMP/b31-settle-a.sql" <<SQL
           begin;
