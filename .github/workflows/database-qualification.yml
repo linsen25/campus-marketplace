@@ -350,6 +350,7 @@ jobs:
           if [ "$transfer_identity_rc" -ne 0 ]; then
             cat "$RUNNER_TEMP/b31-transfer-identity.log"
             transfer_identity_msg=$(tail -n 4 "$RUNNER_TEMP/b31-transfer-identity.log" | tr '\n' ' ' | sed -E 's/([A-Za-z_]*(PASSWORD|TOKEN|SECRET|KEY)[A-Za-z_]*[=:][^ ]+)/REDACTED/Ig')
+            echo "B31 Transfer identity SQL failure: ${transfer_identity_msg}" >> "$GITHUB_STEP_SUMMARY"
             echo "::error file=.github/workflows/database-qualification.yml,line=331::${transfer_identity_msg}"
             exit "$transfer_identity_rc"
           fi
