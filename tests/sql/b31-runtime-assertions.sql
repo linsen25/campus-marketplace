@@ -47,20 +47,16 @@ begin
   perform pg_temp.bc_assert(public.marketplace_confirm_buyer_receipt(o.id,receipt_command)->>'idempotent'='true','receipt replay is idempotent');
 
   -- 47:59 remains held; exactly 48 hours is eligible and settles once.
-  update marketplace_private.order_protection
-    set started_at=clock_timestamp()-interval '47 hours 59 minutes',
-        expires_at=clock_timestamp()+interval '1 minute',
-        buyer_confirmed_at=clock_timestamp()-interval '47 hours 59 minutes',
-        release_eligible_at=clock_timestamp()+interval '1 minute'
-    where order_id=o.id;
+  update marketplace_private.order_protection p
+    set started_at=c.t-interval '47 hours 59 minutes', expires_at=c.t+interval '1 minute',
+        buyer_confirmed_at=c.t-interval '47 hours 59 minutes', release_eligible_at=c.t+interval '1 minute'
+    from (select clock_timestamp() t) c where p.order_id=o.id;
   perform marketplace_private.settle_order_protection(o.listing_id);
   perform pg_temp.bc_assert((select lifecycle_status='open' and payout_status='not_eligible' from public.orders where id=o.id),'47:59 remains protected');
-  update marketplace_private.order_protection
-    set started_at=clock_timestamp()-interval '48 hours 1 second',
-        expires_at=clock_timestamp()-interval '1 second',
-        buyer_confirmed_at=clock_timestamp()-interval '48 hours 1 second',
-        release_eligible_at=clock_timestamp()-interval '1 second'
-    where order_id=o.id;
+  update marketplace_private.order_protection p
+    set started_at=c.t-interval '48 hours 1 second', expires_at=c.t-interval '1 second',
+        buyer_confirmed_at=c.t-interval '48 hours 1 second', release_eligible_at=c.t-interval '1 second'
+    from (select clock_timestamp() t) c where p.order_id=o.id;
   perform marketplace_private.settle_order_protection(o.listing_id);
   perform marketplace_private.settle_order_protection(o.listing_id);
   perform pg_temp.bc_assert((select lifecycle_status='completed' and payout_status='eligible' and not holds_listing from public.orders where id=o.id),'48-hour release settles once');
@@ -85,12 +81,10 @@ begin
   perform public.marketplace_confirm_buyer_receipt(o.id,gen_random_uuid());
   reply := public.marketplace_open_protection_case(o.id,'WRONG_ITEM',gen_random_uuid());
   perform pg_temp.bc_assert(reply->>'state'='resolution_required','protection case opens');
-  update marketplace_private.order_protection
-    set started_at=clock_timestamp()-interval '48 hours 1 second',
-        expires_at=clock_timestamp()-interval '1 second',
-        buyer_confirmed_at=clock_timestamp()-interval '48 hours 1 second',
-        release_eligible_at=clock_timestamp()-interval '1 second'
-    where order_id=o.id;
+  update marketplace_private.order_protection p
+    set started_at=c.t-interval '48 hours 1 second', expires_at=c.t-interval '1 second',
+        buyer_confirmed_at=c.t-interval '48 hours 1 second', release_eligible_at=c.t-interval '1 second'
+    from (select clock_timestamp() t) c where p.order_id=o.id;
   perform marketplace_private.settle_order_protection(o.listing_id);
   perform pg_temp.bc_assert((select lifecycle_status='open' and holds_listing and payout_status='not_eligible' from public.orders where id=o.id),'active case blocks release');
 end $$;
