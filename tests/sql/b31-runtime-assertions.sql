@@ -15,6 +15,11 @@ declare
   payment jsonb;
 begin
   o := pg_temp.bc_accept(terms, true);
+  -- Agreement confirmation is a required precondition for address/payment.
+  perform pg_temp.bc_actor((select buyer from bc_people));
+  perform public.marketplace_confirm_order_agreement(o.id);
+  perform pg_temp.bc_actor((select seller from bc_people));
+  perform public.marketplace_confirm_order_agreement(o.id);
   perform pg_temp.bc_actor((select buyer from bc_people));
   perform public.marketplace_save_delivery_address(o.id, '{"country_code":"CA","province_code":"ON","city":"London","postal_code":"N6A1A1","street":"Synthetic Test St"}'::jsonb);
   perform public.marketplace_record_financial_capability((select buyer from bc_people),'payment_method','set','staging_test','b31_runtime','b31_method','Test Card','1234');
