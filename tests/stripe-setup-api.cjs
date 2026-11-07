@@ -111,6 +111,15 @@ const dependencies = {
       }
     },
   },
+  '@/lib/server/worker-observability': {
+    configuredStripeWorkerPlatform: () => 'acct_TestPlatform',
+    startStripeWorkerRun: async () => ({
+      acquired: true,
+      runId: 'synthetic-worker-run',
+      token: 'synthetic-worker-token',
+    }),
+    finishStripeWorkerRun: async () => ({}),
+  },
   '@/lib/server/marketplace-auth': {
     requireMarketplaceUser: async () => {
       if (!authenticated) throw new ListingApiError('Log in.', 401)
