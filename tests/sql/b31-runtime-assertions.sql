@@ -42,10 +42,14 @@ begin
   o := pg_temp.b31_paid_delivery();
   perform pg_temp.bc_actor((select buyer from bc_people));
   cred := public.marketplace_handoff_credential(o.id);
-  perform pg_temp.bc_reject(format('select public.marketplace_confirm_buyer_receipt(%L,%L)',o.id,gen_random_uuid()),'42501');
+  -- Buyer identity is valid, but delivery/handoff is not yet confirmed.
+  perform pg_temp.bc_reject(format('select public.marketplace_confirm_buyer_receipt(%L,%L)',o.id,gen_random_uuid()),'23505');
   perform pg_temp.bc_actor((select seller from bc_people));
   reply := public.marketplace_verify_handoff(o.id,'code',cred->>'code',handoff_command);
   perform pg_temp.bc_assert(reply->>'verified'='true','seller handoff verification succeeds');
+  perform pg_temp.bc_reject(format('select public.marketplace_confirm_buyer_receipt(%L,%L)',o.id,gen_random_uuid()),'42501');
+  perform pg_temp.bc_actor((select outsider from bc_people));
+  perform pg_temp.bc_reject(format('select public.marketplace_confirm_buyer_receipt(%L,%L)',o.id,gen_random_uuid()),'42501');
   perform pg_temp.bc_actor((select buyer from bc_people));
   reply := public.marketplace_confirm_buyer_receipt(o.id,receipt_command);
   perform pg_temp.bc_assert(reply->>'received'='true' and (reply->>'releaseEligibleAt')::timestamptz=(reply->>'confirmedAt')::timestamptz+interval '48 hours','buyer receipt starts 48-hour clock');
