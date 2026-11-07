@@ -244,11 +244,15 @@ jobs:
             docker exec -i "$db_container" psql -X -At -F ' ' -U postgres -d postgres \
               -c "select order_id,listing_id,buyer_id,seller_id,command_id from public.b31_concurrency_fixture where name='case';"
           )
+          read -r case_race_order case_race_listing case_race_buyer case_race_seller case_race_cmd < <(
+            docker exec -i "$db_container" psql -X -At -F ' ' -U postgres -d postgres \
+              -c "select order_id,listing_id,buyer_id,seller_id,command_id from public.b31_concurrency_fixture where name='case_race';"
+          )
           read -r refund_order refund_listing refund_buyer refund_seller refund_cmd < <(
             docker exec -i "$db_container" psql -X -At -F ' ' -U postgres -d postgres \
               -c "select order_id,listing_id,buyer_id,seller_id,command_id from public.b31_concurrency_fixture where name='refund';"
           )
-          test -n "$receipt_order" -a -n "$settle_order" -a -n "$case_order" -a -n "$refund_order" || { echo 'Concurrency fixtures missing' >&2; exit 1; }
+          test -n "$receipt_order" -a -n "$settle_order" -a -n "$case_order" -a -n "$case_race_order" -a -n "$refund_order" || { echo 'Concurrency fixtures missing' >&2; exit 1; }
 
           cat > "$RUNNER_TEMP/b31-receipt-a.sql" <<SQL
           begin;
@@ -346,6 +350,35 @@ jobs:
           SQL
           echo 'PASS B31 Transfer operation identity uniqueness'
 
+          # Two workers claim the same durable Transfer operation. Exactly one
+          # lease holder may advance the operation from prepared.
+          cat > "$RUNNER_TEMP/b31-transfer-lease-a.sql" <<SQL
+          begin; set local application_name='b31_transfer_lease_a';
+          set local request.jwt.claims='{"role":"service_role","ref":"pcaqxezdfxofysghssyo"}';
+          select public.marketplace_order_transfer_operation('claim_due',null,'acct_b31platform',null);
+          commit;
+          SQL
+          cat > "$RUNNER_TEMP/b31-transfer-lease-b.sql" <<SQL
+          begin; set local application_name='b31_transfer_lease_b';
+          set local request.jwt.claims='{"role":"service_role","ref":"pcaqxezdfxofysghssyo"}';
+          select public.marketplace_order_transfer_operation('claim_due',null,'acct_b31platform',null);
+          commit;
+          SQL
+          set +e
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$RUNNER_TEMP/b31-transfer-lease-a.sql" > "$RUNNER_TEMP/b31-transfer-lease-a.log" 2>&1 & pid_a=$!
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$RUNNER_TEMP/b31-transfer-lease-b.sql" > "$RUNNER_TEMP/b31-transfer-lease-b.log" 2>&1 & pid_b=$!
+          wait "$pid_a"; rc_a=$?; wait "$pid_b"; rc_b=$?; set -e
+          cat "$RUNNER_TEMP/b31-transfer-lease-a.log" "$RUNNER_TEMP/b31-transfer-lease-b.log"
+          test "$rc_a" -eq 0 -a "$rc_b" -eq 0 || { echo 'Transfer lease workers failed' >&2; exit 1; }
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
+          do \$\$
+          declare n integer; l uuid; a integer; begin
+            select count(*),max(lease),max(attempts) into n,l,a from marketplace_private.order_transfer_operations where order_id='$settle_order'::uuid;
+            if n<>1 or l is null or a<>1 then raise exception 'Transfer lease invariant failed'; end if;
+          end \$\$;
+          SQL
+          echo 'PASS B31 Transfer Lease independent workers'
+
           # A prepared refund operation blocks release; a protection case
           # remains an independent hold even when the provider is not called.
           docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
@@ -369,6 +402,47 @@ jobs:
           end \$\$;
           SQL
           echo 'PASS B31 Protection Case release gate'
+
+          # Race a buyer opening a protection case against a concurrent
+          # settlement attempt while the protection window is still open.
+          # The case is then matured deterministically and settlement is
+          # retried to prove the persisted case remains a release blocker.
+          cat > "$RUNNER_TEMP/b31-case-create-a.sql" <<SQL
+          begin;
+          set local application_name='b31_case_create_a';
+          set local request.jwt.claims='{"sub":"$case_race_buyer","role":"authenticated"}';
+          select public.marketplace_open_protection_case('$case_race_order'::uuid,'WRONG_ITEM',gen_random_uuid());
+          commit;
+          SQL
+          cat > "$RUNNER_TEMP/b31-case-create-b.sql" <<SQL
+          begin;
+          set local application_name='b31_case_create_b';
+          set local request.jwt.claims='{"role":"service_role","ref":"pcaqxezdfxofysghssyo"}';
+          select marketplace_private.settle_order_protection('$case_race_listing'::uuid);
+          commit;
+          SQL
+          set +e
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$RUNNER_TEMP/b31-case-create-a.sql" > "$RUNNER_TEMP/b31-case-create-a.log" 2>&1 & pid_a=$!
+          sleep 0.2
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$RUNNER_TEMP/b31-case-create-b.sql" > "$RUNNER_TEMP/b31-case-create-b.log" 2>&1 & pid_b=$!
+          wait "$pid_a"; rc_a=$?; wait "$pid_b"; rc_b=$?; set -e
+          cat "$RUNNER_TEMP/b31-case-create-a.log" "$RUNNER_TEMP/b31-case-create-b.log"
+          test "$rc_a" -eq 0 -a "$rc_b" -eq 0 || { echo 'Protection Case creation race failed' >&2; exit 1; }
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
+          do \$\$
+          begin
+            if (select count(*) from marketplace_private.protection_cases where order_id='$case_race_order'::uuid)<>1 then raise exception 'Protection Case race did not persist exactly one case'; end if;
+            update marketplace_private.order_protection
+               set started_at=clock_timestamp()-interval '48 hours 1 second',
+                   expires_at=clock_timestamp()-interval '1 second',
+                   buyer_confirmed_at=clock_timestamp()-interval '48 hours 1 second',
+                   release_eligible_at=clock_timestamp()-interval '1 second'
+             where order_id='$case_race_order'::uuid;
+            perform marketplace_private.settle_order_protection('$case_race_listing'::uuid);
+            if exists(select 1 from public.orders where id='$case_race_order'::uuid and lifecycle_status='completed') then raise exception 'Protection Case race released matured order'; end if;
+          end \$\$;
+          SQL
+          echo 'PASS B31 Protection Case creation / Release race'
 
           race_blocked_release() {
             local tag="$1" order="$2" listing="$3"
@@ -394,6 +468,15 @@ jobs:
           }
           race_blocked_release b31_refund_race "$refund_order" "$refund_listing"
           race_blocked_release b31_case_race "$case_order" "$case_listing"
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
+          do \$\$
+          begin
+            if exists(select 1 from public.orders where id='$refund_order'::uuid and lifecycle_status='completed') then raise exception 'Refund / Release race completed protected order'; end if;
+            if not exists(select 1 from marketplace_private.order_refund_operations where order_id='$refund_order'::uuid and state in('prepared','in_flight','reconciling')) then raise exception 'Refund operation was not retained as a release blocker'; end if;
+            if exists(select 1 from marketplace_private.order_transfer_operations where order_id='$refund_order'::uuid) then raise exception 'Refund / Release race created transfer operation'; end if;
+          end \$\$;
+          SQL
+          echo 'PASS B31 Refund / Release race final state'
 
           cat > "$RUNNER_TEMP/b31-settle-a.sql" <<SQL
           begin;

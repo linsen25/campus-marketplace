@@ -92,6 +92,23 @@ begin
   perform pg_temp.bc_actor(buyer); perform public.marketplace_confirm_buyer_receipt(o.id,gen_random_uuid());
   insert into public.b31_concurrency_fixture values('case',o.id,o.listing_id,buyer,seller,gen_random_uuid());
 
+  -- Separate case-vs-settlement race order. It remains open until the CI step
+  -- advances its protection timestamps after due-work has finished.
+  o := pg_temp.bc_accept(terms,true);
+  perform pg_temp.bc_actor(buyer); perform public.marketplace_confirm_order_agreement(o.id);
+  perform pg_temp.bc_actor(seller); perform public.marketplace_confirm_order_agreement(o.id);
+  perform pg_temp.bc_actor(buyer);
+  perform public.marketplace_save_delivery_address(o.id,'{"country_code":"CA","province_code":"ON","city":"London","postal_code":"N6A1A1","street":"Synthetic Test St"}'::jsonb);
+  perform public.marketplace_record_financial_capability(buyer,'payment_method','set','staging_test','b31_concurrency','b31_method5','Test Card','1234');
+  perform public.marketplace_start_order_payment(o.id,gen_random_uuid());
+  perform set_config('request.jwt.claims','{"role":"service_role","ref":"pcaqxezdfxofysghssyo"}',true);
+  perform public.marketplace_resolve_campus_payment((select id from marketplace_private.campus_payment_attempts where order_id=o.id),true);
+  perform pg_temp.bc_actor(seller); perform public.marketplace_start_seller_delivery(o.id,gen_random_uuid());
+  perform pg_temp.bc_actor(buyer); cred := public.marketplace_handoff_credential(o.id);
+  perform pg_temp.bc_actor(seller); perform public.marketplace_verify_handoff(o.id,'code',cred->>'code',gen_random_uuid());
+  perform pg_temp.bc_actor(buyer); perform public.marketplace_confirm_buyer_receipt(o.id,gen_random_uuid());
+  insert into public.b31_concurrency_fixture values('case_race',o.id,o.listing_id,buyer,seller,gen_random_uuid());
+
   -- Independent prepared-refund order, already mature after receipt.
   o := pg_temp.bc_accept(terms,true);
   perform pg_temp.bc_actor(buyer); perform public.marketplace_confirm_order_agreement(o.id);
