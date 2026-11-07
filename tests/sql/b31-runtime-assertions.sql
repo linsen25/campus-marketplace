@@ -25,6 +25,26 @@ begin
   return o;
 end; $$;
 
+-- Seed the source row consumed by the shared bc_accept helper.  The helper's
+-- own listing is still created through the normal offer path; this one row is
+-- an explicit rollback-only admin fixture, so the test never depends on
+-- pre-existing database data.
+do $$
+begin
+  perform set_config('request.jwt.claims', '{"role":"service_role","ref":"pcaqxezdfxofysghssyo"}', true);
+  insert into public.listings(
+    seller_id,title,description,price_cents,currency,category,subcategory,
+    condition,pickup_area,expected_image_count,published_at
+  ) values (
+    (select seller from bc_people),'B31 source listing',
+    'Synthetic published source for rollback-only runtime tests',10000,'CAD',
+    'Electronics','Computers & Tablets','good','Western University',1,clock_timestamp()
+  );
+  if not exists(select 1 from public.listings where title='B31 source listing' and published_at is not null and status='available') then
+    raise exception 'B31 deterministic published listing fixture missing';
+  end if;
+end $$;
+
 do $$
 declare
   o public.orders;
