@@ -51,6 +51,10 @@ begin
   perform pg_temp.bc_actor((select seller from bc_people));
   reply := public.marketplace_verify_handoff(o.id,'code',cred->>'code',handoff_command);
   perform pg_temp.bc_assert(reply->>'verified'='true','seller handoff verification succeeds');
+  perform pg_temp.bc_assert(exists(
+    select 1 from marketplace_private.order_protection
+    where order_id=o.id and buyer_confirmed_at is null and expires_at=started_at+interval '24 hours'
+  ),'legacy handoff keeps a 24-hour pre-receipt record');
   perform pg_temp.bc_reject(format('select public.marketplace_confirm_buyer_receipt(%L,%L)',o.id,gen_random_uuid()),'42501');
   perform pg_temp.bc_actor((select outsider from bc_people));
   perform pg_temp.bc_reject(format('select public.marketplace_confirm_buyer_receipt(%L,%L)',o.id,gen_random_uuid()),'42501');
@@ -58,6 +62,14 @@ begin
   reply := public.marketplace_confirm_buyer_receipt(o.id,receipt_command);
   perform pg_temp.bc_assert(reply->>'received'='true' and (reply->>'releaseEligibleAt')::timestamptz=(reply->>'confirmedAt')::timestamptz+interval '48 hours','buyer receipt starts 48-hour clock');
   perform pg_temp.bc_assert(public.marketplace_confirm_buyer_receipt(o.id,receipt_command)->>'idempotent'='true','receipt replay is idempotent');
+  begin
+    update marketplace_private.order_protection
+      set release_eligible_at=buyer_confirmed_at+interval '47 hours'
+      where order_id=o.id;
+    raise exception 'shortened release window unexpectedly accepted';
+  exception when check_violation then
+    null;
+  end;
 
   -- 47:59 remains held; exactly 48 hours is eligible and settles once.
   update marketplace_private.order_protection p

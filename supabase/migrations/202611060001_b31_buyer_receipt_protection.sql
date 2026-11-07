@@ -4,6 +4,7 @@
 begin;
 
 alter table marketplace_private.order_protection
+  drop constraint if exists order_protection_check,
   drop constraint if exists order_protection_expires_at_check,
   add column if not exists buyer_confirmed_at timestamptz,
   add column if not exists release_eligible_at timestamptz,
