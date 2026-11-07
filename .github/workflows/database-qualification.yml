@@ -391,7 +391,7 @@ jobs:
                 raise exception '$tag release race invariant failed: lifecycle=%, payout=%, protection_completed_at=%',s,p,c;
               end if;
             end \$\$;
-            SQL
+          SQL
           }
           race_blocked_release b31_refund_race "$refund_order" "$refund_listing"
           race_blocked_release b31_case_race "$case_order" "$case_listing"
