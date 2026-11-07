@@ -73,6 +73,27 @@ begin
          release_eligible_at=c.t-interval '1 second'
     from (select clock_timestamp() t) c
    where p.order_id=o.id;
+  -- Transfer lease fixture: establish the same trusted test-mode seller
+  -- binding and payment evidence that claim_due validates before leasing.
+  insert into marketplace_private.stripe_bindings(
+    user_id,kind,platform,mode,owner_ref,status,label,last4,synced_at)
+  values(seller,'payout_account','acct_b31platform','test','acct_b31seller',
+    'ready','B31 synthetic seller','6789',clock_timestamp())
+  on conflict(user_id,kind,platform,mode) do update set
+    owner_ref=excluded.owner_ref,status=excluded.status,label=excluded.label,
+    last4=excluded.last4,synced_at=excluded.synced_at;
+  update marketplace_private.campus_payment_attempts a
+     set provider='stripe',provider_mode='test',provider_platform='acct_b31platform',
+         provider_purpose='marketplace_order',provider_operation_id=gen_random_uuid(),
+         provider_idempotency_key='uu:test:acct_b31platform:order:b31settle',
+         provider_customer_ref='cus_b31buyer',provider_instrument_ref='pm_b31card',
+         provider_seller_account_ref='acct_b31seller',
+         provider_amount_cents=(select buyer_total_cents from marketplace_private.v2_order_economics where order_id=o.id),
+         provider_currency='CAD',provider_transfer_group='uu_order_'||o.id::text,
+         provider_reference='pi_b31settle',provider_bound_at=clock_timestamp(),
+         provider_status='succeeded',provider_observed_at=clock_timestamp(),
+         provider_evidence_id='evt_b31settle',provider_reconcile_state='applied'
+   where a.order_id=o.id and a.status='paid';
   insert into public.b31_concurrency_fixture values('settlement',o.id,o.listing_id,buyer,seller,gen_random_uuid());
 
   -- Independent open protection-case order.  The case is created later while

@@ -333,7 +333,8 @@ jobs:
               provider,provider_mode,provider_platform,payment_intent_ref,destination_account_ref,
               amount_cents,currency,transfer_group,operation_id,idempotency_key)
             values('$settle_order'::uuid,a,'$settle_seller'::uuid,'sale_proceeds','protection_completed',clock_timestamp(),
-              'stripe','test','acct_b31platform','pi_b31payment','acct_b31seller',1,'CAD',
+              'stripe','test','acct_b31platform','pi_b31settle','acct_b31seller',
+              (select seller_gross_cents from marketplace_private.v2_order_economics where order_id='$settle_order'::uuid),'CAD',
               'uu_order_$settle_order',op,'uu:test:acct_b31platform:transfer:'||op::text);
             begin
               insert into marketplace_private.order_transfer_operations(
@@ -341,7 +342,8 @@ jobs:
                 provider,provider_mode,provider_platform,payment_intent_ref,destination_account_ref,
                 amount_cents,currency,transfer_group,operation_id,idempotency_key)
               values('$settle_order'::uuid,a,'$settle_seller'::uuid,'sale_proceeds','protection_completed',clock_timestamp(),
-                'stripe','test','acct_b31platform','pi_b31payment','acct_b31seller',1,'CAD',
+                'stripe','test','acct_b31platform','pi_b31settle','acct_b31seller',
+                (select seller_gross_cents from marketplace_private.v2_order_economics where order_id='$settle_order'::uuid),'CAD',
                 'uu_order_$settle_order',op,'uu:test:acct_b31platform:transfer:'||op::text);
               raise exception 'duplicate transfer operation unexpectedly accepted';
             exception when unique_violation then null;
