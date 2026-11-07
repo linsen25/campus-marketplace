@@ -30,14 +30,12 @@ begin
     raise exception '48-hour arithmetic failed';
   end if;
   select count(*) into receipt_rpc_count
-  from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-  where n.nspname='public' and p.proname='marketplace_confirm_buyer_receipt'
-    and pg_get_function_identity_arguments(p.oid)='uuid, uuid';
+  from pg_proc p
+  where p.oid=to_regprocedure('public.marketplace_confirm_buyer_receipt(uuid,uuid)');
   select p.prosecdef and coalesce(p.proconfig @> ARRAY['search_path=""'],false)
     into receipt_rpc_secure
-  from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-  where n.nspname='public' and p.proname='marketplace_confirm_buyer_receipt'
-    and pg_get_function_identity_arguments(p.oid)='uuid, uuid';
+  from pg_proc p
+  where p.oid=to_regprocedure('public.marketplace_confirm_buyer_receipt(uuid,uuid)');
   if receipt_rpc_count <> 1 or not coalesce(receipt_rpc_secure,false) then
     raise exception 'buyer receipt RPC security metadata invalid: count %, secure %', receipt_rpc_count, receipt_rpc_secure;
   end if;
