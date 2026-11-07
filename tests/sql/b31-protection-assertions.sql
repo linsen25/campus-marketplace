@@ -24,7 +24,7 @@ begin
   from pg_proc p join pg_namespace n on n.oid=p.pronamespace
   where n.nspname='public' and p.proname='marketplace_confirm_buyer_receipt'
     and pg_get_function_identity_arguments(p.oid)='uuid, uuid';
-  if not found or not fn.prosecdef or not coalesce(fn.proconfig @> ARRAY['search_path='],false) then
+  if not found or not fn.prosecdef or not coalesce(fn.proconfig @> ARRAY['search_path=""'],false) then
     raise exception 'buyer receipt RPC security metadata invalid';
   end if;
   if not exists(select 1 from pg_trigger where tgname='order_transfer_b31_release_gate') then
