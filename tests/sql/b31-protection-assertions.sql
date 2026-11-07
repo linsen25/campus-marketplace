@@ -23,7 +23,7 @@ begin
   select p.prosecdef,p.proconfig into fn
   from pg_proc p join pg_namespace n on n.oid=p.pronamespace
   where n.nspname='public' and p.proname='marketplace_confirm_buyer_receipt'
-    and pg_get_function_identity_arguments(p.oid)='p_order_id uuid, p_client_action_id uuid';
+    and pg_get_function_identity_arguments(p.oid)='uuid, uuid';
   if not found or not fn.prosecdef or not coalesce(fn.proconfig @> ARRAY['search_path='],false) then
     raise exception 'buyer receipt RPC security metadata invalid';
   end if;
