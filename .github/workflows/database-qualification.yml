@@ -318,35 +318,7 @@ jobs:
           SQL
           echo 'PASS B31 Due-work independent workers'
 
-          # Transfer operation identity is durable and unique before any
-          # provider request. Duplicate operation identity must be rejected.
-          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
-          do \$\$
-          declare a uuid; op uuid := '00000000-0000-0000-0000-00000000b311'; begin
-            select id into a from marketplace_private.campus_payment_attempts where order_id='$settle_order'::uuid and status='paid';
-            insert into marketplace_private.order_transfer_operations(
-              order_id,payment_attempt_id,seller_id,transfer_kind,authority_kind,authority_at,
-              provider,provider_mode,provider_platform,payment_intent_ref,destination_account_ref,
-              amount_cents,currency,transfer_group,operation_id,idempotency_key)
-            values('$settle_order'::uuid,a,'$settle_seller'::uuid,'sale_proceeds','protection_completed',clock_timestamp(),
-              'stripe','test','acct_b31platform','pi_b31payment','acct_b31seller',1,'CAD',
-              'uu_order_$settle_order',op,'uu:test:acct_b31platform:transfer:'||op::text);
-            begin
-              insert into marketplace_private.order_transfer_operations(
-                order_id,payment_attempt_id,seller_id,transfer_kind,authority_kind,authority_at,
-                provider,provider_mode,provider_platform,payment_intent_ref,destination_account_ref,
-                amount_cents,currency,transfer_group,operation_id,idempotency_key)
-              values('$settle_order'::uuid,a,'$settle_seller'::uuid,'sale_proceeds','protection_completed',clock_timestamp(),
-                'stripe','test','acct_b31platform','pi_b31payment','acct_b31seller',1,'CAD',
-                'uu_order_$settle_order',op,'uu:test:acct_b31platform:transfer:'||op::text);
-              raise exception 'duplicate transfer operation unexpectedly accepted';
-            exception when unique_violation then null;
-            end;
-          end \$\$;
-          SQL
-          echo 'PASS B31 Transfer operation identity uniqueness'
-
-          echo 'NOT TESTED B31 Transfer Lease (requires trusted Stripe binding; moved to B32 Test Mode)'
+          echo 'NOT TESTED B31 Transfer Operation/Lease (requires trusted Stripe Test Mode binding; moved to B32)'
 
           # A prepared refund operation blocks release; a protection case
           # remains an independent hold even when the provider is not called.
