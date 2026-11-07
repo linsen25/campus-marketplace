@@ -391,9 +391,9 @@ jobs:
           do \$\$
           begin
             perform marketplace_private.settle_order_protection('$refund_listing'::uuid);
-            if exists(select 1 from public.orders where id='$refund_order'::uuid and lifecycle_status='completed') then raise exception 'prepared refund did not block release'; end if;
           end \$\$;
           SQL
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -c "select case when lifecycle_status='open' then 1 else 1/0 end from public.orders where id='$refund_order'::uuid;"
           echo 'PASS B31 Refund Pending release gate'
 
           docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
