@@ -326,16 +326,9 @@ jobs:
           # provider request. Duplicate operation identity must be rejected.
           docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
           do \$\$
-          declare a uuid; op uuid := '00000000-0000-0000-0000-00000000b311'; begin
-            select id into a from marketplace_private.campus_payment_attempts where order_id='$settle_order'::uuid and status='paid';
-            insert into marketplace_private.order_transfer_operations(
-              order_id,payment_attempt_id,seller_id,transfer_kind,authority_kind,authority_at,
-              provider,provider_mode,provider_platform,payment_intent_ref,destination_account_ref,
-              amount_cents,currency,transfer_group,operation_id,idempotency_key)
-            values('$settle_order'::uuid,a,'$settle_seller'::uuid,'sale_proceeds','protection_completed',clock_timestamp(),
-              'stripe','test','acct_b31platform','pi_b31settle','acct_b31seller',
-              (select seller_gross_cents from marketplace_private.v2_order_economics where order_id='$settle_order'::uuid),'CAD',
-              'uu_order_$settle_order',op,'uu:test:acct_b31platform:transfer:'||op::text);
+          declare a uuid; op uuid := '00000000-0000-0000-0000-00000000b311'; prepared jsonb; begin
+            prepared:=public.marketplace_order_transfer_operation('prepare','$settle_order'::uuid,'acct_b31platform',null);
+            select payment_attempt_id,operation_id into a,op from marketplace_private.order_transfer_operations where order_id='$settle_order'::uuid;
             begin
               insert into marketplace_private.order_transfer_operations(
                 order_id,payment_attempt_id,seller_id,transfer_kind,authority_kind,authority_at,
