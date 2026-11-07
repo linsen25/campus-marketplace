@@ -66,12 +66,13 @@ begin
   perform public.marketplace_verify_handoff(o.id,'code',cred->>'code',gen_random_uuid());
   perform pg_temp.bc_actor(buyer);
   perform public.marketplace_confirm_buyer_receipt(o.id,gen_random_uuid());
-  update marketplace_private.order_protection
-     set started_at=clock_timestamp()-interval '48 hours 1 second',
-         expires_at=clock_timestamp()-interval '1 second',
-         buyer_confirmed_at=clock_timestamp()-interval '48 hours 1 second',
-         release_eligible_at=clock_timestamp()-interval '1 second'
-   where order_id=o.id;
+  update marketplace_private.order_protection p
+     set started_at=c.t-interval '48 hours 1 second',
+         expires_at=c.t-interval '1 second',
+         buyer_confirmed_at=c.t-interval '48 hours 1 second',
+         release_eligible_at=c.t-interval '1 second'
+    from (select clock_timestamp() t) c
+   where p.order_id=o.id;
   insert into public.b31_concurrency_fixture values('settlement',o.id,o.listing_id,buyer,seller,gen_random_uuid());
 end $$;
 
