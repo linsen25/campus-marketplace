@@ -270,9 +270,9 @@ jobs:
           docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
           do \$\$
           declare n integer; t timestamptz; begin
-            select count(*),max(buyer_confirmed_at) into n,t from marketplace_private.buyer_receipt_commands where order_id='$receipt_order'::uuid;
+            select count(*),max(confirmed_at) into n,t from marketplace_private.buyer_receipt_commands where order_id='$receipt_order'::uuid;
             if n<>1 or t is null then raise exception 'Buyer Receipt concurrency invariant failed'; end if;
-            if (select count(*) from public.transaction_events where order_id='$receipt_order'::uuid and event_type='buyer_receipt_confirmed')<>1 then raise exception 'Duplicate Buyer Receipt event'; end if;
+            if (select count(*) from public.transaction_events where order_id='$receipt_order'::uuid and event_type='buyer_confirm_received')<>1 then raise exception 'Duplicate Buyer Receipt event'; end if;
           end \$\$;
           SQL
           echo 'PASS B31 Buyer Receipt independent-session idempotency'
