@@ -350,17 +350,8 @@ jobs:
           # remains an independent hold even when the provider is not called.
           docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<SQL
           do \$\$
-          declare a uuid; op uuid := '00000000-0000-0000-0000-00000000b312'; begin
-            select id into a from marketplace_private.campus_payment_attempts where order_id='$refund_order'::uuid and status='paid';
-            insert into marketplace_private.order_refund_operations(
-              order_id,payment_attempt_id,provider,provider_mode,provider_platform,payment_intent_ref,
-              amount_cents,currency,operation_id,idempotency_key,state)
-            values('$refund_order'::uuid,a,'stripe','test','acct_b31platform','pi_b31refund',1,'CAD',op,
-              'uu:test:acct_b31platform:refund:'||op::text,'prepared');
-            update marketplace_private.order_protection p
-              set started_at=c.t-interval '48 hours 1 second',expires_at=c.t-interval '1 second',
-                  buyer_confirmed_at=c.t-interval '48 hours 1 second',release_eligible_at=c.t-interval '1 second'
-              from (select clock_timestamp() t) c where p.order_id='$refund_order'::uuid;
+          begin
+            if not exists(select 1 from marketplace_private.order_refund_operations where order_id='$refund_order'::uuid and state='prepared') then raise exception 'prepared refund fixture missing'; end if;
             perform marketplace_private.settle_order_protection('$refund_listing'::uuid);
             if exists(select 1 from public.orders where id='$refund_order'::uuid and lifecycle_status='completed') then raise exception 'prepared refund did not block release'; end if;
           end \$\$;

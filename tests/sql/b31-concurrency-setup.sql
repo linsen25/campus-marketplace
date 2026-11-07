@@ -110,6 +110,13 @@ begin
      set started_at=c.t-interval '48 hours 1 second',expires_at=c.t-interval '1 second',
          buyer_confirmed_at=c.t-interval '48 hours 1 second',release_eligible_at=c.t-interval '1 second'
     from (select clock_timestamp() t)c where p.order_id=o.id;
+  insert into marketplace_private.order_refund_operations(
+    order_id,payment_attempt_id,provider,provider_mode,provider_platform,payment_intent_ref,
+    amount_cents,currency,operation_id,idempotency_key,state)
+  values(o.id,(select id from marketplace_private.campus_payment_attempts where order_id=o.id and status='paid'),
+    'stripe','test','acct_b31platform','pi_b31refund',1,'CAD',
+    '00000000-0000-0000-0000-00000000b312'::uuid,
+    'uu:test:acct_b31platform:refund:00000000-0000-0000-0000-00000000b312','prepared');
   insert into public.b31_concurrency_fixture values('refund',o.id,o.listing_id,buyer,seller,gen_random_uuid());
 end $$;
 
