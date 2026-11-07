@@ -22,6 +22,8 @@ export type OrderFulfillmentState = {
   handoffConfirmedAt: string | null
   protectionStartedAt: string | null
   protectionExpiresAt: string | null
+  buyerConfirmedAt: string | null
+  releaseEligibleAt: string | null
   protectionCompletedAt: string | null
   protectionHold: boolean
   caseState: string | null
@@ -128,6 +130,7 @@ export const actOnOrderFlow = (
     | 'checkout'
     | 'confirm-agreement'
     | 'confirm-exchange'
+    | 'confirm-receipt'
     | 'dispute-exchange'
     | 'handoff'
     | 'payment'

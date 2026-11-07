@@ -102,6 +102,10 @@ export function createOrderDomainService(context: MarketplaceContext) {
           name: 'marketplace_confirm_courier_received',
           fields: ['clientActionId'],
         },
+        'confirm-receipt': {
+          name: 'marketplace_confirm_buyer_receipt',
+          fields: ['clientActionId'],
+        },
       }
       if (
         action === 'payment' &&

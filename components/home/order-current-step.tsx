@@ -171,7 +171,10 @@ export function OrderCurrentStep({
       action === 'shipment' ||
       action === 'start-delivery'
     const paidAction =
-      sellerAction || action === 'received' || action === 'case'
+      sellerAction ||
+      action === 'received' ||
+      action === 'confirm-receipt' ||
+      action === 'case'
     if (
       busy.current ||
       blocked ||
@@ -654,6 +657,18 @@ export function OrderCurrentStep({
               )}
               {stage === 'protection' && data && (
                 <>
+                  {buyer &&
+                    !data.fulfillment.buyerConfirmedAt &&
+                    (Boolean(data.fulfillment.handoffConfirmedAt) ||
+                      data.courier?.state === 'delivered') && (
+                      <StatefulButton
+                        className={pageStyles.primaryAction}
+                        disabled={blocked}
+                        onClick={() => act('confirm-receipt')}
+                      >
+                        Confirm receipt
+                      </StatefulButton>
+                    )}
                   {buyer && !data.fulfillment.protectionHold && (
                     <>
                       <label

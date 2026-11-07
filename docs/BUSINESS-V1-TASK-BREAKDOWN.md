@@ -631,6 +631,17 @@ remain outstanding.
 
 ## Product decisions still needed, only when relevant task starts
 
+## B31 local implementation (2026-11-06)
+
+- Added the buyer receipt / 48-hour release gate on the existing order
+  protection and transfer-operation boundaries.
+- Reused B21-B25 PaymentIntent reconciliation, refund, transfer, dispute and
+  due-work paths; no provider call or financial flag was enabled.
+- Local static checks pass. Disposable PostgreSQL runtime checks, Stripe Test
+  Mode, webhook delivery, and staging browser acceptance remain NOT VERIFIED.
+- Migration 011 remains untouched and uncommitted; ordinary non-UWO Offer/Order
+  access is still a separate approval dependency.
+
 - B10 core Shop/trial lifecycle, pricing, tier limits, visibility and expiry are
   confirmed in Core Product Contract v1.0; do not reopen those decisions or infer
   rights from PricingCard. Its section 18 explicitly defers provider selection,

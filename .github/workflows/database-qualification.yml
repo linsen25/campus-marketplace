@@ -112,9 +112,46 @@ jobs:
         working-directory: ${{ env.BASELINE_DIR }}
         run: supabase stop --no-backup || true
 
+      - name: Prepare B31 allowlisted migration workspace
+        if: steps.start-baseline.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          full="$RUNNER_TEMP/supabase-b31"
+          echo "FULL_DIR=$full" >> "$GITHUB_ENV"
+          python - "$full" <<'PY'
+          from pathlib import Path
+          import os, shutil, sys
+          root = Path.cwd()
+          full = Path(sys.argv[1])
+          migrations_dir = full / 'supabase' / 'migrations'
+          migrations_dir.mkdir(parents=True, exist_ok=True)
+          shutil.copy2(root / 'supabase' / 'config.toml', full / 'supabase' / 'config.toml')
+          seed = root / 'supabase' / 'seed.sql'
+          if seed.exists(): shutil.copy2(seed, full / 'supabase' / 'seed.sql')
+          all_files = sorted((root / 'supabase' / 'migrations').glob('*.sql'))
+          selected = [p for p in all_files if p.name < '202610260011_resale_verified_offer_order_permissions.sql'
+                      or p.name == '202611060001_b31_buyer_receipt_protection.sql']
+          if any(p.name == '202610260011_resale_verified_offer_order_permissions.sql' for p in selected):
+              raise SystemExit('Migration 011 entered the B31 allowlist')
+          if not any(p.name == '202611060001_b31_buyer_receipt_protection.sql' for p in selected):
+              raise SystemExit('B31 migration is missing from the allowlist')
+          for source in selected: shutil.copy2(source, migrations_dir / source.name)
+          actual = sorted(p.name for p in migrations_dir.glob('*.sql'))
+          Path(os.environ['RUNNER_TEMP'], 'b31-migrations.txt').write_text('\n'.join(actual) + '\n')
+          print('\n'.join(actual))
+          PY
+          {
+            echo '### B31 allowlisted migration manifest'
+            echo '```text'
+            cat "$RUNNER_TEMP/b31-migrations.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Start full disposable Supabase database
         id: start-full
         if: steps.start-baseline.outcome == 'success'
+        working-directory: ${{ env.FULL_DIR }}
         shell: bash
         run: |
           set +e
@@ -134,7 +171,39 @@ jobs:
 
       - name: Apply the complete migration chain
         if: steps.start-full.outcome == 'success'
+        working-directory: ${{ env.FULL_DIR }}
         run: supabase db reset --local
+
+      - name: Verify B31 migration allowlist and protection catalog
+        if: steps.start-full.outcome == 'success'
+        working-directory: ${{ env.FULL_DIR }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e "supabase/migrations/202610260011_resale_verified_offer_order_permissions.sql"
+          test -e "supabase/migrations/202611060001_b31_buyer_receipt_protection.sql"
+          db_container="$(docker ps --format '{{.Names}}' | grep -E '^supabase_db_' | head -n 1)"
+          test -n "$db_container" || { echo 'Disposable local Postgres container not found' >&2; exit 1; }
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres <<'SQL'
+          begin read only;
+          do $$
+          begin
+            if (select count(*) from supabase_migrations.schema_migrations where version='202611060001') <> 1 then raise exception 'B31 migration missing or duplicated'; end if;
+            if exists(select 1 from supabase_migrations.schema_migrations where version='202610260011') then raise exception 'Migration 011 was executed'; end if;
+            if not exists(select 1 from information_schema.columns where table_schema='marketplace_private' and table_name='order_protection' and column_name='release_eligible_at') then raise exception 'release gate column missing'; end if;
+            if not exists(select 1 from pg_trigger where tgname='order_transfer_b31_release_gate') then raise exception 'transfer release gate missing'; end if;
+          end $$;
+          rollback;
+          SQL
+          node "$GITHUB_WORKSPACE/tests/b31-protection-static.cjs"
+      - name: Run B31 protection database assertions
+        if: steps.start-full.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_container="$(docker ps --format '{{.Names}}' | grep -E '^supabase_db_' | head -n 1)"
+          test -n "$db_container" || { echo 'Disposable local Postgres container not found' >&2; exit 1; }
+          docker exec -i "$db_container" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < tests/sql/b31-protection-assertions.sql
       - name: Verify filtered notification definition and privileges
         if: steps.start-full.outcome == 'success'
         shell: bash
@@ -181,6 +250,7 @@ jobs:
           name: database-qualification-diagnostics
           path: |
             ${{ runner.temp }}/pre-008-migrations.txt
+            ${{ runner.temp }}/b31-migrations.txt
             ${{ runner.temp }}/pre-008-start.log
             ${{ runner.temp }}/verified-account-008-baseline.txt
             ${{ runner.temp }}/supabase-start-diagnostics.log
@@ -188,5 +258,6 @@ jobs:
           retention-days: 1
 
       - name: Stop and destroy the full database
-        if: always()
+        if: always() && env.FULL_DIR != ''
+        working-directory: ${{ env.FULL_DIR }}
         run: supabase stop --no-backup || true
