@@ -17,6 +17,8 @@ export function stripeConfiguration() {
     connected: process.env.STRIPE_CONNECT_WEBHOOK_SECRET || '',
     account: process.env.STRIPE_ACCOUNT_WEBHOOK_SECRET || '',
   }
+  const expectedProjectRef =
+    process.env.B32_SUPABASE_PROJECT_REF || 'pcaqxezdfxofysghssyo'
   let origin = ''
   try {
     const value = new URL(process.env.STRIPE_APPLICATION_ORIGIN || '')
@@ -43,7 +45,7 @@ export function stripeConfiguration() {
   if (
     !stripeRequested() ||
     process.env.APP_ENV !== 'staging' ||
-    requireMessagesEnvironment() !== 'pcaqxezdfxofysghssyo' ||
+    requireMessagesEnvironment() !== expectedProjectRef ||
     !/^sk_test_[A-Za-z0-9]+$/.test(secretKey) ||
     !/^pk_test_[A-Za-z0-9]+$/.test(publishableKey) ||
     !/^acct_[A-Za-z0-9]+$/.test(platform) ||

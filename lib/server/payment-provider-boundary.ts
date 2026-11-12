@@ -274,7 +274,9 @@ export function decidePaymentRetry(
   return { action: 'reconcile_attempt', attempt: stableAttempt }
 }
 
-export function paymentModeUsesProvider(paymentMode: 'external' | 'uu_pay') {
+export function paymentModeUsesProvider(
+  paymentMode: 'in_person' | 'interac_etransfer' | 'external' | 'uu_pay'
+) {
   return paymentMode === 'uu_pay'
 }
 

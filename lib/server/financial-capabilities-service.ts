@@ -16,9 +16,11 @@ import type { MarketplaceContext } from '@/lib/supabase/server'
 import type { FinancialCapabilities } from '@/types/financial-capabilities'
 
 export function requireFinancialEnvironment() {
+  const expectedProjectRef =
+    process.env.B32_SUPABASE_PROJECT_REF || 'pcaqxezdfxofysghssyo'
   if (
     process.env.APP_ENV !== 'staging' ||
-    requireMessagesEnvironment() !== 'pcaqxezdfxofysghssyo'
+    requireMessagesEnvironment() !== expectedProjectRef
   )
     throw new ListingApiError(
       'Financial capabilities are not enabled in this environment.',
@@ -82,13 +84,13 @@ export function createTrustedFinancialClient() {
   if (typeof window !== 'undefined')
     throw new Error('Server-only financial capability service.')
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  const expectedRef = requireMessagesEnvironment()
   let valid = false
   try {
     const claims = JSON.parse(
       Buffer.from(key.split('.')[1], 'base64url').toString()
     )
-    valid =
-      claims.role === 'service_role' && claims.ref === 'pcaqxezdfxofysghssyo'
+    valid = claims.role === 'service_role' && claims.ref === expectedRef
   } catch {
     valid = false
   }
@@ -97,7 +99,7 @@ export function createTrustedFinancialClient() {
       'Trusted financial capability service is unavailable.',
       503
     )
-  return createClient('https://pcaqxezdfxofysghssyo.supabase.co', key, {
+  return createClient(`https://${expectedRef}.supabase.co`, key, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

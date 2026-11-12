@@ -7,15 +7,16 @@ import {
   Globe,
   UserRound,
 } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
 import sortStyles from '@/components/filter-interaction.module.css'
-import { DynamicAction } from '@/components/ui/dynamic-action'
-import { FadingDialog } from '@/components/ui/fading-dialog'
+import { StripeAccountOnboarding } from '@/components/payments/stripe-account-onboarding'
+import { StripeFlowPanel } from '@/components/payments/stripe-flow-panel'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatefulButton } from '@/components/velora/stateful-button'
 import { useFinancialCapabilities } from '@/hooks/use-financial-capabilities'
 import { marketplaceRequest } from '@/lib/listings-api'
+import type { StripeIdentityVerification } from '@/types/financial-capabilities'
 
 import financialStyles from './financial-settings.module.css'
 import styles from './profile.module.css'
@@ -28,6 +29,9 @@ const labels = {
   needs_attention: 'Needs attention',
 }
 type Capability = 'payment_method' | 'payout_account'
+type VerificationStatus =
+  | StripeIdentityVerification['status']
+  | 'refresh_failed'
 type SetupAction = { pending?: boolean; error?: string; onStart: () => unknown }
 
 // Each section owns its action presentation. Phase 1B can provide independent
@@ -37,11 +41,13 @@ export function FinancialCapabilitySection({
   status,
   summary,
   action,
+  verificationStatus,
 }: {
   capability: Capability
   status: keyof typeof labels
   summary?: string
   action: SetupAction
+  verificationStatus?: VerificationStatus
 }) {
   const payment = capability === 'payment_method'
   const ready = status === 'set' || status === 'ready'
@@ -73,6 +79,30 @@ export function FinancialCapabilitySection({
   }[capability]
   const description = attention ? copy.warning : copy.initial
   const handleStart = () => action.onStart()
+  const verificationCopy = verificationStatus
+    ? {
+        action_required: {
+          title: 'Action required',
+          body: 'Stripe needs additional information to enable payouts.',
+        },
+        pending_review: {
+          title: 'Submitted / Pending review',
+          body: 'Stripe will review your information. Your payout status will update when verification is complete.',
+        },
+        ready: {
+          title: 'Ready',
+          body: 'Your identity and payout account are ready for protected payments.',
+        },
+        refresh_failed: {
+          title: 'Unable to refresh',
+          body: "We couldn't refresh Stripe's latest verification status. Return to Settings to retry.",
+        },
+        not_available: {
+          title: 'Not available',
+          body: "Stripe hasn't provided a confirmed identity verification status yet.",
+        },
+      }[verificationStatus]
+    : null
   return (
     <section
       className={financialStyles.setupSection}
@@ -86,6 +116,17 @@ export function FinancialCapabilitySection({
           <p className={styles.caption}>{description}</p>
         )}
       </div>
+      {verificationCopy && (
+        <div
+          className={financialStyles.identityStatus}
+          data-stripe-identity-status={verificationStatus}
+          role="status"
+        >
+          <span>Identity verification</span>
+          <strong>{verificationCopy.title}</strong>
+          <p>{verificationCopy.body}</p>
+        </div>
+      )}
       <StatefulButton
         className={financialStyles.setupAction}
         disabled={action.pending}
@@ -161,24 +202,30 @@ export function FinancialSettings({
 }) {
   const { data, error, refresh, loading, userId } = useFinancialCapabilities()
   const [surface, setSurface] = useState<Capability | null>(null)
-  const [payoutPending, setPayoutPending] = useState(false)
-  const [payoutError, setPayoutError] = useState('')
+  const [renderedSurface, setRenderedSurface] = useState<Capability | null>(
+    null
+  )
   const [reconcileErrors, setReconcileErrors] = useState<
     Record<Capability, string>
   >({ payment_method: '', payout_account: '' })
+  const [identityVerification, setIdentityVerification] =
+    useState<StripeIdentityVerification['status']>('not_available')
   const currentOwner = useRef(userId)
   currentOwner.current = userId
   const mounted = useRef(true)
   const currentSettings = useRef(settings)
   currentSettings.current = settings
+  const [interacEmail, setInteracEmail] = useState<string | null>(null)
+  const [interacDraft, setInteracDraft] = useState('')
+  const [interacVerified, setInteracVerified] = useState(false)
+  const [interacBusy, setInteracBusy] = useState(false)
+  const [interacError, setInteracError] = useState('')
   useEffect(() => {
     mounted.current = true
     return () => {
       mounted.current = false
     }
   }, [])
-  const titleId = useId()
-  const descriptionId = useId()
   useEffect(() => {
     if (
       settings &&
@@ -192,13 +239,73 @@ export function FinancialSettings({
   }, [settings])
   useEffect(() => {
     setSurface(null)
-    setPayoutError('')
-    setPayoutPending(false)
     setReconcileErrors({ payment_method: '', payout_account: '' })
+    setIdentityVerification('not_available')
+    setInteracEmail(null)
+    setInteracDraft('')
+    setInteracVerified(false)
+    setInteracError('')
   }, [userId])
+  useEffect(() => {
+    if (!settings || !userId) return undefined
+    let active = true
+    fetch('/api/interac/settings', { credentials: 'same-origin' })
+      .then(async (response) => {
+        const body = await response.json()
+        if (!response.ok)
+          throw new Error(body.error || 'Unable to load Interac settings.')
+        if (active) {
+          setInteracEmail(body.receivingEmail || null)
+          setInteracDraft(body.accountEmail || body.receivingEmail || '')
+          setInteracVerified(Boolean(body.verified))
+        }
+      })
+      .catch((error) => {
+        if (active)
+          setInteracError(
+            error instanceof Error
+              ? error.message
+              : 'Unable to load Interac settings.'
+          )
+      })
+    return () => {
+      active = false
+    }
+  }, [settings, userId])
+  const saveInterac = async (value = interacDraft) => {
+    setInteracBusy(true)
+    setInteracError('')
+    try {
+      const response = await fetch('/api/interac/settings', {
+        method: value.trim() ? 'PUT' : 'DELETE',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Marketplace-Request': '1',
+        },
+        body: JSON.stringify({ receivingEmail: value }),
+      })
+      const body = await response.json()
+      if (!response.ok)
+        throw new Error(body.error || 'Unable to save Interac settings.')
+      setInteracEmail(body.receivingEmail || null)
+      setInteracDraft(body.receivingEmail || '')
+      setInteracVerified(Boolean(body.verified))
+    } catch (error) {
+      setInteracError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to save Interac settings.'
+      )
+    } finally {
+      setInteracBusy(false)
+    }
+  }
   useEffect(() => {
     if (!settings || !userId || !stripeSetupAvailable()) return undefined
     const lifecycle = { active: true }
+    const running = new Set<Capability>()
+    let focusTimer: ReturnType<typeof setTimeout> | undefined
     const url = new URL(window.location.href)
     const returning = url.searchParams.has('stripe_return')
     if (returning) {
@@ -215,98 +322,68 @@ export function FinancialSettings({
         url.pathname + url.search + url.hash
       )
     }
-    const reconcile = () => {
-      for (const kind of ['payment_method', 'payout_account'] as const)
-        marketplaceRequest('/api/stripe/reconcile', 'POST', { kind })
-          .then(() => {
+    const reconcile = (showPersistentError: boolean) => {
+      for (const kind of ['payment_method', 'payout_account'] as const) {
+        if (running.has(kind)) continue
+        running.add(kind)
+        marketplaceRequest<{
+          identityVerification?: StripeIdentityVerification
+        }>('/api/stripe/reconcile', 'POST', { kind })
+          .then((result) => {
             if (lifecycle.active) {
+              if (kind === 'payout_account')
+                setIdentityVerification(
+                  result.identityVerification?.status || 'not_available'
+                )
               setReconcileErrors((current) => ({ ...current, [kind]: '' }))
               refresh().catch(() => {})
             }
           })
           .catch(() => {
-            if (lifecycle.active)
+            // A Stripe login/identity popup can transfer focus several times
+            // while its Account Session is still settling. Keep that transient
+            // failure local to the embedded flow instead of replacing the
+            // Settings status with a durable-looking error.
+            if (lifecycle.active && showPersistentError) {
               setReconcileErrors((current) => ({
                 ...current,
                 [kind]:
                   'Unable to refresh this setup. Return to Settings to retry.',
               }))
+            }
           })
+          .finally(() => running.delete(kind))
+      }
     }
-    reconcile()
-    window.addEventListener('focus', reconcile)
+    const onFocus = () => {
+      if (focusTimer) clearTimeout(focusTimer)
+      focusTimer = setTimeout(() => reconcile(false), 750)
+    }
+    reconcile(true)
+    window.addEventListener('focus', onFocus)
     return () => {
       lifecycle.active = false
-      window.removeEventListener('focus', reconcile)
+      if (focusTimer) clearTimeout(focusTimer)
+      window.removeEventListener('focus', onFocus)
     }
   }, [settings, userId, refresh])
-  const handleCardComplete = async () => {
+  const close = useCallback(() => setSurface(null), [])
+  const handleCardComplete = useCallback(async () => {
     await refresh()
     window.dispatchEvent(new Event('marketplace-financial-changed'))
     setSurface(null)
-  }
-  const handlePayoutContinue = async () => {
-    if (payoutPending) return
-    setPayoutPending(true)
-    setPayoutError('')
-    const owner = userId
-    try {
-      const result = await marketplaceRequest<{ url: string }>(
-        '/api/stripe/payout-setup',
-        'POST',
-        {}
-      )
-      if (
-        !mounted.current ||
-        !currentSettings.current ||
-        currentOwner.current !== owner
-      )
-        return
-      const destination = new URL(result.url)
-      if (
-        destination.protocol !== 'https:' ||
-        destination.hostname !== 'connect.stripe.com'
-      )
-        throw Error('Invalid setup link')
-      window.location.assign(destination.href)
-    } catch {
-      if (mounted.current && currentOwner.current === owner)
-        setPayoutError('Unable to start payout setup. Please try again.')
-    } finally {
-      if (mounted.current && currentOwner.current === owner)
-        setPayoutPending(false)
-    }
-  }
-  const payment = surface === 'payment_method'
+  }, [refresh])
+  const handlePayoutComplete = useCallback(async () => {
+    await refresh()
+    close()
+  }, [close, refresh])
+  const activeSurface = surface ?? renderedSurface
+  const payment = activeSurface === 'payment_method'
   const paymentMode = data?.paymentMethod.status === 'set' ? 'change' : 'setup'
   const paymentTitle =
     paymentMode === 'change' ? 'Change payment method' : 'Set up payment method'
-  const close = () => {
-    if (!payoutPending) setSurface(null)
-  }
-  const handleDialogKeyDown = (
-    event: React.KeyboardEvent<HTMLDialogElement>
-  ) => {
-    if (event.key !== 'Tab') return
-    const controls = Array.from(
-      event.currentTarget.querySelectorAll<HTMLElement>(
-        'iframe:not([tabindex="-1"]), button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]'
-      )
-    ).filter(
-      (control) =>
-        control.getBoundingClientRect().height > 0 &&
-        getComputedStyle(control).visibility !== 'hidden'
-    )
-    const first = controls[0]
-    const last = controls[controls.length - 1]
-    if (
-      (!event.shiftKey && document.activeElement === last) ||
-      (event.shiftKey && document.activeElement === first)
-    ) {
-      event.preventDefault()
-      ;(event.shiftKey ? last : first)?.focus()
-    }
-  }
+  const payoutMode =
+    data?.payoutAccount.status === 'ready' ? 'management' : 'onboarding'
   return (
     <section
       id="payments-payouts"
@@ -317,6 +394,78 @@ export function FinancialSettings({
       <header className={styles.panelHeader}>
         <h3>Payments &amp; payouts</h3>
       </header>
+      {settings && (
+        <section
+          className={financialStyles.setupSection}
+          aria-label="Interac e-Transfer"
+          data-financial-capability="interac_etransfer"
+        >
+          <div className={financialStyles.sectionHeading}>
+            <h4>Interac e-Transfer</h4>
+            <p className={styles.caption}>
+              Use your verified email address to receive Interac e-Transfers.
+              Make sure this email is registered with your bank. UU cannot
+              verify bank deposits.
+            </p>
+          </div>
+          <label
+            className={styles.fieldLabel}
+            htmlFor="interac-receiving-email"
+          >
+            Receiving email
+          </label>
+          <input
+            id="interac-receiving-email"
+            type="email"
+            autoComplete="email"
+            value={interacDraft}
+            readOnly
+            disabled={interacBusy}
+            aria-describedby={
+              interacError ? 'interac-settings-error' : undefined
+            }
+          />
+          <div className={financialStyles.actionRow}>
+            <StatefulButton
+              className={financialStyles.setupAction}
+              disabled={interacBusy}
+              onClick={() => void saveInterac()}
+            >
+              {interacBusy ? 'Saving…' : interacEmail ? 'Save changes' : 'Save'}
+            </StatefulButton>
+            {interacEmail && (
+              <button
+                type="button"
+                onClick={() => {
+                  setInteracDraft('')
+                  void saveInterac('')
+                }}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          {interacDraft && (
+            <p className={styles.caption} role="status">
+              {interacVerified
+                ? 'Receiving email verified.'
+                : 'Receiving email pending ownership verification.'}
+            </p>
+          )}
+          {interacError && (
+            <p
+              id="interac-settings-error"
+              className={styles.error}
+              role="alert"
+            >
+              {interacError}{' '}
+              <button type="button" onClick={() => setInteracError('')}>
+                Dismiss
+              </button>
+            </p>
+          )}
+        </section>
+      )}
       {(['payment_method', 'payout_account'] as const).map((capability) => {
         const isPayment = capability === 'payment_method'
         const value = isPayment ? data?.paymentMethod : data?.payoutAccount
@@ -336,8 +485,18 @@ export function FinancialSettings({
               capability={capability}
               status={value.status}
               summary={summary}
+              verificationStatus={
+                capability === 'payout_account' && value.status !== 'unset'
+                  ? reconcileErrors.payout_account
+                    ? 'refresh_failed'
+                    : identityVerification
+                  : undefined
+              }
               action={{
-                onStart: () => setSurface(capability),
+                onStart: () => {
+                  setRenderedSurface(capability)
+                  setSurface(capability)
+                },
                 error: reconcileErrors[capability],
               }}
             />
@@ -393,58 +552,35 @@ export function FinancialSettings({
         </button>
       )}
       <AnimatePresence>
-        {settings && surface && (
-          <FadingDialog
-            className={`${styles.dialog} ${financialStyles.setupDialog} ${
-              payment ? financialStyles.paymentDialog : ''
-            }`}
-            aria-labelledby={titleId}
-            aria-describedby={descriptionId}
-            onRequestClose={close}
-            onKeyDownCapture={handleDialogKeyDown}
+        {settings && (
+          <StripeFlowPanel
+            open={surface !== null}
+            title={payment ? paymentTitle : 'Set up payouts'}
+            description={
+              payment
+                ? 'Your payment information is securely handled by Stripe.'
+                : 'Secure verification powered by Stripe.'
+            }
+            onClose={close}
+            onExitComplete={() => setRenderedSurface(null)}
+            confirmClose={!payment && payoutMode === 'onboarding'}
+            preventScrimClose={!payment && payoutMode === 'onboarding'}
           >
-            <h3 id={titleId}>
-              {payment ? paymentTitle : 'Continue to Stripe'}
-            </h3>
-            <p id={descriptionId}>
-              {payment
-                ? 'Your payment information will be securely handled by Stripe.'
-                : "Stripe securely handles your payout account and verification details. You'll return to Usual & Unusual when you're done."}
-            </p>
-            {payment ? (
+            {activeSurface && payment ? (
               <StripeCardSetup
                 mode={paymentMode}
                 preview={<CardFormPreview />}
                 onCancel={close}
                 onComplete={handleCardComplete}
               />
-            ) : (
-              <>
-                {payoutError && (
-                  <p className={styles.error} role="alert">
-                    {payoutError}
-                  </p>
-                )}
-                <div className={financialStyles.actions}>
-                  <DynamicAction
-                    variant="red"
-                    showArrow={false}
-                    disabled={payoutPending}
-                    onClick={close}
-                  >
-                    Cancel
-                  </DynamicAction>
-                  <DynamicAction
-                    variant="green"
-                    disabled={!stripeSetupAvailable() || payoutPending}
-                    onClick={handlePayoutContinue}
-                  >
-                    Continue
-                  </DynamicAction>
-                </div>
-              </>
-            )}
-          </FadingDialog>
+            ) : activeSurface ? (
+              <StripeAccountOnboarding
+                onComplete={handlePayoutComplete}
+                onCancel={close}
+                mode={payoutMode}
+              />
+            ) : null}
+          </StripeFlowPanel>
         )}
       </AnimatePresence>
     </section>

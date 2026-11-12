@@ -314,11 +314,12 @@ async function main() {
       /bodyParser: false/
     )
   const old = process.env.STRIPE_WORKER_SECRET
+  const oldCron = process.env.CRON_SECRET
   process.env.STRIPE_WORKER_SECRET = 'x'.repeat(32)
   res = response()
   await worker({ method: 'GET', headers: {} }, res)
-  assert.equal(res.code, 405)
-  assert.equal(res.headers.Allow, 'POST')
+  assert.equal(res.code, 401)
+  assert.equal(res.headers.Allow, 'GET, POST')
   res = response()
   await worker({ method: 'POST', headers: {} }, res)
   assert.equal(res.code, 401)
@@ -376,8 +377,38 @@ async function main() {
     'a disabled Shop lifecycle step must not mask financial recovery failure'
   )
   recoveryFailure = false
+  process.env.CRON_SECRET = 'c'.repeat(32)
+  res = response()
+  await worker(
+    { method: 'GET', headers: { authorization: 'Bearer ' + 'x'.repeat(32) } },
+    res
+  )
+  assert.equal(res.code, 401, 'POST worker secret cannot authorize Cron GET')
+  process.env.CRON_SECRET = 'too-short'
+  res = response()
+  await worker(
+    { method: 'GET', headers: { authorization: 'Bearer too-short' } },
+    res
+  )
+  assert.equal(res.code, 401, 'Short Cron secret must fail closed')
+  process.env.CRON_SECRET = 'c'.repeat(32)
+  res = response()
+  await worker(
+    { method: 'GET', headers: { authorization: 'Bearer ' + 'c'.repeat(32) } },
+    res
+  )
+  assert.equal(res.code, 200, 'Cron GET requires its own configured secret')
+  process.env.CRON_SECRET = process.env.STRIPE_WORKER_SECRET
+  res = response()
+  await worker(
+    { method: 'GET', headers: { authorization: 'Bearer ' + 'x'.repeat(32) } },
+    res
+  )
+  assert.equal(res.code, 401, 'Cron and worker credentials cannot be reused')
   if (old === undefined) delete process.env.STRIPE_WORKER_SECRET
   else process.env.STRIPE_WORKER_SECRET = old
+  if (oldCron === undefined) delete process.env.CRON_SECRET
+  else process.env.CRON_SECRET = oldCron
   // Enabling account setup cannot accidentally route an Order through the simulator.
   let rpcCalls = 0
   const blockedClient = {

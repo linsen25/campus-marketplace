@@ -1,0 +1,106 @@
+.root {
+  position: relative;
+  min-height: 440px;
+}
+.verificationIntro {
+  margin-bottom: 20px;
+  padding: 16px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 4%);
+}
+.verificationIntro h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.verificationIntro > p {
+  margin: 8px 0 0;
+  color: #c9bdd3;
+  line-height: 1.5;
+}
+.verificationOptions {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.verificationOptions > div {
+  padding: 12px;
+  border-radius: 10px;
+  background: rgb(124 58 237 / 8%);
+}
+.verificationOptions p {
+  margin: 4px 0 0;
+  color: #c9bdd3;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+.requirementsNote {
+  font-size: 0.8rem;
+}
+.host {
+  min-height: 440px;
+}
+.privacyNote {
+  margin: 16px 0 0;
+  color: #c9bdd3;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.timeline {
+  margin-bottom: 20px;
+}
+.phaseSummary {
+  margin: 0 0 8px;
+  color: #e4daed;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+.timeline :global(section) {
+  margin: 0;
+  padding: 16px;
+  background: transparent;
+  box-shadow: none;
+}
+.timeline :global(section h4) {
+  margin-top: 0;
+}
+.waiting {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: rgb(10 13 24 / 72%);
+  padding: 24px;
+}
+.waitingCard {
+  width: min(100%, 460px);
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 16px;
+  background: var(--surface, #101521);
+  color: var(--text, #f6f7fb);
+  padding: 24px;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 35%);
+}
+.waitingTitle {
+  margin: 0 0 8px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.waitingCard p:not(.waitingTitle) {
+  color: rgb(255 255 255 / 72%);
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.actions button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 999px;
+  color: inherit;
+  background: rgb(255 255 255 / 8%);
+  cursor: pointer;
+}

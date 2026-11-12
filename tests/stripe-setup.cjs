@@ -19,6 +19,7 @@ const bindings = new Map(),
   transferEvents = [],
   connectedPayoutEvents = []
 const disputeEvents = []
+const bindingReconciliations = []
 const customers = new Map(),
   setups = new Map(),
   methods = new Map(),
@@ -38,6 +39,20 @@ const copy = (x) => (x == null ? x : JSON.parse(JSON.stringify(x)))
 const platform = 'acct_SyntheticPlatform'
 async function dbRpc(name, p) {
   try {
+    if (name === 'marketplace_reconcile_stripe_binding') {
+      const b = [...bindings.values()].find(
+        (candidate) => candidate.id === p.p_metadata_binding
+      )
+      assert(b)
+      assert.equal(b.user_id, p.p_user)
+      assert.equal(b.kind, p.p_kind)
+      assert.equal(b.platform, p.p_platform)
+      assert.equal(b.owner_ref, p.p_owner_ref)
+      bindingReconciliations.push({ ...p })
+      return {
+        data: { canonicalBindingId: b.id, supersededCount: 0 },
+      }
+    }
     if (name === 'marketplace_stripe_binding') {
       const key = p.p_user + ':' + p.p_kind
       let b = bindings.get(key)
@@ -653,12 +668,56 @@ async function main() {
   await service.startPayoutSetup('seller')
   assert.equal(connectCreates, 1)
   const seller = bindings.get('seller:payout_account')
-  await service.reconcileStripe('seller')
+  const initialSellerProjection = await service.reconcileStripe('seller')
   assert.equal(seller.status, 'needs_attention')
+  assert.deepEqual(initialSellerProjection.identityVerification, {
+    status: 'not_available',
+  })
+  assert(
+    bindingReconciliations.some(
+      (entry) =>
+        entry.p_user === 'seller' &&
+        entry.p_kind === 'payout_account' &&
+        entry.p_metadata_binding === seller.id &&
+        entry.p_owner_ref === seller.owner_ref
+    )
+  )
   const account = accounts.get(seller.owner_ref),
     bank = banks.get(seller.owner_ref)
+  assert.deepEqual(
+    service.stripeIdentityVerification(
+      {
+        ...bank,
+        requirements: {
+          currently_due: ['individual.verification.proof_of_liveness'],
+          past_due: [],
+          pending_verification: [],
+          errors: [],
+          alternatives: [],
+        },
+      },
+      false
+    ),
+    { status: 'action_required' }
+  )
+  assert.deepEqual(
+    service.stripeIdentityVerification(
+      {
+        ...bank,
+        requirements: {
+          currently_due: [],
+          past_due: [],
+          pending_verification: ['individual.verification.document'],
+          errors: [],
+          alternatives: [],
+        },
+      },
+      false
+    ),
+    { status: 'pending_review' }
+  )
   const description =
-    'I sell new and pre-owned personal items through the Usual & Unusual marketplace.'
+    'Selling personal pre-owned goods such as clothing, electronics, books, furniture, and household items through the Usual & Unusual marketplace.'
   assert.equal(account.defaults.profile.product_description, description)
   assert(
     !account.defaults.profile.business_url,
@@ -709,8 +768,11 @@ async function main() {
       last4: '1234',
     },
   ]
-  await service.reconcileStripe('seller')
+  const readySellerProjection = await service.reconcileStripe('seller')
   assert.equal(seller.status, 'ready')
+  assert.deepEqual(readySellerProjection.identityVerification, {
+    status: 'ready',
+  })
   assert(
     !service.sellerReadiness(account, { ...bank, payouts_enabled: false }).ready
   )

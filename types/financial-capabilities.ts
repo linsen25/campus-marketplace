@@ -10,3 +10,7 @@ export type FinancialCapabilities = {
     last4: string | null
   }
 }
+
+export type StripeIdentityVerification = {
+  status: 'action_required' | 'pending_review' | 'ready' | 'not_available'
+}

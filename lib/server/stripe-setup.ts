@@ -4,6 +4,8 @@ import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'crypto'
 
 import type Stripe from 'stripe'
 
+import type { StripeIdentityVerification } from '@/types/financial-capabilities'
+
 import { ListingApiError } from '@/lib/listing-validation'
 import {
   createTrustedFinancialClient,
@@ -160,7 +162,10 @@ async function ensureOwner(
   const owner = await r.stripe.v2.core.accounts.create(
     {
       contact_email: data.user.email,
-      identity: { country: 'ca' },
+      // Resale is the personal-seller flow. Stripe still owns the final KYC
+      // decision; business sellers must use an explicitly selected business
+      // account flow rather than being silently converted here.
+      identity: { country: 'ca', entity_type: 'individual' },
       dashboard: 'express',
       defaults: {
         currency: 'cad',
@@ -198,6 +203,16 @@ function owned(
   )
     throw new Error('Provider ownership mismatch')
 }
+async function reconcileVerifiedBinding(b: Binding) {
+  if (!b.owner_ref) return
+  await rpc('marketplace_reconcile_stripe_binding', {
+    p_user: b.user_id,
+    p_kind: b.kind,
+    p_platform: b.platform,
+    p_owner_ref: b.owner_ref,
+    p_metadata_binding: b.id,
+  })
+}
 // eslint-disable-next-line complexity -- Independently verifies setup ownership, replacement safety and card eligibility.
 async function buyerProjection(
   r: Awaited<ReturnType<typeof stripeRuntime>>,
@@ -211,6 +226,7 @@ async function buyerProjection(
     return 'unavailable'
   }
   owned(customer, b)
+  await reconcileVerifiedBinding(b)
   let methodId = b.instrument_ref
   let setupStatus = 'unset'
   if (b.setup_ref) {
@@ -296,6 +312,57 @@ export function sellerReadiness(
     destination: destination?.object === 'bank_account' ? destination : null,
   }
 }
+
+type StripeIdentityRequirements = {
+  currently_due?: string[] | null
+  past_due?: string[] | null
+  pending_verification?: string[] | null
+  errors?: Array<{ requirement?: string | null }> | null
+  alternatives?: Array<{
+    original_fields_due?: string[] | null
+    alternative_fields_due?: string[] | null
+  }> | null
+}
+
+function isIdentityRequirement(value: unknown) {
+  return (
+    typeof value === 'string' &&
+    /(?:^|\.)(?:individual\.)?verification(?:\.|$)|proof_of_liveness/.test(
+      value
+    )
+  )
+}
+
+/**
+ * Project only the minimum trusted verification state needed by Settings.
+ * Raw requirement names, errors, file ids and identity material never cross
+ * the server boundary.
+ */
+export function stripeIdentityVerification(
+  account: Stripe.Account,
+  sellerReady: boolean
+): StripeIdentityVerification {
+  const requirements = account.requirements as StripeIdentityRequirements | null
+  if (sellerReady) return { status: 'ready' }
+  const actionFields = [
+    ...(requirements?.currently_due || []),
+    ...(requirements?.past_due || []),
+    ...(requirements?.errors || []).map((error) => error.requirement),
+    ...(requirements?.alternatives || []).flatMap((alternative) => [
+      ...(alternative.original_fields_due || []),
+      ...(alternative.alternative_fields_due || []),
+    ]),
+  ]
+  if (actionFields.some(isIdentityRequirement))
+    return { status: 'action_required' }
+  if (
+    account.individual?.verification?.status === 'pending' ||
+    requirements?.pending_verification?.some(isIdentityRequirement)
+  )
+    return { status: 'pending_review' }
+  return { status: 'not_available' }
+}
+
 async function sellerProjection(
   r: Awaited<ReturnType<typeof stripeRuntime>>,
   b: Binding,
@@ -306,10 +373,12 @@ async function sellerProjection(
     include: ['configuration.recipient', 'requirements', 'identity'],
   })
   owned(account, b)
+  await reconcileVerifiedBinding(b)
   // Read-only compatibility adapter for external bank status: same v2 account,
   // not a second v1 connected account or a direct-charge capability requirement.
   const bank = await r.stripe.accounts.retrieve(b.owner_ref)
   const result = sellerReadiness(account, bank)
+  const identityVerification = stripeIdentityVerification(bank, result.ready)
   const state = result.ready ? 'ready' : 'needs_attention'
   await patch({
     status: state,
@@ -318,6 +387,7 @@ async function sellerProjection(
     last4: result.destination?.last4 || null,
     project: true,
   })
+  return identityVerification
 }
 export async function stripeCapabilities(user: string) {
   const config = stripeConfiguration()
@@ -407,6 +477,7 @@ export function startPayoutSetup(user: string, refreshToken?: string) {
         include: ['defaults'],
       })
       owned(account, b)
+      await reconcileVerifiedBinding(b)
       const proposed = await sellerOnboardingProfile(b.user_id)
       const profile: { business_url?: string; product_description?: string } =
         {}
@@ -439,11 +510,49 @@ export function startPayoutSetup(user: string, refreshToken?: string) {
     return { url: trustedConnectUrl(link.url) }
   })
 }
+
+/** Create a short-lived Stripe Connect Embedded account session for onboarding.
+ * The connected account is resolved from the server-owned binding; the browser
+ * never supplies an account id or secret.
+ */
+export async function startEmbeddedPayoutSetup(
+  user: string,
+  mode: 'onboarding' | 'management' = 'onboarding'
+) {
+  return withBinding(user, 'payout_account', async (r, initial) => {
+    const b = await ensureOwner(r, initial, async () => initial)
+    if (!b.owner_ref)
+      throw new ListingApiError('Payout account is unavailable.', 503)
+    const account = await r.stripe.v2.core.accounts.retrieve(b.owner_ref, {
+      include: ['defaults'],
+    })
+    owned(account, b)
+    await reconcileVerifiedBinding(b)
+    const session = await r.stripe.accountSessions.create({
+      account: b.owner_ref,
+      components:
+        mode === 'management'
+          ? { account_management: { enabled: true } }
+          : { account_onboarding: { enabled: true } },
+    })
+    if (
+      session.livemode ||
+      session.account !== b.owner_ref ||
+      !session.client_secret
+    )
+      throw new Error('Invalid account session scope')
+    return {
+      clientSecret: session.client_secret,
+      publishableKey: r.config.publishableKey,
+    }
+  })
+}
 export async function reconcileStripe(
   user: string,
   kinds: SetupKind[] = ['payment_method', 'payout_account']
 ) {
   let setupStatus = 'unset'
+  let identityVerification: StripeIdentityVerification | undefined
   const config = stripeConfiguration()
   for (const kind of kinds) {
     if (await store('read', user, kind, config.platform)) {
@@ -453,14 +562,18 @@ export async function reconcileStripe(
         async (r, binding, patch) => {
           if (kind === 'payment_method')
             return buyerProjection(r, binding, patch)
-          await sellerProjection(r, binding, patch)
+          identityVerification = await sellerProjection(r, binding, patch)
           return 'unset'
         }
       )
       if (kind === 'payment_method') setupStatus = status
     }
   }
-  return { capabilities: await stripeCapabilities(user), setupStatus }
+  return {
+    capabilities: await stripeCapabilities(user),
+    setupStatus,
+    identityVerification,
+  }
 }
 export const platformSetupEvents = [
   'setup_intent.succeeded',

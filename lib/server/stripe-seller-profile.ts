@@ -4,7 +4,7 @@ import { ListingApiError } from '@/lib/listing-validation'
 import { publicSellerPath } from '@/lib/public-seller'
 
 export const sellerProductDescription =
-  'I sell new and pre-owned personal items through the Usual & Unusual marketplace.'
+  'Selling personal pre-owned goods such as clothing, electronics, books, furniture, and household items through the Usual & Unusual marketplace.'
 
 export async function sellerOnboardingProfile(identifier: string) {
   const profile: { business_url?: string; product_description: string } = {
