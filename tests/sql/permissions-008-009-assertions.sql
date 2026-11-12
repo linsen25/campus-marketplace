@@ -199,15 +199,48 @@ set role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000a1',true);
 do $$
-declare conversation_id uuid; offer_id uuid; second_offer uuid; preflight jsonb;
+declare
+  conversation_id uuid;
+  offer_id uuid;
+  second_offer uuid;
+  preflight jsonb;
+  rejected boolean:=false;
+  -- Keep this positive fixture aligned with the V2 Offer contract loaded by
+  -- database-qualification.yml. Payment mode/version are server-injected by
+  -- mutate_offer_revision(); all fulfillment terms below are caller-owned.
+  offer_terms jsonb:=pg_catalog.jsonb_build_object(
+    'item_amount_cents',800,
+    'fulfillment','on_campus',
+    'note','ordinary resale offer',
+    'meetup_location','Fixture meeting point',
+    'meetup_location_provider',null,
+    'meetup_place_id',null,
+    'scheduled_at',pg_catalog.date_trunc('hour',pg_catalog.clock_timestamp())+interval '2 hours'
+  );
 begin
   if not coalesce(marketplace_private.is_verified_user(),false)
      or coalesce(marketplace_private.is_western_user(),false) then
     raise exception 'ordinary offer fixture must be confirmed but non-Western';
   end if;
   select id into conversation_id from fixture_conversation limit 1;
+
+  -- Keep the malformed-terms rejection meaningful while the positive fixture
+  -- exercises the complete current contract below.
+  begin
+    perform public.marketplace_create_offer(
+      conversation_id,
+      pg_catalog.jsonb_build_object('item_amount_cents',800,'note','missing fulfillment'),
+      gen_random_uuid()
+    );
+  exception when check_violation then
+    rejected:=true;
+  end;
+  if not rejected then
+    raise exception 'malformed offer terms were accepted';
+  end if;
+
   select id into offer_id from public.marketplace_create_offer(
-    conversation_id,'{"item_amount_cents":800,"note":"ordinary resale offer"}'::jsonb,gen_random_uuid());
+    conversation_id,offer_terms,gen_random_uuid());
   if offer_id is null then raise exception 'ordinary confirmed account offer creation failed'; end if;
   perform public.marketplace_offer_history(conversation_id);
 
@@ -216,7 +249,9 @@ begin
 
   perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000a1',true);
   select id into second_offer from public.marketplace_create_offer(
-    conversation_id,'{"item_amount_cents":800,"note":"ordinary resale offer 2"}'::jsonb,gen_random_uuid());
+    conversation_id,
+    offer_terms||pg_catalog.jsonb_build_object('note','ordinary resale offer 2'),
+    gen_random_uuid());
   perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000b2',true);
   preflight:=public.marketplace_offer_accept_preflight(second_offer,gen_random_uuid());
   if preflight->>'ready' is distinct from 'true' then
