@@ -201,6 +201,10 @@ select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000a1'
 do $$
 declare conversation_id uuid; offer_id uuid; second_offer uuid; preflight jsonb;
 begin
+  if not coalesce(marketplace_private.is_verified_user(),false)
+     or coalesce(marketplace_private.is_western_user(),false) then
+    raise exception 'ordinary offer fixture must be confirmed but non-Western';
+  end if;
   select id into conversation_id from fixture_conversation limit 1;
   select id into offer_id from public.marketplace_create_offer(
     conversation_id,'{"item_amount_cents":800,"note":"ordinary resale offer"}'::jsonb,gen_random_uuid());

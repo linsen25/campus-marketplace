@@ -136,9 +136,12 @@ jobs:
           if seed.exists(): shutil.copy2(seed, full / 'supabase' / 'seed.sql')
           all_files = sorted((root / 'supabase' / 'migrations').glob('*.sql'))
           selected = [p for p in all_files if p.name < '202610260011_resale_verified_offer_order_permissions.sql'
-                      or p.name == '202611060001_b31_buyer_receipt_protection.sql']
-          if any(p.name == '202610260011_resale_verified_offer_order_permissions.sql' for p in selected):
-              raise SystemExit('Migration 011 entered the B31 allowlist')
+                      or p.name in {
+                          '202610260011_resale_verified_offer_order_permissions.sql',
+                          '202611060001_b31_buyer_receipt_protection.sql',
+                      }]
+          if not any(p.name == '202610260011_resale_verified_offer_order_permissions.sql' for p in selected):
+              raise SystemExit('Resale offer verified-user migration is missing from the qualification allowlist')
           if not any(p.name == '202611060001_b31_buyer_receipt_protection.sql' for p in selected):
               raise SystemExit('B31 migration is missing from the allowlist')
           for source in selected: shutil.copy2(source, migrations_dir / source.name)
@@ -185,7 +188,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test ! -e "supabase/migrations/202610260011_resale_verified_offer_order_permissions.sql"
+          test -e "supabase/migrations/202610260011_resale_verified_offer_order_permissions.sql"
           test -e "supabase/migrations/202611060001_b31_buyer_receipt_protection.sql"
           db_container="$(docker ps --format '{{.Names}}' | grep -E '^supabase_db_' | head -n 1)"
           test -n "$db_container" || { echo 'Disposable local Postgres container not found' >&2; exit 1; }
@@ -194,7 +197,7 @@ jobs:
           do $$
           begin
             if (select count(*) from supabase_migrations.schema_migrations where version='202611060001') <> 1 then raise exception 'B31 migration missing or duplicated'; end if;
-            if exists(select 1 from supabase_migrations.schema_migrations where version='202610260011') then raise exception 'Migration 011 was executed'; end if;
+            if (select count(*) from supabase_migrations.schema_migrations where version='202610260011') <> 1 then raise exception 'Resale offer verified-user migration missing or duplicated'; end if;
             if not exists(select 1 from information_schema.columns where table_schema='marketplace_private' and table_name='order_protection' and column_name='release_eligible_at') then raise exception 'release gate column missing'; end if;
             if not exists(select 1 from pg_trigger where tgname='order_transfer_b31_release_gate') then raise exception 'transfer release gate missing'; end if;
           end $$;
