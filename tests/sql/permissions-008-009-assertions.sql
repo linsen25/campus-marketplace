@@ -257,6 +257,11 @@ begin
   if preflight->>'ready' is distinct from 'true' then
     raise exception 'ordinary confirmed account offer preflight did not reach transaction checks: %',preflight;
   end if;
+
+  -- The legacy V1 request assertion below deliberately uses the same
+  -- conversation. Close this V2 Offer through its legitimate recipient path
+  -- first: production correctly rejects concurrent active V1/V2 proposals.
+  perform public.marketplace_deny_offer(second_offer,gen_random_uuid());
 end $$;
 
 -- The same confirmed accounts can read their own participant request/order
