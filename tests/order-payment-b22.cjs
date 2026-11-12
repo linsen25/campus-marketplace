@@ -24,13 +24,14 @@ const intent = {
   currency: 'cad',
   customer: 'cus_Buyer',
   payment_method: 'pm_Card',
-  on_behalf_of: 'acct_Seller',
+  on_behalf_of: null,
   transfer_group: 'uu_order_order-1',
   metadata: {
     uu_order: 'order-1',
     uu_attempt: 'attempt-1',
     uu_kind: 'marketplace_order',
     uu_environment: 'staging',
+    uu_seller_account: 'acct_Seller',
   },
 }
 
@@ -151,6 +152,7 @@ async function main() {
   assert.equal(applied.p_value.providerStatus, 'succeeded')
   assert.equal(applied.p_value.amountReceived, 10825)
   assert.equal(applied.p_value.metadataKind, 'marketplace_order')
+  assert.equal(applied.p_value.sellerAccount, 'acct_Seller')
 
   rpcCalls = []
   retrieveError = true

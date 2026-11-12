@@ -42,7 +42,7 @@ function intent(overrides = {}) {
     amount: 10825,
     amount_received: 10825,
     currency: 'cad',
-    on_behalf_of: claim.destination_account_ref,
+    on_behalf_of: null,
     latest_charge: 'ch_Source',
     transfer_group: claim.transfer_group,
     metadata: {
@@ -50,6 +50,7 @@ function intent(overrides = {}) {
       uu_order: claim.order_id,
       uu_attempt: claim.payment_attempt_id,
       uu_environment: 'staging',
+      uu_seller_account: claim.destination_account_ref,
     },
     ...overrides,
   }
@@ -67,11 +68,12 @@ function charge(overrides = {}) {
     amount_refunded: 0,
     currency: 'cad',
     payment_intent: claim.payment_intent_ref,
-    on_behalf_of: claim.destination_account_ref,
+    on_behalf_of: null,
     transfer_group: claim.transfer_group,
     metadata: {
       uu_order: claim.order_id,
       uu_attempt: claim.payment_attempt_id,
+      uu_seller_account: claim.destination_account_ref,
     },
     ...overrides,
   }

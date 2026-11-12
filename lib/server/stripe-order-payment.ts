@@ -2,6 +2,7 @@
 import type Stripe from 'stripe'
 
 import { ListingApiError } from '@/lib/listing-validation'
+import { SellerPayoutNotReadyError } from '@/lib/order-payout-error'
 import { createTrustedFinancialClient } from '@/lib/server/financial-capabilities-service'
 import { stripeRuntime } from '@/lib/server/stripe-runtime'
 
@@ -69,6 +70,12 @@ async function providerRpc({
   )
   if (error) {
     const forbidden = error.code === '42501'
+    if (
+      action === 'claim' &&
+      error.code === '23514' &&
+      error.message === 'Seller Connect binding unavailable.'
+    )
+      throw new SellerPayoutNotReadyError('Order')
     let status = 503
     if (forbidden) status = 403
     else if (error.code === '23505') status = 409
@@ -99,13 +106,13 @@ export function buildOrderPaymentIntentParams(row: ProviderAttemptRow) {
     capture_method: 'automatic',
     confirmation_method: 'automatic',
     confirm: false,
-    on_behalf_of: row.provider_seller_account_ref,
     transfer_group: row.provider_transfer_group,
     metadata: {
       uu_order: row.order_id,
       uu_attempt: row.id,
       uu_kind: 'marketplace_order',
       uu_environment: 'staging',
+      uu_seller_account: row.provider_seller_account_ref,
     },
   }
   return params
@@ -126,12 +133,13 @@ function validateIntent(
     intent.currency !== 'cad' ||
     id(intent.customer) !== row.provider_customer_ref ||
     id(intent.payment_method) !== row.provider_instrument_ref ||
-    id(intent.on_behalf_of) !== row.provider_seller_account_ref ||
+    id(intent.on_behalf_of) !== null ||
     intent.transfer_group !== row.provider_transfer_group ||
     intent.metadata.uu_order !== row.order_id ||
     intent.metadata.uu_attempt !== row.id ||
     intent.metadata.uu_kind !== 'marketplace_order' ||
-    intent.metadata.uu_environment !== 'staging'
+    intent.metadata.uu_environment !== 'staging' ||
+    intent.metadata.uu_seller_account !== row.provider_seller_account_ref
   )
     throw new ListingApiError(
       'Payment requires server reconciliation before retrying.',
@@ -139,19 +147,21 @@ function validateIntent(
     )
 }
 
-async function assertSellerChargeReady(
+async function assertSellerRecipientReady(
   stripe: Stripe,
   sellerAccountId: string,
   platformCountry: string | null | undefined
 ) {
   const seller = await stripe.accounts.retrieve(sellerAccountId)
   if (
-    !seller.charges_enabled ||
-    seller.capabilities?.card_payments !== 'active' ||
+    'deleted' in seller ||
+    !seller.details_submitted ||
+    !seller.payouts_enabled ||
+    seller.capabilities?.transfers !== 'active' ||
     !seller.country ||
     seller.country !== platformCountry
   )
-    throw new ListingApiError('Seller payment account is not ready.', 409)
+    throw new SellerPayoutNotReadyError('Order')
 }
 
 async function assertBuyerPaymentMethodReady(
@@ -199,70 +209,89 @@ export async function prepareOrderPaymentConfirmation(
       503
     )
   const params = buildOrderPaymentIntentParams(claimed)
-  let intent: Stripe.PaymentIntent
-  if (claimed.provider_reference) {
-    intent = await stripe.paymentIntents.retrieve(claimed.provider_reference)
-  } else {
+  const releasable =
+    claimed.claimState === 'create' &&
+    !claimed.provider_reference &&
+    Boolean(claimed.provider_lease)
+  try {
+    // Recheck both immutable provider participants on every attempt, including
+    // reuse of an already-created Intent. A seller becoming unready must not
+    // receive a reusable client secret merely because the Intent already exists.
     await assertBuyerPaymentMethodReady(
       stripe,
       claimed.provider_customer_ref,
       claimed.provider_instrument_ref
     )
-    await assertSellerChargeReady(
+    await assertSellerRecipientReady(
       stripe,
       claimed.provider_seller_account_ref,
       platformAccount.country
     )
-    // This is the only B21 money-provider call. No transfer/refund/payout occurs.
-    intent = await stripe.paymentIntents.create(params, {
-      idempotencyKey: claimed.provider_idempotency_key,
-    })
+    let intent: Stripe.PaymentIntent
+    if (claimed.provider_reference) {
+      intent = await stripe.paymentIntents.retrieve(claimed.provider_reference)
+    } else {
+      // This is the only B21 money-provider call. No transfer/refund/payout occurs.
+      intent = await stripe.paymentIntents.create(params, {
+        idempotencyKey: claimed.provider_idempotency_key,
+      })
+      validateIntent(intent, claimed, params)
+      const bound = await providerRpc({
+        action: 'bind',
+        attemptId,
+        buyerId,
+        platform: config.platform,
+        token: claimed.provider_lease,
+        value: { providerReference: intent.id },
+      })
+      if (!bound?.confirmable)
+        throw new ListingApiError(
+          'Order changed while payment was starting. Refresh the Order.',
+          409
+        )
+    }
     validateIntent(intent, claimed, params)
-    const bound = await providerRpc({
-      action: 'bind',
+    const current = await providerRpc({
+      action: 'read',
       attemptId,
       buyerId,
       platform: config.platform,
-      token: claimed.provider_lease,
-      value: { providerReference: intent.id },
     })
-    if (!bound?.confirmable)
+    if (!current?.confirmable || current.provider_reference !== intent.id)
       throw new ListingApiError(
         'Order changed while payment was starting. Refresh the Order.',
         409
       )
-  }
-  validateIntent(intent, claimed, params)
-  const current = await providerRpc({
-    action: 'read',
-    attemptId,
-    buyerId,
-    platform: config.platform,
-  })
-  if (!current?.confirmable || current.provider_reference !== intent.id)
-    throw new ListingApiError(
-      'Order changed while payment was starting. Refresh the Order.',
-      409
-    )
-  const base = {
-    orderId: claimed.order_id,
-    attemptId: claimed.id,
-    paymentIntentId: intent.id,
-  }
-  if (
-    [
-      'requires_action',
-      'requires_confirmation',
-      'requires_payment_method',
-    ].includes(intent.status)
-  ) {
-    if (!intent.client_secret)
-      throw new ListingApiError('Payment confirmation is unavailable.', 503)
-    return {
-      ...base,
-      clientSecret: intent.client_secret,
-      nextAction: 'confirm',
+    const base = {
+      orderId: claimed.order_id,
+      attemptId: claimed.id,
+      paymentIntentId: intent.id,
     }
+    if (
+      [
+        'requires_action',
+        'requires_confirmation',
+        'requires_payment_method',
+      ].includes(intent.status)
+    ) {
+      if (!intent.client_secret)
+        throw new ListingApiError('Payment confirmation is unavailable.', 503)
+      return {
+        ...base,
+        clientSecret: intent.client_secret,
+        nextAction: 'confirm',
+      }
+    }
+    return { ...base, nextAction: 'reconcile' }
+  } catch (error) {
+    if (releasable)
+      await providerRpc({
+        action: 'release',
+        attemptId,
+        buyerId,
+        platform: config.platform,
+        token: claimed.provider_lease,
+      }).catch(() => {})
+    throw error
   }
-  return { ...base, nextAction: 'reconcile' }
 }

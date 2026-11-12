@@ -18,9 +18,12 @@ const observabilitySql = read(
   'supabase/migrations/20261023224905_worker_observability.sql'
 )
 
-assert.match(worker, /req\.method !== 'POST'.*status\(405\)/s)
+assert.match(worker, /req\.method !== 'GET'.*req\.method !== 'POST'/s)
+assert.match(worker, /process\.env\.CRON_SECRET/)
+assert.match(worker, /process\.env\.STRIPE_WORKER_SECRET/)
+assert.match(worker, /cronSecret !== workerSecret/)
 assert.match(worker, /timingSafeEqual\(actualBytes, expectedBytes\)/)
-assert.match(worker, /expected\.length >= 32/)
+assert.match(worker, /expected\.length < 32/)
 assert.match(worker, /status\(401\)/)
 assert.match(worker, /Cache-Control', 'no-store'/)
 assert.match(worker, /const scheduledBatchLimit = 2/)

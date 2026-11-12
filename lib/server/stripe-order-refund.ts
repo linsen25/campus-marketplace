@@ -195,12 +195,13 @@ function validatePaymentIntent(
     intent.currency !== 'cad' ||
     providerId(intent.customer) !== claim.provider_customer_ref ||
     providerId(intent.payment_method) !== claim.provider_instrument_ref ||
-    providerId(intent.on_behalf_of) !== claim.provider_seller_account_ref ||
+    providerId(intent.on_behalf_of) !== null ||
     intent.transfer_group !== claim.provider_transfer_group ||
     intent.metadata.uu_kind !== 'marketplace_order' ||
     intent.metadata.uu_order !== claim.order_id ||
     intent.metadata.uu_attempt !== claim.payment_attempt_id ||
-    intent.metadata.uu_environment !== 'staging'
+    intent.metadata.uu_environment !== 'staging' ||
+    intent.metadata.uu_seller_account !== claim.provider_seller_account_ref
   )
     throw new ProviderValidationError(
       'Original payment binding mismatch.',

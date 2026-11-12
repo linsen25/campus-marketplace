@@ -12,20 +12,26 @@ fs.writeFileSync(
 export const useRouter=()=>({push:async()=>{}});
 export const useFinancialCapabilities=()=>({data:{paymentMethod:{status:'set'}},error:null,refresh:async()=>{window.capabilityRefreshes++}});
 export const mutateCampusOrder=async()=>{window.starts++;if(window.holdStart)await new Promise(r=>window.releaseStart=r);return window.startResult};
-export const getStripeClient=async()=>({confirmCardPayment:async(secret)=>{window.confirms++;window.secret=secret;if(window.confirmError)return {error:{type:window.confirmError}};return {paymentIntent:{id:'pi_Order',status:window.confirmStatus}}}});
+export const findConversation=async()=>({id:'conversation',role:'buying'});
+export const StripeFlowPanel=({open,children,onClose})=>open?<div role="dialog"><button onClick={onClose}>Close payment</button>{children}</div>:null;
+export const StripeOrderPayment=({prepare,onComplete,onCancel})=><div><button onClick={async()=>{if(window.formBusy)return;window.formBusy=true;window.confirms++;try{window.prepared=await prepare();await onComplete()}finally{window.formBusy=false}}}>Confirm test payment</button><button onClick={onCancel}>Cancel test payment</button></div>;
+export const PaymentUnavailableDialog=()=>null;
 `
 )
 aliases['next/router'] = path.join(root, 'b21-mocks.jsx')
 aliases['@/hooks/use-financial-capabilities'] = path.join(root, 'b21-mocks.jsx')
 aliases['@/lib/orders-api'] = path.join(root, 'b21-mocks.jsx')
-aliases['@/lib/stripe-client'] = path.join(root, 'b21-mocks.jsx')
+aliases['@/lib/messages-api'] = path.join(root, 'b21-mocks.jsx')
+aliases['@/components/payments/stripe-flow-panel'] = path.join(root, 'b21-mocks.jsx')
+aliases['@/components/payments/stripe-order-payment'] = path.join(root, 'b21-mocks.jsx')
+aliases['@/components/home/payment-unavailable-dialog'] = path.join(root, 'b21-mocks.jsx')
 
 fs.writeFileSync(
   path.join(root, 'entry.tsx'),
   `
 import React from 'react';import {createRoot} from 'react-dom/client';import {OrderCampusPayment} from '@/components/home/order-campus-payment';
 const order={id:'21222222-2222-4222-8222-222222222222',requestId:'r',conversationId:'c',listingId:'l',buyerId:'b',sellerId:'s',snapshot:{listing:{id:'l',liveId:'l',title:'Item',price:10000,currency:'CAD',category:'Other',availability:'unavailable',photoUrls:[]},draft:{price:10000,fulfillment:'shipping',location:'',scheduleMode:'tbd',shippingCost:'included',shippingFee:null,shippingMethod:'',note:''},buyer:'Buyer',seller:'Seller'},lifecycle:'open',holdsListing:true,moneyStatus:'finalized',paymentStatus:'pending',paymentPaidAt:null,payoutStatus:'not_eligible',fulfillmentStatus:'awaiting_payment',itemAmount:10000,shippingAmount:0,serviceFee:825,totalAmount:10825,createdAt:new Date().toISOString(),reservationStartedAt:null,reservationExpiresAt:null,campusPayment:{inspectionConfirmedAt:new Date().toISOString(),itemCents:10000,feeCents:825,totalCents:10825,feeRule:'test'}};
-window.starts=0;window.confirms=0;window.refreshes=0;window.capabilityRefreshes=0;window.confirmStatus='succeeded';window.startResult={order:{...order,paymentStatus:'processing'},serverTime:new Date().toISOString(),paymentConfirmation:{orderId:order.id,attemptId:'a',paymentIntentId:'pi_Order',clientSecret:'pi_Order_secret_Synthetic',nextAction:'confirm'}};
+window.starts=0;window.confirms=0;window.refreshes=0;window.capabilityRefreshes=0;window.startResult={order:{...order,paymentStatus:'processing'},serverTime:new Date().toISOString(),paymentConfirmation:{orderId:order.id,attemptId:'a',paymentIntentId:'pi_Order',clientSecret:'pi_Order_secret_Synthetic',nextAction:'confirm'}};
 createRoot(document.getElementById('root')).render(<OrderCampusPayment order={order} role="buyer" onRefresh={async()=>{window.refreshes++}} onUpdated={(value)=>{window.updated=value.paymentStatus}}/>);
 `
 )
@@ -58,17 +64,18 @@ async function main() {
       window.holdStart = true
     })
     await pay.click({ noWaitAfter: true })
+    const confirm = page.getByRole('button', {
+      name: 'Confirm test payment',
+      exact: true,
+    })
+    await confirm.click({ noWaitAfter: true })
     await page.waitForFunction(() => window.starts === 1)
-    await page.evaluate(() =>
-      document
-        .querySelector('button')
-        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    )
+    await confirm.click({ noWaitAfter: true })
     assert.equal(await page.evaluate(() => window.starts), 1)
     await page.evaluate(() => window.releaseStart())
     await page.waitForFunction(() => window.confirms === 1)
     assert.equal(
-      await page.evaluate(() => window.secret),
+      await page.evaluate(() => window.prepared.clientSecret),
       'pi_Order_secret_Synthetic'
     )
     assert.equal(await page.evaluate(() => window.updated), 'processing')
@@ -79,7 +86,7 @@ async function main() {
     assert.equal(await page.evaluate(() => window.refreshes), 1)
     assert.deepEqual(errors, [])
     console.log(
-      'PASS B21 Buyer Pay normal click, duplicate-submit guard, Stripe.js confirmation, authoritative refresh, and no client-side Paid projection'
+      'PASS B21 Buyer Pay panel, stable prepare callback, duplicate-submit guard, authoritative refresh, and no client-side Paid projection'
     )
   } finally {
     await browser.close()

@@ -193,6 +193,152 @@ async function main() {
     ])
       sql(fs.readFileSync(path.join('supabase/migrations', migration), 'utf8'))
 
+    // Reproduce the pre-013 NULL-start phantom before applying the repair.
+    const phantom = {
+      buyer: randomUUID(),
+      seller: randomUUID(),
+      listing: randomUUID(),
+      order: randomUUID(),
+      attempt: randomUUID(),
+      pi: `pi_${randomUUID().replaceAll('-', '')}`,
+    }
+    sql(`
+      insert into public.profiles values('${phantom.buyer}'),('${phantom.seller}');
+      insert into public.listings values('${phantom.listing}','pending','${phantom.order}');
+      insert into public.orders(id,request_id,conversation_id,listing_id,buyer_id,seller_id,
+       order_protocol_version,terms_snapshot,lifecycle_status,holds_listing,payment_status,
+       fulfillment_status,payout_status)
+      values('${phantom.order}',gen_random_uuid(),gen_random_uuid(),'${phantom.listing}',
+       '${phantom.buyer}','${phantom.seller}',2,'{"terms":{"payment_mode":"uu_pay"}}',
+       'open',true,'processing','awaiting_payment','not_eligible');
+      insert into marketplace_private.campus_payment_attempts(
+       id,order_id,buyer_id,command,status,started_at)
+      values('${phantom.attempt}','${phantom.order}','${phantom.buyer}',gen_random_uuid(),
+       'processing',clock_timestamp());
+    `)
+    assert.equal(
+      sql(`select count(*) from marketplace_private.operational_cases
+       where source_kind='payment_exception' and source_id='${phantom.attempt}'
+        and provider is null and source_status='unknown:none';`),
+      '1'
+    )
+
+    sql(
+      fs.readFileSync(
+        path.join(
+          'supabase/migrations',
+          '20261111001147_operational_case_null_provider_start.sql'
+        ),
+        'utf8'
+      )
+    )
+    assert.equal(
+      sql(`select review_status||':'||source_status from marketplace_private.operational_cases
+       where source_kind='payment_exception' and source_id='${phantom.attempt}';`),
+      'resolved:phantom_null_start_repaired'
+    )
+    assert.equal(
+      sql(`select count(*) from marketplace_private.operational_case_audit a
+       join marketplace_private.operational_cases c on c.id=a.case_id
+       where c.source_id='${phantom.attempt}' and a.action='review_transition'
+        and a.source_event_key='migration013:phantom:'||c.id::text;`),
+      '1'
+    )
+
+    // Exercise the actual trusted claim/bind RPC. The false-positive case can
+    // seal NULL provider fields once; later mutation remains a hard conflict.
+    sql(`insert into marketplace_private.v2_order_economics values(
+      '${phantom.order}',10000,0,825,10825,0,10000,
+      'item_only_4pct_min100_max1500_v1',clock_timestamp());
+      insert into marketplace_private.stripe_bindings(
+       user_id,kind,platform,mode,status,owner_ref,instrument_ref)
+      values
+       ('${phantom.buyer}','payment_method','acct_TestPlatform','test','set','cus_Buyer','pm_Card'),
+       ('${phantom.seller}','payout_account','acct_TestPlatform','test','ready','acct_Seller',null);`)
+    const phantomClaims = `select set_config('request.jwt.claims','{"sub":"${phantom.buyer}","role":"service_role","ref":"pcaqxezdfxofysghssyo"}',false) as ignored \\gset\n`
+    const claimResult = JSON.parse(
+      sql(
+        phantomClaims +
+          `select public.marketplace_order_payment_provider('claim','${phantom.attempt}',
+           '${phantom.buyer}','acct_TestPlatform',null,'{}'::jsonb);`
+      )
+        .split('\n')
+        .filter(Boolean)
+        .at(-1)
+    )
+    assert.equal(claimResult.claimState, 'create')
+    assert.match(claimResult.provider_lease, /^[0-9a-f-]{36}$/)
+    sql(
+      phantomClaims +
+        `select public.marketplace_order_payment_provider('bind','${phantom.attempt}',
+         '${phantom.buyer}','acct_TestPlatform','${claimResult.provider_lease}',
+         '{"providerReference":"${phantom.pi}"}'::jsonb);`
+    )
+    assert.equal(
+      sql(`select provider||':'||provider_mode||':'||provider_platform||':'||provider_object_ref
+       from marketplace_private.operational_cases where source_id='${phantom.attempt}';`),
+      `stripe:test:acct_TestPlatform:${phantom.pi}`
+    )
+    sql(`do $$begin
+      begin
+       update marketplace_private.campus_payment_attempts
+          set provider_platform='acct_OtherPlatform' where id='${phantom.attempt}';
+       raise exception 'Expected source binding conflict was not raised.';
+      exception when check_violation then
+       if sqlerrm<>'Operational case source binding conflict.' then raise;end if;
+      end;
+    end$$;`)
+
+    // A clean NULL start and a current, non-overdue provider attempt do not
+    // create cases after 013. A genuinely overdue attempt still does.
+    const cleanAttempt = randomUUID()
+    const overdueAttempt = randomUUID()
+    const overdueListing = randomUUID()
+    const overdueOrder = randomUUID()
+    sql(`insert into marketplace_private.campus_payment_attempts(
+       id,order_id,buyer_id,command,status,started_at,finished_at)
+      values('${cleanAttempt}','${phantom.order}','${phantom.buyer}',gen_random_uuid(),
+       'failed',clock_timestamp(),clock_timestamp());`)
+    assert.equal(
+      sql(`select count(*) from marketplace_private.operational_cases
+       where source_kind='payment_exception' and source_id='${cleanAttempt}';`),
+      '0'
+    )
+    sql(`insert into public.listings values('${overdueListing}','pending','${overdueOrder}');
+      insert into public.orders(id,request_id,conversation_id,listing_id,buyer_id,seller_id,
+       order_protocol_version,terms_snapshot,lifecycle_status,holds_listing,payment_status,
+       fulfillment_status,payout_status)
+      values('${overdueOrder}',gen_random_uuid(),gen_random_uuid(),'${overdueListing}',
+       '${phantom.buyer}','${phantom.seller}',2,'{"terms":{"payment_mode":"uu_pay"}}',
+       'open',true,'processing','awaiting_payment','not_eligible');
+      insert into marketplace_private.campus_payment_attempts(
+      id,order_id,buyer_id,command,status,started_at,provider,provider_mode,
+      provider_platform,provider_purpose,provider_operation_id,provider_idempotency_key,
+      provider_customer_ref,provider_instrument_ref,provider_seller_account_ref,
+      provider_amount_cents,provider_currency,provider_transfer_group,
+      provider_create_started_at)
+      values('${overdueAttempt}','${overdueOrder}','${phantom.buyer}',gen_random_uuid(),
+      'processing',clock_timestamp()-interval '21 hours','stripe','test','acct_TestPlatform',
+      'marketplace_order',gen_random_uuid(),'uu:test:acct_TestPlatform:order:'||gen_random_uuid(),
+      'cus_Buyer','pm_Card','acct_Seller',10825,'CAD','uu_order_${overdueOrder}',
+      clock_timestamp()-interval '21 hours');`)
+    assert.equal(
+      sql(`select source_status from marketplace_private.operational_cases
+       where source_kind='payment_exception' and source_id='${overdueAttempt}';`),
+      'recovery_exhausted:unbound'
+    )
+    const syncSql = `select marketplace_private.sync_operational_case('payment_exception','${overdueAttempt}');`
+    const [syncOne, syncTwo] = await Promise.all([
+      runAsync('psql', args, syncSql),
+      runAsync('psql', args, syncSql),
+    ])
+    assert.equal(syncOne.trim(), syncTwo.trim())
+    assert.equal(
+      sql(`select count(*) from marketplace_private.operational_cases
+       where source_kind='payment_exception' and source_id='${overdueAttempt}';`),
+      '1'
+    )
+
     const buyer = randomUUID()
     const platform = 'acct_TestPlatform'
     const claims = `select set_config('request.jwt.claims','{"sub":"${buyer}","role":"service_role","ref":"pcaqxezdfxofysghssyo"}',false) as ignored \\gset\n`

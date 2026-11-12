@@ -12,24 +12,38 @@ import {
 
 const scheduledBatchLimit = 2
 
+function hasBearerSecret(value: string, expected: string) {
+  if (expected.length < 32) return false
+  const expectedBytes = Buffer.from(`Bearer ${expected}`)
+  const actualBytes = Buffer.from(value)
+  return (
+    actualBytes.length === expectedBytes.length &&
+    timingSafeEqual(actualBytes, expectedBytes)
+  )
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   res.setHeader('Cache-Control', 'no-store')
-  res.setHeader('Allow', 'POST')
-  if (req.method !== 'POST') return res.status(405).end()
-  const expected = process.env.STRIPE_WORKER_SECRET || ''
+  res.setHeader('Allow', 'GET, POST')
+  if (req.method !== 'GET' && req.method !== 'POST')
+    return res.status(405).end()
   const actual =
     typeof req.headers.authorization === 'string'
       ? req.headers.authorization
       : ''
-  const expectedBytes = Buffer.from(`Bearer ${expected}`)
-  const actualBytes = Buffer.from(actual)
+  const cronSecret = process.env.CRON_SECRET || ''
+  const workerSecret = process.env.STRIPE_WORKER_SECRET || ''
+  // Vercel Cron invokes configured paths with GET and CRON_SECRET. Manual or
+  // other trusted operational callers retain the existing POST-only worker
+  // credential. Neither route is available when its configured secret is
+  // missing, too short, or reused for both callers.
   const authorized =
-    expected.length >= 32 &&
-    actualBytes.length === expectedBytes.length &&
-    timingSafeEqual(actualBytes, expectedBytes)
+    req.method === 'GET'
+      ? cronSecret !== workerSecret && hasBearerSecret(actual, cronSecret)
+      : hasBearerSecret(actual, workerSecret)
   if (!authorized) return res.status(401).end()
   const enabled =
     process.env.STRIPE_OPERATIONAL_RECOVERY_ENABLED === 'true' ||

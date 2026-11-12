@@ -97,7 +97,7 @@ function observation(
     currency: intent.currency,
     customer: providerId(intent.customer),
     paymentMethod: providerId(intent.payment_method),
-    sellerAccount: providerId(intent.on_behalf_of),
+    sellerAccount: intent.metadata.uu_seller_account || null,
     transferGroup: intent.transfer_group,
     orderId: intent.metadata.uu_order || null,
     metadataAttempt: intent.metadata.uu_attempt || null,

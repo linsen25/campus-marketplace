@@ -189,12 +189,13 @@ function validatePaymentIntent(
     intent.status !== 'succeeded' ||
     intent.amount_received !== intent.amount ||
     intent.currency !== 'cad' ||
-    providerId(intent.on_behalf_of) !== claim.destination_account_ref ||
+    providerId(intent.on_behalf_of) !== null ||
     intent.transfer_group !== claim.transfer_group ||
     intent.metadata.uu_kind !== 'marketplace_order' ||
     intent.metadata.uu_order !== claim.order_id ||
     intent.metadata.uu_attempt !== claim.payment_attempt_id ||
-    intent.metadata.uu_environment !== 'staging'
+    intent.metadata.uu_environment !== 'staging' ||
+    intent.metadata.uu_seller_account !== claim.destination_account_ref
   )
     throw new ProviderValidationError(
       'Original payment binding mismatch.',
@@ -223,10 +224,11 @@ function validateCharge(
     charge.amount !== intent.amount_received ||
     charge.currency !== 'cad' ||
     providerId(charge.payment_intent) !== claim.payment_intent_ref ||
-    providerId(charge.on_behalf_of) !== claim.destination_account_ref ||
+    providerId(charge.on_behalf_of) !== null ||
     charge.transfer_group !== claim.transfer_group ||
     charge.metadata.uu_order !== claim.order_id ||
-    charge.metadata.uu_attempt !== claim.payment_attempt_id
+    charge.metadata.uu_attempt !== claim.payment_attempt_id ||
+    charge.metadata.uu_seller_account !== claim.destination_account_ref
   )
     throw new ProviderValidationError('Source Charge mismatch.', 'binding')
   if (

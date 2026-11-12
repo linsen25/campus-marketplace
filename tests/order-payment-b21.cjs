@@ -38,13 +38,14 @@ function intent(overrides = {}) {
     currency: 'cad',
     customer: 'cus_Buyer',
     payment_method: 'pm_Card',
-    on_behalf_of: 'acct_Seller',
+    on_behalf_of: null,
     transfer_group: baseRow.provider_transfer_group,
     metadata: {
       uu_order: baseRow.order_id,
       uu_attempt: baseRow.id,
       uu_kind: 'marketplace_order',
       uu_environment: 'staging',
+      uu_seller_account: 'acct_Seller',
     },
     status: 'requires_confirmation',
     client_secret: 'pi_Order_secret_synthetic',
@@ -68,10 +69,11 @@ function loadAdapter(state) {
         id
           ? {
               id,
-              charges_enabled: state.sellerReady !== false,
+              details_submitted: state.sellerReady !== false,
+              payouts_enabled: state.sellerReady !== false,
               country: state.sellerCountry || 'CA',
               capabilities: {
-                card_payments:
+                transfers:
                   state.sellerReady === false ? 'inactive' : 'active',
               },
             }
@@ -136,6 +138,15 @@ function loadAdapter(state) {
     (name) => {
       if (name === '@/lib/listing-validation')
         return { ListingApiError: ApiError }
+      if (name === '@/lib/order-payout-error')
+        return {
+          SellerPayoutNotReadyError: class extends ApiError {
+            constructor() {
+              super('Seller payment account is not ready.', 409)
+              this.code = 'seller_payout_not_ready'
+            }
+          },
+        }
       if (name === '@/lib/server/financial-capabilities-service')
         return financial
       if (name === '@/lib/server/stripe-runtime')
@@ -172,10 +183,12 @@ async function main() {
       'supabase/migrations/202610200002_order_payment_intent_start.sql',
       'utf8'
     )
-    const ui = fs.readFileSync(
+    const ui = [
       'components/home/order-campus-payment.tsx',
-      'utf8'
-    )
+      'components/payments/stripe-order-payment.tsx',
+    ]
+      .map((file) => fs.readFileSync(file, 'utf8'))
+      .join('\n')
     const api = fs.readFileSync('pages/api/orders/[[...segments]].ts', 'utf8')
 
     const adapter = loadAdapter(state())
@@ -188,7 +201,7 @@ async function main() {
     assert.equal(params.capture_method, 'automatic')
     assert.equal(params.confirmation_method, 'automatic')
     assert.equal(params.confirm, false)
-    assert.equal(params.on_behalf_of, 'acct_Seller')
+    assert.equal(params.on_behalf_of, undefined)
     assert.equal(params.transfer_group, baseRow.provider_transfer_group)
     assert(!('transfer_data' in params))
     assert(!('application_fee_amount' in params))
@@ -197,6 +210,7 @@ async function main() {
       'uu_environment',
       'uu_kind',
       'uu_order',
+      'uu_seller_account',
     ])
     assert.throws(() =>
       adapter.buildOrderPaymentIntentParams({
@@ -243,6 +257,25 @@ async function main() {
     assert.equal(bound.creates.length, 0)
     assert.deepEqual(bound.retrieves, ['pi_Existing'])
 
+    const existingSellerNotReady = state({
+      sellerReady: false,
+      claim: {
+        ...baseRow,
+        provider_reference: 'pi_Existing',
+        claimState: 'bound',
+      },
+      intent: intent({ id: 'pi_Existing' }),
+    })
+    await assert.rejects(
+      () =>
+        loadAdapter(existingSellerNotReady).prepareOrderPaymentConfirmation(
+          baseRow.id,
+          baseRow.buyer_id
+        ),
+      (error) => error.status === 409
+    )
+    assert.equal(existingSellerNotReady.creates.length, 0)
+
     for (const [claimState, status] of [
       ['in_progress', 409],
       ['reconcile', 503],
@@ -271,6 +304,10 @@ async function main() {
       timeout.rpc.some((entry) => entry.p_action === 'bind'),
       false
     )
+    assert.equal(
+      timeout.rpc.some((entry) => entry.p_action === 'release'),
+      true
+    )
 
     const bindFailure = state({
       rpcError: { action: 'bind', error: { code: '40001' } },
@@ -285,12 +322,22 @@ async function main() {
       bindFailure.creates[0].options.idempotencyKey,
       baseRow.provider_idempotency_key
     )
+    assert.equal(
+      bindFailure.rpc.some((entry) => entry.p_action === 'release'),
+      true
+    )
 
     for (const overrides of [
       { amount: 10826 },
       { customer: 'cus_Other' },
       { payment_method: 'pm_Other' },
       { on_behalf_of: 'acct_Other' },
+      {
+        metadata: {
+          ...intent().metadata,
+          uu_seller_account: 'acct_Other',
+        },
+      },
       { transfer_group: 'wrong' },
       { livemode: true },
     ]) {
@@ -317,6 +364,29 @@ async function main() {
       (error) => error.status === 409
     )
     assert.equal(notReady.creates.length, 0)
+    assert.equal(
+      notReady.rpc.some((entry) => entry.p_action === 'release'),
+      true
+    )
+
+    const bindingNotReady = state({
+      rpcError: {
+        action: 'claim',
+        error: {
+          code: '23514',
+          message: 'Seller Connect binding unavailable.',
+        },
+      },
+    })
+    await assert.rejects(
+      () =>
+        loadAdapter(bindingNotReady).prepareOrderPaymentConfirmation(
+          baseRow.id,
+          baseRow.buyer_id
+        ),
+      (error) =>
+        error.status === 409 && error.code === 'seller_payout_not_ready'
+    )
 
     const wrongCustomer = state({ paymentCustomer: 'cus_Other' })
     await assert.rejects(
@@ -359,7 +429,8 @@ async function main() {
         'grant execute on function public.marketplace_order_payment_provider(text,uuid,uuid,text,uuid,jsonb) to authenticated'
       )
     )
-    assert(ui.includes('stripe.confirmCardPayment('))
+    assert(ui.includes('stripe.confirmPayment('))
+    assert(ui.includes('<PaymentElement'))
     assert(ui.includes('Stripe.js is not Order payment evidence'))
     assert(!ui.includes("paymentStatus: 'paid'"))
     assert(api.includes('requireSameOriginWrite(req)'))

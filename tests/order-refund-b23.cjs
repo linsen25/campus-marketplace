@@ -48,13 +48,14 @@ function intent(overrides = {}) {
     currency: 'cad',
     customer: claim.provider_customer_ref,
     payment_method: claim.provider_instrument_ref,
-    on_behalf_of: claim.provider_seller_account_ref,
+    on_behalf_of: null,
     transfer_group: claim.provider_transfer_group,
     metadata: {
       uu_kind: 'marketplace_order',
       uu_order: claim.order_id,
       uu_attempt: claim.payment_attempt_id,
       uu_environment: 'staging',
+      uu_seller_account: claim.provider_seller_account_ref,
     },
     ...overrides,
   }

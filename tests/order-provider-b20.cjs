@@ -243,6 +243,8 @@ assert.equal(
 )
 
 assert.equal(paymentModeUsesProvider('external'), false)
+assert.equal(paymentModeUsesProvider('in_person'), false)
+assert.equal(paymentModeUsesProvider('interac_etransfer'), false)
 assert.equal(paymentModeUsesProvider('uu_pay'), true)
 
 const simulator = fs.readFileSync(
