@@ -10,6 +10,7 @@ node_modules
 
 # next.js
 /.next/
+/.next-b32*/
 /out/
 **/public/workbox-*.js
 **/public/sw.js
@@ -33,6 +34,7 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.b32.test.local
 
 # vercel
 .vercel

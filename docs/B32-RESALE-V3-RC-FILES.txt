@@ -1,0 +1,191 @@
+UU B32 Release Candidate — exact selective staging manifest
+Freeze date: 2026-11-11
+Branch: b30-staging-acceptance-20261024
+Base commit: 9c11796033b6ed9b2f3f3e6e917c28010f042bb4
+
+This manifest contains 146 candidate files in four mutually exclusive commit
+groups. Do not use `git add .` or `git add -A`; stage only the paths in one
+group at a time. The 16 paths at the end are explicitly excluded pending
+separate review. Ignored environment files and tests/artifacts/** are never
+part of this manifest.
+
+[1-resale-v3-core] 91 paths
+components/home/agreement-card.tsx
+components/home/animated-sidebar-demo.module.css
+components/home/animated-sidebar-demo.tsx
+components/home/formal-orders.tsx
+components/home/formal-v2-order-detail.tsx
+components/home/messages-chat.tsx
+components/home/messages.tsx
+components/home/offer-ui.tsx
+components/home/order-current-step.tsx
+components/home/order-flow-cancellation.tsx
+components/home/order-meetup.tsx
+components/home/order-progress.module.css
+components/home/order-progress.tsx
+components/home/order-stage-details.tsx
+components/home/orders.tsx
+components/home/profile-overview.tsx
+components/home/uwo-email-verification.tsx
+components/listings/listing-form.tsx
+components/listings/published-listing-card.tsx
+components/listings/published-listing-details.tsx
+components/listings/use-listing-offer-context.ts
+components/listings/use-message-seller.ts
+components/ui/skeleton.module.css
+hooks/use-order-flow.ts
+lib/listing-builder.ts
+lib/listing-fulfillment.ts
+lib/listing-validation.ts
+lib/listings-api.ts
+lib/meeting-location.ts
+lib/messages-realtime.ts
+lib/offer-economics.ts
+lib/offers-api.ts
+lib/order-current-step.ts
+lib/order-flow-api.ts
+lib/order-payment-ui.ts
+lib/order-presentation.ts
+lib/page-slide.ts
+lib/server/messages-environment.ts
+lib/server/offers-service.ts
+lib/server/order-domain-service.ts
+lib/server/order-request-service.ts
+lib/server/order-snapshot-media.ts
+lib/server/orders-service.ts
+lib/server/places-service.ts
+lib/server/supabase-listings-repository.ts
+lib/supabase/listing-mapper.ts
+pages/api/orders/[[...segments]].ts
+pages/listings/[id].tsx
+tests/b32-offline.cjs
+tests/dual-payment.cjs
+tests/listing-contact-reuse.cjs
+tests/listing-fulfillment-repository.cjs
+tests/listing-fulfillment.cjs
+tests/meeting-location.cjs
+tests/order-domain-api.cjs
+tests/sql/permissions-008-009-assertions.sql
+types/listing.ts
+types/meeting-location.ts
+types/offer.ts
+types/order.ts
+components/home/payment-unavailable-dialog.tsx
+lib/interac-email.ts
+lib/transaction-preferences.ts
+lib/western-buildings.ts
+pages/api/interac/orders/[id].ts
+pages/api/interac/orders/[id]/payment.ts
+pages/api/interac/settings.ts
+supabase/migrations/202610260011_resale_verified_offer_order_permissions.sql
+supabase/migrations/202611070001_resale_verified_image_permissions.sql
+supabase/migrations/202611070002_resale_image_update_ownership.sql
+supabase/migrations/202611070003_b32_stripe_service_guard.sql
+supabase/migrations/202611070004_resale_three_payment_methods.sql
+supabase/migrations/202611070005_interac_receiving_email.sql
+supabase/migrations/202611070006_interac_email_verification_gate.sql
+supabase/migrations/202611070007_interac_email_auth_claim_fix.sql
+supabase/migrations/202611070008_interac_payment_confirmation.sql
+supabase/migrations/202611080009_resale_verified_transaction_access.sql
+supabase/migrations/202611090010_resale_verified_order_projection_guards.sql
+supabase/migrations/20261109083118_interac_receipt_completion_history.sql
+tests/b32-browser-transaction-e2e.cjs
+tests/b32-interac-011-http-regression.cjs
+tests/b32-interac-build.cjs
+tests/b32-interac-privacy-diagnostics.cjs
+tests/b32-resale-v3-rc.cjs
+tests/interac-completion-history-static.cjs
+tests/interac-email-verification.cjs
+tests/interac-payment-state.cjs
+tests/interac-settings.cjs
+tests/resale-order-projection-guards.cjs
+tests/resale-verified-transaction-access.cjs
+tests/uwo-email-visibility.cjs
+
+[2-stripe-groundwork-binding-012] 23 paths
+components/home/financial-settings.module.css
+components/home/financial-settings.tsx
+components/home/order-campus-payment.tsx
+components/payments/stripe-account-onboarding.module.css
+components/payments/stripe-account-onboarding.tsx
+components/payments/stripe-flow-nav-button.tsx
+components/payments/stripe-flow-panel.module.css
+components/payments/stripe-flow-panel.tsx
+components/payments/stripe-order-payment.tsx
+lib/server/financial-capabilities-service.ts
+lib/server/payment-provider-boundary.ts
+lib/server/stripe-environment.ts
+lib/server/stripe-seller-profile.ts
+lib/server/stripe-setup.ts
+types/financial-capabilities.ts
+pages/api/stripe/account-session.ts
+supabase/migrations/20261109190000_stripe_binding_reconciliation.sql
+tests/stripe-binding-reconciliation.cjs
+tests/stripe-animation.cjs
+tests/stripe-onboarding-lifecycle.cjs
+tests/stripe-resale-onboarding.cjs
+tests/stripe-setup.cjs
+tests/stripe-setup-api.cjs
+
+[3-stripe-payment-b31-worker-013-014] 18 paths
+lib/order-payout-error.ts
+lib/server/stripe-order-payment.ts
+lib/server/stripe-order-reconciliation.ts
+lib/server/stripe-order-refund.ts
+lib/server/stripe-order-transfer.ts
+pages/api/stripe/worker.ts
+supabase/migrations/20261111001147_operational_case_null_provider_start.sql
+supabase/migrations/20261111002000_b32_stripe_payment_receipt_authority.sql
+tests/order-payment-b21.browser.cjs
+tests/order-payment-b21.cjs
+tests/order-payment-b22.cjs
+tests/order-provider-b20.cjs
+tests/order-refund-b23.cjs
+tests/order-transfer-b24-db.cjs
+tests/order-transfer-b24.cjs
+tests/worker-runtime-b28.cjs
+tests/b32-stripe-payment-receipt-authority.cjs
+tests/b32-stripe-readiness-readonly.cjs
+
+[4-ci-environment-docs] 14 paths
+.github/workflows/database-qualification.yml
+.gitignore
+.env.b32.test.local.example
+next.config.js
+package.json
+package-lock.json
+scripts/dev-b32.cjs
+scripts/stop-b32.cjs
+docs/B32-RESALE-TRANSACTION-AUDIT.md
+docs/B32-RESALE-V3-ACCEPTANCE.md
+docs/B32-RESALE-V3-RC-FILES.txt
+docs/B32-RESALE-V3-RC-REPORT.md
+docs/B32-RESALE-V3-RELEASE-TREE.md
+docs/B32-STRIPE-PROTECTED-PAYMENT-ACCEPTANCE.md
+
+[excluded-local-or-separate-review] 16 paths
+docs/BUSINESS-V1-TASK-BREAKDOWN.md
+tests/stripe-setup-live.cjs
+tests/b32-browser-interac-accept-continue.cjs
+tests/b32-browser-navigation-diagnose.cjs
+tests/b32-browser-order-diagnose.cjs
+tests/b32-browser-order-refresh-verify.cjs
+tests/b32-browser-session-diagnose.cjs
+tests/b32-browser-transaction-continue.cjs
+tests/b32-fulfillment-http-check.cjs
+tests/b32-interac-history-diagnostic.cjs
+tests/b32-interac-new-fixtures.cjs
+tests/b32-sidebar-v1-visual.cjs
+tests/b32-stripe-binding-reconcile.cjs
+tests/interac-completion-history-db.cjs
+tests/stripe-binding-reconciliation-db.cjs
+tests/stripe-onboarding-browser-lifecycle.cjs
+
+Never stage: .env.local, .env.staging.local, .env.b32.test.local,
+tests/artifacts/**, .next/**, .next-b32*/**, .vercel/**, browser sessions,
+credentials, screenshots, traces, generated logs, coverage/**, or *.tsbuildinfo.
+
+Migration safety note: 013 and 014 are already deployed to B32. Migration 014
+contains the B32-only project ref by design; it is immutable. A future
+environment must receive a newly reviewed, environment-specific adaptation,
+not a replay or edit of this file.

@@ -14,6 +14,11 @@ on:
       - 'tests/sql/**'
       - 'tests/notification-filtered-permission.cjs'
       - 'tests/verified-account-008-static.cjs'
+      - 'tests/b32-resale-v3-rc.cjs'
+      - 'tests/interac-*.cjs'
+      - 'tests/resale-*.cjs'
+      - 'tests/order-domain-api.cjs'
+      - 'tests/order-payment-ui.cjs'
       - '.github/workflows/database-qualification.yml'
 
 jobs:
@@ -463,6 +468,9 @@ jobs:
       - name: Run verified-account 008 static manifest regression
         if: steps.start-full.outcome == 'success'
         run: node tests/verified-account-008-static.cjs
+      - name: Run B32 Resale V3 RC offline regression
+        if: steps.start-full.outcome == 'success'
+        run: node tests/b32-resale-v3-rc.cjs
 
       - name: Diagnose failed database startup
         if: failure() && (steps.start-baseline.outcome == 'failure' || steps.start-full.outcome == 'failure')

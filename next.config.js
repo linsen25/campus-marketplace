@@ -18,6 +18,9 @@ const ifdefOpts = {
 
 /** @type {import('next').NextConfig} */
 module.exports = withNextPlugins([withBundleAnalyzer, withPWA], {
+  // B32 uses a dedicated build directory so another local Next instance
+  // cannot delete or overwrite its pages while it is compiling.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   env: {
     NEXT_PUBLIC_MESSAGES_ENV: process.env.APP_ENV || '',
     NEXT_PUBLIC_ORDER_PREVIEW: process.env.ORDER_PREVIEW_MODE || '',
