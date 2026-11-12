@@ -464,6 +464,10 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
     async createListing(input: CreateListingInput) {
       await requireMarketplaceUser(client)
       const validated = validateListingInput(input)
+      if (validated.preferredFulfillment === 'DELIVERY')
+        throw new ListingApiError(
+          'New Resale listings use Meeting. Existing Delivery listings remain compatible.'
+        )
       if (validated.photoUrls.length)
         throw new ListingApiError('Upload images after creating the listing.')
       const { data, error } = await client

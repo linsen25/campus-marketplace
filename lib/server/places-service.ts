@@ -5,10 +5,13 @@ import type { PlaceDetails, PlaceSuggestion } from '@/types/meeting-location'
 const tokenPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 export function requirePlacesEnvironment() {
+  const allowedProjects = new Set([
+    'https://pcaqxezdfxofysghssyo.supabase.co',
+    'https://giqdwyiupslpfhstbtqf.supabase.co',
+  ])
   if (
     process.env.APP_ENV !== 'staging' ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL !==
-      'https://pcaqxezdfxofysghssyo.supabase.co' ||
+    !allowedProjects.has(process.env.NEXT_PUBLIC_SUPABASE_URL || '') ||
     !process.env.GOOGLE_PLACES_API_KEY
   )
     throw new ListingApiError(

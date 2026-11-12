@@ -92,8 +92,8 @@ export function PublishedListingCard({
     setOverlayActive(active)
     overlayListener.current?.(active)
   }, [])
-  const messaging = useMessageSeller(listing.id)
   const shopReadOnly = listing.listingChannel === 'shop'
+  const messaging = useMessageSeller(listing.id, shopReadOnly)
   const shopTransactionsEnabled =
     !shopReadOnly ||
     process.env.NEXT_PUBLIC_SHOP_TRANSACTIONS_ENABLED === 'true'

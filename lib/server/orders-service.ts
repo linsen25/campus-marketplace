@@ -245,7 +245,7 @@ export function createOrdersService(context: MarketplaceContext) {
             baseConfirmedId: r.base_confirmed_id
               ? String(r.base_confirmed_id)
               : null,
-            location: String(r.location),
+            location: r.location == null ? null : String(r.location),
             scheduledAt: String(r.scheduled_at),
             note: String(r.note),
             status: r.status as MeetupRevision['status'],

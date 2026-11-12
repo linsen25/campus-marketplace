@@ -27,7 +27,11 @@ export type Listing = {
   subcategory: ListingSubcategory
   condition?: ListingCondition
   pickupArea?: string
-  preferredPaymentMode?: 'external' | 'uu_pay'
+  preferredPaymentMode?:
+    | 'in_person'
+    | 'interac_etransfer'
+    | 'external'
+    | 'uu_pay'
   preferredFulfillment?: 'DELIVERY' | 'ON_CAMPUS'
   meetingLocation?: MeetingLocation | null
   estimatedDeliveryFeeCents?: number

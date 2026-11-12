@@ -61,6 +61,9 @@
   padding-inline: 4px;
   overflow-wrap: anywhere;
 }
+.step[data-muted] .label {
+  opacity: 0.58;
+}
 .date {
   font-size: 11px;
   color: #a99ab5;

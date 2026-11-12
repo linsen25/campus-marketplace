@@ -11,7 +11,9 @@ export function offerEconomics(terms: OfferTerms) {
   const item = terms.itemAmountCents
   const delivery = terms.fulfillment === 'delivery' ? terms.deliveryFeeCents : 0
   const fee =
-    terms.paymentMode === 'external' ? 0 : buyerServiceFeeDisplay(item)
+    (terms.paymentMode ?? 'uu_pay') !== 'uu_pay'
+      ? 0
+      : buyerServiceFeeDisplay(item)
   return {
     item,
     delivery,

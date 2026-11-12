@@ -36,8 +36,10 @@ export function useListingOfferContext(
     allowed &&
     Boolean(seller && seller.id !== sellerId) &&
     process.env.NEXT_PUBLIC_MESSAGES_ENV === 'staging' &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL ===
-      'https://pcaqxezdfxofysghssyo.supabase.co'
+    (process.env.NEXT_PUBLIC_SUPABASE_URL ===
+      'https://pcaqxezdfxofysghssyo.supabase.co' ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ===
+        'https://giqdwyiupslpfhstbtqf.supabase.co')
   useEffect(() => {
     let valid = true
     setContext(null)

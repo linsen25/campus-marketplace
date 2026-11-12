@@ -6,9 +6,13 @@ import { findConversation } from '@/lib/messages-api'
 
 import { useMarketplaceSession } from './marketplace-session'
 
-/** Resume this exact listing after the existing Western sign-in flow. */
-export function useMessageSeller(listingId: string) {
-  const { seller } = useMarketplaceSession()
+/** Resume this exact listing after sign-in. Resale uses the verified-user
+ * conversation RPC; the legacy contact-seller intent remains opt-in for Shop. */
+export function useMessageSeller(
+  listingId: string,
+  useLegacyContactIntent = false
+) {
+  const { seller, loading } = useMarketplaceSession()
   const { openAuth } = useAuthModal()
   const router = useRouter()
   const pending = useRef(false)
@@ -25,6 +29,10 @@ export function useMessageSeller(listingId: string) {
   }, [])
   async function contact(makeOffer = false) {
     if (running.current) return
+    if (loading) {
+      pending.current = true
+      return
+    }
     if (!seller) {
       pending.current = true
       openAuth({
@@ -41,7 +49,10 @@ export function useMessageSeller(listingId: string) {
     setBusy(true)
     setError('')
     try {
-      const conversation = await findConversation(listingId, !makeOffer)
+      const conversation = await findConversation(
+        listingId,
+        !makeOffer && useLegacyContactIntent
+      )
       if (mounted.current)
         await router.push(
           `/home?section=messages&destination=${
@@ -61,9 +72,9 @@ export function useMessageSeller(listingId: string) {
     }
   }
   useEffect(() => {
-    if (seller && pending.current) contact()
+    if (!loading && seller && pending.current) contact()
     // contact intentionally captures this render's authenticated session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seller?.id, listingId])
+  }, [loading, seller?.id, listingId])
   return { contact, busy, error }
 }

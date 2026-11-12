@@ -57,7 +57,10 @@ function PublicShopListingPage({ listing }: { listing: Listing }) {
 function ListingContent({ listing, error }: ListingPageProps) {
   const { seller } = useMarketplaceSession()
   const own = seller?.id === listing?.seller.id
-  const messaging = useMessageSeller(listing?.id || '')
+  const messaging = useMessageSeller(
+    listing?.id || '',
+    listing?.listingChannel === 'shop'
+  )
   const offerContext = useListingOfferContext(
     listing?.id || '',
     listing?.seller.id || '',

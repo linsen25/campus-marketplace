@@ -89,10 +89,10 @@ async function run() {
   const legacy = await repo.getCreationListing(id)
   assert.equal(legacy.meetingLocation, null)
   assert.equal(legacy.estimatedDeliveryFeeCents, 0)
-  await assert.rejects(
-    repo.updateListing(id, { title: 'Missing Meeting' }),
-    /Meeting location is required/
-  )
+  const withoutMeeting = await repo.updateListing(id, {
+    title: 'Missing Meeting',
+  })
+  assert.equal(withoutMeeting.meetingLocation, null)
   const updated = await repo.updateListing(id, {
     meetingLocation: { label: 'User entrance' },
     preferredFulfillment: 'DELIVERY',
@@ -114,7 +114,7 @@ async function run() {
     subcategory: 'Cameras',
     condition: 'good',
     meetingLocation: { label: 'Another entrance' },
-    preferredFulfillment: 'DELIVERY',
+    preferredFulfillment: 'ON_CAMPUS',
     photoUrls: [],
     expectedImageCount: 1,
   }
@@ -123,6 +123,10 @@ async function run() {
   assert.equal(row.pickup_area, null)
   assert.equal(created.pickupArea, undefined)
   assert.equal(row.meeting_location, 'Another entrance')
+  await assert.rejects(
+    repo.createListing({ ...input, preferredFulfillment: 'DELIVERY' }),
+    /New Resale listings use Meeting/
+  )
   row.published_at = '2026-10-01'
   await repo.updateListing(id, { estimatedDeliveryFeeCents: 1050 })
   assert.equal(row.estimated_delivery_fee_cents, 1050)
@@ -138,7 +142,7 @@ async function run() {
     )
   )
   console.log(
-    'PASS real Listing repository Create/Edit/read mapping: cents persistence, default 0, required Meeting, preserved historical pickup, new NULL pickup, invalid fees rejected; zero network'
+    'PASS real Listing repository Create/Edit/read mapping: cents persistence, default 0, optional Meeting, preserved historical pickup, new NULL pickup, invalid fees rejected; zero network'
   )
 }
 run().catch((e) => {

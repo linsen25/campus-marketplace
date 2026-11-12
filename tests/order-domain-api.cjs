@@ -8,6 +8,7 @@ let environment = true,
   authenticated = true,
   calls = [],
   rpcError = null,
+  rpcResponses = null,
   rpcData = { notifications: [], unreadCount: 0 },
   trustedCalls = [],
   sameOrigin = true
@@ -55,6 +56,7 @@ function load(file) {
             return {
               async rpc(name, params) {
                 calls.push({ name, params })
+                if (rpcResponses && name in rpcResponses) return rpcResponses[name]
                 return {
                   data: rpcData,
                   error: rpcError,
@@ -124,6 +126,14 @@ async function main() {
     assert.equal(calls.length, 0)
   }
   const query = { id, operation: 'economics' }
+  for (const [operation, body] of [
+    ['report-interac-payment', { reference: 'B32 UI regression' }],
+    ['confirm-interac-receipt', {}],
+  ]) {
+    assert.equal(await request('POST', { id, operation }, body), 200)
+    assert.equal(await request('POST', { id, operation }, { ...body, clientActionId: id }), 400)
+    assert.equal(calls.length, 0)
+  }
   assert.equal(await request('GET', query), 200)
   assert.deepEqual(calls[0], {
     name: 'marketplace_order_economics',
@@ -228,6 +238,30 @@ async function main() {
   rpcError = { code: '42501', message: 'must never expose diagnostic' }
   assert.equal(await request('GET', query), 403)
   rpcError = null
+  rpcError = { code: '23514', message: 'Seller receipt confirmation required before Interac exchange.' }
+  assert.equal(await request('POST', { id, operation: 'confirm-exchange' }, { clientActionId: id }), 409)
+  rpcError = null
+  // Read fallback must not turn a non-external Shop/Delivery projection, or a
+  // denied participant RPC, into a successful external transaction read.
+  const fulfillmentQuery = { id, operation: 'fulfillment' }
+  rpcResponses = {
+    marketplace_order_fulfillment: { data: null, error: { code: '42501' } },
+    marketplace_external_exchange: { data: null, error: null },
+    marketplace_order_agreement: { data: { orderId: id }, error: null },
+  }
+  assert.equal(await request('GET', fulfillmentQuery), 403)
+  rpcResponses.marketplace_external_exchange = { data: null, error: { code: '42501' } }
+  assert.equal(await request('GET', fulfillmentQuery), 403)
+  authenticated = false
+  assert.equal(await request('GET', fulfillmentQuery), 401)
+  assert.equal(calls.length, 0)
+  authenticated = true
+  rpcResponses.marketplace_external_exchange = { data: { orderId: id, status: 'awaiting_both' }, error: null }
+  assert.equal(await request('GET', fulfillmentQuery), 200)
+  assert.deepEqual(calls.map(call => call.name), [
+    'marketplace_order_fulfillment', 'marketplace_external_exchange', 'marketplace_order_agreement',
+  ])
+  rpcResponses = null
   assert.equal(await request('DELETE', query), 405)
   console.log(
     'PASS Order domain API: session, exact staging guard, no-store, CSRF, financial-input rejection, no client Paid resolver, safe errors; no network'

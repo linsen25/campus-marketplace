@@ -141,7 +141,7 @@ export function OrderFlowCancellation({
   else if (courier && flow.data?.courier?.shippedAt)
     explanation =
       'Shipment has been recorded. Normal cancellation is no longer available. Problems follow the shipment / Protection / Case flow.'
-  if (order.v2?.terms.paymentMode === 'external' && order.lifecycle === 'open')
+  if (order.v2?.terms.paymentMode !== 'uu_pay' && order.lifecycle === 'open')
     explanation =
       flow.data?.fulfillment.externalExchange?.status &&
       flow.data.fulfillment.externalExchange.status !== 'awaiting_both'
@@ -182,7 +182,7 @@ export function OrderFlowCancellation({
     <section className={profile.panel} aria-label="Cancel Order">
       <h4>Cancel order</h4>
       <p>{explanation}</p>
-      {order.v2?.terms.paymentMode !== 'external' && (
+      {order.v2?.terms.paymentMode === 'uu_pay' && (
         <p>
           After the cancellation cutoff, use the applicable Protection / Case
           path.

@@ -6,7 +6,8 @@ export type MeetupRevision = {
   id: string
   revision: number
   baseConfirmedId: string | null
-  location: string
+  /** Null until participants agree a concrete meetup location. */
+  location: string | null
   scheduledAt: string
   note: string
   status:

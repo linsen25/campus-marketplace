@@ -6,7 +6,10 @@ export function validMeetingReference(provider: unknown, placeId: unknown) {
       (placeId === null || placeId === undefined)) ||
     (provider === 'google' &&
       typeof placeId === 'string' &&
-      /^[A-Za-z0-9_-]{6,256}$/.test(placeId))
+      /^[A-Za-z0-9_-]{6,256}$/.test(placeId)) ||
+    (provider === 'western' &&
+      typeof placeId === 'string' &&
+      /^[A-Za-z0-9_-]{2,32}$/.test(placeId))
   )
 }
 export function parseMeetingLocation(value: unknown): MeetingLocation | null {
@@ -27,8 +30,8 @@ export function parseMeetingLocation(value: unknown): MeetingLocation | null {
     throw new Error('Check the Meeting location.')
   return {
     label: v.label.trim(),
-    ...(v.provider === 'google'
-      ? { provider: 'google', placeId: v.placeId as string }
+    ...(v.provider === 'google' || v.provider === 'western'
+      ? { provider: v.provider, placeId: v.placeId as string }
       : {}),
   }
 }

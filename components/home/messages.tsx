@@ -146,11 +146,19 @@ export function Messages({
     if (!userId) return undefined
     let valid = true
     const generation = accountGeneration.current
-    const requested =
-      router.query.section === 'messages' &&
+    const pathQuery = new URLSearchParams(
+      router.asPath.split('?')[1]?.split('#')[0] || ''
+    )
+    const section =
+      typeof router.query.section === 'string'
+        ? router.query.section
+        : pathQuery.get('section')
+    const conversation =
       typeof router.query.conversation === 'string'
         ? router.query.conversation
-        : null
+        : pathQuery.get('conversation')
+    const requested =
+      section === 'messages' && conversation ? conversation : null
     if (!requested || consumedEntry.current === requested) return undefined
     getConversation(requested)
       .then((item) => {
@@ -179,6 +187,7 @@ export function Messages({
     retry,
     router.query.section,
     router.query.conversation,
+    router.asPath,
     updateConversation,
   ])
   const conversations = sortConversationsByRecent(collections[active])

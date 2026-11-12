@@ -43,10 +43,13 @@ export async function marketplaceRequest<T>(
     ...(input !== undefined ? { body: JSON.stringify(input) } : {}),
   })
   const body = await response.json().catch(() => null)
-  if (!response.ok)
-    throw new Error(
+  if (!response.ok) {
+    const error = new Error(
       body?.error || 'Unable to complete the request. Please try again.'
-    )
+    ) as Error & { code?: string }
+    if (typeof body?.code === 'string') error.code = body.code
+    throw error
+  }
   if (path === '/api/auth/sign-out' && typeof window !== 'undefined')
     window.dispatchEvent(new Event('marketplace-session-ended'))
   return body

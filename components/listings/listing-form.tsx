@@ -59,6 +59,11 @@ import uploaderStyles from './listing-uploader.module.css'
 import styles from './listing-workspace.module.css'
 import { useMarketplaceSession } from './marketplace-session'
 import { MeetingLocationInput } from './meeting-location-input'
+import { westernBuildings } from '@/lib/western-buildings'
+import {
+  resalePaymentOptions,
+  resalePaymentOption,
+} from '@/lib/transaction-preferences'
 import { ListingDetails } from './published-listing-card'
 import { PublishedListingDetails } from './published-listing-details'
 
@@ -647,7 +652,10 @@ export function ListingForm({
             disabled={busy || Boolean(pending)}
             options={[
               { value: 'ON_CAMPUS', label: 'Meeting' },
-              { value: 'DELIVERY', label: 'Delivery' },
+              ...(channel !== 'resale' ||
+              (listing && fields.preferredFulfillment === 'DELIVERY')
+                ? [{ value: 'DELIVERY', label: 'Delivery' }]
+                : []),
             ]}
             onChange={(value: string) => {
               if (value === 'DELIVERY' || value === 'ON_CAMPUS')
@@ -664,51 +672,142 @@ export function ListingForm({
                 value={fields.preferredPaymentMode}
                 disabled={busy || Boolean(pending)}
                 options={[
-                  { value: 'uu_pay', label: 'Pay by UU (recommended)' },
-                  { value: 'external', label: 'Pay independently' },
+                  ...resalePaymentOptions.map((option) => ({
+                    value: option.value,
+                    label:
+                      option.value === 'in_person'
+                        ? `${option.label} (Recommended)`
+                        : option.label,
+                  })),
+                  { value: 'external', label: 'Pay independently (legacy)' },
                 ]}
                 onChange={(value: string) =>
-                  change('preferredPaymentMode', value as 'external' | 'uu_pay')
+                  change(
+                    'preferredPaymentMode',
+                    value as
+                      | 'in_person'
+                      | 'interac_etransfer'
+                      | 'external'
+                      | 'uu_pay'
+                  )
                 }
               />
               <small>
                 A default preference. Buyers may propose the other payment
                 method.
               </small>
+              {fields.preferredPaymentMode !== 'external' && (
+                <small>
+                  {resalePaymentOption(fields.preferredPaymentMode).description}{' '}
+                  {resalePaymentOption(fields.preferredPaymentMode).risks}
+                </small>
+              )}
             </label>
           )}
-          <MeetingLocationInput
-            required={true}
-            value={fields.meetingLocation?.label || ''}
-            selected={
-              fields.meetingLocation?.provider && fields.meetingLocation.placeId
-                ? {
-                    provider: 'google',
-                    placeId: fields.meetingLocation.placeId,
-                  }
-                : null
-            }
-            disabled={busy || Boolean(pending)}
-            onChange={(value) =>
-              setFields((current) => ({
-                ...current,
-                meetingLocation: value.trim() ? { label: value } : null,
-              }))
-            }
-            onSelect={(place) =>
-              setFields((current) => ({
-                ...current,
-                meetingLocation: current.meetingLocation
+          <label className={styles.field}>
+            Meeting location (optional)
+            <GlideSelect
+              overlay={wizardPresentation}
+              ariaLabel="Meeting location source"
+              value={
+                fields.meetingLocation?.provider === 'western'
+                  ? 'western'
+                  : 'custom'
+              }
+              disabled={busy || Boolean(pending)}
+              options={[
+                { value: 'western', label: 'Western building' },
+                { value: 'custom', label: 'Custom location' },
+              ]}
+              onChange={(value: string) => {
+                if (value === 'western') {
+                  const first = westernBuildings[0]
+                  setFields((current) => ({
+                    ...current,
+                    meetingLocation: first
+                      ? {
+                          label: first.name,
+                          provider: 'western',
+                          placeId: first.code,
+                        }
+                      : null,
+                  }))
+                } else {
+                  setFields((current) => ({
+                    ...current,
+                    meetingLocation: null,
+                  }))
+                }
+              }}
+            />
+          </label>
+          {fields.meetingLocation?.provider === 'western' ? (
+            <label className={styles.field}>
+              Western building
+              <select
+                aria-label="Western building"
+                value={fields.meetingLocation.placeId}
+                disabled={busy || Boolean(pending)}
+                onChange={(event) => {
+                  const building = westernBuildings.find(
+                    (item) => item.code === event.target.value
+                  )
+                  if (building)
+                    setFields((current) => ({
+                      ...current,
+                      meetingLocation: {
+                        label: building.name,
+                        provider: 'western',
+                        placeId: building.code,
+                      },
+                    }))
+                }}
+              >
+                {westernBuildings.map((building) => (
+                  <option key={building.code} value={building.code}>
+                    {building.name}
+                  </option>
+                ))}
+              </select>
+              <small>
+                Suggested public meeting building. Details can be agreed in
+                chat.
+              </small>
+            </label>
+          ) : (
+            <MeetingLocationInput
+              required={false}
+              value={fields.meetingLocation?.label || ''}
+              selected={
+                fields.meetingLocation?.provider === 'google' &&
+                fields.meetingLocation.placeId
                   ? {
-                      label: current.meetingLocation.label,
-                      ...(place
-                        ? { provider: 'google', placeId: place.placeId }
-                        : {}),
+                      provider: 'google',
+                      placeId: fields.meetingLocation.placeId,
                     }
-                  : null,
-              }))
-            }
-          />
+                  : null
+              }
+              disabled={busy || Boolean(pending)}
+              onChange={(value) =>
+                setFields((current) => ({
+                  ...current,
+                  meetingLocation: value.trim() ? { label: value } : null,
+                }))
+              }
+              onSelect={(place) =>
+                setFields((current) => ({
+                  ...current,
+                  meetingLocation: place
+                    ? {
+                        label: place.displayName,
+                        provider: 'google',
+                        placeId: place.placeId,
+                      }
+                    : current.meetingLocation,
+                }))
+              }
+            />
+          )}
           {fields.preferredFulfillment === 'DELIVERY' && (
             <label className={styles.field}>
               Estimated delivery fee (CA$)
@@ -780,62 +879,57 @@ export function ListingForm({
   }
   const paymentField = (
     <div className={wizard.payment}>
-      <label>
-        <input
-          type="radio"
-          name="wizardPayment"
-          value="external"
-          checked={fields.preferredPaymentMode === 'external'}
-          disabled={
-            fields.preferredFulfillment === 'DELIVERY' ||
-            busy ||
-            Boolean(pending)
-          }
-          onChange={() => change('preferredPaymentMode', 'external')}
-        />
-        <span>
-          <strong>Arrange Payment Directly</strong>
-          {channel === 'resale' ? (
-            <>
+      {channel === 'resale' && (
+        <>
+          <label>
+            <input
+              type="radio"
+              name="wizardPayment"
+              value="in_person"
+              checked={
+                fields.preferredPaymentMode === 'in_person' ||
+                fields.preferredPaymentMode === 'external'
+              }
+              disabled={
+                fields.preferredFulfillment === 'DELIVERY' ||
+                busy ||
+                Boolean(pending)
+              }
+              onChange={() => change('preferredPaymentMode', 'in_person')}
+            />
+            <span>
+              <strong>Direct exchange (Recommended)</strong>
               <p>
-                {fields.preferredFulfillment === 'DELIVERY'
-                  ? 'Unavailable for Delivery. Delivery requires UU Pay.'
-                  : 'You and the buyer arrange payment outside UU.'}
+                {resalePaymentOption('in_person').description} Meet safely,
+                inspect the item and pay directly. No UU payment protection.
               </p>
-              <p>Before completing the exchange:</p>
-              <ul>
-                <li>
-                  Confirm funds in your own bank or payment account.
-                  Screenshots, emails and messages are not proof of payment.
-                </li>
-                <li>
-                  Do not hand over or ship the item until you have confirmed
-                  payment yourself.
-                </li>
-                <li>
-                  Meet in a public, appropriate location and allow inspection
-                  where practical.
-                </li>
-                <li>Keep a record of the agreed price and exchange details.</li>
-              </ul>
+            </span>
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="wizardPayment"
+              value="interac_etransfer"
+              checked={fields.preferredPaymentMode === 'interac_etransfer'}
+              disabled={
+                fields.preferredFulfillment === 'DELIVERY' ||
+                busy ||
+                Boolean(pending)
+              }
+              onChange={() =>
+                change('preferredPaymentMode', 'interac_etransfer')
+              }
+            />
+            <span>
+              <strong>Interac e-Transfer</strong>
               <p>
-                Never send money to receive money. Be cautious of overpayment or
-                refund requests.
+                {resalePaymentOption('interac_etransfer').description} UU does
+                not verify or protect the transfer.
               </p>
-              <p>
-                External payments happen outside UU. UU cannot verify, reverse,
-                refund or provide payment protection for them.
-              </p>
-            </>
-          ) : (
-            <p>
-              {fields.preferredFulfillment === 'DELIVERY'
-                ? 'Unavailable for Delivery. Delivery uses UU Pay.'
-                : 'You and the buyer arrange payment outside UU. UU does not process, hold, reverse or protect this payment. Verify the item and payment details before completing the exchange; do not rely on payment screenshots alone.'}
-            </p>
-          )}
-        </span>
-      </label>
+            </span>
+          </label>
+        </>
+      )}
       <label>
         <input
           type="radio"
@@ -846,8 +940,9 @@ export function ListingForm({
           onChange={() => change('preferredPaymentMode', 'uu_pay')}
         />
         <span>
-          <strong>UU Pay</strong>
+          <strong>UU Protected Payment</strong>
           <p>Payment is securely processed by Stripe.</p>
+          <p>{resalePaymentOption('uu_pay').advantages}</p>
           {channel === 'resale' && (
             <>
               <ul>

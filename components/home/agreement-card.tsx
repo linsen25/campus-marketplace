@@ -21,7 +21,7 @@ export function AgreementCard({
   let fulfillment = 'Meeting'
   let summary = ''
   if (terms.fulfillment === 'on_campus')
-    summary = `${terms.meetupLocation} · ${new Date(
+    summary = `${terms.meetupLocation || 'To be arranged'} · ${new Date(
       terms.scheduledAt
     ).toLocaleString('en-CA', {
       timeZone: 'America/Toronto',
@@ -59,7 +59,7 @@ export function AgreementCard({
             {offerAmount(terms.itemAmountCents)} · {fulfillment}
           </p>
           <p>{summary}</p>
-          {terms.paymentMode === 'external' && (
+          {terms.paymentMode !== 'uu_pay' && (
             <p>Paid outside UU · No UU payment protection</p>
           )}
         </div>

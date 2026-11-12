@@ -26,7 +26,7 @@ export function orderPresentation(
   order: FormalOrder,
   data: OrderFlowData | null
 ) {
-  if (order.v2?.terms.paymentMode === 'external') {
+  if (order.v2?.terms.paymentMode !== 'uu_pay') {
     const pages: OrderPage[] = [
       'review',
       'fulfillment',
@@ -92,9 +92,9 @@ export function orderPageAction(
   data: OrderFlowData | null,
   page: OrderPage
 ): CurrentOrderStep {
-  if (order.v2?.terms.paymentMode === 'external' && page === 'exchange')
+  if (order.v2?.terms.paymentMode !== 'uu_pay' && page === 'exchange')
     return 'exchange'
-  if (order.v2?.terms.paymentMode === 'external' && page === 'fulfillment')
+  if (order.v2?.terms.paymentMode !== 'uu_pay' && page === 'fulfillment')
     return 'inspect'
   if (page === 'closed')
     return order.lifecycle === 'expired' ? 'expired' : 'cancelled'

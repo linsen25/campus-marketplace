@@ -37,7 +37,13 @@ const location = {
   provider: 'google',
   placeId: 'fixture_1',
 }
+const western = {
+  label: 'University Community Centre (UCC)',
+  provider: 'western',
+  placeId: 'UCC',
+}
 assert.deepEqual(parseMeetingLocation(location), location)
+assert.deepEqual(parseMeetingLocation(western), western)
 assert.deepEqual(parseMeetingLocation({ label: ' At UCC ' }), {
   label: 'At UCC',
 })
@@ -64,12 +70,11 @@ const fields = {
 const input = validateBuilder(fields, [{ type: 'image/jpeg', size: 100 }])
 assert.equal(input.pickupArea, 'Near campus')
 assert.deepEqual(input.meetingLocation, location)
-assert.throws(
-  () =>
-    validateBuilder({ ...fields, meetingLocation: null }, [
-      { type: 'image/jpeg', size: 100 },
-    ]),
-  /Meeting location is required/
+assert.equal(
+  validateBuilder({ ...fields, meetingLocation: null }, [
+    { type: 'image/jpeg', size: 100 },
+  ]).meetingLocation,
+  null
 )
 assert.equal(
   validateBuilder({ ...fields, preferredFulfillment: 'DELIVERY' }, [
@@ -97,6 +102,8 @@ assert.equal(
   null
 )
 const terms = {
+  paymentMode: 'uu_pay',
+  paymentModeVersion: 1,
   fulfillment: 'on_campus',
   itemAmountCents: 8000,
   currency: 'CAD',
@@ -110,6 +117,15 @@ const payload = offerPayload(terms)
 assert.deepEqual(
   mapTerms({ item_amount_cents: 8000, offer_terms: payload }),
   terms
+)
+assert.equal(
+  mapTerms({
+    item_amount_cents: 8000,
+    offer_terms: {
+      ...offerPayload({ ...terms, meetupLocation: '' }),
+    },
+  }).meetupLocation,
+  undefined
 )
 const legacy = { ...terms }
 delete legacy.meetupLocationProvider

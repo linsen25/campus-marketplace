@@ -203,7 +203,7 @@ function V2OrderPresentation({
           </span>
         </div>
       </header>
-      {terms.paymentMode === 'external' && (
+      {terms.paymentMode !== 'uu_pay' && (
         <p>Paid outside UU · No UU payment protection</p>
       )}
       <OrderProgress

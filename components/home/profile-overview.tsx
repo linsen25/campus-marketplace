@@ -2,10 +2,11 @@
 
 import { AnimatePresence } from 'framer-motion'
 import type { ReactNode } from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import actionStyles from '@/components/animata/button/action-button-sizing.module.css'
 import { CardAction } from '@/components/listings/card-actions'
+import { useMarketplaceSession } from '@/components/listings/marketplace-session'
 import { NotificationSettings } from '@/components/notifications/notification-settings'
 import { ActionRow } from '@/components/ui/action-row'
 import { useContentReveal } from '@/components/ui/content-reveal'
@@ -17,6 +18,7 @@ import { requestPasswordChange } from '@/lib/auth-change-password'
 import { passwordRules, validSignupPassword } from '@/lib/auth-password'
 import { reservedUsername, validUsername } from '@/lib/auth-username'
 import { marketplaceRequest } from '@/lib/listings-api'
+import { isWesternEmail } from '@/lib/marketplace-auth'
 
 import { FinancialSettings } from './financial-settings'
 import { UwoEmailVerification } from './uwo-email-verification'
@@ -314,6 +316,7 @@ export function ProfileOverview({
   showHeading?: boolean
   onUsername?: (username: string | null) => void
 }) {
+  const { seller } = useMarketplaceSession()
   const [account, setAccount] = useState<{
     username: string | null
     email: string
@@ -321,6 +324,7 @@ export function ProfileOverview({
     createdAt: string
     nextUsernameChangeAt: string | null
   } | null>(null)
+  const accountRequest = useRef(0)
   const [error, setError] = useState('')
   const unavailable = 'Unavailable'
   const loading = !account && !error
@@ -328,33 +332,34 @@ export function ProfileOverview({
   const [dialog, setDialog] = useState<
     'avatar' | 'password' | 'username' | null
   >(null)
-  useEffect(() => {
-    let active = true
-    marketplaceRequest<{
-      username: string | null
-      email: string
-      emailVerified: boolean
-      createdAt: string
-      nextUsernameChangeAt: string | null
-    }>('/api/profile/account', 'GET')
-      .then((data) => {
-        if (active) {
-          setAccount(data)
-          onUsername?.(data.username)
-        }
-      })
-      .catch((reason) => {
-        if (active)
-          setError(
-            reason instanceof Error
-              ? reason.message
-              : 'Unable to load account information.'
-          )
-      })
-    return () => {
-      active = false
+  const loadAccount = useCallback(async () => {
+    const request = ++accountRequest.current
+    setAccount(null)
+    setError('')
+    try {
+      const data = await marketplaceRequest<{
+        username: string | null
+        email: string
+        emailVerified: boolean
+        createdAt: string
+        nextUsernameChangeAt: string | null
+      }>('/api/profile/account', 'GET')
+      if (request === accountRequest.current) {
+        setAccount(data)
+        onUsername?.(data.username)
+      }
+    } catch (reason) {
+      if (request === accountRequest.current)
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : 'Unable to load account information.'
+        )
     }
   }, [onUsername])
+  useEffect(() => {
+    void loadAccount()
+  }, [loadAccount, seller?.id])
   return (
     <>
       <section
@@ -372,9 +377,12 @@ export function ProfileOverview({
             </header>
           )}
           {error && (
-            <p className={styles.error} role="alert">
-              {error}
-            </p>
+            <div className={styles.error} role="alert">
+              <p>{error}</p>
+              <button type="button" onClick={() => void loadAccount()}>
+                Retry
+              </button>
+            </div>
           )}
           <div className={styles.accountRow} data-profile-avatar-row="true">
             <div className={styles.avatarIdentity}>
@@ -478,7 +486,9 @@ export function ProfileOverview({
           )}
           {settings && (
             <>
-              <UwoEmailVerification />
+              {account?.email && isWesternEmail(account.email) && (
+                <UwoEmailVerification accountEmail={account.email} />
+              )}
               <div className={styles.accountRow}>
                 <div>
                   <span className={styles.fieldLabel}>Password</span>

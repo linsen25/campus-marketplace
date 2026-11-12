@@ -131,6 +131,7 @@ export function OrderCurrentStep({
   const [error, setError] = useState('')
   const [addressDirty, setAddressDirty] = useState(false)
   const [reason, setReason] = useState('')
+  const [interacReference, setInteracReference] = useState('')
   const [scannerOpen, setScannerOpen] = useState(false)
   const [numericRetryAt, setNumericRetryAt] = useState<string>()
   const busy = useRef(false)
@@ -169,12 +170,27 @@ export function OrderCurrentStep({
     const sellerAction =
       action === 'handoff' ||
       action === 'shipment' ||
-      action === 'start-delivery'
+      action === 'start-delivery' ||
+      action === 'confirm-interac-receipt'
+    const offlinePaymentAction =
+      action === 'report-interac-payment' ||
+      action === 'confirm-interac-receipt'
     const paidAction =
       sellerAction ||
       action === 'received' ||
       action === 'confirm-receipt' ||
       action === 'case'
+    if (
+      action === 'confirm-exchange' &&
+      terms.paymentMode === 'interac_etransfer' &&
+      (!data?.interacPayment?.buyerReportedAt ||
+        !data.interacPayment.sellerReceivedAt)
+    ) {
+      setError(
+        'The buyer must report payment and the seller must confirm receipt before confirming this exchange.'
+      )
+      return
+    }
     if (
       busy.current ||
       blocked ||
@@ -185,11 +201,12 @@ export function OrderCurrentStep({
         action
       ) &&
         sellerAction === buyer) ||
-      (paidAction && order.paymentStatus !== 'paid')
+      (paidAction && !offlinePaymentAction && order.paymentStatus !== 'paid')
     )
       return
     if (
       !paidAction &&
+      !offlinePaymentAction &&
       action !== 'confirm-agreement' &&
       !['pending', 'failed'].includes(order.paymentStatus)
     )
@@ -216,7 +233,8 @@ export function OrderCurrentStep({
         command.current = { digest, id: crypto.randomUUID() }
       await actOnOrderFlow(order.id, action, {
         ...body,
-        ...(!['address', 'checkout', 'confirm-agreement'].includes(action)
+        ...(!offlinePaymentAction &&
+        !['address', 'checkout', 'confirm-agreement'].includes(action)
           ? { clientActionId: command.current.id }
           : {}),
       })
@@ -304,7 +322,7 @@ export function OrderCurrentStep({
     loading: '',
     cancellation: '',
   }
-  if (terms.paymentMode === 'external' && stage === 'inspect')
+  if (terms.paymentMode !== 'uu_pay' && stage === 'inspect')
     instructions.inspect =
       'Meet at the agreed location and time. Inspect the item before confirming the direct exchange.'
   if (stage === 'shipment' && data?.courier?.state === 'shipped') {
@@ -331,7 +349,7 @@ export function OrderCurrentStep({
             ? 'Review this recorded stage. Completed transaction facts are read-only.'
             : instructions[stage]}
         </p>
-        {order.v2?.terms.paymentMode === 'external' && stage !== 'review' && (
+        {order.v2?.terms.paymentMode !== 'uu_pay' && stage !== 'review' && (
           <>
             <p>Paid outside UU · No UU payment protection</p>
             <p>
@@ -387,7 +405,11 @@ export function OrderCurrentStep({
                         {!readOnly && (
                           <StatefulButton
                             className={workspace.statefulForward}
-                            disabled={blocked}
+                            disabled={
+                              blocked ||
+                              (terms.paymentMode === 'interac_etransfer' &&
+                                !data?.interacPayment?.sellerReceivedAt)
+                            }
                             onClick={() => act('confirm-exchange')}
                           >
                             Confirm exchange{' '}
@@ -423,6 +445,66 @@ export function OrderCurrentStep({
                 )
               })()}
           </>
+        )}
+        {terms.paymentMode === 'interac_etransfer' && data?.interacPayment && (
+          <section aria-label="Interac payment confirmation">
+            <p>
+              Interac status: {data.interacPayment.status.replaceAll('_', ' ')}
+            </p>
+            {buyer && !data.interacPayment.buyerReportedAt && !readOnly && (
+              <>
+                <label>
+                  Reference number (optional)
+                  <input
+                    value={interacReference}
+                    maxLength={120}
+                    onChange={(event) =>
+                      setInteracReference(event.target.value)
+                    }
+                  />
+                </label>
+                <StatefulButton
+                  disabled={blocked}
+                  onClick={() =>
+                    act('report-interac-payment', {
+                      reference: interacReference || null,
+                    })
+                  }
+                >
+                  I&apos;ve sent the payment
+                </StatefulButton>
+              </>
+            )}
+            {!buyer &&
+              data.interacPayment.buyerReportedAt &&
+              !data.interacPayment.sellerReceivedAt &&
+              !readOnly && (
+                <StatefulButton
+                  disabled={blocked}
+                  onClick={() => act('confirm-interac-receipt')}
+                >
+                  I&apos;ve received the payment
+                </StatefulButton>
+              )}
+            {data.interacPayment.status === 'payment_reported' && (
+              <p role="status">
+                {readOnly
+                  ? 'Payment reported. Seller receipt confirmation was not recorded.'
+                  : 'Payment reported. Waiting for seller confirmation.'}
+              </p>
+            )}
+            {data.interacPayment.status === 'pending' && readOnly && (
+              <p role="status">
+                No Interac payment report or seller receipt confirmation was
+                recorded.
+              </p>
+            )}
+            {data.interacPayment.status === 'receipt_confirmed' && (
+              <p role="status">
+                Receipt confirmed by seller. UU has not verified a bank deposit.
+              </p>
+            )}
+          </section>
         )}
         {stage === 'review' && !readOnly && data?.fulfillment.agreement && (
           <>

@@ -16,6 +16,13 @@ export type OrderFulfillmentState = {
     sellerConfirmedAt: string | null
     disputedAt: string | null
   } | null
+  interacPayment?: {
+    orderId: string
+    status: 'pending' | 'payment_reported' | 'receipt_confirmed'
+    buyerReportedAt: string | null
+    buyerReference: string | null
+    sellerReceivedAt: string | null
+  } | null
   agreement: OrderAgreementState
   orderId: string
   handoffReady: boolean
@@ -31,6 +38,14 @@ export type OrderFulfillmentState = {
   serverTime: string
   deliveryStartedAt: string | null
   cancellation: OrderCancellationState
+}
+export type InteracPaymentState = {
+  orderId: string
+  mode: 'interac_etransfer'
+  status: 'pending' | 'payment_reported' | 'receipt_confirmed'
+  buyerReportedAt: string | null
+  buyerReference: string | null
+  sellerReceivedAt: string | null
 }
 export type OrderAgreementState = {
   orderId: string
@@ -116,6 +131,7 @@ export const readOrderFlow = <T>(
     | 'courier'
     | 'credential'
     | 'fulfillment'
+    | 'interac-payment'
 ) =>
   marketplaceRequest<T>(
     `/api/order-domain/${encodeURIComponent(id)}/${resource}`,
@@ -132,6 +148,8 @@ export const actOnOrderFlow = (
     | 'confirm-exchange'
     | 'confirm-receipt'
     | 'dispute-exchange'
+    | 'report-interac-payment'
+    | 'confirm-interac-receipt'
     | 'handoff'
     | 'payment'
     | 'received'

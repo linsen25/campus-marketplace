@@ -75,13 +75,16 @@ export default async function handler(
           : await service.workspace(req.query.workspace)
       )
   } catch (error) {
+    const payload: { error: string; code?: string } = {
+      error:
+        error instanceof ListingApiError
+          ? error.message
+          : 'Unable to load Orders.',
+    }
+    const errorCode = (error as { code?: unknown })?.code
+    if (typeof errorCode === 'string') payload.code = errorCode
     return res
       .status(error instanceof ListingApiError ? error.status : 500)
-      .json({
-        error:
-          error instanceof ListingApiError
-            ? error.message
-            : 'Unable to load Orders.',
-      })
+      .json(payload)
   }
 }

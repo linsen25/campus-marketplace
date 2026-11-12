@@ -5,6 +5,7 @@ import type {
   CourierState,
   DeliveryCheckoutState,
   HandoffCredential,
+  InteracPaymentState,
   OrderFulfillmentState,
 } from '@/lib/order-flow-api'
 import type { FormalOrder } from '@/types/order'
@@ -14,6 +15,7 @@ export type OrderFlowData = {
   checkout: DeliveryCheckoutState | null
   courier: CourierState | null
   credential: HandoffCredential | null
+  interacPayment: InteracPaymentState | null
 }
 
 /** All progression comes from existing server reads; no local transaction transitions. */
@@ -34,13 +36,17 @@ export function useOrderFlow(order: FormalOrder, role: 'buyer' | 'seller') {
   const refresh = useCallback(async () => {
     const request = ++generation.current
     try {
-      const [fulfillment, checkout, shipment] = await Promise.all([
-        readOrderFlow<OrderFulfillmentState>(order.id, 'fulfillment'),
-        delivery
-          ? readOrderFlow<DeliveryCheckoutState>(order.id, 'checkout')
-          : null,
-        courier ? readOrderFlow<CourierState>(order.id, 'courier') : null,
-      ])
+      const [fulfillment, checkout, shipment, interacPayment] =
+        await Promise.all([
+          readOrderFlow<OrderFulfillmentState>(order.id, 'fulfillment'),
+          delivery
+            ? readOrderFlow<DeliveryCheckoutState>(order.id, 'checkout')
+            : null,
+          courier ? readOrderFlow<CourierState>(order.id, 'courier') : null,
+          terms.paymentMode === 'interac_etransfer'
+            ? readOrderFlow<InteracPaymentState>(order.id, 'interac-payment')
+            : null,
+        ])
       if (
         fulfillment.orderId !== order.id ||
         (checkout && checkout.orderId !== order.id)
@@ -58,7 +64,13 @@ export function useOrderFlow(order: FormalOrder, role: 'buyer' | 'seller') {
       if (request === generation.current) {
         setResult({
           scope,
-          data: { fulfillment, checkout, courier: shipment, credential },
+          data: {
+            fulfillment,
+            checkout,
+            courier: shipment,
+            credential,
+            interacPayment,
+          },
         })
         setFailure(null)
       }
@@ -79,6 +91,7 @@ export function useOrderFlow(order: FormalOrder, role: 'buyer' | 'seller') {
     order.lifecycle,
     order.paymentStatus,
     role,
+    terms.paymentMode,
     delivery,
     courier,
   ])

@@ -87,6 +87,8 @@ const client = {
     },
   },
   async rpc(name) {
+    if (name === 'marketplace_uwo_identity_badge')
+      return { data: false, error: null }
     rpcCalls++
     assert.equal(name, expectedRpc)
     if (status !== 'available')
@@ -118,6 +120,10 @@ new Function('require', 'module', 'exports', source)(
           }
         },
       }
+    if (name.endsWith('/conversation-provenance'))
+      return {
+        conversationProvenance: (channel, shopName) => ({ channel, shopName }),
+      }
     if (name.endsWith('/marketplace-auth'))
       return {
         requireMarketplaceUser: async () => {
@@ -130,6 +136,13 @@ new Function('require', 'module', 'exports', source)(
     if (name.endsWith('/listing-mapper')) return { mapListing: (r) => r }
     if (name.endsWith('/chat-image-storage'))
       return { imageSendingEnabled: () => true }
+    if (name.endsWith('/message-image-service'))
+      return {
+        signMessageImages: async () => [],
+        imagePresentation: (item) => item,
+      }
+    if (name.endsWith('/order-request-service'))
+      return { requireOrderRequestEnvironment() {} }
     if (name.endsWith('/messages-environment'))
       return {
         requireMessagesEnvironment() {},

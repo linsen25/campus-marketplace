@@ -8,6 +8,12 @@ values
  ('00000000-0000-0000-0000-0000000000b2','ordinary-b@example.com',now(),'{"username":"Ordinary_B"}'::jsonb),
  ('00000000-0000-0000-0000-0000000000c3','unconfirmed@example.com',null,'{"username":"Unconfirmed_C"}'::jsonb);
 
+-- The seller readiness row is an explicit financial precondition for Offer
+-- acceptance; it does not grant payment execution or provider access.
+select public.marketplace_record_financial_capability(
+  '00000000-0000-0000-0000-0000000000b2','payout_account','ready',
+  'staging_test','permissions_fixture','permissions_payout','Test Bank','6789');
+
 insert into public.shops(id,owner_id,name,category,description)
 values ('00000000-0000-0000-0000-0000000000e3','00000000-0000-0000-0000-0000000000b2','Fixture Shop','Electronics','Fixture shop for permission tests');
 
@@ -184,6 +190,52 @@ begin
   select id into conversation_id from fixture_conversation limit 1;
   begin perform public.marketplace_mark_conversation_read(conversation_id,1); exception when others then rejected:=true; end;
   if not rejected then raise exception 'nonparticipant conversation read was accepted'; end if;
+end $$;
+
+-- Ordinary confirmed non-UWO accounts can traverse the Resale Offer boundary.
+-- Existing participant, listing and seller payout-readiness checks remain active.
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000a1',true);
+do $$
+declare conversation_id uuid; offer_id uuid; second_offer uuid; preflight jsonb;
+begin
+  select id into conversation_id from fixture_conversation limit 1;
+  select id into offer_id from public.marketplace_create_offer(
+    conversation_id,'{"item_amount_cents":800,"note":"ordinary resale offer"}'::jsonb,gen_random_uuid());
+  if offer_id is null then raise exception 'ordinary confirmed account offer creation failed'; end if;
+  perform public.marketplace_offer_history(conversation_id);
+
+  perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000b2',true);
+  perform public.marketplace_deny_offer(offer_id,gen_random_uuid());
+
+  perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000a1',true);
+  select id into second_offer from public.marketplace_create_offer(
+    conversation_id,'{"item_amount_cents":800,"note":"ordinary resale offer 2"}'::jsonb,gen_random_uuid());
+  perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000b2',true);
+  preflight:=public.marketplace_offer_accept_preflight(second_offer,gen_random_uuid());
+  if preflight->>'ready' is distinct from 'true' then
+    raise exception 'ordinary confirmed account offer preflight did not reach transaction checks: %',preflight;
+  end if;
+end $$;
+
+-- The same confirmed accounts can read their own participant request/order
+-- projections; direct writes and forged participants remain guarded by the
+-- existing SECURITY DEFINER transaction functions and immutable triggers.
+do $$
+declare conversation_id uuid; request_id uuid; history jsonb;
+begin
+  select id into conversation_id from fixture_conversation limit 1;
+  request_id:=null;
+  select id into request_id from public.marketplace_create_order_request(
+    conversation_id,'{"item_amount_cents":800,"fulfillment_type":"shipping","shipping_cost_mode":"included"}'::jsonb,gen_random_uuid());
+  if request_id is null then raise exception 'ordinary confirmed account order request creation failed'; end if;
+  perform set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000000000a1',true);
+  history:=public.marketplace_order_request_history(conversation_id);
+  if not (history->'requests' @> jsonb_build_array(jsonb_build_object('id',request_id))) then
+    raise exception 'ordinary confirmed account order request history read failed';
+  end if;
 end $$;
 
 rollback;

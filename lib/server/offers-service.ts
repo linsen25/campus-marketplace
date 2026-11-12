@@ -68,9 +68,14 @@ function deliveryArea(value: unknown) {
 function validatePaymentMode(v: Record<string, unknown>) {
   if (
     (v.payment_mode !== undefined &&
-      !['uu_pay', 'external'].includes(String(v.payment_mode))) ||
+      !['uu_pay', 'external', 'in_person', 'interac_etransfer'].includes(
+        String(v.payment_mode)
+      )) ||
     (v.payment_mode_version !== undefined && v.payment_mode_version !== 1) ||
-    (v.payment_mode === 'external' && v.fulfillment !== 'on_campus')
+    (['external', 'in_person', 'interac_etransfer'].includes(
+      String(v.payment_mode)
+    ) &&
+      v.fulfillment !== 'on_campus')
   )
     throw new ListingApiError('Invalid payment mode.', 503)
 }
@@ -88,7 +93,7 @@ export function mapTerms(
     throw new ListingApiError('Offer terms unavailable.', 503)
   validatePaymentMode(v)
   const common = {
-    paymentMode: (v.payment_mode ?? 'uu_pay') as 'external' | 'uu_pay',
+    paymentMode: (v.payment_mode ?? 'in_person') as OfferTerms['paymentMode'],
     paymentModeVersion: 1 as const,
     itemAmountCents: Number(v.item_amount_cents),
     currency: 'CAD' as const,
@@ -96,7 +101,8 @@ export function mapTerms(
   }
   if (
     v.fulfillment === 'on_campus' &&
-    typeof v.meetup_location === 'string' &&
+    (v.meetup_location === undefined ||
+      typeof v.meetup_location === 'string') &&
     validMeetingReference(v.meetup_location_provider, v.meetup_place_id) &&
     typeof v.scheduled_at === 'string' &&
     Number.isFinite(Date.parse(v.scheduled_at))
@@ -104,10 +110,13 @@ export function mapTerms(
     return {
       ...common,
       fulfillment: 'on_campus',
-      meetupLocation: v.meetup_location,
-      ...(v.meetup_location_provider === 'google'
+      ...(typeof v.meetup_location === 'string'
+        ? { meetupLocation: v.meetup_location }
+        : {}),
+      ...(v.meetup_location_provider === 'google' ||
+      v.meetup_location_provider === 'western'
         ? {
-            meetupLocationProvider: 'google',
+            meetupLocationProvider: v.meetup_location_provider,
             meetupPlaceId: v.meetup_place_id as string,
           }
         : {}),

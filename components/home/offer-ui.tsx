@@ -13,6 +13,8 @@ import { StatefulButton } from '@/components/velora/stateful-button'
 import { offerAmount, parseOfferAmount } from '@/lib/offer-amount'
 import { offerChangedFields } from '@/lib/offer-changes'
 import { offerEconomics } from '@/lib/offer-economics'
+import { westernBuildings } from '@/lib/western-buildings'
+import { resalePaymentOptions } from '@/lib/transaction-preferences'
 import {
   combineLocalDateAndTime,
   validateNewOrderSchedule,
@@ -68,14 +70,14 @@ export function OfferTermsSummary({
       <dd>{terms.fulfillment === 'on_campus' ? 'Meeting' : 'Delivery'}</dd>
       <dt>Payment method</dt>
       <dd>
-        {terms.paymentMode === 'external'
+        {terms.paymentMode !== 'uu_pay'
           ? 'Pay independently · No UU payment protection'
           : 'Pay by UU'}
       </dd>
       {terms.fulfillment === 'on_campus' ? (
         <>
           <dt>Meeting location</dt>
-          <dd>{terms.meetupLocation}</dd>
+          <dd>{terms.meetupLocation || 'To be agreed in chat'}</dd>
           <dt>Meeting date / time</dt>
           <dd>
             {new Date(terms.scheduledAt).toLocaleString('en-CA', {
@@ -423,9 +425,12 @@ export function OfferEditor({
         ? 'delivery'
         : 'on_campus')
   )
+  const deliveryAllowed =
+    listing.live?.listingChannel !== 'resale' ||
+    listing.live?.preferredFulfillment === 'DELIVERY'
   const [location, setLocation] = useState(
     original?.fulfillment === 'on_campus'
-      ? original.meetupLocation
+      ? original.meetupLocation ?? ''
       : listing.live?.meetingLocation?.label ?? ''
   )
   const initialMeeting =
@@ -438,7 +443,10 @@ export function OfferEditor({
   const [meetingReference, setMeetingReference] =
     useState<MeetingPlaceReference | null>(
       initialMeeting?.provider && initialMeeting.placeId
-        ? { provider: 'google', placeId: initialMeeting.placeId }
+        ? {
+            provider: initialMeeting.provider ?? 'google',
+            placeId: initialMeeting.placeId,
+          }
         : null
     )
   const date =
@@ -470,10 +478,12 @@ export function OfferEditor({
   const [postalPrefix, setPostalPrefix] = useState(
     originalArea?.postalPrefix ?? ''
   )
-  const [paymentMode, setPaymentMode] = useState<'external' | 'uu_pay'>(
+  const [paymentMode, setPaymentMode] = useState<
+    'in_person' | 'interac_etransfer' | 'external' | 'uu_pay'
+  >(
     original
-      ? original.paymentMode ?? 'uu_pay'
-      : listing.live?.preferredPaymentMode ?? 'uu_pay'
+      ? original.paymentMode ?? 'in_person'
+      : listing.live?.preferredPaymentMode ?? 'in_person'
   )
   const [confirmation, setConfirmation] = useState<OfferTerms | null>(null)
   const [discard, setDiscard] = useState(false)
@@ -527,13 +537,11 @@ export function OfferEditor({
     }
     if (mode === 'on_campus') {
       const valid = validateNewOrderSchedule(schedule)
-      if (!location.trim() || !valid.valid) {
+      if (!valid.valid) {
         const scheduleError = !valid.valid
           ? valid.message
           : 'Check meetup details.'
-        setError(
-          !location.trim() ? 'Enter a public meetup location.' : scheduleError
-        )
+        setError(scheduleError)
         return false
       }
       const scheduled =
@@ -542,7 +550,7 @@ export function OfferEditor({
       setConfirmation({
         ...common,
         fulfillment: 'on_campus',
-        meetupLocation: location.trim(),
+        ...(location.trim() ? { meetupLocation: location.trim() } : {}),
         ...(meetingReference
           ? {
               meetupLocationProvider: meetingReference.provider,
@@ -620,7 +628,10 @@ export function OfferEditor({
               <fieldset>
                 <legend>Fulfillment</legend>
                 <div className={profile.segment}>
-                  {(['on_campus', 'delivery'] as const).map((value) => (
+                  {(deliveryAllowed
+                    ? (['on_campus', 'delivery'] as const)
+                    : (['on_campus'] as const)
+                  ).map((value) => (
                     <button
                       key={value}
                       type="button"
@@ -642,14 +653,29 @@ export function OfferEditor({
                     ariaLabel="Payment method"
                     value={paymentMode}
                     options={[
-                      { value: 'uu_pay', label: 'Pay by UU (recommended)' },
-                      { value: 'external', label: 'Pay independently' },
+                      ...resalePaymentOptions.map((option) => ({
+                        value: option.value,
+                        label:
+                          option.value === 'in_person'
+                            ? `${option.label} (Recommended)`
+                            : option.label,
+                      })),
+                      {
+                        value: 'external',
+                        label: 'Pay independently (legacy)',
+                      },
                     ]}
                     onChange={(value: string) =>
-                      setPaymentMode(value as 'external' | 'uu_pay')
+                      setPaymentMode(
+                        value as
+                          | 'in_person'
+                          | 'interac_etransfer'
+                          | 'external'
+                          | 'uu_pay'
+                      )
                     }
                   />
-                  {paymentMode === 'external' && (
+                  {paymentMode !== 'uu_pay' && (
                     <small>Paid outside UU · No UU payment protection</small>
                   )}
                 </label>
@@ -657,23 +683,83 @@ export function OfferEditor({
               <div className={styles.conditional}>
                 {mode === 'on_campus' && (
                   <>
-                    <MeetingLocationInput
-                      label="Meetup location"
-                      value={location}
-                      required={true}
-                      selected={meetingReference}
-                      onChange={(value) => {
-                        setLocation(value)
-                        setMeetingReference(null)
-                      }}
-                      onSelect={(place) =>
-                        setMeetingReference(
-                          place
-                            ? { provider: 'google', placeId: place.placeId }
-                            : null
-                        )
-                      }
-                    />
+                    <label>
+                      Meeting location source
+                      <GlideSelect
+                        ariaLabel="Meeting location source"
+                        value={
+                          meetingReference?.provider === 'western'
+                            ? 'western'
+                            : 'custom'
+                        }
+                        options={[
+                          { value: 'western', label: 'Western building' },
+                          { value: 'custom', label: 'Custom location' },
+                        ]}
+                        onChange={(value: string) => {
+                          if (value === 'western') {
+                            const building = westernBuildings[0]
+                            setLocation(building?.name ?? '')
+                            setMeetingReference(
+                              building
+                                ? {
+                                    provider: 'western',
+                                    placeId: building.code,
+                                  }
+                                : null
+                            )
+                          } else {
+                            setLocation('')
+                            setMeetingReference(null)
+                          }
+                        }}
+                      />
+                    </label>
+                    {meetingReference?.provider === 'western' ? (
+                      <label>
+                        Western building
+                        <select
+                          aria-label="Western building"
+                          value={meetingReference.placeId}
+                          onChange={(event) => {
+                            const building = westernBuildings.find(
+                              (item) => item.code === event.target.value
+                            )
+                            if (building) {
+                              setLocation(building.name)
+                              setMeetingReference({
+                                provider: 'western',
+                                placeId: building.code,
+                              })
+                            }
+                          }}
+                        >
+                          {westernBuildings.map((building) => (
+                            <option key={building.code} value={building.code}>
+                              {building.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : (
+                      <MeetingLocationInput
+                        label="Meetup location (optional)"
+                        value={location}
+                        required={false}
+                        selected={meetingReference}
+                        onChange={(value) => {
+                          setLocation(value)
+                          setMeetingReference(null)
+                        }}
+                        onSelect={(place) =>
+                          setMeetingReference(
+                            place
+                              ? { provider: 'google', placeId: place.placeId }
+                              : null
+                          )
+                        }
+                      />
+                    )}
                     <fieldset className={styles.scheduleGroups}>
                       <OrderScheduleField
                         value={schedule}

@@ -68,7 +68,7 @@ function OrderState({ order, offset }: { order: FormalOrder; offset: number }) {
         )}
       {!outcome && (
         <p className={workspace.hint}>
-          {order.v2?.terms.paymentMode === 'external'
+          {order.v2?.terms.paymentMode !== 'uu_pay'
             ? 'Paid outside UU \u00b7 No UU payment protection'
             : 'Payment integration is not enabled yet.'}
         </p>

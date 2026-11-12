@@ -36,9 +36,10 @@ const fields = {
 const file = { type: 'image/jpeg', size: 100 },
   validate = (f) => validateBuilder(f, [file])
 for (const preferredFulfillment of ['ON_CAMPUS', 'DELIVERY']) {
-  assert.throws(
-    () => validate({ ...fields, preferredFulfillment, meetingLocation: null }),
-    /Meeting location is required/
+  assert.equal(
+    validate({ ...fields, preferredFulfillment, meetingLocation: null })
+      .meetingLocation,
+    null
   )
   for (const [text, cents] of [
     ['', 0],
@@ -109,5 +110,5 @@ assert.equal(
   '10.50'
 )
 console.log(
-  'PASS Listing required Meeting for both modes, optional estimate blank/zero/custom/safe maximum, invalid money, legacy read/edit, nullable legacy place, integer DTO round trip; no network'
+  'PASS Listing optional Meeting location for both modes, optional estimate blank/zero/custom/safe maximum, invalid money, legacy read/edit, nullable legacy place, integer DTO round trip; no network'
 )

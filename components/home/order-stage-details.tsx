@@ -24,7 +24,7 @@ function ConfirmedFulfillment({ terms }: { terms: OfferTerms }) {
     <dl className={styles.amounts}>
       <dt>Payment method</dt>
       <dd>
-        {terms.paymentMode === 'external' ? 'Pay independently' : 'Pay by UU'}
+        {terms.paymentMode !== 'uu_pay' ? 'Pay independently' : 'Pay by UU'}
       </dd>
       <dt>Fulfillment</dt>
       <dd>{mode}</dd>
@@ -39,7 +39,7 @@ function ConfirmedFulfillment({ terms }: { terms: OfferTerms }) {
       {terms.fulfillment === 'on_campus' ? (
         <>
           <dt>Meeting location</dt>
-          <dd>{terms.meetupLocation}</dd>
+          <dd>{terms.meetupLocation || 'To be arranged'}</dd>
           <dt>Date / time</dt>
           <dd>
             {new Date(terms.scheduledAt).toLocaleString('en-CA', {
@@ -106,7 +106,7 @@ function OrderEconomics({
           </>
         )}
       </dl>
-      {order.v2.terms.paymentMode !== 'external' &&
+      {order.v2.terms.paymentMode === 'uu_pay' &&
         order.lifecycle === 'cancelled' &&
         ['pending', 'failed'].includes(order.paymentStatus) &&
         !order.paymentPaidAt && (
@@ -259,7 +259,7 @@ function PaymentDetails({ order, role, flow, offset }: StageProps) {
     <>
       {' '}
       <OrderEconomics order={order} role={role} />
-      {order.v2?.terms.paymentMode === 'external' ? (
+      {order.v2?.terms.paymentMode !== 'uu_pay' ? (
         <>
           <p>Paid outside UU · No UU payment protection</p>
           <p>
@@ -324,7 +324,7 @@ function CompletionDetails({ order, status, page, flow }: StageProps) {
     <>
       {' '}
       <p>{status}</p>
-      {order.v2?.terms.paymentMode === 'external' ? (
+      {order.v2?.terms.paymentMode !== 'uu_pay' ? (
         <>
           <p>Paid outside UU · No UU payment protection</p>
           <p>
@@ -338,7 +338,7 @@ function CompletionDetails({ order, status, page, flow }: StageProps) {
       ) : (
         <p>Payment: {order.paymentStatus.replaceAll('_', ' ')}</p>
       )}
-      {order.v2?.terms.paymentMode === 'external' && (
+      {order.v2?.terms.paymentMode !== 'uu_pay' && (
         <>
           {flow.data?.fulfillment.externalExchange?.buyerConfirmedAt && (
             <p>
@@ -367,7 +367,7 @@ function CompletionDetails({ order, status, page, flow }: StageProps) {
       {order.expiredAt && (
         <p>Expired: {new Date(order.expiredAt).toLocaleString()}</p>
       )}
-      {page === 'completed' && order.v2?.terms.paymentMode !== 'external' && (
+      {page === 'completed' && order.v2?.terms.paymentMode === 'uu_pay' && (
         <p>Payout status: {order.payoutStatus.replaceAll('_', ' ')}</p>
       )}
     </>
@@ -393,7 +393,7 @@ function FulfillmentDetails({ order, role, flow, terms }: StageProps) {
               <MapPin size={16} aria-hidden="true" />
               Meeting location
             </dt>
-            <dd>{terms.meetupLocation}</dd>
+            <dd>{terms.meetupLocation || 'To be arranged'}</dd>
             <dt>
               <CalendarDays size={16} aria-hidden="true" />
               Date / time

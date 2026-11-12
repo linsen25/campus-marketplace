@@ -87,8 +87,10 @@ export function Orders({
   if (
     !visuals.enabled &&
     process.env.NEXT_PUBLIC_MESSAGES_ENV === 'staging' &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL ===
-      'https://pcaqxezdfxofysghssyo.supabase.co'
+    (process.env.NEXT_PUBLIC_SUPABASE_URL ===
+      'https://pcaqxezdfxofysghssyo.supabase.co' ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ===
+        'https://giqdwyiupslpfhstbtqf.supabase.co')
   )
     return <FormalOrders key={mode} mode={mode} />
   const collections = deriveOrderWorkspaces(

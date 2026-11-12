@@ -10,6 +10,7 @@ const tests = [
   'tests/stripe-dispute-b25.cjs',
   'tests/operational-recovery-b25.cjs',
   'tests/worker-runtime-b28.cjs',
+  'tests/resale-verified-transaction-access.cjs',
 ]
 
 let failed = false

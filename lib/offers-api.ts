@@ -25,8 +25,12 @@ export function offerPayload(terms: OfferTerms) {
     ? {
         ...common,
         fulfillment: 'on_campus',
-        meetup_location: terms.meetupLocation,
-        ...(terms.meetupLocationProvider && terms.meetupPlaceId
+        ...(terms.meetupLocation?.trim()
+          ? { meetup_location: terms.meetupLocation }
+          : {}),
+        ...(terms.meetupLocation?.trim() &&
+        terms.meetupLocationProvider &&
+        terms.meetupPlaceId
           ? {
               meetup_location_provider: terms.meetupLocationProvider,
               meetup_place_id: terms.meetupPlaceId,

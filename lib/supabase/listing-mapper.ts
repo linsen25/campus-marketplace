@@ -14,10 +14,14 @@ export type ListingRow = {
   condition: Listing['condition'] | null
   pickup_area: string | null
   estimated_delivery_fee_cents?: number | null
-  preferred_payment_mode?: 'external' | 'uu_pay'
+  preferred_payment_mode?:
+    | 'in_person'
+    | 'interac_etransfer'
+    | 'external'
+    | 'uu_pay'
   preferred_fulfillment?: 'DELIVERY' | 'ON_CAMPUS'
   meeting_location?: string | null
-  meeting_location_provider?: 'google' | null
+  meeting_location_provider?: 'google' | 'western' | null
   meeting_place_id?: string | null
   status: Listing['status']
   created_at: string
@@ -55,8 +59,13 @@ export function mapListing(
     meetingLocation: row.meeting_location
       ? {
           label: row.meeting_location,
-          ...(row.meeting_location_provider === 'google' && row.meeting_place_id
-            ? { provider: 'google', placeId: row.meeting_place_id }
+          ...((row.meeting_location_provider === 'google' ||
+            row.meeting_location_provider === 'western') &&
+          row.meeting_place_id
+            ? {
+                provider: row.meeting_location_provider,
+                placeId: row.meeting_place_id,
+              }
             : {}),
         }
       : null,

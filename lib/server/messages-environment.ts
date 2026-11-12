@@ -6,12 +6,13 @@ const messagesProjects: Record<string, string> = {
 }
 export function requireMessagesEnvironment() {
   const designation = process.env.APP_ENV || ''
-  const ref = Object.prototype.hasOwnProperty.call(
-    messagesProjects,
-    designation
-  )
-    ? messagesProjects[designation]
-    : undefined
+  const configuredB32Ref = process.env.B32_SUPABASE_PROJECT_REF || ''
+  const ref =
+    designation === 'staging' && configuredB32Ref
+      ? configuredB32Ref
+      : Object.prototype.hasOwnProperty.call(messagesProjects, designation)
+      ? messagesProjects[designation]
+      : undefined
   let valid = false
   try {
     const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '')

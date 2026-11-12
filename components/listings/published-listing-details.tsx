@@ -13,9 +13,12 @@ export function PublishedListingDetails({ listing }: { listing: Listing }) {
   const meeting = listing.preferredFulfillment === 'ON_CAMPUS'
   const delivery = listing.preferredFulfillment === 'DELIVERY'
   const payment = listing.preferredPaymentMode
-    ? { uu_pay: 'UU Pay', external: 'Pay outside UU' }[
-        listing.preferredPaymentMode
-      ]
+    ? {
+        uu_pay: 'UU Protected Payment',
+        external: 'In-person exchange',
+        in_person: 'In-person exchange',
+        interac_etransfer: 'Interac e-Transfer',
+      }[listing.preferredPaymentMode]
     : null
   return (
     <div className={styles.details}>

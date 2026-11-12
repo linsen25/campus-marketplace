@@ -14,7 +14,11 @@ export type ListingFields = {
   subcategory: string
   condition: string
   estimatedDeliveryFee: string
-  preferredPaymentMode: 'external' | 'uu_pay'
+  preferredPaymentMode:
+    | 'in_person'
+    | 'interac_etransfer'
+    | 'external'
+    | 'uu_pay'
   preferredFulfillment: 'DELIVERY' | 'ON_CAMPUS'
   meetingLocation: MeetingLocation | null
   description: string
@@ -31,7 +35,9 @@ export function initialListingFields(listing?: Listing): ListingFields {
     estimatedDeliveryFee: `${Math.floor(estimate / 100)}.${String(
       estimate % 100
     ).padStart(2, '0')}`,
-    preferredPaymentMode: listing?.preferredPaymentMode ?? 'uu_pay',
+    preferredPaymentMode:
+      listing?.preferredPaymentMode ??
+      (listing?.listingChannel === 'shop' ? 'uu_pay' : 'in_person'),
     preferredFulfillment: listing?.preferredFulfillment ?? 'ON_CAMPUS',
     meetingLocation: listing?.meetingLocation ?? null,
     description: listing?.description ?? '',

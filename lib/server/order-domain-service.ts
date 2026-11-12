@@ -13,11 +13,61 @@ import type { MarketplaceContext } from '@/lib/supabase/server'
 export function createOrderDomainService(context: MarketplaceContext) {
   requireFinancialEnvironment()
   const client = createMarketplaceClient(context)
+  async function readExternalParticipantProjection(orderId: string) {
+    // The deployed fulfillment projection composes the historical cancellation
+    // reader. That reader intentionally remains Western-only for legacy
+    // Delivery/cancellation operations, so an ordinary verified Resale
+    // participant can receive 42501 even though the external exchange and
+    // agreement projections are participant-safe. Use only those two
+    // participant-scoped projections as a narrow read fallback; no mutation,
+    // payment, cancellation, handoff, or payout capability is widened here.
+    const [exchange, agreement] = await Promise.all([
+      client.rpc('marketplace_external_exchange', { p_order_id: orderId }),
+      client.rpc('marketplace_order_agreement', { p_order_id: orderId }),
+    ])
+    if (exchange.error || agreement.error || !exchange.data || !agreement.data)
+      return null
+    return {
+      orderId,
+      externalExchange: exchange.data,
+      interacPayment: null,
+      agreement: agreement.data,
+      handoffReady: false,
+      handoffConfirmedAt: null,
+      protectionStartedAt: null,
+      protectionExpiresAt: null,
+      buyerConfirmedAt: null,
+      releaseEligibleAt: null,
+      protectionCompletedAt: null,
+      protectionHold: false,
+      caseState: null,
+      payoutEligible: false,
+      serverTime:
+        typeof agreement.data.serverTime === 'string'
+          ? agreement.data.serverTime
+          : typeof exchange.data.serverTime === 'string'
+          ? exchange.data.serverTime
+          : null,
+      deliveryStartedAt: null,
+      cancellation: null,
+    }
+  }
   async function call(name: string, params: Record<string, unknown>) {
     await requireMarketplaceUser(client)
     const { data, error } = await client.rpc(name, params)
     if (error) {
       if (name === 'marketplace_verify_handoff') throw handoffRpcError(error)
+      if (
+        error.code === '23514' &&
+        [
+          'Seller receipt confirmation required before Interac exchange.',
+          'Seller receipt confirmation required before Interac completion.',
+        ].includes(error.message || '')
+      )
+        throw new ListingApiError(
+          'The buyer must report payment and the seller must confirm receipt before completing this Interac exchange.',
+          409
+        )
       let status = 503
       if (error.code === '42501') status = 403
       else if (error.code === '23505') status = 409
@@ -33,7 +83,7 @@ export function createOrderDomainService(context: MarketplaceContext) {
     return data
   }
   return {
-    read(id: unknown, resource: string) {
+    async read(id: unknown, resource: string) {
       const names: Record<string, string> = {
         economics: 'marketplace_order_economics',
         checkout: 'marketplace_delivery_checkout',
@@ -42,9 +92,22 @@ export function createOrderDomainService(context: MarketplaceContext) {
         courier: 'marketplace_courier_state',
         cancellation: 'marketplace_order_cancellation_state',
         agreement: 'marketplace_order_agreement',
+        'interac-payment': 'marketplace_interac_payment_state',
       }
       if (!names[resource]) throw new ListingApiError('Not found.', 404)
-      return call(names[resource], { p_order_id: messageUuid(id) })
+      const orderId = messageUuid(id)
+      if (resource === 'fulfillment') {
+        try {
+          return await call(names[resource], { p_order_id: orderId })
+        } catch (error) {
+          if (error instanceof ListingApiError && error.status === 403) {
+            const fallback = await readExternalParticipantProjection(orderId)
+            if (fallback) return fallback
+          }
+          throw error
+        }
+      }
+      return call(names[resource], { p_order_id: orderId })
     },
     async write(id: unknown, action: string, body: Record<string, unknown>) {
       const orderId = messageUuid(id)
@@ -52,6 +115,14 @@ export function createOrderDomainService(context: MarketplaceContext) {
         'confirm-exchange': {
           name: 'marketplace_confirm_external_exchange',
           fields: ['clientActionId'],
+        },
+        'report-interac-payment': {
+          name: 'marketplace_report_interac_payment',
+          fields: ['reference'],
+        },
+        'confirm-interac-receipt': {
+          name: 'marketplace_confirm_interac_receipt',
+          fields: [],
         },
         'dispute-exchange': {
           name: 'marketplace_dispute_external_exchange',
@@ -130,6 +201,7 @@ export function createOrderDomainService(context: MarketplaceContext) {
         response: 'p_response',
         carrierLabel: 'p_carrier_label',
         trackingReference: 'p_tracking_reference',
+        reference: 'p_reference',
       }
       for (const field of definition.fields)
         params[mapping[field]] =

@@ -55,9 +55,13 @@ export function connectMessagesRealtime(
     production: 'yzvchumzyonegujucyqs',
   }
   const designation = process.env.NEXT_PUBLIC_MESSAGES_ENV || ''
-  const ref = Object.prototype.hasOwnProperty.call(projects, designation)
-    ? projects[designation]
-    : undefined
+  const ref =
+    designation === 'staging' &&
+    url === 'https://giqdwyiupslpfhstbtqf.supabase.co'
+      ? 'giqdwyiupslpfhstbtqf'
+      : Object.prototype.hasOwnProperty.call(projects, designation)
+      ? projects[designation]
+      : undefined
   let supported = false
   try {
     const target = new URL(url)

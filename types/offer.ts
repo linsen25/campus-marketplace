@@ -9,7 +9,7 @@ export type OfferStatus =
   | 'Withdrawn'
 export type OfferTerms = {
   /** Missing only on legacy records; always resolves to uu_pay. */
-  paymentMode?: 'external' | 'uu_pay'
+  paymentMode?: 'in_person' | 'interac_etransfer' | 'external' | 'uu_pay'
   paymentModeVersion?: 1
   itemAmountCents: number
   currency: 'CAD'
@@ -29,9 +29,9 @@ export type OfferTerms = {
     }
   | {
       fulfillment: 'on_campus'
-      meetupLocation: string
+      meetupLocation?: string | null
       scheduledAt: string
-      meetupLocationProvider?: 'google'
+      meetupLocationProvider?: 'google' | 'western'
       meetupPlaceId?: string
     }
 )

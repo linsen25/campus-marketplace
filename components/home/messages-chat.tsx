@@ -106,8 +106,10 @@ export function MessagesChat({
   const formal =
     !orderVisuals.enabled &&
     process.env.NEXT_PUBLIC_MESSAGES_ENV === 'staging' &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL ===
-      'https://pcaqxezdfxofysghssyo.supabase.co'
+    (process.env.NEXT_PUBLIC_SUPABASE_URL ===
+      'https://pcaqxezdfxofysghssyo.supabase.co' ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ===
+        'https://giqdwyiupslpfhstbtqf.supabase.co')
   const requests = useFormalOrderRequests(conversationId, currentUserId, formal)
   const offers = useFormalOffers(conversationId, currentUserId, formal)
   const [offerEditor, setOfferEditor] = useState<{ initial?: Offer } | null>(

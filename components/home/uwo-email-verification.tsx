@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { StatefulButton } from '@/components/velora/stateful-button'
-import { useMarketplaceSession } from '@/components/listings/marketplace-session'
+import { isWesternEmail } from '@/lib/marketplace-auth'
 import { marketplaceRequest } from '@/lib/listings-api'
 
-export function UwoEmailVerification() {
-  const { seller } = useMarketplaceSession()
+export function UwoEmailVerification({
+  accountEmail,
+}: {
+  accountEmail: string
+}) {
   const [verified, setVerified] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState('')
@@ -14,6 +17,7 @@ export function UwoEmailVerification() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const generation = useRef(0)
+  const supported = isWesternEmail(accountEmail)
   const load = useCallback(async () => {
     const current = ++generation.current
     setLoading(true)
@@ -38,6 +42,7 @@ export function UwoEmailVerification() {
     }
   }, [])
   useEffect(() => {
+    if (!supported) return undefined
     generation.current++
     const effectGeneration = generation.current
     setVerified(null)
@@ -50,7 +55,8 @@ export function UwoEmailVerification() {
       if (generation.current === effectGeneration)
         generation.current = effectGeneration + 1
     }
-  }, [load, seller?.id])
+  }, [load, accountEmail, supported])
+  if (!supported) return null
   async function send() {
     if (busy || loading) return
     const operationGeneration = generation.current

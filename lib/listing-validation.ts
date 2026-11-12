@@ -40,14 +40,20 @@ export function validateListingInput(input: unknown): CreateListingInput {
   )
   if (
     data.preferredPaymentMode !== undefined &&
-    !['uu_pay', 'external'].includes(String(data.preferredPaymentMode))
+    !['uu_pay', 'external', 'in_person', 'interac_etransfer'].includes(
+      String(data.preferredPaymentMode)
+    )
   )
     throw new ListingApiError('Choose a valid payment preference.')
   const preferredPaymentMode =
     preferredFulfillment === 'DELIVERY'
       ? 'uu_pay'
-      : ((data.preferredPaymentMode ?? 'uu_pay') as 'external' | 'uu_pay')
-  const meetingLocation = requireMeetingLocation(data.meetingLocation)
+      : ((data.preferredPaymentMode ?? 'in_person') as
+          | 'external'
+          | 'in_person'
+          | 'interac_etransfer'
+          | 'uu_pay')
+  const meetingLocation = optionalMeetingLocation(data.meetingLocation)
   const estimatedDeliveryFeeCents = validateDeliveryEstimate(
     data.estimatedDeliveryFeeCents
   )
@@ -120,14 +126,14 @@ function rejectClientChannel(data: Record<string, unknown>) {
     )
 }
 
-function requireMeetingLocation(value: unknown) {
+function optionalMeetingLocation(value: unknown) {
+  if (value === null || value === undefined) return null
   let location
   try {
     location = parseMeetingLocation(value)
   } catch {
     throw new ListingApiError('Check the Meeting location.')
   }
-  if (!location) throw new ListingApiError('Meeting location is required.')
   return location
 }
 function validateDeliveryEstimate(value: unknown): number {

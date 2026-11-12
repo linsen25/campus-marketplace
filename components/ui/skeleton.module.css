@@ -2,14 +2,19 @@
   position: relative;
   overflow: hidden;
   border-radius: 6px;
-  background: #b88cfa12;
+  background: var(--skeleton-background, rgb(255 255 255 / 8%));
 }
 
 .skeleton::after {
   position: absolute;
   inset: 0;
-  content: "";
-  background: linear-gradient(90deg, transparent, #cbb5e91a, transparent);
+  content: '';
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--skeleton-highlight, rgb(255 255 255 / 12%)),
+    transparent
+  );
   transform: translateX(-100%);
   animation: skeleton-shimmer 1.8s ease-in-out infinite;
 }

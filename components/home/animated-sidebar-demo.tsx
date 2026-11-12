@@ -227,8 +227,21 @@ export function AnimatedSidebarDemo() {
     }))
   }, [orderVisuals.selection])
   useEffect(() => {
-    const syncSection = () => {
-      const section = router.query.section
+    // Next's statically-rendered Home page can expose the query in `asPath`
+    // one render before `router.query` is hydrated. Resolve from both sources
+    // so direct authenticated deep links do not silently fall back to Profile.
+    const syncSection = (nextPath = router.asPath) => {
+      const pathQuery = new URLSearchParams(
+        nextPath.split('?')[1]?.split('#')[0] || ''
+      )
+      const section =
+        typeof router.query.section === 'string'
+          ? router.query.section
+          : pathQuery.get('section')
+      const destination =
+        typeof router.query.destination === 'string'
+          ? router.query.destination
+          : pathQuery.get('destination')
       if (section === 'settings') setActive('settings')
       if (section === 'notifications') setActive('notifications')
       if (section === 'orders') {
@@ -236,9 +249,7 @@ export function AnimatedSidebarDemo() {
         setExpanded('orders')
         setSelected((current) => ({
           ...current,
-          orders: ['sales', 'selling'].includes(
-            String(router.query.destination)
-          )
+          orders: ['sales', 'selling'].includes(String(destination))
             ? 'sales'
             : 'purchases',
         }))
@@ -248,8 +259,7 @@ export function AnimatedSidebarDemo() {
         setExpanded('messages')
         setSelected((current) => ({
           ...current,
-          messages:
-            router.query.destination === 'selling' ? 'selling' : 'buying',
+          messages: destination === 'selling' ? 'selling' : 'buying',
         }))
       }
       // Legacy create links open the management-owned overlay, never a second page.
@@ -278,16 +288,22 @@ export function AnimatedSidebarDemo() {
     // when a Settings link navigates to the same query as a previous visit.
     router.events.on('routeChangeComplete', syncSection)
     return () => router.events.off('routeChangeComplete', syncSection)
-  }, [router, router.query.section, router.query.destination])
+  }, [
+    router,
+    router.asPath,
+    router.isReady,
+    router.query.section,
+    router.query.destination,
+  ])
   // Primary entries classify child pages; explicit group selection starts at
   // its first child. Rail width/hover/pinning never calls this selection path.
   const selectSection = (
     id: Group | 'notifications' | 'settings',
     child?: string
   ) => {
-    if (id === 'notifications') {
+    if (id === 'notifications' || id === 'settings') {
       const enter = () => {
-        router.push('/home?section=notifications').catch(() => {})
+        router.push(`/home?section=${id}`).catch(() => {})
       }
       if (listingGuard.current) listingGuard.current(enter)
       else enter()
@@ -519,7 +535,7 @@ export function AnimatedSidebarDemo() {
                 }}
               />
               <SidebarLink
-                href="#settings"
+                href="/home?section=settings"
                 label="Settings"
                 icon={<Settings />}
                 active={active === 'settings'}

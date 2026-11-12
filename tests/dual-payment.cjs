@@ -30,6 +30,14 @@ function load(file) {
 const { offerEconomics } = load('lib/offer-economics.ts'),
   { offerPayload } = load('lib/offers-api.ts'),
   { offerChangedFields } = load('lib/offer-changes.ts')
+const migration004 = fs.readFileSync(
+  'supabase/migrations/202611070004_resale_three_payment_methods.sql',
+  'utf8'
+)
+assert(migration004.includes("provider = 'western'"))
+assert(
+  migration004.includes('Invalid optional meeting location or zoned time.')
+)
 const terms = {
   fulfillment: 'on_campus',
   itemAmountCents: 10000,
@@ -56,6 +64,10 @@ assert.equal(
   offerPayload({ ...terms, paymentMode: 'external' }).payment_mode_version,
   1
 )
+for (const mode of ['in_person', 'interac_etransfer']) {
+  assert.equal(offerPayload({ ...terms, paymentMode: mode }).payment_mode, mode)
+  assert.equal(offerEconomics({ ...terms, paymentMode: mode }).fee, 0)
+}
 assert.equal(
   offerPayload({
     ...terms,
@@ -78,10 +90,11 @@ assert(
 )
 assert.equal(offerEconomics({ ...terms, itemAmountCents: 500000 }).fee, 500)
 console.log(
-  'PASS explicit payment version, UU legacy default, external zero fee, negotiated change comparison, Delivery UU-only payload, UU cap unchanged'
+  'PASS explicit payment version, in-person default, external zero fee, negotiated change comparison, Delivery UU-only payload, UU cap unchanged'
 )
 
 const { validateListingInput } = load('lib/listing-validation.ts')
+const { westernBuildings } = load('lib/western-buildings.ts')
 const listing = {
   title: 'Synthetic listing',
   description: '',
@@ -99,16 +112,21 @@ assert.equal(validateListingInput(listing).preferredPaymentMode, 'external')
 assert.equal(
   validateListingInput({ ...listing, preferredPaymentMode: undefined })
     .preferredPaymentMode,
-  'uu_pay'
+  'in_person'
 )
 assert.equal(
   validateListingInput({ ...listing, preferredFulfillment: 'DELIVERY' })
     .preferredPaymentMode,
   'uu_pay'
 )
+assert.equal(
+  validateListingInput({ ...listing, meetingLocation: null }).meetingLocation,
+  null
+)
+assert(westernBuildings.some((building) => building.code === 'UCC'))
 assert.throws(() =>
   validateListingInput({ ...listing, preferredPaymentMode: 'unknown' })
 )
 console.log(
-  'PASS Meeting Listing preference/default and Delivery fixed UU validation'
+  'PASS Meeting Listing preference/default, optional location, Western directory and Delivery fixed UU validation'
 )

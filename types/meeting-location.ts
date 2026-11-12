@@ -1,5 +1,7 @@
 /** Provider content is transient; this reference contains no raw response or coordinates. */
-export type MeetingPlaceReference = { provider: 'google'; placeId: string }
+export type MeetingPlaceReference =
+  | { provider: 'google'; placeId: string }
+  | { provider: 'western'; placeId: string }
 /** Label is the final user-confirmed input text; provider metadata is auxiliary. */
 export type MeetingLocation = Partial<MeetingPlaceReference> & { label: string }
 export type PlaceSuggestion = {
@@ -13,3 +15,4 @@ export type PlaceDetails = {
   displayName: string
   formattedAddress: string
 }
+export type WesternBuilding = { code: string; name: string }

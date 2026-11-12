@@ -5,7 +5,10 @@ import { listingImageBucket } from '@/lib/listing-media'
 import { ListingApiError } from '@/lib/listing-validation'
 import { createChatStorage } from '@/lib/server/chat-image-storage'
 import { requireMarketplaceUser } from '@/lib/server/marketplace-auth'
-import { messageUuid } from '@/lib/server/messages-environment'
+import {
+  messageUuid,
+  requireMessagesEnvironment,
+} from '@/lib/server/messages-environment'
 import type { MarketplaceClient } from '@/lib/supabase/server'
 
 const bucket = 'order-snapshot-media'
@@ -20,11 +23,11 @@ type Asset = {
 }
 type Batch = { id: string; state: string; assets: Asset[] }
 function storage() {
+  const ref = requireMessagesEnvironment()
   if (
     typeof window !== 'undefined' ||
     process.env.APP_ENV !== 'staging' ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL !==
-      'https://pcaqxezdfxofysghssyo.supabase.co'
+    !['pcaqxezdfxofysghssyo', 'giqdwyiupslpfhstbtqf'].includes(ref)
   )
     throw new ListingApiError('Snapshot media environment unavailable.', 503)
   return createChatStorage()

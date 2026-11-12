@@ -297,7 +297,9 @@
     height: var(--desktop-app-control-height);
   }
 
-  .navigation :is(a[href^="#"], a[href="/home?section=notifications"]) {
+  .navigation a[href^="#"],
+  .navigation a[href="/home?section=notifications"],
+  .navigation a[href="/home?section=settings"] {
     height: var(--desktop-app-control-height);
     padding-inline: var(--home-rail-icon-inset);
   }
@@ -340,8 +342,12 @@
     outline-offset: -2px;
   }
 
-  .navigation :is(a[href^="#"], a[href="/home?section=notifications"]) > span:first-child,
-  .navigation :is(a[href^="#"], a[href="/home?section=notifications"]) > span:first-child svg {
+  .navigation a[href^="#"] > span:first-child,
+  .navigation a[href="/home?section=notifications"] > span:first-child,
+  .navigation a[href="/home?section=settings"] > span:first-child,
+  .navigation a[href^="#"] > span:first-child svg,
+  .navigation a[href="/home?section=notifications"] > span:first-child svg,
+  .navigation a[href="/home?section=settings"] > span:first-child svg {
     width: var(--desktop-app-icon-size);
     height: var(--desktop-app-icon-size);
   }

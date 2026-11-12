@@ -26,6 +26,8 @@ export function OrderProgress({
   shipping,
   current,
   steps,
+  title = 'Order Progress',
+  emphasizeCurrentAndNext = false,
   terminal = false,
   completed,
   dates,
@@ -34,6 +36,8 @@ export function OrderProgress({
   shipping?: boolean
   current: number | null
   steps?: readonly string[]
+  title?: string
+  emphasizeCurrentAndNext?: boolean
   terminal?: boolean
   completed?: number
   dates?: ReadonlyArray<string | null | undefined>
@@ -46,7 +50,7 @@ export function OrderProgress({
       className={`${profile.panel} ${styles.progress}`}
       aria-label="Order Progress"
     >
-      <h4>Order Progress</h4>
+      <h4>{title}</h4>
       {terminal && <p role="status">{terminalLabel}</p>}
       <ol
         className={timeline.steps}
@@ -68,6 +72,14 @@ export function OrderProgress({
               data-done={finished || undefined}
               aria-current={active ? 'step' : undefined}
               aria-label={`${label}: ${state}`}
+              data-muted={
+                emphasizeCurrentAndNext &&
+                !finished &&
+                !active &&
+                index !== (current ?? -1) + 1
+                  ? true
+                  : undefined
+              }
             >
               <span className={timeline.marker} aria-hidden="true">
                 {finished ? <Check size={16} /> : index + 1}

@@ -39,7 +39,7 @@ function ScheduleTerms({ revision }: { revision: MeetupRevision }) {
   return (
     <dl className={detail.amounts}>
       <dt>Location</dt>
-      <dd>{revision.location}</dd>
+      <dd>{revision.location || 'To be arranged'}</dd>
       <dt>Date</dt>
       <dd>{formatScheduleDate(date)}</dd>
       <dt>Time</dt>
@@ -106,7 +106,7 @@ export function OrderMeetup({
         getEarliestOrderSchedule(new Date(now)).getTime()
       )
     )
-    setLocation(proposal?.location || current.location)
+    setLocation(proposal?.location || current.location || '')
     setNote(proposal?.note || current.note)
     setSchedule({
       mode: 'scheduled',

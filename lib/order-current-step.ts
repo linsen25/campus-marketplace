@@ -24,7 +24,7 @@ export function currentOrderStep(
 ): CurrentOrderStep {
   if (order.lifecycle !== 'open') return order.lifecycle
   if (!data) return 'loading'
-  if (order.v2?.terms.paymentMode === 'external')
+  if (order.v2?.terms.paymentMode !== 'uu_pay')
     return !data.fulfillment.agreement?.complete ? 'review' : 'exchange'
   if (data.fulfillment.cancellation?.state) return 'cancellation'
   if (data.fulfillment.protectionStartedAt) return 'protection'
@@ -56,7 +56,7 @@ export function currentOrderProgress(
   data: OrderFlowData | null
 ) {
   const terms = order.v2!.terms
-  if (terms.paymentMode === 'external') {
+  if (terms.paymentMode !== 'uu_pay') {
     const steps = [
       'Agreement',
       'Meet / Inspect',
