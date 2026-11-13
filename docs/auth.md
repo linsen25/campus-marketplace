@@ -10,6 +10,20 @@ The browser is configured only with Supabase's opaque `sb_publishable` key.
 Server-side recovery and UWO verification require the matching opaque
 `sb_secret` key; neither key is parsed as a JWT by application code.
 
+## Auth email hook
+
+Implemented, not deployed: `supabase/functions/send-email` verifies Supabase's
+Standard Webhooks signature before mapping `signup` to the published account
+OTP template and `recovery` to the published reset-link template. Email-change
+and unsupported actions fail closed pending separately reviewed dual-recipient
+templates. It requires Edge Function secrets `RESEND_API_KEY`,
+`SEND_EMAIL_HOOK_SECRET`, and `AUTH_EMAIL_FROM`; no secret belongs in Next.js
+or Git. Real Auth delivery and OTP E2E remain pending Dashboard hook setup.
+
+UWO uses the separate `uwo-email` Edge Function and its own shared webhook
+secret. It retains the existing HMAC, ten-minute expiry, rate limit and unique
+binding database flow; it is not an Auth Hook.
+
 Any confirmed email can use the marketplace. UWO identity is separate: a
 private server-managed verification record derives only an approved public
 boolean badge. The UWO address itself is not included in public projections.

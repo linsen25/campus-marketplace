@@ -36,7 +36,8 @@ function codeHash(code: string) {
 
 async function deliver(email: string, code: string) {
   const endpoint = process.env.UWO_VERIFICATION_EMAIL_WEBHOOK_URL
-  if (!endpoint)
+  const secret = process.env.UWO_VERIFICATION_EMAIL_WEBHOOK_SECRET
+  if (!endpoint || !secret)
     throw new ListingApiError(
       'UWO verification email is temporarily unavailable.',
       503
@@ -57,7 +58,10 @@ async function deliver(email: string, code: string) {
     )
   const response = await fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${secret}`,
+    },
     body: JSON.stringify({
       to: email,
       purpose: 'uwo-email-verification',

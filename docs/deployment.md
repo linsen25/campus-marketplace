@@ -52,6 +52,15 @@ If it is enabled later, add a server-only, Google-restricted key to the ignored
 runtime environment, retain the Canada/Western-London request bounds, and run
 the focused Places regression; never expose that key to the browser.
 
+## Deferred email activation
+
+The checked-in `send-email` and `uwo-email` Edge Functions are implemented but
+not deployed. Keep Auth's Send Email Hook disabled until both functions are
+deployed and their protected secrets are set. The test sender
+`onboarding@resend.dev` is restricted to the Resend account-authorized
+recipient; a verified sender domain is required before sending real Seller or
+Buyer mail. Notification Worker and Cron remain disabled.
+
 ## Verification order
 
 1. Run TypeScript, targeted lint, the canonical environment guard test, and a
