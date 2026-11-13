@@ -121,8 +121,7 @@ declare
   definition text;
 begin
   definition:=pg_catalog.pg_get_functiondef(signature::oid);
-  if definition not like '%https://pcaqxezdfxofysghssyo.supabase.co/functions/v1/notification-email-worker%'
-     or definition not like '%marketplace_notification_worker%' then
+  if definition not like '%Notification worker is not configured for this environment.%' then
     raise exception 'Notification worker baseline drifted.' using errcode='P0001';
   end if;
   select p.proowner,p.prosecdef,p.proconfig,p.proacl

@@ -223,11 +223,10 @@ language plpgsql security definer set search_path='' as $$begin
 end;$$;
 create function marketplace_private.invoke_email_worker() returns void
 language plpgsql security definer set search_path='' as $$begin
- perform net.http_post(url:='https://pcaqxezdfxofysghssyo.supabase.co/functions/v1/notification-email-worker',
- headers:=jsonb_build_object('Content-Type','application/json','Authorization','Bearer '||(select decrypted_secret from vault.decrypted_secrets where name='marketplace_notification_worker')),
- body:='{}'::jsonb,timeout_milliseconds:=5000);
+ raise exception 'Notification worker is not configured for this environment.' using errcode='42501';
 end;$$;
-select cron.schedule('marketplace-notification-email','* * * * *','select marketplace_private.invoke_email_worker();');
+-- No cron job is installed by a canonical schema replay. Deployment configures
+-- a project-local scheduler only after its worker endpoint is available.
 
 revoke all on function marketplace_private.notification_email_enabled(text),marketplace_private.notify_notification_delivery(),marketplace_private.retire_notification_delivery(),
  marketplace_private.project_agreement_notification(),marketplace_private.project_message_notification(),marketplace_private.require_notification_worker(),
