@@ -21,7 +21,12 @@ export function PublishedListingDetails({ listing }: { listing: Listing }) {
     <div className={styles.details}>
       <section aria-label="Seller">
         <h4>Seller</h4>
-        <p>{listing.seller.displayName}</p>
+        <p>
+          {listing.seller.displayName}
+          {listing.seller.uwoEmailVerified && (
+            <small aria-label="UWO Email Verified"> · UWO verified</small>
+          )}
+        </p>
       </section>
       <section aria-label="Item details">
         <h4>Item details</h4>

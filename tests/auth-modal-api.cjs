@@ -184,7 +184,7 @@ async function main() {
   for (const password of ['Ab1!', 'password1!', 'Password!!', 'Password12'])
     assert(!validSignupPassword(password))
   for (const body of [
-    { ...input, email: 'test@example.com' },
+    { ...input, email: 'not-an-email' },
     { ...input, password: 'short' },
     { ...input, agreement: false },
   ]) {
@@ -192,6 +192,12 @@ async function main() {
     assert.equal((await request('signup-code', body)).statusCode, 400)
     assert.equal(calls.length, before, 'Invalid signup must not reach Supabase')
   }
+  assert.equal(
+    (await request('signup-code', { ...input, email: 'member@example.com' }))
+      .statusCode,
+    200,
+    'A confirmed ordinary email may start signup; UWO identity is separate'
+  )
   const beforeWrongOrigin = calls.length
   assert.equal(
     (

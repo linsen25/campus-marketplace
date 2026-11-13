@@ -21,7 +21,8 @@ export async function isPendingSignupResumable(req: NextApiRequest) {
   if (!ticket || !/^[0-9a-f]{64}$/.test(ticket)) return false
   try {
     const ref = requireMessagesEnvironment()
-    if (ref !== 'pcaqxezdfxofysghssyo') return false
+    if (!['pcaqxezdfxofysghssyo', 'giqdwyiupslpfhstbtqf'].includes(ref))
+      return false
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     const claims = JSON.parse(
       Buffer.from(key.split('.')[1], 'base64url').toString()

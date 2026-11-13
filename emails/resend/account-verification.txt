@@ -1,0 +1,11 @@
+Usual & Unusual
+
+Verify your email
+
+Enter this verification code in Usual & Unusual to finish creating your account:
+
+{{{OTP_CODE}}}
+
+This code expires in {{{EXPIRY_TEXT}}}.
+
+For your security, do not share this code with anyone. Usual & Unusual will never ask for it outside the verification screen.

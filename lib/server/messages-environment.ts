@@ -1,20 +1,14 @@
 import { ListingApiError } from '@/lib/listing-validation'
+import {
+  configuredMarketplaceTestRef,
+  marketplaceTestProjects,
+} from '@/lib/marketplace-test-environment'
 
-const messagesProjects: Record<string, string> = {
-  staging: 'pcaqxezdfxofysghssyo',
-  production: 'yzvchumzyonegujucyqs',
-}
 export function requireMessagesEnvironment() {
   const designation = process.env.APP_ENV || ''
-  const ref = Object.prototype.hasOwnProperty.call(
-    messagesProjects,
-    designation
-  )
-    ? messagesProjects[designation]
-    : undefined
+  const ref = configuredMarketplaceTestRef(designation)
   let valid = false
   try {
-    const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '')
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
     let publicKey = /^sb_publishable_[A-Za-z0-9_-]+$/.test(key)
     if (!publicKey && key.split('.').length === 3) {
@@ -25,12 +19,7 @@ export function requireMessagesEnvironment() {
     }
     valid = Boolean(
       ref &&
-        url.origin === `https://${ref}.supabase.co` &&
-        url.pathname === '/' &&
-        !url.username &&
-        !url.password &&
-        !url.search &&
-        !url.hash &&
+        Object.values(marketplaceTestProjects).includes(ref) &&
         publicKey
     )
   } catch {

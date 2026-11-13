@@ -55,7 +55,7 @@ async function main() {
   })
   const targets = {
     staging: 'pcaqxezdfxofysghssyo',
-    production: 'yzvchumzyonegujucyqs',
+    b32: 'giqdwyiupslpfhstbtqf',
   }
   const jwt = (claims) =>
     [
@@ -64,21 +64,22 @@ async function main() {
       'not-a-secret',
     ].join('.')
   for (const [designation, url, key] of [
-    ['', `https://${targets.production}.supabase.co`, 'sb_publishable_unit'],
-    ['unknown', `https://${targets.production}.supabase.co`, 'sb_publishable_unit'],
-    ['toString', `https://${targets.production}.supabase.co`, 'sb_publishable_unit'],
-    ['staging', `https://${targets.production}.supabase.co`, 'sb_publishable_unit'],
+    ['', `https://${targets.staging}.supabase.co`, 'sb_publishable_unit'],
+    ['unknown', `https://${targets.staging}.supabase.co`, 'sb_publishable_unit'],
+    ['toString', `https://${targets.staging}.supabase.co`, 'sb_publishable_unit'],
+    ['staging', `https://${targets.b32}.supabase.co`, 'sb_publishable_unit'],
+    ['b32', `https://${targets.staging}.supabase.co`, 'sb_publishable_unit'],
     ['production', `https://${targets.staging}.supabase.co`, 'sb_publishable_unit'],
-    ['production', 'https://example.com', 'sb_publishable_unit'],
-    ['production', '', 'sb_publishable_unit'],
-    ['production', 'invalid', 'sb_publishable_unit'],
-    ['production', `http://${targets.production}.supabase.co`, 'sb_publishable_unit'],
-    ['production', `https://${targets.production}.supabase.co/path`, 'sb_publishable_unit'],
-    ['production', `https://${targets.production}.supabase.co`, ''],
-    ['production', `https://${targets.production}.supabase.co`, 'sb_secret_unit'],
-    ['production', `https://${targets.production}.supabase.co`, jwt({ role: 'service_role', ref: targets.production })],
-    ['production', `https://${targets.production}.supabase.co`, jwt({ role: 'anon', ref: targets.staging })],
-    ['production', `https://${targets.production}.supabase.co`, 'bad.invalid.jwt'],
+    ['b32', 'https://example.com', 'sb_publishable_unit'],
+    ['b32', '', 'sb_publishable_unit'],
+    ['b32', 'invalid', 'sb_publishable_unit'],
+    ['b32', `http://${targets.b32}.supabase.co`, 'sb_publishable_unit'],
+    ['b32', `https://${targets.b32}.supabase.co/path`, 'sb_publishable_unit'],
+    ['b32', `https://${targets.b32}.supabase.co`, ''],
+    ['b32', `https://${targets.b32}.supabase.co`, 'sb_secret_unit'],
+    ['b32', `https://${targets.b32}.supabase.co`, jwt({ role: 'service_role', ref: targets.b32 })],
+    ['b32', `https://${targets.b32}.supabase.co`, jwt({ role: 'anon', ref: targets.staging })],
+    ['b32', `https://${targets.b32}.supabase.co`, 'bad.invalid.jwt'],
   ]) {
     process.env.APP_ENV = designation
     process.env.NEXT_PUBLIC_SUPABASE_URL = url
@@ -214,7 +215,7 @@ async function main() {
     fs.rmdirSync(directory)
   }
   console.log(
-    'PASS: explicit staging/production accepted, unknown/mismatched/secret configuration blocked before network, UUIDs, unauthenticated routes, CSRF, methods, private no-store'
+    'PASS: explicit staging/B32 accepted, unknown/mismatched/secret configuration blocked before network, UUIDs, unauthenticated routes, CSRF, methods, private no-store'
   )
 }
 main().catch((error) => {

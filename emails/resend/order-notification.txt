@@ -1,0 +1,14 @@
+Usual & Unusual
+
+{{{EVENT_TITLE}}}
+
+{{{EVENT_BODY}}}
+
+Order: {{{ORDER_REFERENCE}}}
+Item: {{{ITEM_TITLE}}}
+Status: {{{ORDER_STATUS}}}
+Amount: {{{CURRENCY}}} {{{AMOUNT}}}
+
+Open order: {{{ORDER_URL}}}
+
+Payment details are available only in your signed-in order view.

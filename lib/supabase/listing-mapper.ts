@@ -24,7 +24,11 @@ export type ListingRow = {
   updated_at: string
   published_at: string | null
   expected_image_count: number
-  profiles: { id: string; display_name: string }
+  profiles: {
+    id: string
+    display_name: string
+    uwo_email_verified?: boolean
+  }
   listing_images: Array<{
     id?: string
     path: string
@@ -65,7 +69,13 @@ export function mapListing(
       .filter((image) => image.ready)
       .sort((a, b) => a.slot - b.slot)
       .map((image) => listingImageUrl(image, publicImageUrl)),
-    seller: { id: row.profiles.id, displayName: row.profiles.display_name },
+    seller: {
+      id: row.profiles.id,
+      displayName: row.profiles.display_name,
+      ...(row.profiles.uwo_email_verified === true
+        ? { uwoEmailVerified: true }
+        : {}),
+    },
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     publishedAt: row.published_at,

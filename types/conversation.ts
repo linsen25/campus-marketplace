@@ -27,7 +27,12 @@ export type ChatListing = {
 export type Conversation = {
   id: string
   role: 'buying' | 'selling'
-  person: { id: string; name: string; avatar?: string }
+  person: {
+    id: string
+    name: string
+    avatar?: string
+    uwoEmailVerified?: boolean
+  }
   listing: ChatListing
   lastMessage: string
   createdAt: string

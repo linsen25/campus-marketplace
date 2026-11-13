@@ -1,0 +1,18 @@
+{
+  "brand": "Usual & Unusual",
+  "configuration": {
+    "from": "Usual & Unusual <onboarding@resend.dev>",
+    "fromEnv": "EMAIL_FROM",
+    "productionFromEnv": "RESEND_PRODUCTION_FROM_EMAIL",
+    "replyToEnv": "RESEND_REPLY_TO",
+    "enabledEnv": "RESEND_EMAIL_ENABLED",
+    "testRecipientEnv": "RESEND_TEST_RECIPIENT",
+    "senderRule": "Use onboarding@resend.dev only for Resend-authorized test recipients. Set EMAIL_FROM to the verified production sender only after its domain is verified; never invent a domain."
+  },
+  "templates": [
+    { "name": "UU Account verification", "alias": "uu-account-verification-v1", "subject": "Your Usual & Unusual verification code", "html": "account-verification.html", "text": "account-verification.txt", "variables": ["OTP_CODE:string", "EXPIRY_TEXT:string"] },
+    { "name": "UU Password reset", "alias": "uu-password-reset-v1", "subject": "Reset your Usual & Unusual password", "html": "password-reset.html", "text": "password-reset.txt", "variables": ["RESET_URL:string", "EXPIRY_TEXT:string"] },
+    { "name": "UU UWO email verification", "alias": "uu-uwo-email-verification-v1", "subject": "Your Usual & Unusual UWO verification code", "html": "uwo-email-verification.html", "text": "uwo-email-verification.txt", "variables": ["OTP_CODE:string", "EXPIRY_TEXT:string"] },
+    { "name": "UU Order notification", "alias": "uu-order-notification-v1", "subject": "{{{EVENT_TITLE}}} — Usual & Unusual", "html": "order-notification.html", "text": "order-notification.txt", "variables": ["EVENT_TITLE:string", "EVENT_BODY:string", "ORDER_REFERENCE:string", "ITEM_TITLE:string", "ORDER_STATUS:string", "CURRENCY:string", "AMOUNT:string", "ORDER_URL:string"] }
+  ]
+}

@@ -1,6 +1,11 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- Token, recovery and teardown callbacks share one scoped lifecycle. */
 import { createClient } from '@supabase/supabase-js'
 
+import {
+  configuredMarketplaceTestRef,
+  marketplaceTestProjects,
+} from '@/lib/marketplace-test-environment'
+
 export type MessagesSignal = {
   conversationId: string
   role: 'buying' | 'selling'
@@ -50,17 +55,13 @@ export function connectMessagesRealtime(
 ) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  const projects: Record<string, string> = {
-    staging: 'pcaqxezdfxofysghssyo',
-    production: 'yzvchumzyonegujucyqs',
-  }
   const designation = process.env.NEXT_PUBLIC_MESSAGES_ENV || ''
-  const ref = Object.prototype.hasOwnProperty.call(projects, designation)
-    ? projects[designation]
-    : undefined
+  const ref = configuredMarketplaceTestRef(designation, url)
+  // The exact environment identity is required before inspecting credentials
+  // or opening a browser-side Realtime connection.
+  if (!ref) return () => {}
   let supported = false
   try {
-    const target = new URL(url)
     let publicKey = /^sb_publishable_[A-Za-z0-9_-]+$/.test(key)
     if (!publicKey) {
       const claims = JSON.parse(
@@ -70,15 +71,9 @@ export function connectMessagesRealtime(
     }
     supported =
       typeof window !== 'undefined' &&
-      Boolean(ref) &&
+      Object.values(marketplaceTestProjects).includes(ref) &&
       uuid.test(userId) &&
-      publicKey &&
-      target.origin === `https://${ref}.supabase.co` &&
-      target.pathname === '/' &&
-      !target.search &&
-      !target.hash &&
-      !target.username &&
-      !target.password
+      publicKey
   } catch {
     supported = false
   }

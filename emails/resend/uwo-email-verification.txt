@@ -1,0 +1,11 @@
+Usual & Unusual
+
+Verify your UWO email
+
+This is separate from your Usual & Unusual account email. Enter this code in Settings to verify your UWO identity:
+
+{{{OTP_CODE}}}
+
+This code expires in {{{EXPIRY_TEXT}}}.
+
+Do not share this code. It only verifies control of the UWO email address and does not change your account email.

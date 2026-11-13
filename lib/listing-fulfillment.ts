@@ -1,8 +1,6 @@
-/** Additive preference is available only where its staging schema is deployed. */
+import { configuredMarketplaceTestRef } from '@/lib/marketplace-test-environment'
+
+/** Additive preference is enabled only for an exact approved test project. */
 export function listingFulfillmentEnabled() {
-  return (
-    process.env.NEXT_PUBLIC_MESSAGES_ENV === 'staging' &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL ===
-      'https://pcaqxezdfxofysghssyo.supabase.co'
-  )
+  return configuredMarketplaceTestRef(process.env.NEXT_PUBLIC_MESSAGES_ENV) !== null
 }

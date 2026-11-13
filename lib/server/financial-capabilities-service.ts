@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js'
 
 import { ListingApiError } from '@/lib/listing-validation'
+import { marketplaceTestUrl } from '@/lib/marketplace-test-environment'
 import { requireMarketplaceUser } from '@/lib/server/marketplace-auth'
 import {
   requireMessagesEnvironment,
@@ -16,14 +17,12 @@ import type { MarketplaceContext } from '@/lib/supabase/server'
 import type { FinancialCapabilities } from '@/types/financial-capabilities'
 
 export function requireFinancialEnvironment() {
-  if (
-    process.env.APP_ENV !== 'staging' ||
-    requireMessagesEnvironment() !== 'pcaqxezdfxofysghssyo'
-  )
+  if (!['staging', 'b32'].includes(process.env.APP_ENV || ''))
     throw new ListingApiError(
       'Financial capabilities are not enabled in this environment.',
       503
     )
+  requireMessagesEnvironment()
 }
 
 // Explicit allowlist: never forward an RPC object or opaque provider reference.
@@ -87,8 +86,7 @@ export function createTrustedFinancialClient() {
     const claims = JSON.parse(
       Buffer.from(key.split('.')[1], 'base64url').toString()
     )
-    valid =
-      claims.role === 'service_role' && claims.ref === 'pcaqxezdfxofysghssyo'
+    valid = claims.role === 'service_role' && claims.ref === requireMessagesEnvironment()
   } catch {
     valid = false
   }
@@ -97,7 +95,7 @@ export function createTrustedFinancialClient() {
       'Trusted financial capability service is unavailable.',
       503
     )
-  return createClient('https://pcaqxezdfxofysghssyo.supabase.co', key, {
+  return createClient(marketplaceTestUrl(requireMessagesEnvironment()), key, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

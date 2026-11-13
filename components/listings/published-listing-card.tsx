@@ -36,7 +36,12 @@ export function ListingDetails({ listing }: { listing: Listing }) {
         </p>
       )}
       <h4>Seller</h4>
-      <p>{listing.seller.displayName || 'You'}</p>
+      <p>
+        {listing.seller.displayName || 'You'}
+        {listing.seller.uwoEmailVerified && (
+          <small aria-label="UWO Email Verified"> · UWO verified</small>
+        )}
+      </p>
       <dl className={detailStyles.metadata}>
         <dt>Condition</dt>
         <dd>

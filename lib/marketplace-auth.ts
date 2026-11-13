@@ -2,6 +2,12 @@ export function isWesternEmail(email: unknown): email is string {
   return typeof email === 'string' && /^[^\s@]+@uwo\.ca$/i.test(email.trim())
 }
 
+export function isValidEmail(email: unknown): email is string {
+  return (
+    typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  )
+}
+
 export function safeMarketplaceNext(value: unknown): string {
   return typeof value === 'string' &&
     /^\/(listings(\/[a-zA-Z0-9-]+(\/edit)?)?|profile\/listings|home)$/.test(

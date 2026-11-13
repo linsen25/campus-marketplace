@@ -1,4 +1,5 @@
 import { isRequestScheduleAvailable } from './order-schedule-preview'
+import { configuredMarketplaceTestRef } from './marketplace-test-environment'
 import type { OrderDetailVisual } from './order-visual-preview'
 
 /** In-memory UX simulation only. Never an API/database contract or authorization. */
@@ -90,10 +91,7 @@ export function isStagingOrderPreview(
   environment: string | undefined,
   url: string | undefined
 ) {
-  return (
-    environment === 'staging' &&
-    url === 'https://pcaqxezdfxofysghssyo.supabase.co'
-  )
+  return configuredMarketplaceTestRef(environment, url) !== null
 }
 export function parsePreviewCurrency(value: string, allowZero = false) {
   if (!/^\d+(?:\.\d{1,2})?$/.test(value.trim())) return null

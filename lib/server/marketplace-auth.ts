@@ -1,7 +1,7 @@
 import type { NextApiRequest } from 'next'
 
 import { ListingApiError } from '@/lib/listing-validation'
-import { isWesternEmail } from '@/lib/marketplace-auth'
+import { isValidEmail } from '@/lib/marketplace-auth'
 import type {
   MarketplaceClient,
   MarketplaceContext,
@@ -15,12 +15,9 @@ export async function requireMarketplaceUser(client: MarketplaceClient) {
     error,
   } = await client.auth.getUser()
   if (error || !user)
-    throw new ListingApiError(
-      'Log in with your Western email to continue.',
-      401
-    )
-  if (!isWesternEmail(user.email) || !user.email_confirmed_at) {
-    throw new ListingApiError('A verified @uwo.ca email is required.', 403)
+    throw new ListingApiError('Log in with your UU account to continue.', 401)
+  if (!isValidEmail(user.email) || !user.email_confirmed_at) {
+    throw new ListingApiError('A verified email is required.', 403)
   }
   return user
 }

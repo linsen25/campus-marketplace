@@ -26,7 +26,7 @@ import type {
 } from '@/types/listing'
 
 const selection: string =
-  '*,profiles!listings_seller_id_fkey(id,display_name),listing_images(id,path,slot,ready,storage_bucket)'
+  '*,profiles!listings_seller_id_fkey(id,display_name,uwo_email_verified),listing_images(id,path,slot,ready,storage_bucket)'
 export const listingBucket = 'listing-images'
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 

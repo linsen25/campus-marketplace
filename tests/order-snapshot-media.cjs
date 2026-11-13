@@ -21,8 +21,7 @@ assert(sql.includes('Tombstones'))
 assert(sql.includes('num_nonnulls(mime_type,size_bytes,sha256)=3'))
 const source = fs.readFileSync('lib/server/order-snapshot-media.ts', 'utf8')
 assert(source.includes('upsert: false'))
-assert(source.includes("process.env.APP_ENV !== 'staging'"))
-assert(source.includes("'https://pcaqxezdfxofysghssyo.supabase.co'"))
+assert(source.includes('configuredMarketplaceTestRef'))
 assert(!source.includes('SUPABASE_SERVICE_ROLE_KEY'))
 const code = ts.transpileModule(source, {
   compilerOptions: {
@@ -130,6 +129,9 @@ function harness() {
       listingImageRules: { maxBytes: 3145728 },
     },
     '@/lib/listing-validation': { ListingApiError: ApiError },
+    '@/lib/marketplace-test-environment': {
+      configuredMarketplaceTestRef: () => 'pcaqxezdfxofysghssyo',
+    },
     '@/lib/server/chat-image-storage': { createChatStorage: () => backend },
     '@/lib/server/marketplace-auth': {
       requireMarketplaceUser: async () => ({ id: 'actor' }),

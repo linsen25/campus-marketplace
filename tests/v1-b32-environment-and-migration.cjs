@@ -1,0 +1,43 @@
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+
+const environment = fs.readFileSync('lib/marketplace-test-environment.ts', 'utf8')
+const launcher = fs.readFileSync('scripts/dev-v1-b32.cjs', 'utf8')
+const migration = fs.readFileSync(
+  'supabase/migrations/20261112070000_b32_public_uwo_badge_verified_message_read.sql',
+  'utf8'
+)
+const messages = fs.readFileSync('lib/server/messages-environment.ts', 'utf8')
+const stripe = fs.readFileSync('lib/server/stripe-environment.ts', 'utf8')
+
+assert.match(environment, /b32:\s*'giqdwyiupslpfhstbtqf'/)
+assert.match(environment, /return `https:\/\/\$\{ref\}\.supabase\.co`/)
+assert.match(environment, /target\.origin === marketplaceTestUrl\(ref\)/)
+assert.match(messages, /configuredMarketplaceTestRef/)
+assert.match(stripe, /\['staging', 'b32'\]/)
+assert.match(launcher, /'dev', '-p', '3000'/)
+assert.match(launcher, /APP_ENV: 'b32'/)
+assert.match(launcher, /NEXT_PUBLIC_MESSAGES_ENV: 'b32'/)
+assert.match(launcher, /STRIPE_PROVIDER_ENABLED: 'false'/)
+assert.match(launcher, /STRIPE_ORDER_TRANSFERS_ENABLED: 'false'/)
+assert.match(launcher, /sk_test_/)
+assert.match(launcher, /pk_test_/)
+assert.match(launcher, /whsec_/)
+assert.doesNotMatch(launcher, /sk_live_|pk_live_/)
+
+assert.match(migration, /B32-only follow-up/i)
+assert.match(migration, /add column uwo_email_verified boolean not null default false/i)
+assert.match(migration, /uwo_email_verifications v/i)
+assert.match(migration, /sync_public_uwo_badge/i)
+assert.match(migration, /guard_public_uwo_badge/i)
+assert.match(migration, /marketplace_uwo_identity_badge\(p_user_id uuid\)/i)
+assert.match(migration, /select p\.uwo_email_verified/i)
+assert.match(migration, /definition like '%marketplace_private\.is_uwo_email_verified%'/i)
+assert.match(migration, /messages_participant_read/i)
+assert.match(migration, /marketplace_private\.is_verified_user\(\)/)
+assert.match(migration, /buyer_id = \(select auth\.uid\(\)\)/i)
+assert.match(migration, /seller_id = \(select auth\.uid\(\)\)/i)
+assert.match(migration, /metadata changed unexpectedly/i)
+assert.doesNotMatch(migration, /grant execute on function public\.marketplace_/i)
+
+console.log('PASS B32 exact-environment gate and badge/message migration static guards')

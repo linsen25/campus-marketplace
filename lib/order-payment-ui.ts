@@ -1,4 +1,5 @@
 import type { FormalOrder } from '@/types/order'
+import { configuredMarketplaceTestRef } from '@/lib/marketplace-test-environment'
 
 export function orderPaymentRole(order: FormalOrder, userId: string) {
   if (userId === order.buyerId) return 'buyer'
@@ -8,9 +9,7 @@ export function orderPaymentRole(order: FormalOrder, userId: string) {
 
 export function stagingPaymentControl(order: FormalOrder, userId: string) {
   return (
-    process.env.NEXT_PUBLIC_MESSAGES_ENV === 'staging' &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL ===
-      'https://pcaqxezdfxofysghssyo.supabase.co' &&
+    configuredMarketplaceTestRef(process.env.NEXT_PUBLIC_MESSAGES_ENV) !== null &&
     orderPaymentRole(order, userId) === 'buyer' &&
     order.paymentStatus === 'pending' &&
     order.lifecycle === 'open' &&

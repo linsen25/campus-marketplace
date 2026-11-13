@@ -42,8 +42,8 @@ export function stripeConfiguration() {
   }
   if (
     !stripeRequested() ||
-    process.env.APP_ENV !== 'staging' ||
-    requireMessagesEnvironment() !== 'pcaqxezdfxofysghssyo' ||
+    !['staging', 'b32'].includes(process.env.APP_ENV || '') ||
+    !requireMessagesEnvironment() ||
     !/^sk_test_[A-Za-z0-9]+$/.test(secretKey) ||
     !/^pk_test_[A-Za-z0-9]+$/.test(publishableKey) ||
     !/^acct_[A-Za-z0-9]+$/.test(platform) ||

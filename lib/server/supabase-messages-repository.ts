@@ -169,7 +169,7 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
       counterpart
         ? client
             .from('profiles')
-            .select('id,display_name')
+            .select('id,display_name,uwo_email_verified')
             .eq('id', counterpart)
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
@@ -199,6 +199,9 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
       person: {
         id: counterpart || 'former-member',
         name: profile.data?.display_name || 'Former member',
+        ...(profile.data?.uwo_email_verified === true
+          ? { uwoEmailVerified: true }
+          : {}),
       },
       listing: {
         provenance: conversationProvenance(
@@ -239,7 +242,7 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
       const withdrawal = {
         withdrawnAt: item.withdrawn_at || null,
         canWithdraw:
-          process.env.APP_ENV === 'staging' &&
+          ['staging', 'b32'].includes(process.env.APP_ENV || '') &&
           !item.withdrawn_at &&
           item.origin !== 'marketplace_auto_reply' &&
           item.sender_id === user.id &&

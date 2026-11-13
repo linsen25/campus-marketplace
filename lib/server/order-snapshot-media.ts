@@ -3,6 +3,7 @@ import { createHash } from 'crypto'
 import { hasImageSignature, listingImageRules } from '@/lib/listing-images'
 import { listingImageBucket } from '@/lib/listing-media'
 import { ListingApiError } from '@/lib/listing-validation'
+import { configuredMarketplaceTestRef } from '@/lib/marketplace-test-environment'
 import { createChatStorage } from '@/lib/server/chat-image-storage'
 import { requireMarketplaceUser } from '@/lib/server/marketplace-auth'
 import { messageUuid } from '@/lib/server/messages-environment'
@@ -22,9 +23,7 @@ type Batch = { id: string; state: string; assets: Asset[] }
 function storage() {
   if (
     typeof window !== 'undefined' ||
-    process.env.APP_ENV !== 'staging' ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL !==
-      'https://pcaqxezdfxofysghssyo.supabase.co'
+    !configuredMarketplaceTestRef()
   )
     throw new ListingApiError('Snapshot media environment unavailable.', 503)
   return createChatStorage()
