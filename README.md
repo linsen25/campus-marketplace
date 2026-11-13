@@ -9,11 +9,13 @@ valid fallbacks for the unified app.
 
 1. Use Node 24 and install locked dependencies with `npm ci`.
 2. Copy `.env.uu.example` to ignored `.env.uu.local`.
-3. Populate only the canonical project’s public key and server-only service
-   role key from an approved secret manager. Do not copy old credentials.
+3. Populate `NEXT_PUBLIC_SUPABASE_ANON_KEY` with the canonical project's
+   `sb_publishable_...` key and `SUPABASE_SECRET_KEY` with its server-only
+   `sb_secret_...` key from an approved secret manager. Do not copy old
+   credentials or use a legacy JWT-based service-role key.
 4. Run `npm run dev:v1:uu` and open `http://localhost:3000`.
 
-The launcher verifies the exact project URL and JWT claims, clears inherited
+The launcher verifies the exact project URL and opaque key formats, clears inherited
 payment variables, rejects live Stripe keys, and forces Payment, Refund,
 Transfer, Payout, Places, and worker execution flags off.
 
@@ -21,7 +23,7 @@ Transfer, Payout, Places, and worker execution flags off.
 
 - Supabase Auth owns account confirmation and OTP validity. The Confirm signup
   template must render `{{ .Token }}`, not a confirmation URL.
-- The browser receives only the Supabase publishable/anon key. Service-role,
+- The browser receives only the Supabase publishable key. The Supabase secret,
   Stripe, Resend, webhook, and worker secrets are server-only.
 - Stripe stays Test-mode-only and disabled by default. The UI never invents a
   paid order; webhook and database state remain authoritative.

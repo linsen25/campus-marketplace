@@ -3,22 +3,19 @@ import { createClient } from '@supabase/supabase-js'
 
 import { ListingApiError } from '@/lib/listing-validation'
 import { requireMessagesEnvironment } from '@/lib/server/messages-environment'
+import { requireUuServerSecret } from '@/lib/server/supabase-secret'
 
 export function requireImageEnvironment() {
   const ref = requireMessagesEnvironment()
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-  let valid = false
+  let secret: ReturnType<typeof requireUuServerSecret>
   try {
-    const claims = JSON.parse(
-      Buffer.from(key.split('.')[1], 'base64url').toString()
-    )
-    valid = claims.role === 'service_role' && claims.ref === ref
+    secret = requireUuServerSecret()
   } catch {
-    valid = false
-  }
-  if (!valid)
     throw new ListingApiError('Private image storage is not configured.', 503)
-  return key
+  }
+  if (secret.ref !== ref)
+    throw new ListingApiError('Private image storage is not configured.', 503)
+  return secret.key
 }
 export function imageSendingEnabled() {
   try {

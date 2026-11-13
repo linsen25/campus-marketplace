@@ -6,6 +6,10 @@ uses `verifyOtp` with `type: 'email'`; a confirmed session is then required
 before marketplace access. Resend invalidates older provider OTPs according to
 Supabase Auth rules.
 
+The browser is configured only with Supabase's opaque `sb_publishable` key.
+Server-side recovery and UWO verification require the matching opaque
+`sb_secret` key; neither key is parsed as a JWT by application code.
+
 Any confirmed email can use the marketplace. UWO identity is separate: a
 private server-managed verification record derives only an approved public
 boolean badge. The UWO address itself is not included in public projections.

@@ -8,6 +8,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { pendingSignupUnavailableMessage } from '@/lib/auth-pending'
 import { ListingApiError } from '@/lib/listing-validation'
 import { requireMessagesEnvironment } from '@/lib/server/messages-environment'
+import { requireUuServerSecret } from '@/lib/server/supabase-secret'
 
 const cookieName = 'marketplace-pending-signup'
 export const newSignupTicket = () => randomBytes(32).toString('hex')
@@ -20,14 +21,9 @@ export async function isPendingSignupResumable(req: NextApiRequest) {
   )?.value
   if (!ticket || !/^[0-9a-f]{64}$/.test(ticket)) return false
   try {
-    const ref = requireMessagesEnvironment()
-    if (ref !== 'uqhyjpjiznpgomuizfqe') return false
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-    const claims = JSON.parse(
-      Buffer.from(key.split('.')[1], 'base64url').toString()
-    )
-    if (claims.role !== 'service_role' || claims.ref !== ref) return false
-    const admin = createClient(`https://${ref}.supabase.co`, key, {
+    if (requireMessagesEnvironment() !== 'uqhyjpjiznpgomuizfqe') return false
+    const secret = requireUuServerSecret()
+    const admin = createClient(secret.url, secret.key, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -77,19 +73,15 @@ export async function correctPendingUsername(
   if (!ticket || !/^[0-9a-f]{64}$/.test(ticket))
     throw new ListingApiError(pendingSignupUnavailableMessage, 403)
   const ref = requireMessagesEnvironment()
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-  let valid = false
+  let secret: ReturnType<typeof requireUuServerSecret>
   try {
-    const claims = JSON.parse(
-      Buffer.from(key.split('.')[1], 'base64url').toString()
-    )
-    valid = claims.role === 'service_role' && claims.ref === ref
+    secret = requireUuServerSecret()
   } catch {
-    valid = false
-  }
-  if (!valid)
     throw new ListingApiError('Signup editing is temporarily unavailable.', 503)
-  const admin = createClient(`https://${ref}.supabase.co`, key, {
+  }
+  if (secret.ref !== ref)
+    throw new ListingApiError('Signup editing is temporarily unavailable.', 503)
+  const admin = createClient(secret.url, secret.key, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

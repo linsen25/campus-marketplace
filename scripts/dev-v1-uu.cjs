@@ -30,18 +30,15 @@ const jwtClaims = (value) => {
   }
 }
 const anon = values.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-const service = values.SUPABASE_SERVICE_ROLE_KEY || ''
+const secret = values.SUPABASE_SECRET_KEY || ''
 const anonClaims = jwtClaims(anon)
-const serviceClaims = jwtClaims(service)
 if (
   values.APP_ENV !== 'uu' ||
   values.NEXT_PUBLIC_SUPABASE_URL !== `https://${ref}.supabase.co` ||
   !anon ||
   (!/^sb_publishable_[A-Za-z0-9_-]+$/.test(anon) &&
     (!anonClaims || anonClaims.role !== 'anon' || anonClaims.ref !== ref)) ||
-  !serviceClaims ||
-  serviceClaims.role !== 'service_role' ||
-  serviceClaims.ref !== ref ||
+  (secret && !/^sb_secret_[A-Za-z0-9_-]+$/.test(secret)) ||
   Object.values(values).some((value) => /(?:sk|pk)_live_/i.test(value))
 )
   throw new Error('UU Supabase credentials do not match the canonical project.')
@@ -61,6 +58,7 @@ for (const name of [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   'SUPABASE_SERVICE_ROLE_KEY',
+  'SUPABASE_SECRET_KEY',
   'STRIPE_SECRET_KEY',
   'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
   'STRIPE_PLATFORM_ACCOUNT_ID',

@@ -263,9 +263,9 @@ async function main() {
     (await request('correct-signup-username', input)).statusCode,
     403
   )
-  process.env.APP_ENV = 'staging'
+  process.env.APP_ENV = 'uu'
   process.env.NEXT_PUBLIC_SUPABASE_URL =
-    'https://pcaqxezdfxofysghssyo.supabase.co'
+    'https://uqhyjpjiznpgomuizfqe.supabase.co'
   const testKey = (role, ref) =>
     Buffer.from('{}').toString('base64url') +
     '.' +
@@ -273,27 +273,21 @@ async function main() {
     '.test'
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = testKey(
     'anon',
-    'pcaqxezdfxofysghssyo'
+    'uqhyjpjiznpgomuizfqe'
   )
-  process.env.SUPABASE_SERVICE_ROLE_KEY = ''
+  process.env.SUPABASE_SECRET_KEY = ''
   assert.equal(
     (await request('correct-signup-username', input, correctionCookie))
       .statusCode,
     503
   )
-  process.env.SUPABASE_SERVICE_ROLE_KEY = testKey(
-    'service_role',
-    'yzvchumzyonegujucyqs'
-  )
+  process.env.SUPABASE_SECRET_KEY = 'invalid-secret-key'
   assert.equal(
     (await request('correct-signup-username', input, correctionCookie))
       .statusCode,
     503
   )
-  process.env.SUPABASE_SERVICE_ROLE_KEY = testKey(
-    'service_role',
-    'pcaqxezdfxofysghssyo'
-  )
+  process.env.SUPABASE_SECRET_KEY = 'sb_secret_unit'
   const beforeProbe = calls.length
   const missingProbe = await request('pending-signup-state')
   assert.deepEqual(missingProbe.body, { resumable: false })
@@ -335,10 +329,10 @@ async function main() {
     403
   )
   assert.equal(calls.length, beforeOrigin)
-  const stagingUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const canonicalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   process.env.APP_ENV = 'production'
   process.env.NEXT_PUBLIC_SUPABASE_URL =
-    'https://yzvchumzyonegujucyqs.supabase.co'
+    'https://example.invalid'
   const beforeProductionGuard = calls.length
   assert.deepEqual(
     (await request('pending-signup-state', {}, correctionCookie)).body,
@@ -347,10 +341,10 @@ async function main() {
   assert.equal(
     calls.length,
     beforeProductionGuard,
-    'Staging-first probe must not contact production'
+    'Canonical probe must not contact a mismatched environment'
   )
-  process.env.APP_ENV = 'staging'
-  process.env.NEXT_PUBLIC_SUPABASE_URL = stagingUrl
+  process.env.APP_ENV = 'uu'
+  process.env.NEXT_PUBLIC_SUPABASE_URL = canonicalUrl
   assert.equal(
     (
       await request(
@@ -425,7 +419,7 @@ async function main() {
   )
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://127.0.0.1:54321'
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'public-test-key'
-  process.env.SUPABASE_SERVICE_ROLE_KEY = ''
+  process.env.SUPABASE_SECRET_KEY = ''
   const beforeVerification = calls.length
   passwordFailure = {
     status: 422,

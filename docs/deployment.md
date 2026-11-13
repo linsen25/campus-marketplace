@@ -5,6 +5,11 @@
 Use `.env.uu.example` only as a variable-name template. The real
 `.env.uu.local` is ignored. `npm run dev:v1:uu` accepts only
 `uqhyjpjiznpgomuizfqe` and refuses live Stripe keys or enabled money flags.
+Use `NEXT_PUBLIC_SUPABASE_ANON_KEY` only for the project's
+`sb_publishable_...` key and `SUPABASE_SECRET_KEY` only for the matching
+server-side `sb_secret_...` key. The secret key is opaque rather than a JWT;
+the server binds it to the exact canonical URL instead of decoding it. Legacy
+API keys are disabled and are not a runtime fallback.
 
 For hosting, configure equivalent secrets in the deployment provider; never in
 Git. Set Auth site and redirect URLs to the exact hosted origin before email.
@@ -26,6 +31,12 @@ SMTP choice, and notification worker secrets remain manual prerequisites.
 Do not configure notification cron, worker URL, Stripe webhooks, or Stripe
 execution flags in initial deployment. Before enabling one, run its focused
 authorization, idempotency, and negative-path regression tests.
+
+Google Places is also intentionally disabled at bootstrap. The Meeting flow
+continues to accept manual location text when `GOOGLE_PLACES_API_KEY` is unset.
+If it is enabled later, add a server-only, Google-restricted key to the ignored
+runtime environment, retain the Canada/Western-London request bounds, and run
+the focused Places regression; never expose that key to the browser.
 
 ## Verification order
 

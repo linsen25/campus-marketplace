@@ -3,6 +3,7 @@ import { createHmac, randomInt } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 
 import { ListingApiError } from '@/lib/listing-validation'
+import { requireUuServerSecret } from '@/lib/server/supabase-secret'
 import {
   createMarketplaceClient,
   type MarketplaceContext,
@@ -11,11 +12,13 @@ import {
 const uwo = /^[^\s@]+@uwo\.ca$/i
 
 function adminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key)
+  let secret: ReturnType<typeof requireUuServerSecret>
+  try {
+    secret = requireUuServerSecret()
+  } catch {
     throw new ListingApiError('UWO verification is not configured.', 503)
-  return createClient(url, key, {
+  }
+  return createClient(secret.url, secret.key, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

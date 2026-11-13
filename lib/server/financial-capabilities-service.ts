@@ -2,8 +2,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 import { ListingApiError } from '@/lib/listing-validation'
-import { marketplaceTestUrl } from '@/lib/marketplace-test-environment'
 import { requireMarketplaceUser } from '@/lib/server/marketplace-auth'
+import { requireUuServerSecret } from '@/lib/server/supabase-secret'
 import {
   requireMessagesEnvironment,
   messageUuid,
@@ -80,24 +80,21 @@ export function createTrustedFinancialClient() {
   requireFinancialEnvironment()
   if (typeof window !== 'undefined')
     throw new Error('Server-only financial capability service.')
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-  let valid = false
+  let secret: ReturnType<typeof requireUuServerSecret>
   try {
-    const claims = JSON.parse(
-      Buffer.from(key.split('.')[1], 'base64url').toString()
-    )
-    valid =
-      claims.role === 'service_role' &&
-      claims.ref === requireMessagesEnvironment()
+    secret = requireUuServerSecret()
   } catch {
-    valid = false
-  }
-  if (!valid)
     throw new ListingApiError(
       'Trusted financial capability service is unavailable.',
       503
     )
-  return createClient(marketplaceTestUrl(requireMessagesEnvironment()), key, {
+  }
+  if (secret.ref !== requireMessagesEnvironment())
+    throw new ListingApiError(
+      'Trusted financial capability service is unavailable.',
+      503
+    )
+  return createClient(secret.url, secret.key, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

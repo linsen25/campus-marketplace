@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const ts = require('typescript')
-const ref = 'pcaqxezdfxofysghssyo'
+const ref = 'uqhyjpjiznpgomuizfqe'
 const user = '11111111-1111-4111-8111-111111111111'
 const other = '22222222-2222-4222-8222-222222222222'
 const empty = {
@@ -58,7 +58,7 @@ function load(file) {
   cache.set(full, m.exports)
   return m.exports
 }
-function config(env = 'staging', target = ref) {
+function config(env = 'uu', target = ref) {
   process.env.APP_ENV = env
   process.env.NEXT_PUBLIC_SUPABASE_URL = `https://${target}.supabase.co`
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY =
@@ -137,12 +137,7 @@ async function invoke(request = {}) {
 ;(async () => {
   config()
   assert.deepEqual((await invoke()).data, empty)
-  process.env.SUPABASE_SERVICE_ROLE_KEY =
-    'e30.' +
-    Buffer.from(JSON.stringify({ role: 'service_role', ref })).toString(
-      'base64url'
-    ) +
-    '.test'
+  process.env.SUPABASE_SECRET_KEY = 'sb_secret_unit'
   for (const request of [
     { query: { userId: other } },
     {
@@ -244,21 +239,11 @@ async function invoke(request = {}) {
     assert.equal(calls.length, 0)
   }
   config()
-  delete process.env.SUPABASE_SERVICE_ROLE_KEY
+  delete process.env.SUPABASE_SECRET_KEY
   await assert.rejects(service.isPayoutReady(user))
-  process.env.SUPABASE_SERVICE_ROLE_KEY =
-    'e30.' +
-    Buffer.from(
-      JSON.stringify({ role: 'service_role', ref: 'yzvchumzyonegujucyqs' })
-    ).toString('base64url') +
-    '.test'
+  process.env.SUPABASE_SECRET_KEY = 'invalid-secret-key'
   await assert.rejects(service.getFinancialCapabilities(user))
-  process.env.SUPABASE_SERVICE_ROLE_KEY =
-    'e30.' +
-    Buffer.from(JSON.stringify({ role: 'service_role', ref })).toString(
-      'base64url'
-    ) +
-    '.test'
+  process.env.SUPABASE_SECRET_KEY = 'sb_secret_unit'
   assert.equal(await service.isPayoutReady(user), false)
   assert.equal(await service.hasUsablePaymentMethod(user), false)
   data = {
