@@ -39,7 +39,9 @@
 }
 
 .loading-spinner-dot::before {
-  @apply content-[""] block w-1/4 h-1/4 bg-brand-nebula rounded-full;
+  @apply content-[""] block w-1/4 h-1/4 rounded-full;
+
+  background: var(--color-primary-purple, #7c3aed);
 
   animation: loading-spinner-dot-before 2s infinite ease-in-out both;
 }

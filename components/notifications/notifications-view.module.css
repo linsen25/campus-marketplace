@@ -166,7 +166,7 @@
   font-weight: 500;
 }
 .statusTabs button[aria-pressed='true'] {
-  background: #7c3aed;
+  background: var(--color-primary-purple, #7c3aed);
   color: #fff;
 }
 .toolbarRight {
@@ -435,7 +435,7 @@
   cursor: pointer;
 }
 .reportActions .openInApp {
-  background: #7c3aed;
+  background: var(--color-primary-purple, #7c3aed);
   color: #fff;
   border-color: transparent;
 }

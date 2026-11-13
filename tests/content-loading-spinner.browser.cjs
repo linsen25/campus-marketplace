@@ -137,7 +137,7 @@ const item = {
           assert.equal(position.width, 40)
           assert.equal(position.height, 40)
           assert.equal(position.border, '3px')
-          assert.equal(position.color, 'rgb(144, 0, 255)')
+          assert.equal(position.color, 'rgb(124, 58, 237)')
           assert(position.centerX < 1 && position.centerY < 1)
           assert.equal(position.text, '')
           assert.equal(

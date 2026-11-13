@@ -195,7 +195,7 @@
   padding: 0 14px;
   border: 1px solid #9460e5;
   border-radius: 10px;
-  background: #7c3aed;
+  background: var(--color-primary-purple, #7c3aed);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -215,7 +215,7 @@
   margin-bottom: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid #ffffff12;
-  --fluid-tabs-active-background: #7c3aed;
+  --fluid-tabs-active-background: var(--color-primary-purple, #7c3aed);
   --fluid-tabs-active-foreground: #fff;
 }
 .statusToolbar [role='tab'] {

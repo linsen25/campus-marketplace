@@ -39,7 +39,7 @@
   --surface: #772d40;
 }
 .setupAction:not(.logoutAction):not(:disabled):not([data-state='error']) {
-  --surface: #7c3aed;
+  --surface: var(--color-primary-purple, #7c3aed);
 }
 .setupSection > [role='alert'] {
   grid-column: 1 / -1;

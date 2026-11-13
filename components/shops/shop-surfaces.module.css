@@ -49,7 +49,7 @@
 }
 .area[data-shop-surface='settings']
   .action:not(:disabled):not([data-state='error']) {
-  --surface: #7c3aed;
+  --surface: var(--color-primary-purple, #7c3aed);
 }
 .viewAction :global(.shining-button) {
   height: 44px;

@@ -339,10 +339,16 @@
   width: 100%;
   height: 40px;
   border-radius: 8px;
-  background: #775497;
+  background: var(--color-primary-purple, #7c3aed);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
+}
+.dialog .primary:not(:disabled):hover {
+  filter: brightness(1.08);
+}
+.dialog .primary:not(:disabled):active {
+  filter: brightness(0.94);
 }
 .secondary {
   align-self: flex-start;

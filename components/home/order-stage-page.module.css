@@ -221,7 +221,7 @@
   padding: 16px 0 0;
 }
 .currentStep > button {
-  --surface: #775497;
+  --surface: var(--color-primary-purple, #7c3aed);
 }
 .detail .details > h4 {
   margin-bottom: 12px;
@@ -297,7 +297,7 @@
 }
 
 .primaryAction {
-  --surface: #775497;
+  --surface: var(--color-primary-purple, #7c3aed);
 }
 
 .navigation button:disabled :global(.shining-button__body) {
@@ -306,7 +306,7 @@
 }
 
 .currentStep section[aria-label='Payment'] button {
-  --shine-color: #775497;
+  --shine-color: var(--color-primary-purple, #7c3aed);
   --press-surface: #211929;
   --press-depth: #15101b;
 }
@@ -317,7 +317,7 @@
 .currentStep
   form[aria-label='Courier shipment']
   button:not([data-state='error']) {
-  --surface: #775497;
+  --surface: var(--color-primary-purple, #7c3aed);
 }
 .detail section[aria-label='Cancel Order'] {
   display: grid;
@@ -337,13 +337,13 @@
 
 /* This pass changes only the specified enabled workflow controls. */
 .nextAction button:not(:disabled) {
-  --shine-color: #7c3aed;
+  --shine-color: var(--color-primary-purple, #7c3aed);
 }
 .nextAction button:not(:disabled) :global(.shining-button__body) {
-  background: #7c3aed;
+  background: var(--color-primary-purple, #7c3aed);
 }
 .reportIssue:not(:disabled):not([data-state='error']) {
-  --surface: #7c3aed;
+  --surface: var(--color-primary-purple, #7c3aed);
 }
 .protectionIssue {
   margin-bottom: 16px;

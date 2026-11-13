@@ -1,5 +1,5 @@
 .shining-button {
-  --shine-color: #5b21b6;
+  --shine-color: var(--color-primary-purple, #7c3aed);
 
   display: inline-flex;
   cursor: pointer;

@@ -146,7 +146,7 @@
 }
 
 .analytics .segment button[aria-pressed="true"] {
-  background: #7C3AED;
+  background: var(--color-primary-purple, #7c3aed);
   color: #fff;
 }
 

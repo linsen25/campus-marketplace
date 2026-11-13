@@ -5,6 +5,8 @@
     /* ---------- Brand */
     --color-brand-nebula: #5468ff;
     --color-brand-black: #23263b;
+    /* Shared surface for primary purple actions, selected controls, and spinners. */
+    --color-primary-purple: #7c3aed;
 
     /* ---------- Neutral */
     --color-neutral-lightest: #f4f4f5;

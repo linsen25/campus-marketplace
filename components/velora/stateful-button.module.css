@@ -1,5 +1,5 @@
 .button {
-  --surface: #775497;
+  --surface: var(--color-primary-purple, #7c3aed);
   position: relative;
   display: inline-grid;
   height: 40px;

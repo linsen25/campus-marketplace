@@ -5,10 +5,10 @@ import { useEffect, useRef, useState } from 'react'
 import styles from './auth-success-reveal.module.css'
 
 const labels = [
+  'Verifying your account',
+  'Loading your profile',
+  'Preparing your marketplace',
   'Opening Usual & Unusual',
-  'Preparing listings',
-  'Loading listing cards',
-  'Getting everything ready',
 ]
 
 export function SuccessThoughtLine({
