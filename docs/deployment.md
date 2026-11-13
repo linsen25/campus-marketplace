@@ -14,6 +14,20 @@ API keys are disabled and are not a runtime fallback.
 For hosting, configure equivalent secrets in the deployment provider; never in
 Git. Set Auth site and redirect URLs to the exact hosted origin before email.
 
+## Phase 4B local smoke status
+
+On 2026-11-13, the unified local runtime passed homepage, anonymous Auth
+session, public Listing/Shop, and anonymous private-route denial checks. A
+server-side Node `@supabase/supabase-js` call using the opaque secret completed
+an existing read-only service RPC successfully. A raw command-line request may
+receive 401 because Supabase deliberately rejects secret keys in browser-like
+contexts; validate server secrets through a Node server client instead.
+
+These are runtime smoke results, not Buyer/Seller E2E. Hosted Auth email/OTP,
+SMTP/Resend delivery, authenticated RLS participant paths, Realtime sessions,
+notification delivery, and all transaction flows remain pending explicit
+manual-account testing.
+
 ## Auth and email
 
 Keep Email Confirmations enabled. The Supabase **Confirm signup** template must

@@ -22,22 +22,13 @@ const values = Object.fromEntries(
       ]
     })
 )
-const jwtClaims = (value) => {
-  try {
-    return JSON.parse(Buffer.from(value.split('.')[1] || '', 'base64url'))
-  } catch {
-    return null
-  }
-}
 const anon = values.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 const secret = values.SUPABASE_SECRET_KEY || ''
-const anonClaims = jwtClaims(anon)
 if (
   values.APP_ENV !== 'uu' ||
   values.NEXT_PUBLIC_SUPABASE_URL !== `https://${ref}.supabase.co` ||
   !anon ||
-  (!/^sb_publishable_[A-Za-z0-9_-]+$/.test(anon) &&
-    (!anonClaims || anonClaims.role !== 'anon' || anonClaims.ref !== ref)) ||
+  !/^sb_publishable_[A-Za-z0-9_-]+$/.test(anon) ||
   (secret && !/^sb_secret_[A-Za-z0-9_-]+$/.test(secret)) ||
   Object.values(values).some((value) => /(?:sk|pk)_live_/i.test(value))
 )

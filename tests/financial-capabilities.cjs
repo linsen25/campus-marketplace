@@ -61,12 +61,7 @@ function load(file) {
 function config(env = 'uu', target = ref) {
   process.env.APP_ENV = env
   process.env.NEXT_PUBLIC_SUPABASE_URL = `https://${target}.supabase.co`
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY =
-    'e30.' +
-    Buffer.from(JSON.stringify({ role: 'anon', ref: target })).toString(
-      'base64url'
-    ) +
-    '.test'
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'sb_publishable_unit'
 }
 const service = load('lib/server/financial-capabilities-service.ts')
 const handler = load('pages/api/financial-capabilities.ts').default

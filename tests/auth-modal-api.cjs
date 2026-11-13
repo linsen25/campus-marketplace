@@ -266,15 +266,7 @@ async function main() {
   process.env.APP_ENV = 'uu'
   process.env.NEXT_PUBLIC_SUPABASE_URL =
     'https://uqhyjpjiznpgomuizfqe.supabase.co'
-  const testKey = (role, ref) =>
-    Buffer.from('{}').toString('base64url') +
-    '.' +
-    Buffer.from(JSON.stringify({ role, ref })).toString('base64url') +
-    '.test'
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = testKey(
-    'anon',
-    'uqhyjpjiznpgomuizfqe'
-  )
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'sb_publishable_unit'
   process.env.SUPABASE_SECRET_KEY = ''
   assert.equal(
     (await request('correct-signup-username', input, correctionCookie))

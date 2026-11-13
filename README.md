@@ -33,3 +33,10 @@ Transfer, Payout, Places, and worker execution flags off.
 See [architecture](docs/architecture.md), [deployment](docs/deployment.md),
 and module documents under `docs/`. Historical acceptance reports remain for
 audit context and are not current deployment instructions.
+
+## Current unified-runtime status
+
+The local runtime has passed anonymous public/read isolation smoke checks and
+a server-only Node Supabase RPC check against the canonical project. No real
+Buyer/Seller account, hosted Auth OTP, listing, conversation, order, email, or
+payment has been created in this environment. Those flows remain E2E pending.

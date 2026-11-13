@@ -4,20 +4,8 @@ import { configuredUuProjectRef } from '@/lib/marketplace-test-environment'
 export function requireMessagesEnvironment() {
   const designation = process.env.APP_ENV || ''
   const ref = configuredUuProjectRef(designation)
-  let valid = false
-  try {
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    let publicKey = /^sb_publishable_[A-Za-z0-9_-]+$/.test(key)
-    if (!publicKey && key.split('.').length === 3) {
-      const claims = JSON.parse(
-        Buffer.from(key.split('.')[1], 'base64url').toString()
-      )
-      publicKey = claims.role === 'anon' && claims.ref === ref
-    }
-    valid = Boolean(ref && publicKey)
-  } catch {
-    valid = false
-  }
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  const valid = Boolean(ref && /^sb_publishable_[A-Za-z0-9_-]+$/.test(key))
   if (!valid || !ref)
     throw new ListingApiError(
       'Messages environment configuration is unavailable.',

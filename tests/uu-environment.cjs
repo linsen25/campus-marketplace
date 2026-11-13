@@ -27,12 +27,10 @@ const environment = load('lib/marketplace-test-environment.ts')
 const messages = load('lib/server/messages-environment.ts')
 const secrets = load('lib/server/supabase-secret.ts')
 const ref = environment.canonicalUuProjectRef
-const jwt = (claims) =>
-  ['eyJhbGciOiJIUzI1NiJ9', Buffer.from(JSON.stringify(claims)).toString('base64url'), 'unit'].join('.')
 
 process.env.APP_ENV = 'uu'
 process.env.NEXT_PUBLIC_SUPABASE_URL = `https://${ref}.supabase.co`
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = jwt({ role: 'anon', ref })
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'sb_publishable_unit'
 assert.equal(environment.configuredUuProjectRef(), ref)
 assert.equal(environment.isConfiguredUuProject('uu', `https://${ref}.supabase.co`), true)
 assert.equal(messages.requireMessagesEnvironment(), ref)
@@ -55,7 +53,7 @@ for (const [designation, url] of [
 ]) {
   process.env.APP_ENV = designation
   process.env.NEXT_PUBLIC_SUPABASE_URL = url
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = jwt({ role: 'anon', ref })
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'sb_publishable_unit'
   assert.equal(environment.configuredUuProjectRef(), null)
   assert.throws(() => messages.requireMessagesEnvironment())
 }
