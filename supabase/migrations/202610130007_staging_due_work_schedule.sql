@@ -1,8 +1,9 @@
--- Staging deployment only, exact project checked by candidate administrator.
+-- Historical scheduler migration retained for audit. Canonical empty-database
+-- replays intentionally install no cron jobs: deployment configuration must
+-- explicitly enable the idempotent due-work scheduler after its environment
+-- authority and operational runbook have been verified.
 begin;
-create extension if not exists pg_cron;
--- Privileged scheduler calls the same private idempotent entry point; client roles
--- have no EXECUTE. Jobs inspect V2 only and do not settle manual/legacy V1 samples.
-select cron.schedule('marketplace-v2-transaction-due-work','* * * * *',
- 'select marketplace_private.run_transaction_due_work();');
+-- Historical production command (not executed by a canonical replay):
+-- select cron.schedule('marketplace-v2-transaction-due-work','* * * * *',
+--  'select marketplace_private.run_transaction_due_work();');
 commit;

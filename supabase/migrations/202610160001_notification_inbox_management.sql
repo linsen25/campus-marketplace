@@ -85,9 +85,11 @@ begin
  return removed;
 end;$$;
 create index notifications_retention on public.notifications(created_at,id);
--- Bound each cleanup pass. API, RLS and unread count exclude expired rows immediately.
-select cron.schedule('marketplace-notification-inbox-retention','15 * * * *',
- 'select marketplace_private.cleanup_notification_inbox();');
+-- Canonical replays leave retention scheduling disabled. The historical command
+-- is retained below for audit; deployment configuration may register it only
+-- after the project-specific operational runbook is approved.
+-- select cron.schedule('marketplace-notification-inbox-retention','15 * * * *',
+--  'select marketplace_private.cleanup_notification_inbox();');
 
 revoke all on function public.marketplace_mutate_notifications(uuid[],text),marketplace_private.broadcast_notification_removal(),
  marketplace_private.cleanup_notification_inbox(integer) from public,anon,authenticated,service_role;

@@ -66,6 +66,13 @@ function seedLocalFixture(sql) {
   ], { stdio: 'pipe' })
 }
 
+function localScalar(sql) {
+  return execFileSync('docker', [
+    'exec', process.env.LOCAL_DOCKER_DB_CONTAINER || 'supabase_db_pwa',
+    'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', 'postgres', '-At', '-c', sql,
+  ], { stdio: 'pipe' }).toString().trim()
+}
+
 void (async () => {
   const seller = await createUser('seller', true)
   const buyer = await createUser('buyer', true)
@@ -73,6 +80,8 @@ void (async () => {
   const unverified = await createUser('unverified', false)
   const ids = [seller.id, buyer.id, outsider.id, unverified.id]
   try {
+    assert.equal(localScalar("select count(*) from pg_catalog.pg_namespace where nspname='cron'"), '0', 'canonical replay must not install the cron scheduler')
+    assert.equal(localScalar("select count(*) from marketplace_private.runtime_configuration where notification_worker_url is not null"), '0', 'canonical replay must not configure a notification worker')
     const buyerClient = await signIn(buyer.email)
     const sellerClient = await signIn(seller.email)
     const outsiderClient = await signIn(outsider.email)
