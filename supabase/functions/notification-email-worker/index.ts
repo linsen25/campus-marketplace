@@ -6,7 +6,9 @@ declare const Deno: {
   serve: (handler: (request: Request) => Promise<Response>) => void
 }
 
-const staging = 'https://pcaqxezdfxofysghssyo.supabase.co'
+// The worker is deployed only after its secrets and scheduler are separately
+// configured. It never infers a target project from an inbound request.
+const uu = 'https://uqhyjpjiznpgomuizfqe.supabase.co'
 class WorkerDatabaseError extends Error {
   constructor(readonly classification: string) {
     super('Worker database unavailable')
@@ -55,11 +57,11 @@ const reply = (status: number, body: unknown) =>
 Deno.serve(async (request) => {
   if (request.method !== 'POST')
     return reply(405, { error: 'Method not allowed.' })
-  if (Deno.env.get('SUPABASE_URL') !== staging)
-    return reply(503, { error: 'Staging configuration required.' })
+  if (Deno.env.get('SUPABASE_URL') !== uu)
+    return reply(503, { error: 'UU configuration required.' })
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
   const rpc = async (name: string, body: unknown) => {
-    const response = await fetch(`${staging}/rest/v1/rpc/${name}`, {
+    const response = await fetch(`${uu}/rest/v1/rpc/${name}`, {
       method: 'POST',
       headers: {
         apikey: serviceKey,

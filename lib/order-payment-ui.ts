@@ -1,5 +1,5 @@
 import type { FormalOrder } from '@/types/order'
-import { configuredMarketplaceTestRef } from '@/lib/marketplace-test-environment'
+import { configuredUuProjectRef } from '@/lib/marketplace-test-environment'
 
 export function orderPaymentRole(order: FormalOrder, userId: string) {
   if (userId === order.buyerId) return 'buyer'
@@ -9,8 +9,7 @@ export function orderPaymentRole(order: FormalOrder, userId: string) {
 
 export function stagingPaymentControl(order: FormalOrder, userId: string) {
   return (
-    configuredMarketplaceTestRef(process.env.NEXT_PUBLIC_MESSAGES_ENV) !==
-      null &&
+    configuredUuProjectRef(process.env.NEXT_PUBLIC_MESSAGES_ENV) !== null &&
     orderPaymentRole(order, userId) === 'buyer' &&
     order.paymentStatus === 'pending' &&
     order.lifecycle === 'open' &&

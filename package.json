@@ -10,6 +10,7 @@
     "dev": "next dev",
     "dev:staging": "node scripts/dev-staging.cjs",
     "dev:v1:b32": "node scripts/dev-v1-b32.cjs",
+    "dev:v1:uu": "node scripts/dev-v1-uu.cjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

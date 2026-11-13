@@ -10,6 +10,7 @@ import { StatefulButton } from '@/components/velora/stateful-button'
 import { useFormalOffers } from '@/hooks/use-formal-offers'
 import { useFormalOrderRequests } from '@/hooks/use-formal-order-requests'
 import { marketplaceRequest } from '@/lib/listings-api'
+import { isConfiguredUuProject } from '@/lib/marketplace-test-environment'
 import {
   sendOffer,
   withdrawOffer,
@@ -103,11 +104,7 @@ export function MessagesChat({
 }) {
   const [draft, setDraft] = useState('')
   const orderVisuals = useOrderVisual()
-  const formal =
-    !orderVisuals.enabled &&
-    process.env.NEXT_PUBLIC_MESSAGES_ENV === 'staging' &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL ===
-      'https://pcaqxezdfxofysghssyo.supabase.co'
+  const formal = !orderVisuals.enabled && isConfiguredUuProject()
   const requests = useFormalOrderRequests(conversationId, currentUserId, formal)
   const offers = useFormalOffers(conversationId, currentUserId, formal)
   const [offerEditor, setOfferEditor] = useState<{ initial?: Offer } | null>(

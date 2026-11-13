@@ -18,7 +18,7 @@ export async function sellerOnboardingProfile(identifier: string) {
   try {
     origin = new URL(configured)
     if (
-      !['staging', 'b32'].includes(process.env.APP_ENV || '') ||
+      process.env.APP_ENV !== 'uu' ||
       origin.protocol !== 'https:' ||
       origin.username ||
       origin.password ||

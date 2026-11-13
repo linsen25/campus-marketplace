@@ -17,7 +17,7 @@ import { createMarketplaceClient } from '@/lib/supabase/server'
 import type { MarketplaceContext } from '@/lib/supabase/server'
 
 export function requireOrderRequestEnvironment() {
-  if (!['staging', 'b32'].includes(process.env.APP_ENV || ''))
+  if (process.env.APP_ENV !== 'uu')
     throw new ListingApiError(
       'Order Requests are not enabled in this environment.',
       503

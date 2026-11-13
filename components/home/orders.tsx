@@ -14,6 +14,7 @@ import {
   orderWorkspaceRole,
 } from '@/lib/order-workspaces'
 import type { OrderWorkspace } from '@/lib/order-workspaces'
+import { isConfiguredUuProject } from '@/lib/marketplace-test-environment'
 
 import workspaceStyles from '../listings/listing-workspace.module.css'
 
@@ -84,12 +85,7 @@ export function Orders({
   const visuals = useOrderVisual()
   const mode: OrderWorkspace =
     destination === 'sales' || destination === 'selling' ? 'sales' : 'purchases'
-  if (
-    !visuals.enabled &&
-    process.env.NEXT_PUBLIC_MESSAGES_ENV === 'staging' &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL ===
-      'https://pcaqxezdfxofysghssyo.supabase.co'
-  )
+  if (!visuals.enabled && isConfiguredUuProject())
     return <FormalOrders key={mode} mode={mode} />
   const collections = deriveOrderWorkspaces(
     visuals.state.orders,

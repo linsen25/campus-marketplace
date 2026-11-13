@@ -1,12 +1,9 @@
 import { ListingApiError } from '@/lib/listing-validation'
-import {
-  configuredMarketplaceTestRef,
-  marketplaceTestProjects,
-} from '@/lib/marketplace-test-environment'
+import { configuredUuProjectRef } from '@/lib/marketplace-test-environment'
 
 export function requireMessagesEnvironment() {
   const designation = process.env.APP_ENV || ''
-  const ref = configuredMarketplaceTestRef(designation)
+  const ref = configuredUuProjectRef(designation)
   let valid = false
   try {
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -17,9 +14,7 @@ export function requireMessagesEnvironment() {
       )
       publicKey = claims.role === 'anon' && claims.ref === ref
     }
-    valid = Boolean(
-      ref && Object.values(marketplaceTestProjects).includes(ref) && publicKey
-    )
+    valid = Boolean(ref && publicKey)
   } catch {
     valid = false
   }

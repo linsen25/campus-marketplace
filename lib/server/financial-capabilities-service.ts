@@ -17,7 +17,7 @@ import type { MarketplaceContext } from '@/lib/supabase/server'
 import type { FinancialCapabilities } from '@/types/financial-capabilities'
 
 export function requireFinancialEnvironment() {
-  if (!['staging', 'b32'].includes(process.env.APP_ENV || ''))
+  if (process.env.APP_ENV !== 'uu')
     throw new ListingApiError(
       'Financial capabilities are not enabled in this environment.',
       503

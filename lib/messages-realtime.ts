@@ -1,10 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- Token, recovery and teardown callbacks share one scoped lifecycle. */
 import { createClient } from '@supabase/supabase-js'
 
-import {
-  configuredMarketplaceTestRef,
-  marketplaceTestProjects,
-} from '@/lib/marketplace-test-environment'
+import { configuredUuProjectRef } from '@/lib/marketplace-test-environment'
 
 export type MessagesSignal = {
   conversationId: string
@@ -56,7 +53,7 @@ export function connectMessagesRealtime(
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
   const designation = process.env.NEXT_PUBLIC_MESSAGES_ENV || ''
-  const ref = configuredMarketplaceTestRef(designation, url)
+  const ref = configuredUuProjectRef(designation, url)
   // The exact environment identity is required before inspecting credentials
   // or opening a browser-side Realtime connection.
   if (!ref) return () => {}
@@ -69,11 +66,7 @@ export function connectMessagesRealtime(
       )
       publicKey = claims.role === 'anon' && claims.ref === ref
     }
-    supported =
-      typeof window !== 'undefined' &&
-      Object.values(marketplaceTestProjects).includes(ref) &&
-      uuid.test(userId) &&
-      publicKey
+    supported = typeof window !== 'undefined' && uuid.test(userId) && publicKey
   } catch {
     supported = false
   }

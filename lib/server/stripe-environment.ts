@@ -42,7 +42,7 @@ export function stripeConfiguration() {
   }
   if (
     !stripeRequested() ||
-    !['staging', 'b32'].includes(process.env.APP_ENV || '') ||
+    process.env.APP_ENV !== 'uu' ||
     !requireMessagesEnvironment() ||
     !/^sk_test_[A-Za-z0-9]+$/.test(secretKey) ||
     !/^pk_test_[A-Za-z0-9]+$/.test(publishableKey) ||

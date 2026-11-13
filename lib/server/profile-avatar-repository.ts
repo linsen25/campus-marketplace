@@ -4,6 +4,7 @@ import { setTimeout } from 'timers'
 import { createClient } from '@supabase/supabase-js'
 
 import { ListingApiError } from '@/lib/listing-validation'
+import { marketplaceTestUrl } from '@/lib/marketplace-test-environment'
 import { requireImageEnvironment } from '@/lib/server/chat-image-storage'
 import { requireMessagesEnvironment } from '@/lib/server/messages-environment'
 
@@ -14,29 +15,30 @@ export function avatarDeadline(milliseconds: number) {
 }
 
 export function requireAvatarEnvironment() {
-  if (
-    process.env.APP_ENV !== 'staging' ||
-    requireMessagesEnvironment() !== 'pcaqxezdfxofysghssyo'
-  )
+  if (process.env.APP_ENV !== 'uu')
     throw new ListingApiError('Avatar storage is unavailable.', 503)
   return requireImageEnvironment()
 }
 export function avatarRepository(signal?: AbortSignal) {
   const key = requireAvatarEnvironment()
-  const client = createClient('https://pcaqxezdfxofysghssyo.supabase.co', key, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-    global: {
-      fetch: (input, options) =>
-        fetch(input, {
-          ...options,
-          signal: signal || avatarDeadline(30000),
-        }),
-    },
-  })
+  const client = createClient(
+    marketplaceTestUrl(requireMessagesEnvironment()),
+    key,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        fetch: (input, options) =>
+          fetch(input, {
+            ...options,
+            signal: signal || avatarDeadline(30000),
+          }),
+      },
+    }
+  )
   return { client, storage: client.storage.from('profile-avatars') }
 }
 export function avatarDatabaseError(error: { code?: string } | null) {

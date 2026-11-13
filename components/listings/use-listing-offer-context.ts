@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { getListing, marketplaceRequest } from '@/lib/listings-api'
+import { isConfiguredUuProject } from '@/lib/marketplace-test-environment'
 import type { ListingStatus } from '@/types/listing'
 
 import { useMarketplaceSession } from './marketplace-session'
@@ -35,9 +36,7 @@ export function useListingOfferContext(
   const enabled =
     allowed &&
     Boolean(seller && seller.id !== sellerId) &&
-    process.env.NEXT_PUBLIC_MESSAGES_ENV === 'staging' &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL ===
-      'https://pcaqxezdfxofysghssyo.supabase.co'
+    isConfiguredUuProject()
   useEffect(() => {
     let valid = true
     setContext(null)

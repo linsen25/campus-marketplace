@@ -242,7 +242,7 @@ export function createSupabaseMessagesRepository(context: MarketplaceContext) {
       const withdrawal = {
         withdrawnAt: item.withdrawn_at || null,
         canWithdraw:
-          ['staging', 'b32'].includes(process.env.APP_ENV || '') &&
+          process.env.APP_ENV === 'uu' &&
           !item.withdrawn_at &&
           item.origin !== 'marketplace_auto_reply' &&
           item.sender_id === user.id &&
