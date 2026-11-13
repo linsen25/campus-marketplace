@@ -4,7 +4,7 @@ const fs = require('node:fs')
 const environment = fs.readFileSync('lib/marketplace-test-environment.ts', 'utf8')
 const launcher = fs.readFileSync('scripts/dev-v1-b32.cjs', 'utf8')
 const migration = fs.readFileSync(
-  'supabase/migrations/20261112070000_b32_public_uwo_badge_verified_message_read.sql',
+  'supabase/migrations/20261113044057_canonical_public_uwo_badge.sql',
   'utf8'
 )
 const messages = fs.readFileSync('lib/server/messages-environment.ts', 'utf8')
@@ -25,7 +25,7 @@ assert.match(launcher, /pk_test_/)
 assert.match(launcher, /whsec_/)
 assert.doesNotMatch(launcher, /sk_live_|pk_live_/)
 
-assert.match(migration, /B32-only follow-up/i)
+assert.match(migration, /Canonical follow-up/i)
 assert.match(migration, /add column uwo_email_verified boolean not null default false/i)
 assert.match(migration, /uwo_email_verifications v/i)
 assert.match(migration, /sync_public_uwo_badge/i)
@@ -40,4 +40,4 @@ assert.match(migration, /seller_id = \(select auth\.uid\(\)\)/i)
 assert.match(migration, /metadata changed unexpectedly/i)
 assert.doesNotMatch(migration, /grant execute on function public\.marketplace_/i)
 
-console.log('PASS B32 exact-environment gate and badge/message migration static guards')
+console.log('PASS B32 exact-environment gate and canonical badge/message migration static guards')

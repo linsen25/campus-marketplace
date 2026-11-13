@@ -173,7 +173,7 @@ async function main() {
       'utf8'
     )
     const ui = fs.readFileSync(
-      'components/home/order-campus-payment.tsx',
+      'components/payments/stripe-order-payment.tsx',
       'utf8'
     )
     const api = fs.readFileSync('pages/api/orders/[[...segments]].ts', 'utf8')
@@ -359,7 +359,7 @@ async function main() {
         'grant execute on function public.marketplace_order_payment_provider(text,uuid,uuid,text,uuid,jsonb) to authenticated'
       )
     )
-    assert(ui.includes('stripe.confirmCardPayment('))
+    assert(ui.includes('stripe.confirmPayment({'))
     assert(ui.includes('Stripe.js is not Order payment evidence'))
     assert(!ui.includes("paymentStatus: 'paid'"))
     assert(api.includes('requireSameOriginWrite(req)'))
