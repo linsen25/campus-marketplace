@@ -21,10 +21,7 @@ type Asset = {
 }
 type Batch = { id: string; state: string; assets: Asset[] }
 function storage() {
-  if (
-    typeof window !== 'undefined' ||
-    !configuredMarketplaceTestRef()
-  )
+  if (typeof window !== 'undefined' || !configuredMarketplaceTestRef())
     throw new ListingApiError('Snapshot media environment unavailable.', 503)
   return createChatStorage()
 }

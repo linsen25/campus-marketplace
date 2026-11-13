@@ -21,9 +21,7 @@ export function configuredMarketplaceTestRef(
     !Object.prototype.hasOwnProperty.call(marketplaceTestProjects, environment)
   )
     return null
-  const ref = marketplaceTestProjects[
-    environment as MarketplaceTestEnvironment
-  ]
+  const ref = marketplaceTestProjects[environment as MarketplaceTestEnvironment]
   try {
     const target = new URL(url || '')
     return target.origin === marketplaceTestUrl(ref) &&

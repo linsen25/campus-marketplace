@@ -18,9 +18,7 @@ export function requireMessagesEnvironment() {
       publicKey = claims.role === 'anon' && claims.ref === ref
     }
     valid = Boolean(
-      ref &&
-        Object.values(marketplaceTestProjects).includes(ref) &&
-        publicKey
+      ref && Object.values(marketplaceTestProjects).includes(ref) && publicKey
     )
   } catch {
     valid = false

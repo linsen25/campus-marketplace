@@ -9,7 +9,8 @@ export function orderPaymentRole(order: FormalOrder, userId: string) {
 
 export function stagingPaymentControl(order: FormalOrder, userId: string) {
   return (
-    configuredMarketplaceTestRef(process.env.NEXT_PUBLIC_MESSAGES_ENV) !== null &&
+    configuredMarketplaceTestRef(process.env.NEXT_PUBLIC_MESSAGES_ENV) !==
+      null &&
     orderPaymentRole(order, userId) === 'buyer' &&
     order.paymentStatus === 'pending' &&
     order.lifecycle === 'open' &&

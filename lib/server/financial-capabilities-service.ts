@@ -86,7 +86,9 @@ export function createTrustedFinancialClient() {
     const claims = JSON.parse(
       Buffer.from(key.split('.')[1], 'base64url').toString()
     )
-    valid = claims.role === 'service_role' && claims.ref === requireMessagesEnvironment()
+    valid =
+      claims.role === 'service_role' &&
+      claims.ref === requireMessagesEnvironment()
   } catch {
     valid = false
   }
