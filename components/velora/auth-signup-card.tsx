@@ -1,10 +1,15 @@
 import { CheckIcon, CircleIcon, EyeIcon, EyeOffIcon, X } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
-import type { FocusEvent, FormEvent, ReactNode, RefObject } from 'react'
+import type {
+  FocusEvent,
+  FormEvent,
+  KeyboardEvent,
+  ReactNode,
+  RefObject,
+} from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
 
 import ShiningButton from '@/components/animata/button/shining-button'
-import ShiftTabs from '@/components/animata/tabs/shift-tabs'
 import { useUsernameAvailability } from '@/components/auth/use-username-availability'
 import HoldButton from '@/components/react-bits/hold-button/hold-button'
 import { StatefulButton } from '@/components/velora/stateful-button'
@@ -262,29 +267,58 @@ function sendCodeDisabled(switching: boolean, busy: string, cooldown: number) {
 function AuthModeTabs({
   mode,
   busy,
+  switching,
   onSelect,
 }: {
   mode: keyof typeof modeCopy
   busy: string
-  onSelect: (mode: keyof typeof modeCopy) => void
+  switching: boolean
+  onSelect: (mode: 'signin' | 'signup') => void
 }) {
+  const tabs = ['signin', 'signup'] as const
+  const active = mode === 'signup' ? 'signup' : 'signin'
+  const select = (next: 'signin' | 'signup') => {
+    if (!busy && !switching && next !== active) onSelect(next)
+  }
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const current = tabs.indexOf(active)
+    let next = current
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown')
+      next = (current + 1) % tabs.length
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp')
+      next = (current - 1 + tabs.length) % tabs.length
+    else if (event.key === 'Home') next = 0
+    else if (event.key === 'End') next = tabs.length - 1
+    else return
+    event.preventDefault()
+    const target =
+      event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[
+        next
+      ]
+    target?.focus()
+  }
   return (
-    <ShiftTabs
-      className={styles.modeTabs}
-      activeIndex={mode === 'signup' ? 1 : 0}
-      onActiveIndexChange={(index) => {
-        if (!busy) onSelect(index === 0 ? 'signin' : 'signup')
-      }}
-    >
-      <ShiftTabs.List aria-label="Authentication mode">
-        <ShiftTabs.Tab disabled={Boolean(busy)}>
-          <ShiftTabs.Label>Log in</ShiftTabs.Label>
-        </ShiftTabs.Tab>
-        <ShiftTabs.Tab disabled={Boolean(busy)}>
-          <ShiftTabs.Label>Sign up</ShiftTabs.Label>
-        </ShiftTabs.Tab>
-      </ShiftTabs.List>
-    </ShiftTabs>
+    <nav className={styles.modeTabs} aria-label="Authentication mode">
+      <div role="tablist" className={styles.modeTabList} onKeyDown={onKeyDown}>
+        {tabs.map((tab) => {
+          const selected = tab === active
+          return (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              className={styles.modeTab}
+              aria-selected={selected}
+              tabIndex={selected ? 0 : -1}
+              disabled={Boolean(busy) || switching}
+              onClick={() => select(tab)}
+            >
+              {tab === 'signin' ? 'Log in' : 'Sign up'}
+            </button>
+          )
+        })}
+      </div>
+    </nav>
   )
 }
 
@@ -711,8 +745,9 @@ export function AuthSignupCard({
       </div>
       <div className={styles.card}>
         <AuthModeTabs
-          mode={requestedMode}
+          mode={mode}
           busy={busy}
+          switching={switching}
           onSelect={setRequestedMode}
         />
         <motion.form

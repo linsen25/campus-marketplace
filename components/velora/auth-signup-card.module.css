@@ -299,6 +299,62 @@
   composes: contract from '../animata/button/action-button-sizing.module.css';
   margin-bottom: 28px;
 }
+.modeTabList {
+  display: flex;
+  justify-content: center;
+  gap: var(--action-gap);
+}
+.modeTab {
+  width: min(var(--action-width), calc((100% - var(--action-gap)) / 2));
+  height: var(--action-height);
+  min-width: 0;
+  border: 1px solid #594961;
+  border-radius: var(--action-surface-radius);
+  background: #241c2e;
+  color: #f5f2f8;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--action-font-size);
+  font-weight: var(--action-font-weight);
+  line-height: var(--action-line-height);
+  transition:
+    transform 170ms ease-out,
+    background-color 170ms ease-out,
+    border-color 170ms ease-out,
+    color 170ms ease-out;
+  will-change: transform;
+}
+.modeTab[aria-selected='true'] {
+  border-color: var(--color-primary-purple, #7c3aed);
+  background: var(--color-primary-purple, #7c3aed);
+  color: #fff;
+}
+.modeTab:not(:disabled):not([aria-selected='true']):hover {
+  border-color: #7b678b;
+  background: #2b2234;
+}
+.modeTab:not(:disabled)[aria-selected='true']:hover {
+  filter: brightness(1.08);
+}
+.modeTab:not(:disabled):active {
+  transform: scale(0.94);
+}
+.modeTab:focus-visible {
+  z-index: 1;
+  outline: 2px solid var(--color-primary-purple, #7c3aed);
+  outline-offset: 3px;
+}
+.modeTab:disabled {
+  cursor: default;
+}
+@media (prefers-reduced-motion: reduce) {
+  .modeTab {
+    transition: none;
+  }
+  .modeTab:not(:disabled):active {
+    transform: none;
+  }
+}
 .holdSubmit {
   width: 100%;
   border: 1px solid #a99bb7;

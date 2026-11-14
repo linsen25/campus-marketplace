@@ -128,24 +128,39 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
       await page.setViewportSize({width:width <= 1023 ? 1280 : 390,height:900})
       assert.equal(await username.inputValue(),'chris_25')
       await page.setViewportSize({width,height:900})
-      const selector = await login.evaluate((e) => {
-        const f=e.firstElementChild, c=getComputedStyle(e), face=getComputedStyle(f)
-        return {height:c.height,bg:c.backgroundColor,bottom:c.borderBottomColor,faceBg:face.backgroundColor,transform:face.transform,radius:c.borderRadius,padding:c.padding,font:getComputedStyle(f.firstElementChild).fontSize}
-      })
-      if(width <=1023) {
-        assert.equal(selector.height,width<768?'48px':'64px')
-        assert.equal(selector.radius,'12px')
-        assert.equal(selector.font,'14px')
-        await login.hover()
-        assert.equal(await login.locator(':scope > span').evaluate(e=>getComputedStyle(e).transform),'none')
-      } else {
-        assert.equal(selector.bg,'rgba(0, 0, 0, 0)') // Log in is inactive
-        await login.hover()
-        await page.waitForTimeout(240)
-        assert.equal(await login.evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(196, 163, 92)')
-        assert.equal(await signup.evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(196, 163, 92)')
-        assert.equal(await signup.locator(':scope > span').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(36, 28, 46)')
+      const selector = await Promise.all([login, signup].map(async (tab) =>
+        tab.evaluate((e) => {
+          const c = getComputedStyle(e)
+          return {
+            height: c.height,
+            background: c.backgroundColor,
+            border: c.borderTopColor,
+            color: c.color,
+            transform: c.transform,
+            radius: c.borderRadius,
+            font: c.fontSize,
+          }
+        })
+      ))
+      for (const tab of selector) {
+        assert.equal(tab.height, width < 768 ? '48px' : '64px')
+        assert.equal(tab.radius, '8px')
+        assert.equal(tab.font, '14px')
       }
+      assert.deepEqual(selector[0], {
+        ...selector[0],
+        background: 'rgb(36, 28, 46)',
+        border: 'rgb(89, 73, 97)',
+        color: 'rgb(245, 242, 248)',
+        transform: 'none',
+      })
+      assert.deepEqual(selector[1], {
+        ...selector[1],
+        background: 'rgb(124, 58, 237)',
+        border: 'rgb(124, 58, 237)',
+        color: 'rgb(255, 255, 255)',
+        transform: 'none',
+      })
       assert(await auth.evaluate(e=>e.scrollWidth<=e.clientWidth),'Auth selector has no horizontal overflow')
       await password.fill('Abcdefg1!')
       const labels = await auth
