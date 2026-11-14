@@ -112,6 +112,7 @@ function AuthDialog({
       html: html.style.overflow,
       padding: body.style.paddingRight,
       behavior: html.style.scrollBehavior,
+      background: html.style.backgroundColor,
     }
     const gutter = getScrollLockPadding()
     body.style.paddingRight = `${
@@ -120,6 +121,10 @@ function AuthDialog({
     body.style.overflow = 'hidden'
     html.style.overflow = 'hidden'
     html.style.scrollBehavior = 'auto'
+    // `scrollbar-gutter: stable` deliberately preserves the root scrollbar
+    // slot. Native dialog backdrops do not paint that slot in every browser,
+    // so give it the same surface as the auth backdrop while locked.
+    html.style.backgroundColor = '#0c0912'
     dialog?.showModal()
     dialog
       ?.querySelector<HTMLInputElement>('input')
@@ -132,6 +137,7 @@ function AuthDialog({
       body.style.overflow = previous.body
       html.style.overflow = previous.html
       body.style.paddingRight = previous.padding
+      html.style.backgroundColor = previous.background
       window.scrollTo({ left: x, top: y, behavior: 'auto' })
       if (trigger?.isConnected) trigger.focus({ preventScroll: true })
       html.style.scrollBehavior = previous.behavior

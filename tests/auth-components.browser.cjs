@@ -70,6 +70,31 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
       const auth = page.locator('dialog[aria-labelledby="auth-title"]')
       await page.getByRole('button', { name: 'Log in', exact: true }).click()
       await auth.waitFor()
+      const modalSurface = await auth.locator('section').evaluate((surface) => {
+        const style = getComputedStyle(surface)
+        const header = surface.children[0]
+        const formArea = surface.children[1]
+        const verification = surface.children[2]
+        return {
+          width: surface.getBoundingClientRect().width,
+          border: style.borderTopWidth,
+          radius: style.borderRadius,
+          headerBorder: getComputedStyle(header).borderTopWidth,
+          formBorder: getComputedStyle(formArea).borderTopWidth,
+          verificationBorder: getComputedStyle(verification).borderTopWidth,
+          verificationText: verification.textContent,
+          rootBackground: document.documentElement.style.backgroundColor,
+        }
+      })
+      assert(modalSurface.width <= 460)
+      assert.equal(modalSurface.border, '1px')
+      assert.equal(modalSurface.radius, '16px')
+      assert.equal(modalSurface.headerBorder, '0px')
+      assert.equal(modalSurface.formBorder, '0px')
+      assert.equal(modalSurface.verificationBorder, '1px')
+      assert.match(modalSurface.verificationText, /Email verification required/)
+      assert.match(modalSurface.verificationText, /personal or Western email/)
+      assert.equal(modalSurface.rootBackground, 'rgb(12, 9, 18)')
       const geometry = await auth.getByRole('button',{name:'Log in',exact:true}).evaluate(e=>{
         const a=e.getBoundingClientRect(), b=e.closest('form').getBoundingClientRect()
         return {center:Math.abs((a.left+a.right)/2-(b.left+b.right)/2),width:Math.abs(a.width-b.width),height:getComputedStyle(e).height}
@@ -162,6 +187,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
         transform: 'none',
       })
       assert(await auth.evaluate(e=>e.scrollWidth<=e.clientWidth),'Auth selector has no horizontal overflow')
+      for (const input of await auth.locator('input[type="email"], input[type="password"]').all())
+        assert.equal(await input.evaluate((e) => getComputedStyle(e).height), '48px')
       await password.fill('Abcdefg1!')
       const labels = await auth
         .locator('[id$="-rules"] li')
@@ -195,6 +222,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
       })
       assert.equal(holdGeometry.height, '52px')
       assert(holdGeometry.width < 1 && holdGeometry.center < 1)
+      assert.equal(
+        await hold.evaluate((e) => getComputedStyle(e).backgroundColor),
+        'rgb(124, 58, 237)'
+      )
       await hold.focus()
       await page.keyboard.down('Enter')
       await page.waitForTimeout(150)

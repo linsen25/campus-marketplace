@@ -1,4 +1,11 @@
-import { CheckIcon, CircleIcon, EyeIcon, EyeOffIcon, X } from 'lucide-react'
+import {
+  CheckIcon,
+  CircleIcon,
+  EyeIcon,
+  EyeOffIcon,
+  ShieldCheckIcon,
+  X,
+} from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
 import type {
   FocusEvent,
@@ -351,7 +358,7 @@ function AuthSubmit({
     return (
       <div className={styles.loginAction}>
         <ShiningButton
-          variant="green"
+          variant="purple"
           desktopAppearance={true}
           disabled={disabled}
           onClick={() => form.current?.requestSubmit()}
@@ -1097,12 +1104,17 @@ export function AuthSignupCard({
           )}
         </motion.form>
       </div>
-      <p className={styles.privacy}>
-        Email verification required.
-        <br />
-        Verify your email to secure your UU account. An optional UWO email can
-        be verified separately in Settings and is not displayed publicly.
-      </p>
+      <div className={styles.privacy}>
+        <ShieldCheckIcon aria-hidden={true} />
+        <div>
+          <strong>Email verification required</strong>
+          <p>
+            Use your personal or Western email to create a UU account. Verify
+            your email to get started. Western email verification for campus
+            identity is optional and available in Settings.
+          </p>
+        </div>
+      </div>
       {showStandards && (
         <CommunityStandards onClose={() => setShowStandards(false)} />
       )}

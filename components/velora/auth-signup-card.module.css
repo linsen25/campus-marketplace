@@ -12,7 +12,7 @@
   position: fixed;
   margin: auto;
   width: calc(100% - 32px);
-  max-width: 448px;
+  max-width: 460px;
   max-height: calc(100vh - 32px);
   max-height: calc(100dvh - 32px);
   padding: 0;
@@ -100,15 +100,17 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 24px;
+  padding: 26px 32px 24px;
+  border: 1px solid #463b50;
+  border-radius: 16px;
+  background: rgba(30, 23, 39, 0.96);
+  box-shadow: 0 20px 40px rgba(12, 7, 22, 0.3);
 }
 .header {
   position: relative;
   text-align: center;
-  padding: 20px 32px;
-  border: 1px solid #463b50;
-  border-radius: 16px;
-  background: rgba(30, 23, 39, 0.96);
+  padding: 0 28px;
 }
 .brand {
   font-size: 14px;
@@ -138,11 +140,7 @@
 }
 .card {
   margin-top: 0;
-  padding: 32px;
-  border: 1px solid #463b50;
-  border-radius: 16px;
-  background: rgba(30, 23, 39, 0.94);
-  box-shadow: 0 20px 40px rgba(12, 7, 22, 0.3);
+  padding: 0;
 }
 .switch {
   display: grid;
@@ -177,7 +175,7 @@
 }
 .input {
   width: 100%;
-  height: 40px;
+  height: 48px;
   padding: 0 12px;
   border: 1px solid #594961;
   border-radius: 8px;
@@ -197,7 +195,7 @@
 }
 .reveal {
   position: absolute;
-  top: 4px;
+  top: 8px;
   right: 4px;
   display: grid;
   place-items: center;
@@ -366,8 +364,9 @@
   border: 1px solid #a99bb7;
 }
 .holdSubmit.holdSubmit:not(:disabled)[data-phase='idle'] {
-  background: #fff;
-  color: #111;
+  border-color: var(--color-primary-purple, #7c3aed);
+  background: var(--color-primary-purple, #7c3aed);
+  color: #fff;
 }
 .loginAction {
   display: flex;
@@ -404,6 +403,9 @@
   font-size: 14px;
   font-weight: 600;
 }
+.form .primary {
+  height: 52px;
+}
 .dialog .primary:not(:disabled):hover {
   filter: brightness(1.08);
 }
@@ -437,12 +439,29 @@
   color: #b7acbf;
 }
 .privacy {
-  margin-top: 0;
-  padding: 16px 20px;
-  border: 1px solid #463b50;
-  border-radius: 16px;
-  background: rgba(30, 23, 39, 0.96);
-  text-align: center;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid #463b50;
+  text-align: left;
+}
+.privacy svg {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: #c1adcf;
+}
+.privacy strong {
+  display: block;
+  color: #e8e0ee;
+  font-size: 12px;
+  font-weight: 600;
+}
+.privacy p {
+  margin-top: 3px;
 }
 .error {
   color: #ffc1cf;
@@ -499,7 +518,8 @@
   border: 0;
 }
 @media (max-width: 767px) {
-  .card {
+  .composition {
+    gap: 20px;
     padding: 24px;
   }
   .header h2 {
