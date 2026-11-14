@@ -297,17 +297,22 @@
 }
 .modeTabs {
   composes: contract from '../animata/button/action-button-sizing.module.css';
+  --action-height: 44px;
+  --action-width: calc((100% - var(--action-gap)) / 2);
+
   margin-bottom: 28px;
 }
 .modeTabList {
   display: flex;
+  width: 100%;
   justify-content: center;
   gap: var(--action-gap);
 }
 .modeTab {
-  width: min(var(--action-width), calc((100% - var(--action-gap)) / 2));
+  width: var(--action-width);
   height: var(--action-height);
   min-width: 0;
+  flex: 1 1 0;
   border: 1px solid #594961;
   border-radius: var(--action-surface-radius);
   background: #241c2e;
@@ -357,6 +362,7 @@
 }
 .holdSubmit {
   width: 100%;
+  height: 52px;
   border: 1px solid #a99bb7;
 }
 .holdSubmit.holdSubmit:not(:disabled)[data-phase='idle'] {
@@ -364,20 +370,18 @@
   color: #111;
 }
 .loginAction {
-  composes: contract from '../animata/button/action-button-sizing.module.css';
   display: flex;
-  justify-content: center;
+  width: 100%;
 }
-@media (max-width: 767px) {
-  .loginAction.loginAction.loginAction {
-    --action-width: calc(
-      (
-          100vw - 2 * var(--action-overlay-inset) - 2 *
-            var(--action-dialog-border) - 2 * var(--action-dialog-padding) -
-            var(--action-gap)
-        ) / 2
-    );
-  }
+.loginAction :global(.shining-button) {
+  box-sizing: border-box;
+  width: 100%;
+  height: 52px;
+}
+.loginAction :global(.shining-button__body) {
+  width: 100%;
+  height: 100%;
+  padding: 0 24px;
 }
 .information {
   display: inline-grid;

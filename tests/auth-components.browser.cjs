@@ -71,10 +71,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
       await page.getByRole('button', { name: 'Log in', exact: true }).click()
       await auth.waitFor()
       const geometry = await auth.getByRole('button',{name:'Log in',exact:true}).evaluate(e=>{
-        const a=e.getBoundingClientRect(), b=e.parentElement.getBoundingClientRect()
-        return Math.abs((a.left+a.right)/2-(b.left+b.right)/2)
+        const a=e.getBoundingClientRect(), b=e.closest('form').getBoundingClientRect()
+        return {center:Math.abs((a.left+a.right)/2-(b.left+b.right)/2),width:Math.abs(a.width-b.width),height:getComputedStyle(e).height}
       })
-      assert(geometry<1,'Log in is centered within its unchanged action sizing wrapper')
+      assert(geometry.center<1 && geometry.width<1 && geometry.height==='52px','Log in fills and aligns with its form')
       const login = auth.getByRole('tab', { name: 'Log in', exact: true })
       const signup = auth.getByRole('tab', { name: 'Sign up', exact: true })
       await login.focus()
@@ -143,7 +143,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
         })
       ))
       for (const tab of selector) {
-        assert.equal(tab.height, width < 768 ? '48px' : '64px')
+        assert.equal(tab.height, '44px')
         assert.equal(tab.radius, '8px')
         assert.equal(tab.font, '14px')
       }
@@ -182,6 +182,19 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
       const hold = auth.getByRole('button', { name: /^(Hold to create account|Create account)/ })
       assert(await hold.getByText('Hold to create account',{exact:true}).first().isVisible())
       assert.equal(await hold.evaluate(e=>getComputedStyle(e).borderTopWidth),'1px')
+      const holdGeometry = await hold.evaluate((e) => {
+        const button = e.getBoundingClientRect()
+        const form = e.closest('form').getBoundingClientRect()
+        return {
+          height: getComputedStyle(e).height,
+          width: Math.abs(button.width - form.width),
+          center: Math.abs(
+            (button.left + button.right) / 2 - (form.left + form.right) / 2
+          ),
+        }
+      })
+      assert.equal(holdGeometry.height, '52px')
+      assert(holdGeometry.width < 1 && holdGeometry.center < 1)
       await hold.focus()
       await page.keyboard.down('Enter')
       await page.waitForTimeout(150)
