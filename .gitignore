@@ -10,6 +10,7 @@ node_modules
 
 # next.js
 /.next/
+/.next-v1-uu-dev/
 /out/
 **/public/workbox-*.js
 **/public/sw.js

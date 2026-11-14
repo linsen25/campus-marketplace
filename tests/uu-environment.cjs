@@ -28,6 +28,11 @@ const messages = load('lib/server/messages-environment.ts')
 const secrets = load('lib/server/supabase-secret.ts')
 const ref = environment.canonicalUuProjectRef
 
+const nextConfig = fs.readFileSync('next.config.js', 'utf8')
+const launcher = fs.readFileSync('scripts/dev-v1-uu.cjs', 'utf8')
+assert.match(nextConfig, /distDir:\s*process\.env\.NEXT_DIST_DIR\s*\|\|\s*'\.next'/)
+assert.match(launcher, /NEXT_DIST_DIR:\s*'\.next-v1-uu-dev'/)
+
 process.env.APP_ENV = 'uu'
 process.env.NEXT_PUBLIC_SUPABASE_URL = `https://${ref}.supabase.co`
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'sb_publishable_unit'

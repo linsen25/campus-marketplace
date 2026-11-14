@@ -18,6 +18,10 @@ const ifdefOpts = {
 
 /** @type {import('next').NextConfig} */
 module.exports = withNextPlugins([withBundleAnalyzer, withPWA], {
+  // Development launchers may opt into an isolated output directory. This
+  // prevents a concurrent production build from replacing the running dev
+  // server's manifests, chunks, and HMR state.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   env: {
     NEXT_PUBLIC_MESSAGES_ENV: process.env.APP_ENV || '',
     NEXT_PUBLIC_ORDER_PREVIEW: process.env.ORDER_PREVIEW_MODE || '',

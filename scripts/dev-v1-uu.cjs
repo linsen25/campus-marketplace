@@ -78,6 +78,10 @@ const child = spawn(
       ...isolated,
       ...values,
       APP_ENV: 'uu',
+      // Keep the running local development compiler separate from `next build`.
+      // A production build may otherwise overwrite `.next` while this server is
+      // serving it, which leaves routes with mismatched manifests/chunks.
+      NEXT_DIST_DIR: '.next-v1-uu-dev',
       NEXT_PUBLIC_MESSAGES_ENV: 'uu',
       STRIPE_APPLICATION_ORIGIN: 'http://localhost:3000',
       STRIPE_PROVIDER_ENABLED: 'false',
