@@ -42,6 +42,7 @@
 
 .main {
   position: relative;
+  z-index: 0;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -98,9 +99,7 @@
   grid-template-rows: 0fr;
   opacity: 0%;
   visibility: hidden;
-  transition:
-    grid-template-rows 200ms ease-out,
-    opacity 200ms ease-out,
+  transition: grid-template-rows 200ms ease-out, opacity 200ms ease-out,
     visibility 200ms;
 }
 
@@ -148,7 +147,7 @@
   outline-offset: -2px;
 }
 
-.child[aria-current="page"] {
+.child[aria-current='page'] {
   background: #a77bcc12;
   color: #f5edf9;
 }
@@ -202,20 +201,22 @@
     --home-section-bottom-inset: max(12px, env(safe-area-inset-bottom, 0px));
   }
   /* Let the open global menu reach above body-portaled local overlays. */
-  .mobileHeader:has([data-smooth-dropdown] > button[aria-expanded="true"]) {
+  .mobileHeader:has([data-smooth-dropdown] > button[aria-expanded='true']) {
     z-index: 80;
   }
 
-  .page:has(.mobileHeader [data-smooth-dropdown] > button[aria-expanded="true"]) {
+  .page:has(.mobileHeader
+      [data-smooth-dropdown]
+      > button[aria-expanded='true']) {
     isolation: auto;
   }
 
   /* Keep the ambient background behind content while isolation is released. */
-  .page:has(.mobileHeader button[aria-expanded="true"]) .mobileAmbient {
+  .page:has(.mobileHeader button[aria-expanded='true']) .mobileAmbient {
     z-index: 0;
   }
 
-  .page:has(.mobileHeader button[aria-expanded="true"]) .mobileMain {
+  .page:has(.mobileHeader button[aria-expanded='true']) .mobileMain {
     z-index: 1;
   }
 }
@@ -258,16 +259,15 @@
     min-height: 0;
     padding-block: 48px;
     background: #160d23;
-    padding-inline:
-      calc(
-        max(
+    padding-inline: calc(
+      max(
           var(--desktop-app-inset),
           calc(
             (100vw - var(--desktop-app-content-width)) / 2 +
-            var(--desktop-app-inset)
+              var(--desktop-app-inset)
           )
         ) / 2
-      );
+    );
   }
 
   /* One 64px rail axis for the logo, links, active surface and pin.
@@ -276,7 +276,9 @@
   .navigation.navigation {
     --home-rail-control-width: 60px;
     --home-rail-inset: 2px;
-    --home-rail-icon-inset: calc((var(--home-rail-control-width) - var(--desktop-app-icon-size)) / 2);
+    --home-rail-icon-inset: calc(
+      (var(--home-rail-control-width) - var(--desktop-app-icon-size)) / 2
+    );
 
     background: #131017;
     border-right-color: #c2a2e63d;
@@ -297,7 +299,7 @@
     height: var(--desktop-app-control-height);
   }
 
-  .navigation :is(a[href^="#"], a[href="/home?section=notifications"]) {
+  .navigation :is(a[href^='#'], a[href='/home?section=notifications']) {
     height: var(--desktop-app-control-height);
     padding-inline: var(--home-rail-icon-inset);
   }
@@ -340,8 +342,13 @@
     outline-offset: -2px;
   }
 
-  .navigation :is(a[href^="#"], a[href="/home?section=notifications"]) > span:first-child,
-  .navigation :is(a[href^="#"], a[href="/home?section=notifications"]) > span:first-child svg {
+  .navigation
+    :is(a[href^='#'], a[href='/home?section=notifications'])
+    > span:first-child,
+  .navigation
+    :is(a[href^='#'], a[href='/home?section=notifications'])
+    > span:first-child
+    svg {
     width: var(--desktop-app-icon-size);
     height: var(--desktop-app-icon-size);
   }
@@ -362,32 +369,29 @@
    header height or adding compensation to the actual content toolbar. */
 .main [data-content-state-region],
 .mobileMain [data-content-state-region] {
-  --home-empty-origin:
-    calc(
-      var(--home-content-state-top-inset) + var(--home-empty-title-row) + 24px
-    );
+  --home-empty-origin: calc(
+    var(--home-content-state-top-inset) + var(--home-empty-title-row) + 24px
+  );
 
   position: static;
 }
 
-.main section[aria-label="My Listings"] [data-content-state-region],
-.mobileMain section[aria-label="My Listings"] [data-content-state-region] {
-  --home-empty-origin:
-    calc(
-      var(--home-content-state-top-inset) + var(--home-empty-title-row) + 24px +
+.main section[aria-label='My Listings'] [data-content-state-region],
+.mobileMain section[aria-label='My Listings'] [data-content-state-region] {
+  --home-empty-origin: calc(
+    var(--home-content-state-top-inset) + var(--home-empty-title-row) + 24px +
       51px + 20px
-    );
+  );
 }
 
 .main [data-content-state-anchor],
 .mobileMain [data-content-state-anchor] {
   inset-inline: 24px;
-  top:
-    calc(
-      var(--home-empty-origin) +
+  top: calc(
+    var(--home-empty-origin) +
       (100% - var(--home-section-bottom-inset) - var(--home-empty-origin)) *
       0.275
-    );
+  );
 }
 
 /* Only the inner pricing workspace is capped. Page headings keep the same

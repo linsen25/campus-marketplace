@@ -17,12 +17,19 @@ import type {
 } from '@/lib/notification-category'
 
 import { NotificationPopups } from './notification-popups'
+import {
+  createNotificationDemoFeed,
+  filterNotificationDemoFeed,
+  notificationDemoEnabledFor,
+} from './notification-demo'
 import { useNotificationPopups } from './use-notification-popups'
 import { useNotificationPreferences } from './use-notification-preferences'
 
 export type Feed = {
   notifications: NotificationItem[]
   unreadCount: number
+  /** Present only when the source can prove a full, not paged, total. */
+  totalCount?: number
   hasMore?: boolean
   nextCursor?: { before: string; beforeId: string } | null
 }
@@ -46,6 +53,7 @@ function useNotificationState(userId: string | undefined) {
   ownerRef.current = userId
   const [owner, setOwner] = useState(userId)
   const [feed, setFeed] = useState<Feed>({ notifications: [], unreadCount: 0 })
+  const demoFeed = useRef<Feed | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
@@ -61,6 +69,21 @@ function useNotificationState(userId: string | undefined) {
     const request = ++version.current
     if (mounted.current) setRefreshing(true)
     try {
+      if (notificationDemoEnabledFor(ownerRef.current)) {
+        const source = demoFeed.current || createNotificationDemoFeed()
+        demoFeed.current = source
+        const data = filterNotificationDemoFeed(
+          source,
+          categoryRef.current,
+          statusRef.current
+        )
+        if (mounted.current && request === version.current) {
+          setFeed(data)
+          setMore(false)
+          setError('')
+        }
+        return
+      }
       const params = new URLSearchParams()
       if (categoryRef.current) params.set('category', categoryRef.current)
       if (statusRef.current) params.set('status', statusRef.current)
@@ -133,6 +156,29 @@ function useNotificationState(userId: string | undefined) {
     setLoading(true)
     refresh()
   }
+  const setFilters = (
+    nextCategory: NotificationCategory | '',
+    nextStatus: '' | 'read' | 'unread'
+  ) => {
+    if (
+      categoryRef.current === nextCategory &&
+      statusRef.current === nextStatus
+    )
+      return
+    categoryRef.current = nextCategory
+    statusRef.current = nextStatus
+    setCategoryState(nextCategory)
+    setStatusState(nextStatus)
+    pagesLoaded.current = 1
+    version.current += 1
+    setFeed((current) => ({
+      notifications: [],
+      unreadCount: current.unreadCount,
+    }))
+    setMore(false)
+    setLoading(true)
+    refresh()
+  }
   const invalidate = useCallback(() => {
     version.current += 1
   }, [])
@@ -144,6 +190,7 @@ function useNotificationState(userId: string | undefined) {
     setStatusState('unread')
     pagesLoaded.current = 1
     setFeed({ notifications: [], unreadCount: 0 })
+    demoFeed.current = null
     setLoading(true)
     setError('')
     setRefreshing(false)
@@ -192,6 +239,23 @@ function useNotificationState(userId: string | undefined) {
   ])
 
   async function markRead(item: NotificationItem) {
+    if (notificationDemoEnabledFor(ownerRef.current)) {
+      const source = demoFeed.current || createNotificationDemoFeed()
+      demoFeed.current = {
+        ...source,
+        unreadCount: Math.max(0, source.unreadCount - Number(!item.read_at)),
+        notifications: source.notifications.map((value) =>
+          value.id === item.id && !value.read_at
+            ? { ...value, read_at: new Date().toISOString() }
+            : value
+        ),
+      }
+      await refresh()
+      return (
+        demoFeed.current.notifications.find((value) => value.id === item.id) ||
+        item
+      )
+    }
     const actor = ownerRef.current
     const known = feed.notifications.find((n) => n.id === item.id)
     let readItem = known?.read_at ? known : item
@@ -241,7 +305,9 @@ function useNotificationState(userId: string | undefined) {
     setCategory,
     status,
     setStatus,
+    setFilters,
     pagesLoaded,
+    isDemo: notificationDemoEnabledFor(owner),
   }
 }
 export function NotificationsProvider({ children }: { children: ReactNode }) {

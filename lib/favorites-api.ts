@@ -1,6 +1,7 @@
 import { marketplaceRequest } from '@/lib/listings-api'
 import type { MarketplaceContext } from '@/lib/supabase/server'
 import type { Listing, ListingQuery } from '@/types/listing'
+import type { FavoriteShopProducts } from '@/types/shop'
 
 export type FavoritesQuery = Omit<ListingQuery, 'sort' | 'status'> & {
   place?: string
@@ -42,6 +43,30 @@ export async function getFavoriteListings(
     if (value !== undefined) params.set(key, String(value))
   })
   return marketplaceRequest(`/api/favorites?${params}`, 'GET')
+}
+
+export async function getFavoriteShopProducts(
+  query: {
+    page?: number
+    pageSize?: number
+    shopId?: string
+    search?: string
+    category?: string
+    sort?: string
+  } = {},
+  context: MarketplaceContext | undefined = undefined
+): Promise<FavoriteShopProducts> {
+  if (typeof window === 'undefined')
+    return (await repository(context)).getFavoriteShopProducts(query)
+  const params = new URLSearchParams()
+  if (query.page !== undefined) params.set('page', String(query.page))
+  if (query.pageSize !== undefined)
+    params.set('pageSize', String(query.pageSize))
+  if (query.shopId) params.set('shopId', query.shopId)
+  if (query.search?.trim()) params.set('search', query.search.trim())
+  if (query.category) params.set('category', query.category)
+  if (query.sort && query.sort !== 'newest') params.set('sort', query.sort)
+  return marketplaceRequest(`/api/favorites/shop-products?${params}`, 'GET')
 }
 
 export async function favoriteState(

@@ -1,6 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { useReducedMotion } from 'motion/react'
 
+import {
+  dropdownMotion,
+  dropdownMotionVars,
+} from '@/components/ui/dropdown-motion'
 import type {
+  MeetingArea,
   MeetingPlaceReference,
   PlaceDetails,
   PlaceSuggestion,
@@ -31,13 +37,14 @@ async function places<T>(
   })
   if (!response.ok)
     throw new Error(
-      'Location search unavailable. You can enter a location manually.'
+      'Location search unavailable. Retry to choose a Google Place.'
     )
   return response.json()
 }
 /** Controlled free text with optional place suggestions; submitted text owns transaction wording. */
 export function MeetingLocationInput({
   value,
+  meetingArea,
   selected,
   onChange,
   onSelect,
@@ -48,6 +55,7 @@ export function MeetingLocationInput({
   required = false,
 }: {
   value: string
+  meetingArea?: MeetingArea | null
   selected?: MeetingPlaceReference | null
   onChange: (value: string) => void
   onSelect: (place: PlaceDetails | null) => void
@@ -69,6 +77,45 @@ export function MeetingLocationInput({
   const [loading, setLoading] = useState(false)
   const [feedback, setFeedback] = useState('')
   const [active, setActive] = useState(-1)
+  const reduced = Boolean(useReducedMotion())
+  const [panelPresent, setPanelPresent] = useState(false)
+  const [panelStage, setPanelStage] = useState<
+    'closed' | 'panel' | 'content' | 'closing'
+  >('closed')
+  useEffect(() => {
+    if (open && !disabled) {
+      setPanelPresent(true)
+      return undefined
+    }
+    if (!panelPresent) return undefined
+    const timer = setTimeout(
+      () => setPanelPresent(false),
+      reduced ? 0 : dropdownMotion.panelExit * 1000
+    )
+    return () => clearTimeout(timer)
+  }, [disabled, open, panelPresent, reduced])
+  useEffect(() => {
+    if (!panelPresent) {
+      setPanelStage('closed')
+      return undefined
+    }
+    if (!open || disabled) {
+      setPanelStage('closing')
+      return undefined
+    }
+    setPanelStage('panel')
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const frame = requestAnimationFrame(() => {
+      timer = setTimeout(
+        () => setPanelStage('content'),
+        reduced ? 0 : dropdownMotion.contentDelay * 1000
+      )
+    })
+    return () => {
+      cancelAnimationFrame(frame)
+      if (timer) clearTimeout(timer)
+    }
+  }, [disabled, open, panelPresent, reduced])
   const dismiss = () => {
     generation.current++
     request.current?.abort()
@@ -99,7 +146,11 @@ export function MeetingLocationInput({
       try {
         const data = await places<{ suggestions: PlaceSuggestion[] }>(
           'autocomplete',
-          { input: query.trim(), sessionToken: token.current },
+          {
+            input: query.trim(),
+            sessionToken: token.current,
+            meetingArea: meetingArea ?? 'OTHER',
+          },
           controller.signal
         )
         if (version !== generation.current) return
@@ -107,12 +158,12 @@ export function MeetingLocationInput({
         setFeedback(
           data.suggestions.length
             ? ''
-            : 'No suggestions. You can enter a location manually.'
+            : 'No suggestions. Refine your search and choose a Google Place.'
         )
       } catch {
         if (version === generation.current)
           setFeedback(
-            'Location search unavailable. You can enter a location manually.'
+            'Location search unavailable. Retry to choose a Google Place.'
           )
       } finally {
         if (version === generation.current) setLoading(false)
@@ -124,7 +175,7 @@ export function MeetingLocationInput({
       clearTimeout(timer)
       request.current?.abort()
     }
-  }, [query, value, disabled])
+  }, [query, value, disabled, meetingArea])
   useEffect(
     () => () => {
       generation.current++
@@ -133,7 +184,7 @@ export function MeetingLocationInput({
     []
   )
   useEffect(() => {
-    if (!open || disabled) return undefined
+    if (!panelPresent || disabled) return undefined
     const node = panel.current
     const position = () => {
       if (!node || !input.current) return
@@ -157,22 +208,28 @@ export function MeetingLocationInput({
     }
     node?.showPopover?.()
     position()
-    const outside = (e: PointerEvent) => {
-      if (!node?.contains(e.target as Node) && e.target !== input.current)
-        dismiss()
-    }
     window.addEventListener('resize', position)
     document.addEventListener('scroll', position, true)
     window.visualViewport?.addEventListener('resize', position)
-    document.addEventListener('pointerdown', outside)
     return () => {
       node?.hidePopover?.()
       window.removeEventListener('resize', position)
       document.removeEventListener('scroll', position, true)
       window.visualViewport?.removeEventListener('resize', position)
-      document.removeEventListener('pointerdown', outside)
     }
-  }, [open, disabled, suggestions, feedback, loading])
+  }, [panelPresent, disabled, suggestions, feedback, loading])
+  useEffect(() => {
+    if (!open || disabled) return undefined
+    const outside = (event: PointerEvent) => {
+      if (
+        !panel.current?.contains(event.target as Node) &&
+        event.target !== input.current
+      )
+        dismiss()
+    }
+    document.addEventListener('pointerdown', outside)
+    return () => document.removeEventListener('pointerdown', outside)
+  }, [disabled, open])
   useEffect(() => {
     const node = panel.current
     const option = node?.querySelector<HTMLElement>('[aria-selected="true"]')
@@ -210,7 +267,7 @@ export function MeetingLocationInput({
     } catch {
       if (version === generation.current)
         setFeedback(
-          'Location search unavailable. You can enter a location manually.'
+          'Location search unavailable. Retry to choose a Google Place.'
         )
     } finally {
       if (version === generation.current) {
@@ -284,8 +341,14 @@ export function MeetingLocationInput({
           {hint}
         </p>
       )}
-      {open && !disabled && (
-        <div ref={panel} {...{ popover: 'manual' }} className={styles.panel}>
+      {panelPresent && !disabled && (
+        <div
+          ref={panel}
+          {...{ popover: 'manual' }}
+          className={styles.panel}
+          data-state={panelStage}
+          style={dropdownMotionVars(reduced)}
+        >
           {loading && (
             <p className={styles.feedback} role="status">
               Searching locations…

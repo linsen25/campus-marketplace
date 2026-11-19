@@ -48,7 +48,23 @@ function load(file) {
             return {}
           },
         }
-      return name.startsWith('@/') ? load(name.slice(2) + '.ts') : require(name)
+      if (name.startsWith('@/')) {
+        return load(name.slice(2) + '.ts')
+      }
+
+      if (name.startsWith('./') || name.startsWith('../')) {
+        const resolved = path.resolve(path.dirname(p), name)
+
+        if (resolved.endsWith('.json')) {
+          return require(resolved)
+        }
+
+        if (resolved.endsWith('.ts')) {
+          return load(resolved)
+        }
+      }
+
+      return require(name)
     },
     m,
     m.exports
@@ -60,9 +76,9 @@ const service = load('lib/server/places-service.ts'),
   handler = load('pages/api/places/[action].ts').default
 const token = '11111111-1111-4111-8111-111111111111',
   key = 'offline-places-key-sentinel'
-process.env.APP_ENV = 'staging'
+process.env.APP_ENV = 'uu'
 process.env.NEXT_PUBLIC_SUPABASE_URL =
-  'https://pcaqxezdfxofysghssyo.supabase.co'
+  'https://uqhyjpjiznpgomuizfqe.supabase.co'
 process.env.GOOGLE_PLACES_API_KEY = key
 let calls = []
 let failure = false
@@ -134,7 +150,7 @@ async function invoke(action, body, extra = {}) {
   assert(!JSON.stringify(res.data).includes(key))
   return res
 }
-(async () => {
+;(async () => {
   assert.equal(
     (
       await invoke(
@@ -219,7 +235,7 @@ async function invoke(action, body, extra = {}) {
     503
   )
   assert.equal(calls.length, before)
-  process.env.APP_ENV = 'staging'
+  process.env.APP_ENV = 'uu'
   for (let i = 0; i < 60; i++) service.guardPlacesRate('rate-fixture', 1000)
   assert.throws(
     () => service.guardPlacesRate('rate-fixture', 1001),

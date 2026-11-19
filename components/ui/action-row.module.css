@@ -1,40 +1,79 @@
-/* stylelint-disable property-no-unknown -- CSS Modules composition. */
 .row {
-  composes: actions from "../velora/expandable-card.module.css";
+  --action-slot-width: var(--action-width, 200px);
+  --row-action-gap: var(--action-gap, 16px);
 
-  --action-slot-width: var(--action-width);
-
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
   align-items: center;
+  justify-content: space-between;
+  gap: var(--row-action-gap);
+  padding-top: 24px;
+  flex-wrap: wrap;
 }
 
-.row.row > span {
-  --action-gap: inherit;
-  --action-width: min(var(--action-slot-width), calc((100% - var(--action-gap)) / 2));
+.end {
+  justify-content: flex-end;
+}
+
+.end > span {
+  width: auto;
+  flex-basis: auto;
+}
+
+.end > span > :global(.shining-button) {
+  width: auto;
+}
+
+.row:not(.end) > span {
+  --action-width: min(
+    var(--action-slot-width),
+    calc((100% - var(--row-action-gap)) / 2)
+  );
 
   flex: 0 0 auto;
   width: var(--action-width);
   min-width: 0;
 }
 
-.row.three > span {
-  --action-width: min(var(--action-slot-width), calc((100% - 2 * var(--action-gap)) / 3));
+.row:not(.end) > span > :global(.shining-button) {
+  width: 100%;
+}
+
+.row.three:not(.end) > span {
+  --action-width: min(
+    var(--action-slot-width),
+    calc((100% - 2 * var(--row-action-gap)) / 3)
+  );
 }
 
 @media (max-width: 1023px) {
-  .row.mobileThree > span {
-    --action-width: min(var(--action-slot-width), calc((100% - 2 * var(--action-gap)) / 3));
+  .row.mobileThree:not(.end) > span {
+    --action-width: min(
+      var(--action-slot-width),
+      calc((100% - 2 * var(--row-action-gap)) / 3)
+    );
   }
 }
 
 @media (max-width: 767px) {
   .row.three,
   .row.mobileThree {
-    --action-gap: 8px;
+    --row-action-gap: 8px;
   }
+}
 
-  .row.three > span,
-  .row.mobileThree > span {
-    --action-font-size: 12px;
-    --action-surface-padding: 0 4px;
-  }
+/* Settings dialogs: content-sized buttons at opposite edges. */
+.row.compactBetween {
+  justify-content: space-between;
+}
+
+.row.compactBetween > span {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+}
+
+.row.compactBetween > span > :global(.shining-button) {
+  width: auto;
 }

@@ -15,8 +15,11 @@ import { useEffect, useRef, useState } from 'react'
 import FilterInteraction from '@/components/filter-interaction'
 import { WorkspaceEmpty } from '@/components/listings/workspace-empty'
 import { FadingDialog } from '@/components/ui/fading-dialog'
+import { SegmentedContent } from '@/components/ui/segmented-content'
+import { SegmentedControl } from '@/components/ui/segmented-control'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatefulButton } from '@/components/velora/stateful-button'
+import ShiningButton from '@/components/animata/button/shining-button'
 import { marketplaceRequest } from '@/lib/listings-api'
 import {
   notificationCategory,
@@ -54,20 +57,24 @@ function NotificationsFilter({
   category,
   status,
   disabled,
-  onCategory,
-  onStatus,
+  onApply,
 }: {
   category: string
   status: string
   disabled: boolean
-  onCategory: (value: NotificationCategory | '') => void
-  onStatus: (value: '' | 'read' | 'unread') => void
+  onApply: (
+    category: NotificationCategory | '',
+    status: '' | 'read' | 'unread'
+  ) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState({ category, status })
+  const reset = () => setDraft({ category: '', status: '' })
+  const close = () => setOpen(false)
   return (
     <FilterInteraction
       label="Filter"
-      appearance="select"
+      appearance="market"
       topLayer={true}
       isOpen={open}
       disabled={disabled}
@@ -79,53 +86,96 @@ function NotificationsFilter({
           Filter
         </>
       }
-      onOpenChange={setOpen}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) setDraft({ category, status })
+        setOpen(nextOpen)
+      }}
     >
-      <div className={styles.filterOptions}>
-        <fieldset>
-          <legend>Notification category</legend>
-          {[
-            ['', 'All notifications'],
-            ['message', 'Messages'],
-            ['order', 'Orders'],
-            ['listing', 'Listings'],
-            ['system', 'System'],
-          ].map(([value, label]) => (
-            <label key={value}>
-              <input
-                type="radio"
-                name="notification-category"
-                checked={category === value}
-                disabled={disabled}
-                onChange={() => onCategory(value as NotificationCategory | '')}
-              />
-              {label}
-            </label>
-          ))}
-        </fieldset>
-        <fieldset>
-          <legend>Notification status</legend>
-          {[
-            ['', 'All status'],
-            ['unread', 'Unread'],
-            ['read', 'Read'],
-          ].map(([value, label]) => (
-            <label key={value}>
-              <input
-                type="radio"
-                name="notification-status"
-                checked={status === value}
-                disabled={disabled}
-                onChange={() => onStatus(value as '' | 'read' | 'unread')}
-              />
-              {label}
-            </label>
-          ))}
-        </fieldset>
-        <button type="button" onClick={() => setOpen(false)}>
-          Close filters
-        </button>
-      </div>
+      <form
+        className={styles.filterOptions}
+        onSubmit={(event) => {
+          event.preventDefault()
+          onApply(
+            draft.category as NotificationCategory | '',
+            draft.status as '' | 'read' | 'unread'
+          )
+          close()
+        }}
+      >
+        <header className={styles.filterHeader}>
+          <h2>Filters</h2>
+          <button
+            type="button"
+            className={styles.filterClose}
+            aria-label="Close filters"
+            onClick={close}
+          >
+            <X size={18} aria-hidden={true} />
+          </button>
+        </header>
+        <div className={styles.filterDivider} />
+        <div className={styles.filterBody}>
+          <fieldset>
+            <legend>Category</legend>
+            {[
+              ['', 'All notifications'],
+              ['message', 'Messages'],
+              ['order', 'Orders'],
+              ['listing', 'Listings'],
+              ['system', 'System'],
+            ].map(([value, label]) => (
+              <label key={value}>
+                <input
+                  type="radio"
+                  name="notification-category"
+                  checked={draft.category === value}
+                  disabled={disabled}
+                  onChange={() =>
+                    setDraft((current) => ({ ...current, category: value }))
+                  }
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </fieldset>
+          <fieldset>
+            <legend>Status</legend>
+            {[
+              ['', 'All status'],
+              ['unread', 'Unread'],
+              ['read', 'Read'],
+            ].map(([value, label]) => (
+              <label key={value}>
+                <input
+                  type="radio"
+                  name="notification-status"
+                  checked={draft.status === value}
+                  disabled={disabled}
+                  onChange={() =>
+                    setDraft((current) => ({ ...current, status: value }))
+                  }
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </fieldset>
+        </div>
+        <div className={styles.filterDivider} />
+        <footer className={styles.filterActions}>
+          <button type="button" className={styles.reset} onClick={reset}>
+            Reset
+          </button>
+          <ShiningButton
+            type="submit"
+            variant="purple"
+            showArrow={false}
+            size="compact"
+            disabled={disabled}
+          >
+            Apply filters
+          </ShiningButton>
+        </footer>
+      </form>
     </FilterInteraction>
   )
 }
@@ -169,12 +219,17 @@ function NotificationContent() {
     version,
     mounted,
     category,
-    setCategory,
     status,
     setStatus,
+    setFilters,
     pagesLoaded,
     ownerRef,
+    isDemo,
   } = state
+  const segmentedStatus = status === 'unread' ? 'unread' : 'all'
+  // The remote endpoint is paged and intentionally has no total-count field.
+  // Do not turn a page length into an All badge. The local demo is complete.
+  const allCount = feed.totalCount
   const chosen = feed.notifications.filter((n) => selectedIds.includes(n.id))
   useEffect(() => {
     setSelectedIds((current) => {
@@ -274,47 +329,33 @@ function NotificationContent() {
   return (
     <section className={styles.center} aria-label="Notifications feed">
       <div className={styles.toolbar}>
-        <div
-          className={styles.statusTabs}
-          role="group"
-          aria-label="Notification status"
-        >
-          {[
-            ['', 'All'],
-            ['unread', 'Unread'],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={status === value}
-              disabled={managing}
-              onClick={() => {
-                resetSelection()
-                setStatus(value as '' | 'unread')
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          ariaLabel="Notification status"
+          value={segmentedStatus}
+          disabled={managing}
+          items={[
+            { value: 'all', label: 'All', count: allCount },
+            { value: 'unread', label: 'Unread', count: feed.unreadCount },
+          ]}
+          onChange={(value) => {
+            resetSelection()
+            setStatus(value === 'unread' ? 'unread' : '')
+          }}
+        />
         <div className={styles.toolbarRight}>
           <NotificationsFilter
             category={category}
             status={status}
             disabled={managing}
-            onCategory={(value) => {
+            onApply={(nextCategory, nextStatus) => {
               resetSelection()
-              setCategory(value)
-            }}
-            onStatus={(value) => {
-              resetSelection()
-              setStatus(value)
+              setFilters(nextCategory, nextStatus)
             }}
           />
           <button
             type="button"
             className={styles.selectMode}
-            disabled={managing}
+            disabled={managing || isDemo}
             aria-pressed={selectionMode}
             aria-label={selectionMode ? 'Done' : 'Select'}
             onClick={() => {
@@ -421,132 +462,139 @@ function NotificationContent() {
           {notice}
         </p>
       )}
-      {loading && (
-        <div role="status" aria-label="Loading notifications">
-          <Skeleton style={{ height: 56, marginBottom: 8 }} />
-          <Skeleton style={{ height: 56 }} />
-        </div>
-      )}
-      {error && (
-        <div role="alert">
-          <p>{error}</p>
-          <button type="button" onClick={refresh}>
-            Retry
-          </button>
-        </div>
-      )}
-      {!loading && !error && !feed.notifications.length && (
-        <WorkspaceEmpty>
-          {category || status
-            ? 'No notifications match these filters.'
-            : 'No notifications yet. Important updates about offers, messages, and orders will appear here.'}
-        </WorkspaceEmpty>
-      )}
-      <ul className={styles.list} data-selection={selectionMode || undefined}>
-        {feed.notifications.map((item) => {
-          const { title, body } = notificationCopy(item.event_type)
-          return (
-            <li
-              key={item.id}
-              className={styles.row}
-              data-unread={!item.read_at || undefined}
-            >
-              {selectionMode && (
-                <input
-                  className={styles.checkbox}
-                  type="checkbox"
-                  aria-label={`Select ${title}`}
-                  checked={selectedIds.includes(item.id)}
-                  disabled={
-                    managing ||
-                    (!selectedIds.includes(item.id) && chosen.length >= 500)
-                  }
-                  onChange={(e) => {
-                    setConfirmDelete(false)
-                    setSelectedIds((current) =>
-                      e.target.checked
-                        ? [...current, item.id]
-                        : current.filter((id) => id !== item.id)
-                    )
-                  }}
-                />
-              )}
-              <button
-                type="button"
-                className={styles.rowOpen}
-                disabled={managing}
-                aria-disabled={opening || managing}
-                aria-label={`Open notification: ${title}`}
-                onClick={() => open(item, false)}
+      {/* Notification content slide animation */}
+      <SegmentedContent
+        value={segmentedStatus}
+        index={segmentedStatus === 'unread' ? 1 : 0}
+      >
+        {loading && (
+          <div role="status" aria-label="Loading notifications">
+            <Skeleton style={{ height: 56, marginBottom: 8 }} />
+            <Skeleton style={{ height: 56 }} />
+          </div>
+        )}
+        {error && (
+          <div role="alert">
+            <p>{error}</p>
+            <button type="button" onClick={refresh}>
+              Retry
+            </button>
+          </div>
+        )}
+        {!loading && !error && !feed.notifications.length && (
+          <WorkspaceEmpty>
+            {category || status
+              ? 'No notifications match these filters.'
+              : 'No notifications yet. Important updates about offers, messages, and orders will appear here.'}
+          </WorkspaceEmpty>
+        )}
+        <ul className={styles.list} data-selection={selectionMode || undefined}>
+          {feed.notifications.map((item) => {
+            const { title, body } = notificationCopy(item.event_type)
+            return (
+              <li
+                key={item.id}
+                className={styles.row}
+                data-unread={!item.read_at || undefined}
               >
-                <NotificationType item={item} />
-                <strong className={styles.summary}>
-                  {title}
-                  <NotificationListingProvenance
-                    provenance={item.listingProvenance}
+                {selectionMode && (
+                  <input
+                    className={styles.checkbox}
+                    type="checkbox"
+                    aria-label={`Select ${title}`}
+                    checked={selectedIds.includes(item.id)}
+                    disabled={
+                      managing ||
+                      (!selectedIds.includes(item.id) && chosen.length >= 500)
+                    }
+                    onChange={(e) => {
+                      setConfirmDelete(false)
+                      setSelectedIds((current) =>
+                        e.target.checked
+                          ? [...current, item.id]
+                          : current.filter((id) => id !== item.id)
+                      )
+                    }}
                   />
-                </strong>
-                <span className={styles.bodySummary}>{body}</span>
-                <time
-                  dateTime={item.created_at}
-                  title={new Date(item.created_at).toLocaleString()}
+                )}
+                <button
+                  type="button"
+                  className={styles.rowOpen}
+                  disabled={managing}
+                  aria-disabled={opening || managing}
+                  aria-label={`Open notification: ${title}`}
+                  onClick={() => open(item, false)}
                 >
-                  {notificationTime(item.created_at, now) === 'now'
-                    ? 'now'
-                    : `${notificationTime(item.created_at, now)} ago`}
-                </time>
-                <ChevronRight
-                  className={styles.chevron}
-                  size={18}
-                  aria-hidden={true}
-                />
-              </button>
-            </li>
-          )
-        })}
-      </ul>
-      {more && (
-        <StatefulButton
-          disabled={refreshing || managing}
-          onClick={async () => {
-            const request = version.current
-            const last = feed.notifications[feed.notifications.length - 1]
-            const cursor = feed.nextCursor || {
-              before: last.created_at,
-              beforeId: last.id,
-            }
-            const query = new URLSearchParams({
-              ...cursor,
-              ...(category ? { category } : {}),
-              ...(status ? { status } : {}),
-            })
-            try {
-              const data = await marketplaceRequest<Feed>(
-                `/api/notifications?${query}`,
-                'GET'
-              )
-              if (mounted.current && request === version.current) {
-                setFeed((current) => ({
-                  ...data,
-                  notifications: [
-                    ...current.notifications,
-                    ...data.notifications.filter(
-                      (n) => !current.notifications.some((v) => v.id === n.id)
-                    ),
-                  ],
-                }))
-                pagesLoaded.current += 1
-                setMore(data.hasMore ?? data.notifications.length === 50)
+                  <NotificationType item={item} />
+                  <strong className={styles.summary}>
+                    {title}
+                    <NotificationListingProvenance
+                      provenance={item.listingProvenance}
+                    />
+                  </strong>
+                  <span className={styles.bodySummary}>{body}</span>
+                  <time
+                    dateTime={item.created_at}
+                    title={new Date(item.created_at).toLocaleString()}
+                  >
+                    {notificationTime(item.created_at, now) === 'now'
+                      ? 'now'
+                      : `${notificationTime(item.created_at, now)} ago`}
+                  </time>
+                  <ChevronRight
+                    className={styles.chevron}
+                    size={18}
+                    aria-hidden={true}
+                  />
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+        {more && (
+          <StatefulButton
+            disabled={refreshing || managing}
+            onClick={async () => {
+              const request = version.current
+              const last = feed.notifications[feed.notifications.length - 1]
+              const cursor = feed.nextCursor || {
+                before: last.created_at,
+                beforeId: last.id,
               }
-            } catch (e) {
-              setError('Unable to load more notifications. Please retry.')
-              throw e
-            }
-          }}
-        >
-          Load more
-        </StatefulButton>
-      )}
+              const query = new URLSearchParams({
+                ...cursor,
+                ...(category ? { category } : {}),
+                ...(status ? { status } : {}),
+              })
+              try {
+                const data = await marketplaceRequest<Feed>(
+                  `/api/notifications?${query}`,
+                  'GET'
+                )
+                if (mounted.current && request === version.current) {
+                  setFeed((current) => ({
+                    ...data,
+                    notifications: [
+                      ...current.notifications,
+                      ...data.notifications.filter(
+                        (n) => !current.notifications.some((v) => v.id === n.id)
+                      ),
+                    ],
+                  }))
+                  pagesLoaded.current += 1
+                  setMore(data.hasMore ?? data.notifications.length === 50)
+                }
+              } catch (e) {
+                setError('Unable to load more notifications. Please retry.')
+                throw e
+              }
+            }}
+          >
+            Load more
+          </StatefulButton>
+        )}
+      </SegmentedContent>
+
       <AnimatePresence>
         {report && (
           <FadingDialog

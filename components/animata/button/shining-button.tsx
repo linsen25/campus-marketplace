@@ -1,5 +1,5 @@
 import cn from 'classnames'
-import { ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import type { MouseEventHandler, ReactNode } from 'react'
 
 import { useAuthModal } from '@/components/auth/auth-modal'
@@ -11,21 +11,27 @@ export default function ShiningButton({
   children = 'Log in',
   href,
   onClick,
+  onNavigate,
   variant = 'purple',
+  size = 'default',
   disabled = false,
   desktopAppearance = false,
   loading = false,
   showArrow = true,
+  arrowDirection = 'right',
   type = 'button',
   form,
 }: {
   children?: ReactNode
   href?: string
   onClick?: MouseEventHandler<HTMLButtonElement>
-  variant?: 'blue' | 'dark-blue' | 'green' | 'purple' | 'red'
+  onNavigate?: MouseEventHandler<HTMLAnchorElement>
+  variant?: 'blue' | 'dark-blue' | 'green' | 'purple' | 'red' | 'outline'
+  size?: 'default' | 'compact'
   disabled?: boolean
   loading?: boolean
   showArrow?: boolean
+  arrowDirection?: 'left' | 'right'
   type?: 'button' | 'submit'
   form?: string
   desktopAppearance?: boolean
@@ -33,18 +39,27 @@ export default function ShiningButton({
   const { openAuth } = useAuthModal()
   const className = cn(
     'shining-button',
+    size === 'compact' && 'shining-button--compact',
     desktopAppearance && styles.desktopAppearance,
     variant === 'red' && styles.red,
     variant === 'blue' && styles.blue,
     variant === 'dark-blue' && styles.darkBlue,
+    variant === 'outline' && 'shining-button--outline',
     {
       'shining-button--green': variant === 'green',
     }
   )
   const content = (
     <span className="shining-button__body">
-      {children}
-      {showArrow && (
+      {showArrow && arrowDirection === 'left' && (
+        <ArrowLeft
+          className="shining-button__arrow shining-button__arrow--left"
+          aria-hidden="true"
+          size={24}
+        />
+      )}
+      <span className="shining-button__label">{children}</span>
+      {showArrow && arrowDirection === 'right' && (
         <ArrowRight
           className="shining-button__arrow"
           aria-hidden="true"
@@ -70,7 +85,7 @@ export default function ShiningButton({
         {content}
       </button>
     ) : (
-      <Link href={href} className={className}>
+      <Link href={href} className={className} onClick={onNavigate}>
         {content}
       </Link>
     )

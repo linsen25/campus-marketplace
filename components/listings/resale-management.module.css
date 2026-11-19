@@ -4,6 +4,7 @@
   font-size: 14px;
   line-height: 22px;
 }
+
 .card {
   min-width: 0;
   overflow: hidden;
@@ -12,12 +13,14 @@
   background: #241c2e;
   color: #f5f1fa;
 }
+
 .preview.preview {
   gap: 0;
   max-width: none;
   background: transparent;
   border: 0;
 }
+
 .summary {
   display: flex;
   flex-direction: column;
@@ -27,6 +30,7 @@
   padding: 12px;
   font-weight: 400;
 }
+
 .priceRow {
   display: flex;
   justify-content: space-between;
@@ -34,6 +38,7 @@
   gap: 6px;
   min-width: 0;
 }
+
 .price {
   min-width: 0;
   overflow: hidden;
@@ -43,6 +48,7 @@
   line-height: 24px;
   font-weight: 700;
 }
+
 .status {
   display: inline-flex;
   align-items: center;
@@ -55,6 +61,7 @@
   font-size: 10px;
   line-height: 14px;
 }
+
 .status::before {
   content: '';
   width: 4px;
@@ -62,10 +69,12 @@
   border-radius: 50%;
   background: currentColor;
 }
+
 .status[data-state='available'] {
   background: #173d2c;
   color: #84dca9;
 }
+
 .title {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -74,6 +83,7 @@
   line-height: 22px;
   font-weight: 600;
 }
+
 .metadata {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -82,12 +92,14 @@
   font-size: 12px;
   line-height: 18px;
 }
+
 .actions {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 0 12px 12px;
 }
+
 .edit,
 .more.more {
   display: inline-flex;
@@ -105,32 +117,39 @@
   line-height: 18px;
   cursor: pointer;
 }
+
 .edit {
   flex: 1;
   justify-content: flex-start;
   white-space: nowrap;
 }
+
 .edit svg {
   flex-shrink: 0;
 }
+
 .more.more {
   width: 34px;
   padding: 0;
   flex-shrink: 0;
 }
+
 .edit:hover:not(:disabled),
 .more.more:hover:not(:disabled) {
   background: #443451;
 }
+
 .edit:focus-visible {
   outline: 2px solid #d5b4f6;
   outline-offset: -2px;
 }
+
 .edit:disabled,
 .more.more:disabled {
   opacity: 0.5;
   cursor: default;
 }
+
 .delete.delete {
   justify-content: flex-start;
   color: #f3a8b4;
@@ -151,40 +170,51 @@
   gap: 16px;
   margin-bottom: 20px;
 }
+
 .creationIntro button > span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   white-space: nowrap;
 }
+
 .creationIntro > p {
   margin: 0;
 }
+
 @media (max-width: 639px) {
   .creationIntro {
     align-items: flex-start;
     flex-direction: column;
     gap: 12px;
   }
+
   .creationIntro > span {
     align-self: flex-end;
   }
 }
 
 .darkControl.darkControl {
-  height: 40px;
-  min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid #655074;
-  border-radius: 10px;
-  background: #2b2136;
-  color: #f5f1fa;
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
+  box-sizing: border-box;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #554761;
+  border-radius: 999px;
+  background: #fff;
+  color: #18181b;
+  font-size: 13px;
+  cursor: pointer;
 }
+
 .darkControl.darkControl:hover {
-  background: #3b2c49;
+  background: #eee;
 }
+
 .createButton {
   display: inline-flex;
   align-items: center;
@@ -202,13 +232,16 @@
   white-space: nowrap;
   cursor: pointer;
 }
+
 .createButton:hover {
   background: #8b4df5;
 }
+
 .createButton:focus-visible {
   outline: 2px solid #d5b4f6;
   outline-offset: 3px;
 }
+
 .statusToolbar.statusToolbar {
   justify-content: space-between;
   flex-wrap: nowrap;
@@ -218,44 +251,55 @@
   --fluid-tabs-active-background: var(--color-primary-purple, #7c3aed);
   --fluid-tabs-active-foreground: #fff;
 }
+
 .statusToolbar [role='tab'] {
   min-width: 88px;
   padding: 10px 20px;
 }
+
 .grid.grid.grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 0;
 }
+
 .status[data-state='pending'] {
   background: #49345f;
   color: #d3b5ed;
 }
+
 @media (min-width: 1024px) {
   .grid.grid.grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
+
   .summary {
     padding: 16px;
     gap: 8px;
   }
+
   .price {
     font-size: 25px;
     line-height: 32px;
   }
+
   .title {
     font-size: 19px;
     line-height: 26px;
   }
+
   .metadata {
     font-size: 13px;
     line-height: 20px;
   }
+
   .actions {
     padding: 0 16px 16px;
   }
+
   .more.more {
     width: 38px;
   }
+
   .actions > :last-child {
     flex-basis: 38px;
     width: 38px;
@@ -269,51 +313,598 @@
   gap: 10px;
   min-width: 0;
 }
+
 .compactCreateLabel {
   display: none;
 }
+
 .filterPanel.filterPanel {
   width: min(320px, calc(100vw - 32px));
 }
+
 .filterPanel [role='combobox'] {
   min-width: 0;
   width: 100%;
 }
+
 @media (max-width: 1023px) {
   .statusToolbar.statusToolbar {
     gap: 8px;
   }
+
   .statusToolbar > :first-child {
     flex: 1;
     min-width: 0;
     max-width: 220px;
   }
+
   .statusToolbar [role='tab'] {
     min-width: 0;
-    padding: 9px 12px;
-    font-size: 13px;
+    padding: 10px 14px;
+    font-size: 14px;
+    white-space: nowrap;
   }
+
   .managementControls {
     gap: 8px;
     margin-left: auto;
     flex-shrink: 0;
   }
+
   .fullCreateLabel {
     display: none;
   }
+
   .compactCreateLabel {
     display: inline;
   }
+
   .createButton {
     padding-inline: 10px;
     gap: 5px;
   }
+
   .darkControl.darkControl {
-    width: 40px;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
     padding: 0;
+    border-radius: 50%;
   }
+
   .darkControl :global(.lucide) {
     width: 18px;
     height: 18px;
+    flex-shrink: 0;
+  }
+
+  .managementControls[data-resale-toolbar='true']
+    .darkControl.darkControl:has(:global(.lucide-arrow-down-wide-narrow))
+    span {
+    display: none;
+  }
+
+  .managementControls[data-resale-toolbar='true']
+    .darkControl.darkControl:has(:global(.lucide-arrow-down-wide-narrow))
+    :global(.lucide-chevron-down) {
+    display: none;
+  }
+}
+
+.createContent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  gap: 7px;
+}
+
+.createContent > svg {
+  flex-shrink: 0;
+}
+
+/* UU-SHOP-MANAGEMENT-REUSE-FAVORITES-PILLS-20261118 */
+/* Actual trigger styling is imported from shop-favorites.module.css:
+   favoriteDropdown. The SAME class follows the portaled active trigger. */
+@media (max-width: 767px) {
+  /* Keep the approved mobile layout: search above, four controls on row 2. */
+  .managementControls[data-shop-toolbar='true'] {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.12fr) minmax(0, 0.95fr) auto;
+    column-gap: 6px;
+    row-gap: 10px;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    flex-shrink: 1;
+  }
+  .managementControls[data-shop-toolbar='true'] > :first-child {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin: 0;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(2),
+  .managementControls[data-shop-toolbar='true'] > :nth-child(3),
+  .managementControls[data-shop-toolbar='true'] > :nth-child(4) {
+    grid-row: 2;
+    justify-self: stretch;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(2) {
+    grid-column: 1;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(3) {
+    grid-column: 2;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(4) {
+    grid-column: 3;
+  }
+
+  /* Favorites template collapses to a circle at <=776px. Only Shop Manage
+     keeps compact white CAPSULES because Add Shop Product shares this row.
+     Specificity also styles the portaled open button outside the toolbar. */
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill {
+    display: inline-flex;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    height: 44px;
+    min-height: 44px;
+    padding: 0 5px;
+    gap: 3px;
+    border-radius: 999px;
+    background: #fff;
+    color: #18181b;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill:hover:not(:disabled) {
+    background: #eee;
+  }
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill > span {
+    display: inline;
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill > svg {
+    display: block;
+    width: 12px;
+    height: 12px;
+    flex: 0 0 12px;
+  }
+
+  .managementControls[data-shop-toolbar='true'] > :nth-child(5) {
+    grid-column: 4;
+    grid-row: 2;
+    justify-self: end;
+    align-self: center;
+    margin: 0;
+    width: max-content;
+    max-width: none;
+    --action-width: 154px;
+    --action-height: 44px;
+    --action-font-size: 12px;
+  }
+  .managementControls[data-shop-toolbar='true'] .fullCreateLabel {
+    display: none;
+  }
+  .managementControls[data-shop-toolbar='true'] .compactCreateLabel {
+    display: inline;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .managementControls[data-shop-toolbar='true'] .createContent {
+    gap: 4px;
+  }
+}
+
+@media (max-width: 420px) {
+  /* Tiny screens: keep white capsules and the full Add label; icons yield
+     space before text, avoiding horizontal page overflow. */
+  .managementControls[data-shop-toolbar='true'] {
+    column-gap: 3px;
+  }
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill {
+    padding: 0 3px;
+    gap: 0;
+    font-size: 10px;
+  }
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill > svg {
+    display: none;
+  }
+}
+
+/* UU-SHOP-STATUS-CATEGORY-PANEL-SORT-ANCHOR-20261118 */
+/* Sort's panel works because it has room to expand. The other two panels
+   were capped at the tiny trigger's right edge by --panel-width and right:0.
+   Anchor both menus at their own trigger's LEFT edge and use available
+   mobile viewport width; keep shared FilterInteraction, Sort and Favorites intact. */
+.shopManagementMenu.shopManagementMenu {
+  /* Use Resale/Sort portal anchoring: the right edge stays inside viewport.
+     --panel-width is derived from trigger.right - 20px by FilterInteraction. */
+  left: auto;
+  right: 0;
+  width: min(320px, var(--panel-width), calc(100vw - 32px));
+  min-width: 0;
+  max-width: calc(100vw - 32px);
+}
+
+/* UU-SHOP-MANAGE-FONT-RESTORE-20261118 */
+/* Restore the original 13px Favorites button text on roomy mobile screens.
+   Keep the tiny-screen compact rules to avoid overflowing the four controls. */
+@media (min-width: 421px) and (max-width: 767px) {
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill {
+    font-size: 13px;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(5) {
+    --action-font-size: 13px;
+  }
+  .managementControls[data-shop-toolbar='true'] .compactCreateLabel {
+    font-size: 13px;
+  }
+}
+
+/* UU-SHOP-MANAGE-TABLET-FILTER-LABELS-20261118 */
+/* The shared control switches to icon-only at <=1023px. Shop Manage's
+   768–1023px layout needs explicit labeled white Favorites pills instead.
+   All selectors are Shop-specific; open portaled triggers share shopFilterPill. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .managementControls[data-shop-toolbar='true'] {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) max-content;
+    column-gap: 10px;
+    row-gap: 10px;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    flex-shrink: 1;
+  }
+  .managementControls[data-shop-toolbar='true'] > :first-child {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin: 0;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(2),
+  .managementControls[data-shop-toolbar='true'] > :nth-child(3),
+  .managementControls[data-shop-toolbar='true'] > :nth-child(4) {
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    justify-self: stretch;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(2) {
+    grid-column: 1;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(3) {
+    grid-column: 2;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(4) {
+    grid-column: 3;
+  }
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    height: 44px;
+    min-height: 44px;
+    gap: 8px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: #fff;
+    color: #18181b;
+    font-size: 13px;
+    line-height: 20px;
+    white-space: nowrap;
+  }
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill:hover:not(:disabled) {
+    background: #eee;
+  }
+  /* The Category label was hidden by the shared <=1023px icon-only rule.
+     Force visible for normal trigger AND the portal-rendered open trigger. */
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill > span {
+    display: inline;
+    flex: 0 1 auto;
+    font-size: inherit;
+    line-height: inherit;
+  }
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill > svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+  }
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill
+    > svg:last-child {
+    width: 14px;
+    height: 14px;
+    flex-basis: 14px;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(5) {
+    grid-column: 4;
+    grid-row: 2;
+    align-self: center;
+    justify-self: end;
+    min-width: 0;
+    width: max-content;
+    max-width: none;
+    margin: 0;
+    --action-width: 216px;
+    --action-height: 44px;
+    --action-font-size: 13px;
+  }
+  .managementControls[data-shop-toolbar='true'] .fullCreateLabel {
+    display: none;
+  }
+  .managementControls[data-shop-toolbar='true'] .compactCreateLabel {
+    display: inline;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
+
+/* UU-SHOP-TOOLBAR-ONE-ROW-FIRST-20261118 */
+/* Shop Manage only: keep search + all actions in one row until narrow phone.
+   Do not expand search to a separate row at tablet / midsize widths. */
+@media (min-width: 768px) and (max-width: 1399px) {
+  .managementControls[data-shop-toolbar='true'] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) repeat(4, max-content);
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 0;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    flex-shrink: 1;
+  }
+  .managementControls[data-shop-toolbar='true'] > :first-child {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(2),
+  .managementControls[data-shop-toolbar='true'] > :nth-child(3),
+  .managementControls[data-shop-toolbar='true'] > :nth-child(4) {
+    grid-row: 1;
+    justify-self: end;
+    width: max-content;
+    min-width: 0;
+    margin: 0;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(2) {
+    grid-column: 2;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(3) {
+    grid-column: 3;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(4) {
+    grid-column: 4;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(5) {
+    grid-column: 5;
+    grid-row: 1;
+    justify-self: end;
+    align-self: center;
+    width: max-content;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+    --action-width: 190px;
+    --action-height: 44px;
+    --action-font-size: 13px;
+  }
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: max-content;
+    min-width: 116px;
+    max-width: none;
+    height: 44px;
+    min-height: 44px;
+    padding: 0 14px;
+    gap: 8px;
+    border: 1px solid #554761;
+    border-radius: 999px;
+    background: #fff;
+    color: #18181b;
+    font-size: 13px;
+    line-height: 20px;
+    white-space: nowrap;
+  }
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill > span {
+    display: inline;
+    flex: 0 0 auto;
+    overflow: visible;
+    font-size: inherit;
+    line-height: inherit;
+  }
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill > svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+  }
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill
+    > svg:last-child {
+    width: 14px;
+    height: 14px;
+    flex-basis: 14px;
+  }
+  .managementControls[data-shop-toolbar='true'] .fullCreateLabel {
+    display: none;
+  }
+  .managementControls[data-shop-toolbar='true'] .compactCreateLabel {
+    display: inline;
+    font-size: 13px;
+  }
+}
+
+/* Collapse both filters and Add BEFORE wrapping search. This keeps the
+   >=768px toolbar on a single row with usable search space. */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .managementControls[data-shop-toolbar='true'] {
+    grid-template-columns: minmax(0, 1fr) repeat(4, 44px);
+    column-gap: 8px;
+  }
+}
+
+/* Only narrow phones get two rows: search, then FOUR icon-only circles. */
+/* UU-SHOP-MOBILE-SINGLE-ROW-20261118 */
+@media (max-width: 767px) {
+  /* Search first; three 44px filter circles and the 44px green Add circle. */
+  .managementControls[data-shop-toolbar='true'] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) repeat(4, 44px);
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 0;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    flex-shrink: 1;
+  }
+  .managementControls[data-shop-toolbar='true'] > :first-child {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(2),
+  .managementControls[data-shop-toolbar='true'] > :nth-child(3),
+  .managementControls[data-shop-toolbar='true'] > :nth-child(4) {
+    grid-row: 1;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    justify-self: end;
+    margin: 0;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(2) {
+    grid-column: 2;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(3) {
+    grid-column: 3;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(4) {
+    grid-column: 4;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(5) {
+    grid-column: 5;
+    grid-row: 1;
+    justify-self: end;
+  }
+}
+
+/* Identical white icon circles on tablet AND phone. Portal-rendered
+   open triggers use shopFilterPill too, so their appearance stays aligned. */
+@media (max-width: 1199px) {
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    gap: 0;
+    border: 1px solid #554761;
+    border-radius: 50%;
+    background: #fff;
+    color: #18181b;
+    line-height: 20px;
+  }
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill > span,
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill
+    > svg:last-child {
+    display: none;
+  }
+  .shopFilterPill.shopFilterPill.shopFilterPill.shopFilterPill
+    > svg:first-child {
+    display: block;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+  }
+  /* The green Add has no text at compact widths, only centered + icon. */
+  .managementControls[data-shop-toolbar='true'] > :nth-child(5) {
+    box-sizing: border-box;
+    justify-self: end;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    margin: 0;
+    border-radius: 999px;
+    --action-width: 44px;
+    --action-height: 44px;
+  }
+  .managementControls[data-shop-toolbar='true'] .fullCreateLabel,
+  .managementControls[data-shop-toolbar='true'] .compactCreateLabel {
+    display: none;
+  }
+  .managementControls[data-shop-toolbar='true'] .createContent {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    gap: 0;
+  }
+  .managementControls[data-shop-toolbar='true'] .createContent > svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+  }
+}
+
+/* UU-SHOP-DESKTOP-TOOLBAR-SPACE-FIX-20261118 */
+/* Desktop only: let product search use spare horizontal room instead of
+   leaving a large empty gap. Controls retain their existing sizes. */
+@media (min-width: 1400px) {
+  .managementControls[data-shop-toolbar='true'] {
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+  .managementControls[data-shop-toolbar='true'] > :first-child {
+    flex: 1 1 320px;
+    width: auto;
+    max-width: none;
+    min-width: 200px;
+    margin: 0;
+  }
+  .managementControls[data-shop-toolbar='true'] > :nth-child(n + 2) {
+    flex-shrink: 0;
   }
 }

@@ -41,9 +41,9 @@
   font-weight: 600;
 }
 .stages button[aria-selected='true'] .number {
-  background: #775497;
+  background: #7c3aed;
   color: #fff;
-  border-color: #b88cfa;
+  border-color: #7c3aed;
 }
 .stages button:hover {
   background: #ffffff08;
@@ -92,7 +92,14 @@
   color: #fafafa;
 }
 .findCard {
-  width: min(300px, 100%);
+  width: min(420px, 100%);
+}
+.flow[data-flow-preview='find'] .preview {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 .conversation {
   display: grid;

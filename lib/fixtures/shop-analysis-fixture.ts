@@ -7,46 +7,18 @@ import type {
   ShopExpense,
 } from '@/lib/shop-analysis'
 
-import { TEST_PICTURES } from './test-pictures'
+import { demoShopProducts } from '@/components/shops/shop-demo-data'
 /** Explicit illustrative Shop dataset, never persisted or bound to the signed-in seller. */
 export const shopAnalysisFixtureAsOf = '2026-10-17'
-const fixtureProducts = [
-  {
-    id: 'demo-shop-tote',
-    name: 'Everyday canvas tote',
-    price: 2800,
-    cost: 1100,
-    image: TEST_PICTURES.toteBag,
-  },
-  {
-    id: 'demo-shop-mug',
-    name: 'Handmade ceramic mug',
-    price: 2400,
-    cost: 900,
-    image: TEST_PICTURES.mug,
-  },
-  {
-    id: 'demo-shop-print',
-    name: 'Potted plant',
-    price: 1800,
-    cost: 400,
-    image: TEST_PICTURES.plant,
-  },
-  {
-    id: 'demo-shop-kit',
-    name: 'Study stationery kit',
-    price: 1600,
-    cost: 650,
-    image: TEST_PICTURES.stationery,
-  },
-  {
-    id: 'demo-shop-candle',
-    name: 'Small-batch candle',
-    price: 2200,
-    cost: 800,
-    image: TEST_PICTURES.candle,
-  },
-]
+const fixtureProducts = demoShopProducts
+  .slice(0, 5)
+  .map(({ listing }, index) => ({
+    id: listing.id,
+    name: listing.title,
+    price: listing.price,
+    cost: [1800, 700, 1050, 800, 900][index],
+    image: listing.photoUrls[0],
+  }))
 export function createShopAnalysisFixture(
   access: ShopAnalysisDemoAccess
 ): ShopAnalysisSource {

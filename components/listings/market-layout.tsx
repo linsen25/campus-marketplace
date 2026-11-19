@@ -1,8 +1,7 @@
 import { UserRound } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-
+import { useRouter } from 'next/router'
 import ShiningButton from '@/components/animata/button/shining-button'
 import { useAuthModal } from '@/components/auth/auth-modal'
 import DiscoverButton from '@/components/discover-button'
@@ -37,7 +36,7 @@ import detailStyles from './homepage-listing-demo.module.css'
 import { ListingMedia } from './listing-media'
 import { MarketBackground } from './market-background'
 import { MarketBrandMark } from './market-brand-mark'
-import { MarketControlGroup, MarketFocusBackdrop } from './market-control-group'
+import { MarketControlGroup } from './market-control-group'
 import { MarketFeedViewport } from './market-feed-viewport'
 import type { MarketMode } from './market-feed-viewport'
 import MarketFilter from './market-filter'
@@ -207,6 +206,7 @@ export function MarketLayout({
   initialError?: string | null
   shops?: ShopPreview[]
 }) {
+  const router = useRouter()
   const navigateHome = useDesktopRouteTransition()
   const [realListings, setRealListings] = useState(initialListings)
   const [listingError, setListingError] = useState(initialError || '')
@@ -268,6 +268,9 @@ export function MarketLayout({
       realListings
         ? realListings.map((listing) => ({
             ...listing,
+            // New listings may intentionally omit a subcategory. The existing
+            // Market search fixture contract uses an empty string for that case.
+            subcategory: listing.subcategory ?? '',
             images: listing.photoUrls,
             location: listing.pickupArea as MarketPreviewListing['location'],
             condition:
@@ -393,22 +396,45 @@ export function MarketLayout({
     subcategory: '',
     place: '',
   })
-  const [marketMode, setMarketMode] = useState<MarketMode>('resale')
+  const [marketMode, setMarketMode] = useState<MarketMode>(() =>
+    router.query.shop === 'demo-luna' ? 'shop' : 'resale'
+  )
+  // A deep link is an arrival instruction, not persistent tab state.
+  const [dismissedDemoEntry, setDismissedDemoEntry] = useState(false)
+  const openDemoShop =
+    router.isReady && router.query.shop === 'demo-luna' && !dismissedDemoEntry
+
+  useEffect(() => {
+    if (openDemoShop) setMarketMode('shop')
+  }, [openDemoShop])
   const activeTab = marketMode === 'resale' ? 'popular' : 'favorites'
   const category = applied.category
   const location = applied.place
   const [activePanel, setActivePanel] = useState<
     'filter' | 'search' | 'sort' | null
   >(null)
+  const panelCloseTimer = useRef<ReturnType<typeof setTimeout>>()
   const closePanel = useCallback(() => {
     if (activePanel === 'search') setSearchDismissSignal((signal) => signal + 1)
+    clearTimeout(panelCloseTimer.current)
     setClosing(true)
+    panelCloseTimer.current = setTimeout(() => {
+      setActivePanel(null)
+      setClosing(false)
+    }, 180)
   }, [activePanel])
+  useEffect(() => () => clearTimeout(panelCloseTimer.current), [])
   const searchFocus = useCallback((open: boolean) => {
     if (!open) {
       setClosing(true)
+      clearTimeout(panelCloseTimer.current)
+      panelCloseTimer.current = setTimeout(() => {
+        setActivePanel(null)
+        setClosing(false)
+      }, 180)
       return
     }
+    clearTimeout(panelCloseTimer.current)
     setClosing(false)
     setActivePanel('search')
   }, [])
@@ -418,6 +444,7 @@ export function MarketLayout({
         closePanel()
         return
       }
+      clearTimeout(panelCloseTimer.current)
       setClosing(false)
       setActivePanel('sort')
     },
@@ -429,6 +456,7 @@ export function MarketLayout({
         closePanel()
         return
       }
+      clearTimeout(panelCloseTimer.current)
       setClosing(false)
       setActivePanel('filter')
     },
@@ -514,23 +542,6 @@ export function MarketLayout({
       ref={marketRoot}
       className={`${styles.page} ${!items.length ? styles.emptyPage : ''}`}
     >
-      {activePanel &&
-        createPortal(
-          <MarketFocusBackdrop
-            closing={closing}
-            label={
-              activePanel === 'search'
-                ? 'Dismiss search suggestions'
-                : 'Close filter or sort'
-            }
-            onClose={closePanel}
-            onClosed={() => {
-              setActivePanel(null)
-              setClosing(false)
-            }}
-          />,
-          document.body
-        )}
       <MarketBackground mode={marketMode} />
       {cardActive && (
         <div aria-hidden="true" style={{ height: headerHeight }} />
@@ -558,9 +569,26 @@ export function MarketLayout({
               focusActive={activePanel === 'search'}
               focusClosing={closing}
               dismissSignal={searchDismissSignal}
-              onTabChange={(tab) =>
+              onTabChange={(tab) => {
+                // An explicit Market tab switch discards the one-time arrival.
+                setDismissedDemoEntry(true)
+                setShopDetailActive(false)
+                setShopQuery(defaultShopDirectoryQuery)
                 setMarketMode(tab === 'popular' ? 'resale' : 'shop')
-              }
+                if (
+                  router.query.shop !== undefined ||
+                  router.query.product !== undefined
+                ) {
+                  const nextQuery = { ...router.query }
+                  delete nextQuery.shop
+                  delete nextQuery.product
+                  void router.replace(
+                    { pathname: router.pathname, query: nextQuery },
+                    undefined,
+                    { shallow: true, scroll: false }
+                  )
+                }
+              }}
               onDraftChange={setDraftQuery}
               onApply={(query) => {
                 setAppliedQuery(query)
@@ -569,8 +597,7 @@ export function MarketLayout({
               }}
               onFocusChange={searchFocus}
               onDismiss={() => {
-                setSearchDismissSignal((signal) => signal + 1)
-                if (activePanel === 'search') setClosing(true)
+                if (activePanel === 'search') closePanel()
               }}
               onSelect={(suggestion: SearchSuggestion) => {
                 if (suggestion.kind === 'search') {
@@ -600,18 +627,16 @@ export function MarketLayout({
           {marketMode === 'shop' ? (
             <ShopDirectoryControls query={shopQuery} onChange={setShopQuery} />
           ) : (
-            <MarketControlGroup>
-              <div id="listing-sort-label">
-                <FilterInteraction
-                  label="Sort"
-                  isOpen={activePanel === 'sort'}
-                  isClosing={closing}
-                  options={[...marketSorts]}
-                  value={sort}
-                  onOpenChange={openSort}
-                  onChange={setSort}
-                />
-              </div>
+            <MarketControlGroup anchorSort>
+              <FilterInteraction
+                label="Sort"
+                isOpen={activePanel === 'sort'}
+                isClosing={closing}
+                options={[...marketSorts]}
+                value={sort}
+                onOpenChange={openSort}
+                onChange={setSort}
+              />
               <FilterInteraction
                 label="Filter"
                 isOpen={activePanel === 'filter'}
@@ -620,7 +645,7 @@ export function MarketLayout({
               >
                 <MarketFilter
                   applied={applied}
-                  onCancel={() => openFilter(false)}
+                  onDismiss={() => openFilter(false)}
                   onConfirm={(draft) => {
                     setApplied(draft)
                     openFilter(false)
@@ -656,6 +681,15 @@ export function MarketLayout({
             <ShopDirectory
               shops={shops}
               query={shopQuery}
+              demo={openDemoShop}
+              autoOpenDemo={openDemoShop}
+              targetDemoProductId={
+                openDemoShop &&
+                typeof router.query.product === 'string' &&
+                /^local-demo-luna-product-\d+$/.test(router.query.product)
+                  ? router.query.product
+                  : undefined
+              }
               overlayClassName={styles.listingOverlay}
               overlayStyle={
                 {

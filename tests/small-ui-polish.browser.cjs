@@ -205,7 +205,7 @@ fs.mkdirSync(output, { recursive: true })
       )
       for (const name of [
         'Username',
-        'Western Email',
+        'Account email',
         'Member since',
         'Verified',
       ])

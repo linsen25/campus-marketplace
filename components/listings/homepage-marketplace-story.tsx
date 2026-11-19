@@ -1,3 +1,4 @@
+import { motion, useReducedMotion } from 'motion/react'
 import { useId, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 
@@ -121,6 +122,7 @@ function FlowPreview({ stage }: { stage: typeof stages[number]['id'] }) {
 /** Explanatory UI only. Never loads or changes any real marketplace transaction. */
 export function HomepageTransactionDemo() {
   const id = useId()
+  const reducedMotion = useReducedMotion()
   const [activeStage, setActiveStage] =
     useState<typeof stages[number]['id']>('find')
   const buttons = useRef<Array<HTMLButtonElement | null>>([])
@@ -138,10 +140,17 @@ export function HomepageTransactionDemo() {
     buttons.current[next]?.focus()
   }
   return (
-    <section
+    <motion.section
       className={layout.section}
       aria-labelledby={`${id}-heading`}
       data-home-section="transaction-demo"
+      initial={reducedMotion ? false : { opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.15 }}
+      transition={{
+        duration: reducedMotion ? 0 : 0.55,
+        ease: 'easeOut',
+      }}
     >
       <header className={layout.heading}>
         <h2 id={`${id}-heading`}>From listing to exchange.</h2>
@@ -201,7 +210,7 @@ export function HomepageTransactionDemo() {
           </div>
         </LocalTabContent>
       </div>
-    </section>
+    </motion.section>
   )
 }
 

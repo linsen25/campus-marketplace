@@ -4,8 +4,10 @@
 
 import { ArrowDown01Icon, Tick02Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
+import { useReducedMotion } from 'motion/react'
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 
+import { dropdownMotion, dropdownMotionVars } from './dropdown-motion'
 import styles from './GlideSelect.module.css'
 
 const SIZES = {
@@ -41,11 +43,14 @@ export default function GlideSelect({
   textColor = '#f5f5f5',
   size = 'md',
   radius = 10,
+  menuRadius = radius,
+  optionRadius = Math.max(3, menuRadius - 4),
+  menuSurfaceColor = surfaceColor,
   menuWidth = 176,
   placement = 'bottom',
   align = 'left',
-  popDuration = 180,
-  glideDuration = 220,
+  popDuration = dropdownMotion.panelEnter * 1000,
+  glideDuration = dropdownMotion.contentEnter * 1000,
   rememberPosition = true,
   disabled = false,
   overlay = false,
@@ -57,6 +62,7 @@ export default function GlideSelect({
   const current = value ?? inner
   const selected = items.findIndex((it) => it.value === current)
   const [phase, setPhase] = useState('closed')
+  const [motionStage, setMotionStage] = useState('closed')
   const [active, setActive] = useState(null)
   const [side, setSide] = useState(placement)
   const [scrolling, setScrolling] = useState(false)
@@ -71,9 +77,33 @@ export default function GlideSelect({
   const closeTimer = useRef(undefined)
   const scrub = useRef(null)
   const id = useId()
+  const reduced = Boolean(useReducedMotion())
   const S = SIZES[size] ?? SIZES.md
   const step = S.row + GAP
-  const popOut = Math.round((popDuration * 2) / 3)
+  const popOut = reduced ? 0 : Math.round(dropdownMotion.panelExit * 1000)
+
+  useEffect(() => {
+    if (phase === 'closed') {
+      setMotionStage('closed')
+      return undefined
+    }
+    if (phase === 'closing') {
+      setMotionStage('closing')
+      return undefined
+    }
+    setMotionStage('panel')
+    let contentTimer
+    const frame = requestAnimationFrame(() => {
+      contentTimer = setTimeout(
+        () => setMotionStage('content'),
+        reduced ? 0 : dropdownMotion.contentDelay * 1000
+      )
+    })
+    return () => {
+      cancelAnimationFrame(frame)
+      clearTimeout(contentTimer)
+    }
+  }, [phase, reduced])
 
   useLayoutEffect(() => {
     if (phase !== 'open') return
@@ -92,9 +122,6 @@ export default function GlideSelect({
     scrollIntent.current = 0
     scrollbarPointer.current = false
     el.style.transitionDuration = instant.current ? '0ms' : ''
-    el.dataset.state = 'closed'
-    void el.offsetHeight
-    el.dataset.state = 'open'
     const p = pillRef.current
     if (p) {
       p.style.transition = 'none'
@@ -181,11 +208,12 @@ export default function GlideSelect({
     clearTimeout(closeTimer.current)
     const el = menuRef.current
     if (mode === 'instant' || !el) {
+      setMotionStage('closed')
       setPhase('closed')
       return
     }
     el.style.transitionDuration = ''
-    el.dataset.state = 'closed'
+    setMotionStage('closing')
     setPhase('closing')
     closeTimer.current = setTimeout(() => setPhase('closed'), popOut + 20)
   }
@@ -200,7 +228,7 @@ export default function GlideSelect({
       onChange?.(it.value, it)
       if (!viaKey && rootRef.current) rootRef.current.dataset.swap = ''
     }
-    close('instant')
+    close('pop')
     triggerRef.current?.focus({ preventScroll: true })
   }
 
@@ -232,7 +260,7 @@ export default function GlideSelect({
         e.preventDefault()
         e.stopPropagation()
       }
-      close('instant')
+      close('pop')
     } else if (k.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey)
       go(typeaheadIndex(items, cur, k))
   }
@@ -336,19 +364,23 @@ export default function GlideSelect({
       data-size={size}
       data-disabled={disabled ? '' : undefined}
       style={{
+        ...dropdownMotionVars(reduced),
         '--gs-accent': accentColor,
         '--gs-surface': surfaceColor,
         '--gs-highlight': highlightColor,
         '--gs-text': textColor,
         '--gs-radius': `${radius}px`,
         '--gs-inner-radius': `${Math.max(3, radius - 4)}px`,
+        '--gs-menu-radius': `${menuRadius}px`,
+        '--gs-menu-inner-radius': `${optionRadius}px`,
+        '--gs-menu-surface': menuSurfaceColor,
         '--gs-chip': `${S.chip}px`,
         '--gs-row': `${S.row}px`,
         '--gs-font': `${S.font}px`,
         '--gs-menu-w': `${menuWidth}px`,
-        '--gs-pop': `${popDuration}ms`,
+        '--gs-pop': reduced ? '0ms' : `${popDuration}ms`,
         '--gs-pop-out': `${popOut}ms`,
-        '--gs-glide': `${glideDuration}ms`,
+        '--gs-glide': reduced ? '0ms' : `${glideDuration}ms`,
         '--gs-origin': origin,
       }}
       onAnimationEnd={(e) => {
@@ -391,7 +423,7 @@ export default function GlideSelect({
           ref={menuRef}
           popover={overlay ? 'manual' : undefined}
           className={styles['glide-select__menu']}
-          data-state="open"
+          data-state={motionStage}
           data-side={side}
           data-align={align}
         >
@@ -443,6 +475,7 @@ export default function GlideSelect({
                 aria-selected={i === selected}
                 data-index={i}
                 className={styles['glide-select__option']}
+                style={{ '--gs-option-index': i }}
               >
                 <span className={styles['glide-select__name']}>{it.label}</span>
                 {showTags && it.tag ? (

@@ -5,29 +5,27 @@ import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 
 import actionStyles from '@/components/animata/button/action-button-sizing.module.css'
+import ShiningButton from '@/components/animata/button/shining-button'
 import { CardAction } from '@/components/listings/card-actions'
 import { NotificationSettings } from '@/components/notifications/notification-settings'
-import { ShopSettings } from '@/components/shops/shop-settings'
-import { ActionRow } from '@/components/ui/action-row'
+import { DialogActions } from '@/components/ui/dialog-actions'
 import { useContentReveal } from '@/components/ui/content-reveal'
-import { DynamicAction } from '@/components/ui/dynamic-action'
 import { FadingDialog } from '@/components/ui/fading-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { StatefulButton } from '@/components/velora/stateful-button'
-import type { OwnShopProfile } from '@/hooks/use-own-shop-profile'
 import { requestPasswordChange } from '@/lib/auth-change-password'
 import { passwordRules, validSignupPassword } from '@/lib/auth-password'
 import { reservedUsername, validUsername } from '@/lib/auth-username'
 import { marketplaceRequest } from '@/lib/listings-api'
-import type { ShopIdentity } from '@/lib/shop-presentation'
-import { ownerShopPreview } from '@/lib/shop-profile-api'
-import type { ShopPreview } from '@/types/shop'
+import { isWesternEmail } from '@/lib/marketplace-auth'
 
 import { FinancialSettings } from './financial-settings'
-import financialStyles from './financial-settings.module.css'
 import { AvatarDialog, ProfileAvatar } from './profile-avatar'
 import styles from './profile.module.css'
-import { UwoEmailVerification } from './uwo-email-verification'
+import { ProfileStatus } from './profile-status'
+import {
+  UwoEmailVerification,
+  UwoVerificationBadge,
+} from './uwo-email-verification'
 
 export function ProfileAction({
   children,
@@ -48,20 +46,26 @@ export function ProfileAction({
 function SettingsChange({
   disabled,
   onClick,
+  variant = 'purple',
   children,
 }: {
   disabled: boolean
   onClick: () => void
+  variant?: 'purple' | 'outline'
   children: ReactNode
 }) {
   return (
-    <StatefulButton
-      className={financialStyles.setupAction}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {children}
-    </StatefulButton>
+    <span className={styles.accountAction}>
+      <ShiningButton
+        variant={variant}
+        size="compact"
+        showArrow={false}
+        disabled={disabled}
+        onClick={onClick}
+      >
+        {children}
+      </ShiningButton>
+    </span>
   )
 }
 
@@ -270,33 +274,39 @@ function ChangeDialog({
           {saveError}
         </p>
       )}
-      <ActionRow>
-        <DynamicAction
-          variant="red"
-          footer={true}
-          showArrow={false}
-          disabled={saving}
-          onClick={onClose}
-        >
-          Cancel
-        </DynamicAction>
-        <DynamicAction
-          variant="green"
-          footer={true}
-          disabled={
-            saving ||
-            (kind === 'password'
-              ? !validPassword || passwordSubmitted
-              : cooldown || cooldownBlocked || availability !== true)
-          }
-          onClick={() => {
-            if (kind === 'password') savePassword()
-            else saveUsername()
-          }}
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </DynamicAction>
-      </ActionRow>
+      <DialogActions>
+        <span>
+          <ShiningButton
+            variant="red"
+            size="compact"
+            showArrow={false}
+            disabled={saving}
+            onClick={onClose}
+          >
+            Cancel
+          </ShiningButton>
+        </span>
+        <span>
+          <ShiningButton
+            variant="green"
+            size="compact"
+            showArrow={false}
+            disabled={
+              saving ||
+              (kind === 'password'
+                ? !validPassword || passwordSubmitted
+                : cooldown || cooldownBlocked || availability !== true)
+            }
+            loading={saving}
+            onClick={() => {
+              if (kind === 'password') void savePassword()
+              else void saveUsername()
+            }}
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </ShiningButton>
+        </span>
+      </DialogActions>
     </FadingDialog>
   )
 }
@@ -309,19 +319,17 @@ export function ProfileOverview({
   sessionAction,
   avatarImage,
   onAvatarSave,
+  onAccountSettings,
   onFinancialSettings,
-  shopPreview,
-  onShopSave,
-  ownShop,
+  financialFocusToken = 0,
 }: {
-  ownShop?: OwnShopProfile
-  shopPreview?: ShopPreview
-  onShopSave?: (patch: Partial<ShopIdentity>) => Promise<void>
   settings?: boolean
   sessionAction?: ReactNode
   avatarImage?: string
   onAvatarSave: (file: File) => Promise<void> | void
+  onAccountSettings?: () => void
   onFinancialSettings?: () => void
+  financialFocusToken?: number
   showHeading?: boolean
   onUsername?: (username: string | null) => void
 }) {
@@ -366,11 +374,6 @@ export function ProfileOverview({
       active = false
     }
   }, [onUsername])
-  let settingsShop = shopPreview
-  if (ownShop)
-    settingsShop = ownShop.shop
-      ? ownerShopPreview(ownShop.shop, account?.username ?? null)
-      : undefined
   return (
     <>
       <section
@@ -394,7 +397,6 @@ export function ProfileOverview({
           )}
           <div className={styles.accountRow} data-profile-avatar-row="true">
             <div className={styles.avatarIdentity}>
-              {!settings && <span className={styles.fieldLabel}>Avatar</span>}
               {loading ? (
                 <Skeleton
                   style={{ width: 72, height: 72, borderRadius: '50%' }}
@@ -406,22 +408,30 @@ export function ProfileOverview({
                   image={avatarImage}
                 />
               )}
+              <div className={styles.avatarDetails}>
+                <span className={styles.fieldLabel}>Avatar</span>
+                {!loading && (
+                  <ProfileStatus tone={avatarImage ? 'success' : 'warning'}>
+                    {avatarImage ? 'Photo set' : 'Not set up'}
+                  </ProfileStatus>
+                )}
+              </div>
             </div>
             {settings ? (
               <SettingsChange
                 disabled={loading || !account}
                 onClick={() => setDialog('avatar')}
+                variant={avatarImage ? 'outline' : 'purple'}
               >
-                Set avatar
+                {avatarImage ? 'Manage photo' : 'Add photo'}
               </SettingsChange>
             ) : (
-              <span
-                className={`${styles.verified} ${
-                  avatarImage ? '' : styles.avatarUnset
-                }`}
+              <SettingsChange
+                disabled={loading || !account || !onAccountSettings}
+                onClick={() => onAccountSettings?.()}
               >
-                {avatarImage ? 'Set' : 'Unset'}
-              </span>
+                Go to Settings
+              </SettingsChange>
             )}
           </div>
           <div className={styles.accountRow}>
@@ -451,22 +461,17 @@ export function ProfileOverview({
             <>
               <div className={styles.accountRow}>
                 <div>
-                  <span className={styles.fieldLabel}>Western Email</span>
+                  <span className={styles.fieldLabel}>Account email</span>
                   {loading ? (
                     <Skeleton className={styles.emailSkeleton} />
                   ) : (
                     <p>{account?.email ?? unavailable}</p>
                   )}
                 </div>
-                {loading ? (
-                  <Skeleton className={styles.badgeSkeleton} />
-                ) : (
-                  <span
-                    className={
-                      account?.emailVerified ? styles.verified : styles.readOnly
-                    }
-                  >
-                    {account?.emailVerified ? 'Verified' : 'Read-only'}
+
+                {account && isWesternEmail(account.email) && (
+                  <span className={styles.emailStatus}>
+                    <UwoVerificationBadge />
                   </span>
                 )}
               </div>
@@ -494,7 +499,9 @@ export function ProfileOverview({
           )}
           {settings && (
             <>
-              <UwoEmailVerification />
+              {account && isWesternEmail(account.email) && (
+                <UwoEmailVerification />
+              )}
               <div className={styles.accountRow}>
                 <div>
                   <span className={styles.fieldLabel}>Password</span>
@@ -514,17 +521,11 @@ export function ProfileOverview({
             </>
           )}
         </section>
-        <FinancialSettings settings={settings} onManage={onFinancialSettings} />
-        {settings && (
-          <ShopSettings
-            shop={settingsShop}
-            username={account?.username ?? null}
-            status={ownShop?.status}
-            version={ownShop?.etag ?? undefined}
-            live={Boolean(ownShop)}
-            onSave={ownShop ? ownShop.save : onShopSave}
-          />
-        )}
+        <FinancialSettings
+          settings={settings}
+          focusToken={financialFocusToken}
+          onManage={onFinancialSettings}
+        />
         {settings && <NotificationSettings />}
         {settings && (
           <div className={`${styles.accountRow} ${styles.sessionRow}`}>

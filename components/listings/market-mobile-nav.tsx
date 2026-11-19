@@ -8,6 +8,7 @@ import { loaderFinishedAtom } from '@/components/loader/loader'
 import {
   usePageSlide,
   usePendingDestination,
+  navigationPathname,
 } from '@/components/navigation/desktop-route-transition'
 
 import styles from './market-mobile-nav.module.css'
@@ -22,7 +23,9 @@ export function MarketMobileNavigation() {
     if (ready) setHasOpened(true)
   }, [ready])
   const routes = ['/listings', '/home']
-  const activeIndex = routes.indexOf(pending ?? router.pathname)
+  const activeIndex = routes.indexOf(
+    navigationPathname(pending ?? router.asPath)
+  )
   if ((!ready && !hasOpened) || activeIndex === -1) return null
   return createPortal(
     <FluidTabs

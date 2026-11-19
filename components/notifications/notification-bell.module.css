@@ -5,10 +5,20 @@
   flex-shrink: 0;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
   background: #261d30;
   color: #fff;
+  cursor: pointer;
+  transition: background-color 180ms ease, color 180ms ease;
 }
+
+.bell:hover {
+  background: #fff;
+  color: #18181b;
+}
+
 .count {
   position: absolute;
   top: -3px;

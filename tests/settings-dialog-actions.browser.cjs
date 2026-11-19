@@ -52,66 +52,69 @@ async function main() {
       )
       await p.waitForFunction(() => !document.querySelector('button')?.disabled)
       const actionNames = [
-        'Set avatar',
+        'Add photo',
         'Change username',
         'Change password',
         'Log out',
-        'Change payment method',
-        'Manage payouts',
+        'Set up',
+        'Set up',
       ]
+      const setupActions = p.getByRole('button', {
+        name: 'Set up',
+        exact: true,
+      })
+      assert.equal(await setupActions.count(), 2)
+      const actionButtons = actionNames.map((name, index) =>
+        name === 'Set up'
+          ? setupActions.nth(index - 4)
+          : p.getByRole('button', { name, exact: true })
+      )
       const geometry = []
-      for (const name of actionNames) {
-        const button = p.getByRole('button', { name, exact: true })
+      for (const [index, name] of actionNames.entries()) {
+        const button = actionButtons[index]
         await button.waitFor()
         assert(
-          (await button.getAttribute('class')).includes(
-            'stateful_button_module_css_button'
-          ),
-          name + ' uses payment setup component'
+          (await button.getAttribute('class')).includes('shining-button'),
+          name + ' uses the shared ShiningButton component'
         )
-        assert.equal(await button.locator('.shining-button__arrow').count(), 0)
+        assert.equal(
+          await button.locator('.shining-button__arrow').count(),
+          name === 'Log out' ? 1 : 0
+        )
         const expectedColor =
           name === 'Log out' ? 'rgb(119, 45, 64)' : 'rgb(124, 58, 237)'
         await p.waitForFunction(
           ({ node, color }) =>
-            getComputedStyle(node.querySelector('[class*="surface"]'))
-              .backgroundColor === color,
+            getComputedStyle(
+              node.querySelector('.shining-button__body,[class*="surface"]')
+            ).backgroundColor === color,
           { node: await button.elementHandle(), color: expectedColor }
         )
         const style = await button.evaluate((n) => {
           const s = getComputedStyle(n)
+          const surface = n.querySelector(
+            '.shining-button__body,[class*="surface"]'
+          )
           return {
             height: n.getBoundingClientRect().height,
             font: s.fontSize,
             radius: s.borderRadius,
-            surface: getComputedStyle(n.querySelector('[class*="surface"]'))
-              .backgroundColor,
+            surface: getComputedStyle(surface).backgroundColor,
           }
         })
         assert.deepEqual(style, {
           height: 44,
           font: '14px',
           radius: '999px',
-          surface:
-            name === 'Log out' ? 'rgb(119, 45, 64)' : 'rgb(124, 58, 237)',
+          surface: expectedColor,
         })
         geometry.push(await button.boundingBox())
       }
-      for (const name of [
-        'Change shop name',
-        'Change category',
-        'Change description',
-      ]) {
-        const action = p.getByRole('button', { name, exact: true })
-        assert.equal(
-          await action.evaluate(
-            (node) =>
-              getComputedStyle(node.querySelector('[class*="surface"]'))
-                .backgroundColor
-          ),
-          'rgb(124, 58, 237)'
-        )
-      }
+      assert.equal(
+        await p.getByText('Shop name', { exact: true }).count(),
+        0,
+        'Personal Settings does not expose Shop controls'
+      )
       const edge = geometry[0].x + geometry[0].width
       assert(
         new Set(geometry.map((r) => Math.round(r.width))).size >= 4,
@@ -144,11 +147,9 @@ async function main() {
         'Session is the final Settings row'
       )
       assert.equal(
-        await p
-          .getByText(/^(Set|Unset|Not set|Ready|Needs attention)$/)
-          .count(),
-        0,
-        'Settings has no setup status labels'
+        await p.getByText('Not set up', { exact: true }).count(),
+        2,
+        'Settings shows one explicit state for each independent Stripe capability'
       )
       assert(
         await p.evaluate(
@@ -160,7 +161,7 @@ async function main() {
         fullPage: true,
       })
       for (const title of [
-        'Set avatar',
+        'Add photo',
         'Change username',
         'Change password',
         'Log out',
@@ -182,7 +183,7 @@ async function main() {
           await cancel
             .locator('.shining-button__body')
             .evaluate((n) => getComputedStyle(n).backgroundColor),
-          'rgb(119, 45, 64)'
+          title === 'Log out' ? 'rgb(22, 101, 52)' : 'rgb(119, 45, 64)'
         )
         const primary = d.getByRole('button', {
           name: title === 'Log out' ? 'Log out' : 'Save',
@@ -192,17 +193,36 @@ async function main() {
           await primary
             .locator('.shining-button__arrow[aria-hidden="true"]')
             .count(),
-          1
+          0
         )
-        if (title !== 'Log out')
-          assert(
-            (await primary.getAttribute('class')).includes(
-              'shining-button--green'
-            )
-          )
+        assert((await primary.getAttribute('class')).includes('shining-button'))
+        assert.equal(
+          await primary
+            .locator('.shining-button__body')
+            .evaluate((n) => getComputedStyle(n).backgroundColor),
+          title === 'Log out' ? 'rgb(119, 45, 64)' : 'rgb(22, 101, 52)'
+        )
         assert(await d.evaluate((n) => n.scrollWidth <= n.clientWidth))
         const rect = await d.boundingBox()
         assert(rect.x >= 0 && rect.x + rect.width <= width)
+        const footer = d.locator('[data-action-row="two"]')
+        const footerBox = await footer.boundingBox()
+        const cancelBox = await cancel.boundingBox()
+        const primaryBox = await primary.boundingBox()
+        assert(
+          cancelBox.x < primaryBox.x,
+          title + ' keeps Cancel on the left and its confirmation on the right'
+        )
+        assert(
+          Math.abs(cancelBox.x - footerBox.x) < 1,
+          title + ' aligns Cancel with the dialog footer left edge'
+        )
+        assert(
+          Math.abs(
+            primaryBox.x + primaryBox.width - (footerBox.x + footerBox.width)
+          ) < 1,
+          title + ' aligns confirmation with the dialog footer right edge'
+        )
         await p.keyboard.press('Tab')
         assert(await d.evaluate((n) => n.contains(document.activeElement)))
         await cancel.click()
@@ -215,7 +235,7 @@ async function main() {
         assert(await opener.evaluate((n) => n === document.activeElement))
       }
       // Avatar validation and save remain local and unchanged.
-      await p.getByRole('button', { name: 'Set avatar', exact: true }).click()
+      await p.getByRole('button', { name: 'Add photo', exact: true }).click()
       let d = p.getByRole('dialog')
       assert(
         await d.getByRole('button', { name: 'Save', exact: true }).isDisabled()
@@ -278,7 +298,7 @@ async function main() {
       console.log(
         'PASS Settings dialogs',
         width,
-        'red/no-arrow Cancel, green/arrow Save, focus/Escape, validation, save/logout recovery, no network'
+        'shared pill actions, focus/Escape, validation, save/logout recovery, no network'
       )
       await p.close()
     }

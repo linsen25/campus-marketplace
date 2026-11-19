@@ -6,19 +6,37 @@ import { formatListingPrice } from '@/utils/format-listing-price'
 import styles from './published-listing-card.module.css'
 
 /** Public-card details only. Form, Messages and legacy Request previews retain ListingDetails. */
-export function PublishedListingDetails({ listing }: { listing: Listing }) {
+export function PublishedListingDetails({
+  listing,
+  showPrice = false,
+}: {
+  listing: Listing
+  /** Cards already render price in their heading; owner previews do not. */
+  showPrice?: boolean
+}) {
   const condition = listingConditions.find(
     (item) => item.value === listing.condition
   )?.label
   const meeting = listing.preferredFulfillment === 'ON_CAMPUS'
   const delivery = listing.preferredFulfillment === 'DELIVERY'
   const payment = listing.preferredPaymentMode
-    ? { uu_pay: 'UU Pay', external: 'Pay outside UU' }[
-        listing.preferredPaymentMode
-      ]
+    ? {
+        in_person: 'Cash / In-Person',
+        interac_etransfer: 'Interac e-Transfer',
+        uu_pay: 'UU Pay',
+        external: 'Pay outside UU',
+      }[listing.preferredPaymentMode]
     : null
   return (
     <div className={styles.details}>
+      {showPrice && (
+        <section aria-label="Price">
+          <h4>Price</h4>
+          <p>
+            {listing.price === 0 ? 'Free' : formatListingPrice(listing.price)}
+          </p>
+        </section>
+      )}
       <section aria-label="Seller">
         <h4>Seller</h4>
         <p>
@@ -27,6 +45,11 @@ export function PublishedListingDetails({ listing }: { listing: Listing }) {
             <small aria-label="UWO Email Verified"> · UWO verified</small>
           )}
         </p>
+        {listing.listingChannel === 'shop' && listing.shop?.shopName && (
+          <p>
+            <small>Shop</small> {listing.shop.shopName}
+          </p>
+        )}
       </section>
       <section aria-label="Item details">
         <h4>Item details</h4>
@@ -73,10 +96,24 @@ export function PublishedListingDetails({ listing }: { listing: Listing }) {
                 <dd>{meeting ? 'Meeting' : 'Delivery'}</dd>
               </>
             )}
+            {meeting && listing.meetingArea && (
+              <>
+                <dt>Meeting area</dt>
+                <dd>
+                  {listing.meetingArea === 'ON_CAMPUS' ? 'On campus' : 'Other'}
+                </dd>
+              </>
+            )}
             {meeting && listing.meetingLocation?.label?.trim() && (
               <>
-                <dt>Meeting location</dt>
+                <dt>Meeting place</dt>
                 <dd>{listing.meetingLocation.label}</dd>
+              </>
+            )}
+            {meeting && listing.meetingLocationDetail?.trim() && (
+              <>
+                <dt>Location detail</dt>
+                <dd>{listing.meetingLocationDetail}</dd>
               </>
             )}
             {delivery && listing.estimatedDeliveryFeeCents !== undefined && (

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-
+import { ProfileStatus } from './profile-status'
 import { StatefulButton } from '@/components/velora/stateful-button'
 import { marketplaceRequest } from '@/lib/listings-api'
 
@@ -161,5 +161,47 @@ export function UwoEmailVerification() {
         )}
       </div>
     </section>
+  )
+}
+
+export function UwoVerificationBadge() {
+  const [verified, setVerified] = useState<boolean | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    let active = true
+
+    marketplaceRequest<{ verified: boolean }>(
+      '/api/profile/uwo-verification',
+      'GET'
+    )
+      .then((result) => {
+        if (active) setVerified(result.verified)
+      })
+      .catch(() => {
+        if (active) setError(true)
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  if (loading) return null
+
+  return (
+    <span className={styles.westernBadge}>
+      <ProfileStatus tone={verified ? 'success' : 'warning'}>
+        {error
+          ? 'Verification unavailable'
+          : verified
+          ? 'Western Verified'
+          : 'Western Not verified'}
+      </ProfileStatus>
+    </span>
   )
 }

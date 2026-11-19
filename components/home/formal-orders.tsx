@@ -2,7 +2,7 @@ import { useRouter } from 'next/router'
 
 import { CardAction } from '@/components/listings/card-actions'
 import { WorkspaceEmpty } from '@/components/listings/workspace-empty'
-import { LocalTabContent } from '@/components/ui/local-tab-content'
+import { SegmentedContent } from '@/components/ui/segmented-content'
 import { useFormalOrders } from '@/hooks/use-formal-orders'
 import {
   deriveOrderListBucket,
@@ -159,9 +159,10 @@ export function FormalOrders({ mode }: { mode: OrderWorkspace }) {
       <OrderStatusTabs
         bucket={bucket}
         activeCount={filterOrderList(orders, 'active').length}
+        historyCount={filterOrderList(orders, 'history').length}
         onChange={(value) => navigate(undefined, value)}
       />
-      <LocalTabContent tab={bucket}>
+      <SegmentedContent value={bucket} index={bucket === 'history' ? 1 : 0}>
         {query.error && (
           <div role="alert">
             <p>{query.error}</p>
@@ -203,7 +204,7 @@ export function FormalOrders({ mode }: { mode: OrderWorkspace }) {
             </WorkspaceEmpty>
           )}
         </section>
-      </LocalTabContent>
+      </SegmentedContent>
     </section>
   )
 }

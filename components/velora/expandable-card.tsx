@@ -1,5 +1,6 @@
 'use client'
 
+import ShiningButton from '@/components/animata/button/shining-button'
 import cn from 'classnames'
 import {
   AnimatePresence,
@@ -23,7 +24,11 @@ interface ExpandableCardProps {
   media?: ReactNode
   expandedMedia?: ReactNode
   topAction?: ReactNode
+  /** Receives the shared close lifecycle for overlays with a top-only action. */
+  renderTopAction?: (close: () => void) => ReactNode
   primaryAction?: ReactNode
+  /** Owner-only preview can use the shared modal without reserving a footer. */
+  hideActions?: boolean
   /** Optional footer close presentation; local collapse authority stays here. */
   renderCloseAction?: (close: () => void) => ReactNode
   className?: string
@@ -31,6 +36,10 @@ interface ExpandableCardProps {
   overlayStyle?: CSSProperties
   onOverlayActiveChange?: (active: boolean) => void
   onIntentionalOpen?: () => void
+  /** Optional external trigger when an owner action opens the shared preview. */
+  restoreFocusTo?: HTMLElement | null
+  /** Opt-in only: owner previews fade the returning media before it reaches its hidden source. */
+  fadeReturningMedia?: boolean
   openOnMount?: boolean
   interactiveMedia?: boolean
   /** Optional non-product content; the shared geometry/motion stays unchanged. */
@@ -51,9 +60,14 @@ function renderCloseControl(
 ) {
   if (renderAction) return renderAction(close)
   return (
-    <button type="button" className={styles.raisedButtonDanger} onClick={close}>
-      <span className={styles.raisedButtonDangerSurface}>Close</span>
-    </button>
+    <ShiningButton
+      variant="red"
+      desktopAppearance={true}
+      arrowDirection="left"
+      onClick={close}
+    >
+      Close
+    </ShiningButton>
   )
 }
 
@@ -98,12 +112,24 @@ function ExpandableCardScrollArea({
   settled: boolean
 }) {
   const isPresent = useIsPresent()
+  const [scrolling, setScrolling] = useState(false)
+  const scrollIdle = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => () => clearTimeout(scrollIdle.current), [])
+  const showScrollbar = () => {
+    clearTimeout(scrollIdle.current)
+    setScrolling(true)
+    scrollIdle.current = setTimeout(() => setScrolling(false), 650)
+  }
   return (
     <div
       className={cn(
         styles.scrollArea,
-        (!settled || !isPresent) && styles.scrollAreaTransitioning
+        (!settled || !isPresent) && styles.scrollAreaTransitioning,
+        scrolling && styles.scrollAreaScrolling
       )}
+      onScroll={showScrollbar}
+      onWheel={showScrollbar}
+      onTouchMove={showScrollbar}
     >
       {children}
     </div>
@@ -181,13 +207,17 @@ export function ExpandableCard({
   media,
   expandedMedia = media,
   topAction,
+  renderTopAction,
   primaryAction,
+  hideActions = false,
   renderCloseAction,
   className,
   overlayClassName,
   overlayStyle,
   onOverlayActiveChange,
   onIntentionalOpen,
+  restoreFocusTo,
+  fadeReturningMedia = false,
   openOnMount = false,
   interactiveMedia = false,
   visualRadius,
@@ -356,11 +386,11 @@ export function ExpandableCard({
       if (!wasInert) page?.removeAttribute('inert')
       html.style.scrollBehavior = 'auto'
       window.scrollTo(x, y)
-      trigger?.focus({ preventScroll: true })
+      ;(restoreFocusTo ?? trigger)?.focus({ preventScroll: true })
       html.style.scrollBehavior = oldScrollBehavior
       onOverlayActiveChange?.(false)
     }
-  }, [active, onOverlayActiveChange, close])
+  }, [active, onOverlayActiveChange, close, restoreFocusTo])
 
   const spring = listingLayoutTransition(reducedMotion)
   // Multi-photo media has native buttons. Avoid nesting those inside a button;
@@ -452,7 +482,14 @@ export function ExpandableCard({
                 layout={true}
                 data-slot="returning-media"
                 className={styles.media}
-                transition={spring}
+                animate={{ opacity: fadeReturningMedia ? 0 : 1 }}
+                transition={{
+                  layout: spring,
+                  opacity: {
+                    duration: reducedMotion ? 0 : 0.24,
+                    ease: 'easeOut',
+                  },
+                }}
                 style={{
                   position: 'fixed',
                   zIndex: 101,
@@ -531,13 +568,13 @@ export function ExpandableCard({
                           {expandedMedia}
                         </motion.div>
                       )}
-                      {topAction && (
+                      {(topAction || renderTopAction) && (
                         <ExpandedContentFade
                           className={styles.topAction}
                           closing={phase === 'returning'}
                           reducedMotion={reducedMotion}
                         >
-                          {topAction}
+                          {renderTopAction ? renderTopAction(close) : topAction}
                         </ExpandedContentFade>
                       )}
                       <ExpandedContentFade
@@ -560,14 +597,16 @@ export function ExpandableCard({
                         {children}
                       </ExpandedContentFade>
                     </ExpandableCardScrollArea>
-                    <ExpandedContentFade
-                      className={styles.actions}
-                      closing={phase === 'returning'}
-                      reducedMotion={reducedMotion}
-                    >
-                      {renderCloseControl(close, renderCloseAction)}
-                      {primaryAction}
-                    </ExpandedContentFade>
+                    {!hideActions && (
+                      <ExpandedContentFade
+                        className={styles.actions}
+                        closing={phase === 'returning'}
+                        reducedMotion={reducedMotion}
+                      >
+                        {renderCloseControl(close, renderCloseAction)}
+                        {primaryAction}
+                      </ExpandedContentFade>
+                    )}
                   </motion.div>
                 </div>
               )}

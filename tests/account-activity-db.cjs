@@ -9,8 +9,10 @@ const {
     await db.exec(`create role anon;create role authenticated;create role service_role;create schema auth;create schema marketplace_private;
  create table auth.users(id uuid primary key);create table public.profiles(id uuid primary key);
  create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
- create function marketplace_private.is_western_user() returns boolean language sql as $$select auth.uid() is not null$$;
- create table public.listings(id uuid primary key,seller_id uuid,status text,published_at timestamptz);
+ create function marketplace_private.is_western_user() returns boolean language sql as $$select false$$;
+ create function marketplace_private.is_verified_user() returns boolean language sql as $$select auth.uid() is not null$$;
+ create function marketplace_private.public_shop_eligibility(uuid) returns jsonb language sql as $$select '{}'::jsonb$$;
+ create table public.listings(id uuid primary key,seller_id uuid,status text,published_at timestamptz,listing_channel text default 'resale');
  create table public.orders(id uuid primary key,listing_origin_id uuid,seller_origin_id uuid,lifecycle_status text);
  create table public.transaction_events(order_id uuid,event_type text,created_at timestamptz);
  grant usage on schema public,auth,marketplace_private to anon,authenticated;
@@ -18,6 +20,17 @@ const {
     await db.exec(
       fs.readFileSync(
         'supabase/migrations/202610160003_account_activity.sql',
+        'utf8'
+      )
+    )
+    // Simulate the later canonical definition whose historical gate was
+    // Western-only, then verify the forward migration replaces that gate.
+    await db.exec(
+      `create or replace function public.marketplace_record_listing_view(p_listing_id uuid,p_event_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$ begin if not coalesce(marketplace_private.is_western_user(),false) then raise exception 'Verified account required.' using errcode='42501'; end if; return jsonb_build_object('recorded',false); end;$$;`
+    )
+    await db.exec(
+      fs.readFileSync(
+        'supabase/migrations/20261114010000_verified_account_activity.sql',
         'utf8'
       )
     )
@@ -46,10 +59,12 @@ const {
       `select set_config('request.jwt.claim.sub','${visitor}',false);select public.marketplace_record_listing_view('${listing}','${event}');select public.marketplace_record_listing_view('${listing}','${event}');`
     )
     assert.equal(await count('view'), 1)
-    await db.exec(
-      `select set_config('request.jwt.claim.sub','',false);select public.marketplace_record_listing_view('${listing}',gen_random_uuid());`
+    await assert.rejects(() =>
+      db.exec(
+        `select set_config('request.jwt.claim.sub','',false);select public.marketplace_record_listing_view('${listing}',gen_random_uuid());`
+      )
     )
-    assert.equal(await count('view'), 2)
+    assert.equal(await count('view'), 1)
     await db.exec(
       `update public.listings set status='sold' where id='${listing}';update public.listings set status='sold' where id='${listing}';delete from public.listings where id='${listing}';`
     )
@@ -78,7 +93,7 @@ const {
       )
       assert.equal(
         response.points.reduce((n, p) => n + p.overall, 0),
-        4
+        3
       )
       assert(response.points.some((p) => p.overall === 0))
     }
@@ -124,7 +139,7 @@ const {
       'PASS Toronto: 24 real hourly buckets, 7/30 local days, explicit zeros, spring 23h/fall 25h days, repeated hour labels, own-only aggregates'
     )
     console.log(
-      'PASS local PostgreSQL: additive migration, publication once, owner exclusion, authenticated/anonymous views, idempotency, Sold once, deleted Listing retention, private table grants'
+      'PASS local PostgreSQL: verified-user Activity migration, publication once, owner exclusion, authenticated view idempotency, anonymous rejection, Sold once, deleted Listing retention, private table grants'
     )
   } finally {
     await db.close()

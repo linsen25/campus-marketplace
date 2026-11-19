@@ -2,7 +2,6 @@
 /* eslint jsx-a11y/no-noninteractive-tabindex: off -- Labelled native step scroll region supports keyboard scrolling. */
 
 // Adapted from the user-supplied useLayouts Multi-Step Form source.
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   AnimatePresence,
   motion,
@@ -12,7 +11,7 @@ import {
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import useMeasure from 'react-use-measure'
-
+import ShiningButton from '@/components/animata/button/shining-button'
 import styles from './multi-step-form.module.css'
 
 export type WizardStep = {
@@ -38,6 +37,7 @@ export default function MultiStepForm({
   contentSizedDesktop?: boolean
 }) {
   const [currentStep, setCurrentStep] = useState(0)
+  const [continuing, setContinuing] = useState(false)
   const [direction, setDirection] = useState(1)
   const [ref, bounds] = useMeasure()
   const reduced = useReducedMotion()
@@ -74,7 +74,10 @@ export default function MultiStepForm({
   const nextStep = async () => {
     if (disabled || advancing.current || currentStep === steps.length - 1)
       return
+
     advancing.current = true
+    setContinuing(true)
+
     try {
       if (await onContinue(currentStep)) {
         setDirection(1)
@@ -82,6 +85,7 @@ export default function MultiStepForm({
       }
     } finally {
       advancing.current = false
+      setContinuing(false)
     }
   }
   const variants = {
@@ -173,30 +177,32 @@ export default function MultiStepForm({
               </div>
             </motion.div>
             <footer className={styles.footer}>
-              <button
-                type="button"
-                className={styles.back}
-                disabled={currentStep === 0 || disabled}
+              <ShiningButton
+                variant="purple"
+                desktopAppearance
+                arrowDirection="left"
+                disabled={currentStep === 0 || disabled || continuing}
                 onClick={() => {
                   setDirection(-1)
                   setCurrentStep((step) => step - 1)
                 }}
               >
-                <ChevronLeft size={16} />
                 Back
-              </button>
+              </ShiningButton>
               {currentStep === steps.length - 1 ? (
-                publishAction
+                <span className={styles.publishActionSlot}>
+                  {publishAction}
+                </span>
               ) : (
-                <button
-                  type="button"
-                  className={styles.forward}
-                  disabled={disabled}
+                <ShiningButton
+                  variant="purple"
+                  desktopAppearance
+                  disabled={disabled || continuing}
+                  loading={continuing}
                   onClick={nextStep}
                 >
                   Continue
-                  <ChevronRight size={16} />
-                </button>
+                </ShiningButton>
               )}
             </footer>
           </motion.div>

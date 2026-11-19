@@ -11,7 +11,9 @@ import {
   motion,
   useReducedMotion,
 } from 'motion/react'
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
+
+import ShiningButton from '@/components/animata/button/shining-button'
 
 import styles from './pricing-card.module.css'
 
@@ -54,19 +56,52 @@ export type ShopTrialEligibility = 'eligible' | 'ineligible' | 'unavailable'
 export default function PricingCard({
   trialEligibility = 'unavailable',
   showTrialPreview = false,
+  trialPreview = false,
+  purchaseUnavailable = false,
+  onPreviewNotice,
 }: {
   trialEligibility?: ShopTrialEligibility
   /** Visual prototype only; does not assert eligibility or grant access. */
   showTrialPreview?: boolean
+  /** Labels a development-only preview that cannot claim a Trial. */
+  trialPreview?: boolean
+  /** Use while provider-backed checkout remains intentionally disabled. */
+  purchaseUnavailable?: boolean
+  /** Development-only completion feedback; never calls payment or Trial APIs. */
+  onPreviewNotice?: (message: string) => void
 }) {
   const id = useId()
   const reduced = useReducedMotion()
   const [selectedPlan, setSelectedPlan] = useState<keyof typeof plans>('plus')
   const [billingMode, setBillingMode] = useState<'auto' | 'one-time'>('auto')
+  const [pendingPreview, setPendingPreview] = useState<
+    'checkout' | 'trial' | null
+  >(null)
+  const previewTimer = useRef<ReturnType<typeof setTimeout>>()
   const plan = plans[selectedPlan]
   const price = billingPrices[selectedPlan][billingMode]
   const showTrial = showTrialPreview || trialEligibility === 'eligible'
+  const interactivePreview =
+    process.env.NODE_ENV === 'development' && Boolean(onPreviewNotice)
   const displayPrice = `CA$${price.toFixed(2)}`
+  useEffect(
+    () => () => {
+      clearTimeout(previewTimer.current)
+    },
+    []
+  )
+  function preview(action: 'checkout' | 'trial') {
+    if (!interactivePreview || pendingPreview) return
+    setPendingPreview(action)
+    previewTimer.current = setTimeout(() => {
+      setPendingPreview(null)
+      onPreviewNotice?.(
+        action === 'trial'
+          ? 'Trial activation is not connected yet.'
+          : 'Checkout is not connected yet.'
+      )
+    }, 450)
+  }
   return (
     <LayoutGroup id={id}>
       <section
@@ -222,10 +257,20 @@ export default function PricingCard({
         <footer className={styles.actions}>
           {showTrial && (
             <>
-              <button type="button" className={styles.trial}>
+              <ShiningButton
+                variant="green"
+                showArrow={false}
+                disabled={
+                  !interactivePreview ||
+                  purchaseUnavailable ||
+                  Boolean(pendingPreview)
+                }
+                loading={pendingPreview === 'trial'}
+                onClick={() => preview('trial')}
+              >
                 <Gift size={18} aria-hidden="true" />
                 Start 2-Month Free Pro Trial
-              </button>
+              </ShiningButton>
               <p className={styles.disclaimer}>
                 No credit card required &middot; No automatic charges
               </p>
@@ -234,14 +279,31 @@ export default function PricingCard({
               </div>
             </>
           )}
-          <button type="button" className={styles.continue}>
-            Continue with {plan.name} &middot; {displayPrice}
-            {billingMode === 'auto' ? '/mo' : ' one-time'}
-          </button>
+          <ShiningButton
+            variant="green"
+            showArrow={false}
+            disabled={
+              !interactivePreview ||
+              purchaseUnavailable ||
+              Boolean(pendingPreview)
+            }
+            loading={pendingPreview === 'checkout'}
+            onClick={() => preview('checkout')}
+          >
+            {`Continue with ${plan.name} · ${displayPrice}${
+              billingMode === 'auto' ? '/mo' : ' one-time'
+            }`}
+          </ShiningButton>
           {showTrial && (
             <p className={styles.note}>
               New sellers can try Pro for 2 months. After the trial, choose
               Plus, Pro, or continue without paid Shop features.
+            </p>
+          )}
+          {trialPreview && (
+            <p className={styles.preview}>
+              Development preview only. Trial eligibility is verified before
+              activation.
             </p>
           )}
         </footer>

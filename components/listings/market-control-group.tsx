@@ -3,9 +3,19 @@ import type { ReactNode } from 'react'
 
 import styles from './market-layout.module.css'
 
-export function MarketControlGroup({ children }: { children: ReactNode }) {
+export function MarketControlGroup({
+  children,
+  anchorSort = false,
+}: {
+  children: ReactNode
+  anchorSort?: boolean
+}) {
   return (
-    <div className={styles.controls} data-market-controls="true">
+    <div
+      className={styles.controls}
+      data-market-controls="true"
+      data-sort-anchor={anchorSort ? 'right' : undefined}
+    >
       {children}
     </div>
   )

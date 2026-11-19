@@ -24,6 +24,7 @@ export function DemoListingCard({
   onOverlayActiveChange,
   overlayClassName,
   overlayStyle,
+  openOnMount = false,
 }: {
   listing: Listing
   categoryLabel: string
@@ -32,6 +33,7 @@ export function DemoListingCard({
   onOverlayActiveChange?: (value: boolean) => void
   overlayClassName?: string
   overlayStyle?: CSSProperties
+  openOnMount?: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
   const callback = useRef(onOverlayActiveChange)
@@ -46,6 +48,7 @@ export function DemoListingCard({
   return (
     <div className={styles.shell} data-demo-listing={listing.id}>
       <ExpandableCard
+        openOnMount={openOnMount}
         title={formatListingPrice(listing.price)}
         expandedTitle={listing.title}
         visualRadius={listingCardRadius}

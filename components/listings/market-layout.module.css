@@ -97,6 +97,19 @@
   font-weight: 400;
 }
 
+/* Keep Filter at the group's right edge so Sort grows and shrinks leftward. */
+.controls[data-sort-anchor='right'] {
+  flex-direction: row-reverse;
+}
+
+.controls[data-sort-anchor='right'] > :first-child {
+  order: 1;
+}
+
+.controls[data-sort-anchor='right'] > :nth-child(2) {
+  order: 0;
+}
+
 .content {
   display: flex;
   flex-direction: column;
@@ -334,5 +347,50 @@
 @media (min-width: 1024px) {
   .resaleGrid.resaleGrid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+/* Market brand visibility and icon sizing fix */
+@media (max-width: 1023px) {
+  .toolbar > .brandHeading {
+    display: none;
+  }
+}
+@media (min-width: 1024px) {
+  .stickyHeader > .mobileBrand {
+    display: none;
+  }
+}
+.mobileBrand [data-market-brand-mark],
+.brandHeading [data-market-brand-mark] {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  height: 1em;
+  flex-shrink: 0;
+}
+.mobileBrand [data-market-brand-mark] img,
+.brandHeading [data-market-brand-mark] img {
+  display: block;
+  width: auto;
+  height: 1em;
+}
+
+/* Prefer inline brand on medium-width Market headers */
+@media (min-width: 900px) and (max-width: 1023px) {
+  .toolbar > .brandHeading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .stickyHeader > .mobileBrand {
+    display: none;
+  }
+}
+
+/* Medium-width inline header top spacing */
+@media (min-width: 900px) and (max-width: 1023px) {
+  .toolbar {
+    padding-top: 16px;
   }
 }

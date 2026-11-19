@@ -13,9 +13,48 @@
   color: #f5f5f5;
   overflow: auto;
   z-index: 100020;
+  opacity: 0%;
+  transform: translateY(var(--dropdown-panel-offset, 4px))
+    scale(var(--dropdown-panel-scale, 0.95));
+  transform-origin: top left;
+  transition: opacity var(--dropdown-panel-enter, 0.2s) ease-out,
+    transform var(--dropdown-panel-enter, 0.2s) ease-out;
 }
 .panel:popover-open {
   display: block;
+}
+.panel[data-state='panel'],
+.panel[data-state='content'] {
+  opacity: 100%;
+  transform: translateY(0) scale(1);
+}
+.panel[data-state='closed'],
+.panel[data-state='closing'] {
+  pointer-events: none;
+  opacity: 0%;
+  transform: translateY(calc(var(--dropdown-panel-offset, 4px) * -1))
+    scale(var(--dropdown-panel-scale, 0.95));
+  transition-duration: var(--dropdown-panel-exit, 0.18s),
+    var(--dropdown-panel-exit, 0.18s);
+}
+.panel > * {
+  opacity: 0%;
+  transform: translateY(var(--dropdown-content-offset, 40px));
+  transition: opacity var(--dropdown-content-enter, 0.25s)
+      cubic-bezier(0.215, 0.61, 0.355, 1) var(--dropdown-content-delay, 0.05s),
+    transform var(--dropdown-content-enter, 0.25s)
+      cubic-bezier(0.215, 0.61, 0.355, 1) var(--dropdown-content-delay, 0.05s);
+}
+.panel[data-state='content'] > * {
+  opacity: 100%;
+  transform: translateY(0);
+}
+.panel[data-state='closing'] > * {
+  opacity: 0%;
+  transform: translateY(calc(var(--dropdown-panel-offset, 4px) * -1));
+  transition-duration: var(--dropdown-content-exit, 0.14s),
+    var(--dropdown-content-exit, 0.14s);
+  transition-delay: 0ms, 0ms;
 }
 .option {
   display: grid;
@@ -28,9 +67,15 @@
   font-size: 14px;
   line-height: 20px;
   overflow-wrap: anywhere;
+  cursor: pointer;
 }
 .option[data-active='true'],
 .option:hover {
+  background: #443451;
+}
+.option:focus-visible {
+  outline: 2px solid #d5b4f6;
+  outline-offset: -2px;
   background: #443451;
 }
 .option small {
@@ -48,4 +93,12 @@
   font: 400 12px/18px Arial, sans-serif;
   color: #fff;
   letter-spacing: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .panel > * {
+    transition-duration: 0ms, 0ms;
+    transition-delay: 0ms, 0ms;
+  }
 }

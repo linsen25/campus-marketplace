@@ -32,6 +32,9 @@ export default function MenuInteraction({
   compact?: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [scrolling, setScrolling] = useState(false)
+  const scrollIdle = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => () => clearTimeout(scrollIdle.current), [])
   // Accordion disclosure is independent of the active navigation destination.
   const [expandedParent, setExpandedParent] = useState<string | null>(
     activeItem
@@ -161,6 +164,13 @@ export default function MenuInteraction({
           ease: 'easeOut',
         }}
         className={styles.surface}
+        data-scrolling={scrolling ? 'true' : undefined}
+        onScroll={() => {
+          if (!isOpen) return
+          setScrolling(true)
+          clearTimeout(scrollIdle.current)
+          scrollIdle.current = setTimeout(() => setScrolling(false), 600)
+        }}
         style={{ pointerEvents: isOpen ? 'auto' : 'none' }}
       >
         <div
@@ -185,9 +195,7 @@ export default function MenuInteraction({
                 const isActive = activeItem === item.id
                 const hasChildren = Boolean(item.children?.length)
                 const isExpanded = expandedParent === item.id
-                const showIndicator = hoveredItem
-                  ? hoveredItem === item.id
-                  : isActive
+                const showIndicator = isActive
                 return (
                   <motion.li
                     key={item.id}
@@ -207,9 +215,7 @@ export default function MenuInteraction({
                       className={styles.item}
                       aria-label={item.label}
                       aria-expanded={hasChildren ? isExpanded : undefined}
-                      aria-current={
-                        isActive && !hasChildren ? 'page' : undefined
-                      }
+                      aria-current={isActive ? 'page' : undefined}
                       onKeyDown={handleKeyDown}
                       onMouseEnter={() => setHoveredItem(item.id)}
                       onMouseLeave={() => setHoveredItem(null)}
@@ -217,9 +223,8 @@ export default function MenuInteraction({
                       onBlur={() => setHoveredItem(null)}
                       onClick={() => {
                         if (hasChildren) {
-                          setExpandedParent((current) =>
-                            current === item.id ? null : item.id
-                          )
+                          onSelect(item.id)
+                          setExpandedParent(item.id)
                         } else {
                           onSelect(item.id)
                           setIsOpen(false)

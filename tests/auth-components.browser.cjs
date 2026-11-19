@@ -70,6 +70,37 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
       const auth = page.locator('dialog[aria-labelledby="auth-title"]')
       await page.getByRole('button', { name: 'Log in', exact: true }).click()
       await auth.waitFor()
+      assert.equal(
+        await auth.getByText('Usual & Unusual', { exact: true }).count(),
+        0,
+        'The auth heading must not duplicate the product brand'
+      )
+      assert.deepEqual(
+        await auth
+          .getByRole('button', { name: 'Close authentication' })
+          .evaluate((button) => {
+            const style = getComputedStyle(button)
+            return {
+              width: style.width,
+              height: style.height,
+              radius: style.borderRadius,
+              border: style.borderTopWidth,
+              background: style.backgroundColor,
+            }
+          }),
+        {
+          width: '36px',
+          height: '36px',
+          radius: '50%',
+          border: '0px',
+          background: 'rgba(0, 0, 0, 0)',
+        }
+      )
+      assert.equal(
+        await auth.locator('input[type="email"] + svg').count(),
+        1,
+        'Email input has a non-interactive mail affordance'
+      )
       const modalSurface = await auth.locator('section').evaluate((surface) => {
         const style = getComputedStyle(surface)
         const header = surface.children[0]
@@ -95,11 +126,50 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
       assert.match(modalSurface.verificationText, /Email verification required/)
       assert.match(modalSurface.verificationText, /personal or Western email/)
       assert.equal(modalSurface.rootBackground, 'rgb(12, 9, 18)')
-      const geometry = await auth.getByRole('button',{name:'Log in',exact:true}).evaluate(e=>{
-        const a=e.getBoundingClientRect(), b=e.closest('form').getBoundingClientRect()
-        return {center:Math.abs((a.left+a.right)/2-(b.left+b.right)/2),width:Math.abs(a.width-b.width),height:getComputedStyle(e).height}
-      })
-      assert(geometry.center<1 && geometry.width<1 && geometry.height==='52px','Log in fills and aligns with its form')
+      const geometry = await auth
+        .getByRole('button', { name: 'Log in', exact: true })
+        .evaluate((e) => {
+          const a = e.getBoundingClientRect(),
+            b = e.closest('form').getBoundingClientRect()
+          const visible = e
+            .querySelector('.shining-button__body')
+            .getBoundingClientRect()
+          return {
+            center: Math.abs((a.left + a.right) / 2 - (b.left + b.right) / 2),
+            width: Math.abs(a.width - b.width),
+            height: getComputedStyle(e).height,
+            visibleHeight: visible.height,
+          }
+        })
+      assert(
+        geometry.center < 1 && geometry.width < 1 && geometry.height === '58px',
+        'Log in fills and aligns with its form'
+      )
+      assert.equal(
+        geometry.visibleHeight,
+        58,
+        'Log in visible surface uses the Hold button height'
+      )
+      await auth.getByRole('button', { name: 'Log in', exact: true }).hover()
+      await page.waitForTimeout(750)
+      const loginHover = await auth
+        .getByRole('button', { name: 'Log in', exact: true })
+        .evaluate((button) => ({
+          outerHeight: button.getBoundingClientRect().height,
+          visibleHeight: button
+            .querySelector('.shining-button__body')
+            .getBoundingClientRect().height,
+          arrowTransform: getComputedStyle(
+            button.querySelector('.shining-button__arrow')
+          ).transform,
+        }))
+      assert.equal(loginHover.outerHeight, 58)
+      assert.equal(loginHover.visibleHeight, 58)
+      assert.notEqual(
+        loginHover.arrowTransform,
+        'none',
+        'Login keeps the shared arrow hover animation'
+      )
       const login = auth.getByRole('tab', { name: 'Log in', exact: true })
       const signup = auth.getByRole('tab', { name: 'Sign up', exact: true })
       await login.focus()
@@ -133,9 +203,11 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
           })
           .waitFor()
       }
-      for(const name of ['admin','ADMIN','Western','UWO']) {
+      for (const name of ['admin', 'ADMIN', 'Western', 'UWO']) {
         await username.fill(name)
-        await auth.getByText('That username is reserved.',{exact:true}).waitFor()
+        await auth
+          .getByText('That username is reserved.', { exact: true })
+          .waitFor()
       }
       await username.fill('Chris')
       await auth
@@ -150,27 +222,44 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
       await username.fill('chris_25')
       await auth.getByText('Username is available.', { exact: true }).waitFor()
       // CSS responsive variants share this one mounted selector and form state.
-      await page.setViewportSize({width:width <= 1023 ? 1280 : 390,height:900})
-      assert.equal(await username.inputValue(),'chris_25')
-      await page.setViewportSize({width,height:900})
-      const selector = await Promise.all([login, signup].map(async (tab) =>
-        tab.evaluate((e) => {
-          const c = getComputedStyle(e)
-          return {
-            height: c.height,
-            background: c.backgroundColor,
-            border: c.borderTopColor,
-            color: c.color,
-            transform: c.transform,
-            radius: c.borderRadius,
-            font: c.fontSize,
-          }
-        })
-      ))
+      await page.setViewportSize({
+        width: width <= 1023 ? 1280 : 390,
+        height: 900,
+      })
+      assert.equal(await username.inputValue(), 'chris_25')
+      await page.setViewportSize({ width, height: 900 })
+      const selector = await Promise.all(
+        [login, signup].map(async (tab) =>
+          tab.evaluate((e) => {
+            const c = getComputedStyle(e)
+            return {
+              height: c.height,
+              background: c.backgroundColor,
+              border: c.borderTopColor,
+              color: c.color,
+              transform: c.transform,
+              radius: c.borderRadius,
+              font: c.fontSize,
+              boxSizing: c.boxSizing,
+              appearance: c.appearance,
+              minHeight: c.minHeight,
+              maxHeight: c.maxHeight,
+              paddingTop: c.paddingTop,
+              paddingBottom: c.paddingBottom,
+            }
+          })
+        )
+      )
       for (const tab of selector) {
-        assert.equal(tab.height, '44px')
-        assert.equal(tab.radius, '8px')
+        assert.equal(tab.height, '48px')
+        assert.equal(tab.radius, '9999px')
         assert.equal(tab.font, '14px')
+        assert.equal(tab.boxSizing, 'border-box')
+        assert.equal(tab.appearance, 'none')
+        assert.equal(tab.minHeight, '0px')
+        assert.equal(tab.maxHeight, '48px')
+        assert.equal(tab.paddingTop, '0px')
+        assert.equal(tab.paddingBottom, '0px')
       }
       assert.deepEqual(selector[0], {
         ...selector[0],
@@ -186,9 +275,100 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
         color: 'rgb(255, 255, 255)',
         transform: 'none',
       })
-      assert(await auth.evaluate(e=>e.scrollWidth<=e.clientWidth),'Auth selector has no horizontal overflow')
-      for (const input of await auth.locator('input[type="email"], input[type="password"]').all())
-        assert.equal(await input.evaluate((e) => getComputedStyle(e).height), '48px')
+      assert(
+        await auth.evaluate((e) => e.scrollWidth <= e.clientWidth),
+        'Auth selector has no horizontal overflow'
+      )
+      const signupControls = await auth.evaluate((dialog) => {
+        const username = dialog.querySelector('input[name="signup-username"]')
+        const usernameIcon = username?.parentElement?.querySelector('svg')
+        const email = dialog.querySelector('input[type="email"]')
+        const emailIcon = email?.parentElement?.querySelector('svg')
+        const code = dialog.querySelector('input[name="code"]')
+        const send = [...dialog.querySelectorAll('button')].find((button) =>
+          /^(Send|Resend) code$/.test(button.textContent?.trim() ?? '')
+        )
+        return {
+          usernameIcon: usernameIcon
+            ? {
+                ariaHidden: usernameIcon.getAttribute('aria-hidden'),
+                height: getComputedStyle(usernameIcon).height,
+                width: getComputedStyle(usernameIcon).width,
+              }
+            : null,
+          emailIcon: emailIcon
+            ? {
+                height: getComputedStyle(emailIcon).height,
+                width: getComputedStyle(emailIcon).width,
+              }
+            : null,
+          codeHeight: code ? getComputedStyle(code).height : null,
+          sendHeight: send ? getComputedStyle(send).height : null,
+        }
+      })
+      assert.deepEqual(signupControls.usernameIcon, {
+        ariaHidden: 'true',
+        height: '18px',
+        width: '18px',
+      })
+      assert.deepEqual(signupControls.usernameIcon, {
+        ...signupControls.usernameIcon,
+        ariaHidden: 'true',
+        height: signupControls.emailIcon?.height,
+        width: signupControls.emailIcon?.width,
+      })
+      assert.equal(signupControls.codeHeight, '48px')
+      assert.equal(signupControls.sendHeight, signupControls.codeHeight)
+      const signinRhythm = await auth.evaluate((dialog) => {
+        const card = dialog.querySelector('section > div:nth-child(2)')
+        const tabs = card.querySelector('[role="tablist"]')
+        const email = dialog.querySelector('input[type="email"]')
+        const password = dialog.querySelector('input[type="password"]')
+        const submit = [...dialog.querySelectorAll('button')].find(
+          (button) => button.textContent?.trim() === 'Log in'
+        )
+        const forgot = [...dialog.querySelectorAll('button')].find(
+          (button) => button.textContent?.trim() === 'Forgot password?'
+        )
+        const privacy = dialog.querySelector('section > div:nth-child(3)')
+        const emailField = email.closest('div[class]')?.parentElement
+        const passwordField = password.closest('[data-help-field="password"]')
+        const submitRow = submit.parentElement?.parentElement
+        const forgotRow = forgot.parentElement
+        const gap = (top, bottom) =>
+          top.getBoundingClientRect().top -
+          bottom.getBoundingClientRect().bottom
+        return {
+          tabsToEmail: gap(emailField, tabs),
+          emailToPassword: gap(passwordField, emailField),
+          passwordToSubmit: gap(submitRow, passwordField),
+          submitToForgot: gap(forgotRow, submitRow),
+          forgotToPrivacy: gap(privacy, forgotRow),
+          shield: getComputedStyle(privacy.querySelector('svg')).width,
+        }
+      })
+      assert(signinRhythm.tabsToEmail >= 24 && signinRhythm.tabsToEmail < 30)
+      assert(
+        signinRhythm.emailToPassword >= 20 && signinRhythm.emailToPassword < 28
+      )
+      assert(
+        signinRhythm.passwordToSubmit >= 24 &&
+          signinRhythm.passwordToSubmit < 30
+      )
+      assert(
+        signinRhythm.submitToForgot >= 16 && signinRhythm.submitToForgot < 22
+      )
+      assert(
+        signinRhythm.forgotToPrivacy >= 20 && signinRhythm.forgotToPrivacy < 28
+      )
+      assert.equal(signinRhythm.shield, '24px')
+      for (const input of await auth
+        .locator('input[type="email"], input[type="password"]')
+        .all())
+        assert.equal(
+          await input.evaluate((e) => getComputedStyle(e).height),
+          '48px'
+        )
       await password.fill('Abcdefg1!')
       const labels = await auth
         .locator('[id$="-rules"] li')
@@ -206,9 +386,19 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
         '1 number',
         '1 symbol',
       ])
-      const hold = auth.getByRole('button', { name: /^(Hold to create account|Create account)/ })
-      assert(await hold.getByText('Hold to create account',{exact:true}).first().isVisible())
-      assert.equal(await hold.evaluate(e=>getComputedStyle(e).borderTopWidth),'1px')
+      const hold = auth.getByRole('button', {
+        name: /^(Hold to create account|Create account)/,
+      })
+      assert(
+        await hold
+          .getByText('Hold to create account', { exact: true })
+          .first()
+          .isVisible()
+      )
+      assert.equal(
+        await hold.evaluate((e) => getComputedStyle(e).borderTopWidth),
+        '1px'
+      )
       const holdGeometry = await hold.evaluate((e) => {
         const button = e.getBoundingClientRect()
         const form = e.closest('form').getBoundingClientRect()
@@ -220,7 +410,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
           ),
         }
       })
-      assert.equal(holdGeometry.height, '52px')
+      assert.equal(holdGeometry.height, '58px')
+      assert.equal(holdGeometry.height, `${geometry.visibleHeight}px`)
       assert(holdGeometry.width < 1 && holdGeometry.center < 1)
       assert.equal(
         await hold.evaluate((e) => getComputedStyle(e).backgroundColor),

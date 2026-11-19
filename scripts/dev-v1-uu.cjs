@@ -18,7 +18,10 @@ const values = Object.fromEntries(
       if (index < 1) throw new Error('Invalid .env.uu.local entry')
       return [
         line.slice(0, index),
-        line.slice(index + 1).trim().replace(/^['"]|['"]$/g, ''),
+        line
+          .slice(index + 1)
+          .trim()
+          .replace(/^['"]|['"]$/g, ''),
       ]
     })
 )
@@ -89,7 +92,6 @@ const child = spawn(
       STRIPE_ORDER_REFUNDS_ENABLED: 'false',
       STRIPE_ORDER_TRANSFERS_ENABLED: 'false',
       STRIPE_ORDER_TRANSFERS_CREATE_APPROVED: 'false',
-      GOOGLE_PLACES_API_KEY: '',
     },
     stdio: 'inherit',
     windowsHide: true,

@@ -1,7 +1,7 @@
 export interface SearchableListing {
   id: string
   title: string
-  subcategory: string
+  subcategory?: string
   category: string
   description: string
 }
@@ -37,7 +37,7 @@ export function listingSearchRank(listing: SearchableListing, value: string) {
   )
     return 1
   if (phraseMatch(title, query)) return 2
-  if (phraseMatch(listing.subcategory, query)) return 3
+  if (listing.subcategory && phraseMatch(listing.subcategory, query)) return 3
   if (phraseMatch(listing.category, query)) return 4
   if (phraseMatch(listing.description, query)) return 5
   return null
@@ -80,7 +80,7 @@ export function searchSuggestions(
         rank,
         index,
       })
-    const categoryOptions = ['', listing.subcategory]
+    const categoryOptions = ['', listing.subcategory ?? '']
     categoryOptions.forEach((subcategory) => {
       const key = `${listing.category}/${subcategory}`
       const label = subcategory

@@ -1,0 +1,269 @@
+.tabs {
+  width: min(336px, 100%);
+  margin-bottom: 16px;
+}
+
+.demoShop {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  max-width: 480px;
+  padding: 12px;
+  border: 1px solid #b995dc29;
+  border-radius: 16px;
+  background: #211927;
+}
+
+.demoShop img {
+  width: 88px;
+  height: 88px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.demoShop strong,
+.demoShop p,
+.demoShop small {
+  display: block;
+}
+
+.demoShop p,
+.demoShop small {
+  margin: 4px 0 0;
+  color: #cbbbd8;
+  font-size: 13px;
+}
+
+.demoShop small {
+  color: #9ee0b8;
+  font-size: 11px;
+}
+
+.demoRemove {
+  justify-self: end;
+  padding: 7px 10px;
+  border: 1px solid #b995dc55;
+  border-radius: 999px;
+  background: transparent;
+  color: #f1e9f5;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+
+.demoRemove:hover {
+  border-color: #d9b4e8;
+}
+
+.fullWidthAction {
+  width: 100%;
+}
+.fullWidthAction :global(.shining-button) {
+  width: 100%;
+}
+
+.favoritesToolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+  min-width: 0;
+  margin-bottom: 16px;
+}
+
+.favoritesToolbar .tabs {
+  flex: 0 0 auto;
+  width: min(336px, 100%);
+  margin-bottom: 0;
+}
+
+.searchWrap {
+  position: relative;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.favoritesSearch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 44px;
+  min-width: 0;
+  padding: 0 14px;
+  border: 1px solid #665373;
+  border-radius: 999px;
+  background: #201a29;
+  color: #b9adc7;
+}
+
+.favoritesSearch:focus-within {
+  border-color: #a77bd3;
+  box-shadow: 0 0 0 3px #9f70cf2e;
+}
+
+.favoritesSearch input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #f7f1fb;
+  font: inherit;
+}
+
+.favoritesSearch input::placeholder {
+  color: #aa9cb6;
+}
+
+.suggestions {
+  position: absolute;
+  z-index: 30;
+  inset: calc(100% + 6px) 0 auto;
+  padding: 8px;
+  background: #201a29;
+  border: 1px solid #544161;
+  border-radius: 16px;
+  box-shadow: 0 12px 26px #0006;
+}
+
+.suggestions button {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  text-align: left;
+  color: #f5efff;
+}
+
+.suggestions button:hover,
+.suggestions button:focus-visible {
+  background: #30263c;
+}
+
+.controlRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+/* Match Shop Favorites Products pagination without changing shared Market UI. */
+.pagination {
+  margin-top: 12px;
+  padding-bottom: 48px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* Shop Favorites only: one responsive toolbar contract.
+   <=1023: tabs + two controls share row 1; search occupies row 2.
+   <=776: only dropdowns collapse to circles; tabs take remaining width. */
+@media (max-width: 1023px) {
+  .favoritesToolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 10px;
+  }
+
+  .favoritesToolbar .tabs {
+    grid-column: 1;
+    grid-row: 1;
+    width: min(336px, 100%);
+    min-width: 0;
+    max-width: 100%;
+    flex: 0 1 auto;
+  }
+
+  .controlRow {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    flex-wrap: nowrap;
+    min-width: max-content;
+    gap: 8px;
+  }
+
+  .searchWrap {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Scope the trigger to this page. Portal duplicates inherit the same class. */
+.favoriteDropdown.favoriteDropdown.favoriteDropdown {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 116px;
+  max-width: none;
+  min-height: 44px;
+  height: 44px;
+  padding: 0 14px;
+  gap: 8px;
+  border: 1px solid #554761;
+  border-radius: 999px;
+  background: #fff;
+  color: #18181b;
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.favoriteDropdown.favoriteDropdown.favoriteDropdown:hover:not(:disabled) {
+  background: #eee;
+}
+.favoriteDropdown.favoriteDropdown.favoriteDropdown > svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+.favoriteDropdown.favoriteDropdown.favoriteDropdown > span {
+  display: inline;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 776px) {
+  .favoritesToolbar {
+    column-gap: 8px;
+  }
+
+  .controlRow {
+    gap: 8px;
+  }
+
+  /* Higher/equal specificity to the full-width trigger declaration above. */
+  .favoriteDropdown.favoriteDropdown.favoriteDropdown {
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    gap: 0;
+    border-radius: 50%;
+  }
+  .favoriteDropdown.favoriteDropdown.favoriteDropdown > span,
+  .favoriteDropdown.favoriteDropdown.favoriteDropdown > svg:last-child {
+    display: none;
+  }
+  .favoriteDropdown.favoriteDropdown.favoriteDropdown > svg:first-child {
+    display: block;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+  }
+}

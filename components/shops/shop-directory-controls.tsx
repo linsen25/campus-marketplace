@@ -1,12 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 
 import ShiningButton from '@/components/animata/button/shining-button'
 import FilterInteraction from '@/components/filter-interaction'
-import {
-  MarketControlGroup,
-  MarketFocusBackdrop,
-} from '@/components/listings/market-control-group'
+import { MarketControlGroup } from '@/components/listings/market-control-group'
 import styles from '@/components/listings/market-filter.module.css'
 import { SHOP_CATEGORIES, shopDirectorySorts } from '@/lib/shop-directory'
 import type { ShopCategory, ShopDirectoryQuery } from '@/lib/shop-directory'
@@ -105,14 +101,6 @@ export function ShopDirectoryControls({
   )
   return (
     <MarketControlGroup>
-      {panel &&
-        createPortal(
-          <MarketFocusBackdrop
-            closing={closing}
-            onClose={() => toggle(panel, false)}
-          />,
-          document.body
-        )}
       <FilterInteraction
         label="Sort"
         value={query.sort}

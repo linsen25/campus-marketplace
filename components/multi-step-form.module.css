@@ -38,21 +38,25 @@
 }
 .progress {
   display: flex;
+  align-items: center;
   gap: 6px;
   padding-top: 6px;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  white-space: nowrap;
 }
 .progress span {
   display: block;
   height: 8px;
   width: 8px;
   border-radius: 999px;
-  background: #a77bcc33;
-  transition: width 300ms, background-color 300ms;
+  background: #7c3aed33;
+  transition: width 300ms ease, background-color 300ms ease;
 }
+
 .progress span[data-current] {
   width: 32px;
-  background: #a77bcc;
+  background: var(--color-primary-purple, #7c3aed);
 }
 .viewport {
   position: relative;
@@ -75,16 +79,27 @@
   padding: 0;
   border: 0;
 }
-.step input:not([type='radio']):not([type='file']),
-.step textarea {
+.step input:not([type='radio']):not([type='file']) {
   width: 100%;
   box-sizing: border-box;
   background: #211b29;
   color: #f5f1fa;
   border: 1px solid #574761;
-  border-radius: 8px;
+  border-radius: 999px;
   min-height: 40px;
   padding: 10px 12px;
+  font: inherit;
+  font-size: 14px;
+}
+.step textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 96px;
+  padding: 10px 12px;
+  border: 1px solid #574761;
+  border-radius: 12px;
+  background: #211b29;
+  color: #f5f1fa;
   font: inherit;
   font-size: 14px;
 }
@@ -127,8 +142,8 @@
   color: #eee7f5;
 }
 .forward {
-  background: #a77bcc;
-  color: #160e20;
+  background: var(--color-primary-purple, #7c3aed);
+  color: #fff;
   font-weight: 600;
 }
 .back:disabled,
@@ -162,8 +177,8 @@
 }
 .payment label {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: 10px;
   border: 1px solid #544161;
   border-radius: 10px;
@@ -171,16 +186,41 @@
   cursor: pointer;
 }
 .payment label:has(input:checked) {
-  border-color: #bba1d5;
-  background: #a77bcc15;
+  border-color: var(--color-primary-purple, #7c3aed);
+  background: rgb(124 58 237 / 14%);
+  box-shadow: inset 0 0 0 1px rgb(124 58 237 / 28%);
+}
+.payment label:hover:not(:has(input:disabled)) {
+  border-color: rgb(167 139 250 / 72%);
+  background: rgb(124 58 237 / 10%);
+}
+.payment label:focus-within {
+  outline: 2px solid var(--color-primary-purple, #7c3aed);
+  outline-offset: 2px;
 }
 .payment label:has(input:disabled) {
   opacity: 0.55;
   cursor: default;
 }
 .payment input {
-  margin-top: 4px;
-  accent-color: #a77bcc;
+  grid-column: 2;
+  margin: 0;
+  accent-color: var(--color-primary-purple, #7c3aed);
+}
+.payment > label > span {
+  display: flex;
+  grid-column: 1;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+.payment > label > span > svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--color-primary-purple, #7c3aed);
+}
+.payment > label > span > span {
+  min-width: 0;
 }
 .payment strong {
   display: block;
@@ -209,6 +249,43 @@
   padding: 0 12px;
   font-size: 14px;
 }
+@media (max-width: 1023px) {
+  .footer :global(.shining-button) {
+    --action-width: 160px;
+    --action-height: 48px;
+    --action-inset: 2px;
+    --action-radius: 999px;
+    --action-surface-padding: 0 10px;
+    --action-font-size: 16px;
+    --action-font-weight: 600;
+    --action-line-height: 20px;
+
+    flex-shrink: 0;
+    max-width: calc((100% - 12px) / 2);
+  }
+
+  /* UU-WIZARD-PUBLISH-INTRINSIC-WIDTH-20261118 */
+  .footer > .publishActionSlot {
+    display: flex;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: calc(100% - 172px);
+  }
+  .footer > .publishActionSlot > :global(.shining-button) {
+    --action-width: max-content;
+    width: max-content;
+    max-width: 100%;
+  }
+
+  .footer :global(.shining-button__body) {
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .footer :global(.shining-button__arrow) {
+    flex-shrink: 0;
+  }
+}
 @media (max-width: 639px) {
   .header {
     padding: 16px;
@@ -217,6 +294,10 @@
   .content {
     padding-inline: 16px;
   }
+  .footer {
+    padding: 16px;
+  }
+
   .footer {
     padding: 16px;
   }
@@ -260,9 +341,14 @@
 .embedded .viewport {
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
+
   overflow-y: auto;
   overflow-x: hidden;
+
+  scrollbar-gutter: stable;
   overscroll-behavior: contain;
+
   scrollbar-width: thin;
   scrollbar-color: #695575 transparent;
   color-scheme: dark;
@@ -276,6 +362,29 @@
 .embedded .viewport::-webkit-scrollbar-thumb {
   background: #695575;
   border-radius: 999px;
+}
+/* UU Shop Create only: match Market/Home scroll-only thumb fade. */
+.creation[data-listing-channel='shop'] .embedded .viewport {
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 200ms ease-out;
+}
+.creation[data-listing-channel='shop']
+  .embedded
+  .viewport::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  transition: background-color 200ms ease-out;
+}
+.creation[data-listing-channel='shop']
+  .embedded
+  .viewport[data-scrolling='true'] {
+  scrollbar-color: #695575 transparent;
+  transition-duration: 140ms;
+}
+.creation[data-listing-channel='shop']
+  .embedded
+  .viewport[data-scrolling='true']::-webkit-scrollbar-thumb {
+  background-color: #695575;
+  transition-duration: 140ms;
 }
 .embedded .footer {
   flex-shrink: 0;
@@ -324,17 +433,24 @@
   .embedded .photos > [role='alert'] {
     grid-column: 1 / -1;
   }
-  .embedded [data-wizard-step='1'],
-  .embedded [data-wizard-step='2'] {
+  .embedded [data-wizard-step='1'] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
+  }
+
+  .embedded [data-wizard-step='2'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .embedded [data-wizard-step='2'] > .fulfillmentDescriptionStep {
+    grid-column: 1 / -1;
+    width: 100%;
   }
   .embedded [data-wizard-step] > [role='alert'] {
     grid-column: 1 / -1;
   }
   .embedded .payment {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr);
   }
   .embedded .payment > p {
     grid-column: 1 / -1;
@@ -375,4 +491,41 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
   }
+}
+
+/* UU Shop Create phase 3 — scope to Shop creation ONLY; Resale untouched. */
+:global([data-listing-channel='shop'][data-listing-builder='create'])
+  .progress
+  span {
+  background: #3b4c34;
+}
+:global([data-listing-channel='shop'][data-listing-builder='create'])
+  .progress
+  span[data-current] {
+  background: #69ff60;
+}
+:global([data-listing-channel='shop'][data-listing-builder='create'])
+  .footer
+  :global(.shining-button) {
+  --surface: #69ff60;
+  --action-surface: #69ff60;
+  --action-color: #0b170a;
+  color: #0b170a !important;
+}
+:global([data-listing-channel='shop'][data-listing-builder='create'])
+  .footer
+  :global(.shining-button__body) {
+  background: #69ff60 !important;
+  color: #0b170a !important;
+}
+:global([data-listing-channel='shop'][data-listing-builder='create'])
+  .footer
+  :global(.shining-button__body)
+  * {
+  color: #0b170a !important;
+}
+:global([data-listing-channel='shop'][data-listing-builder='create'])
+  .footer
+  :global(.shining-button__arrow) {
+  color: #0b170a !important;
 }

@@ -64,7 +64,7 @@
 
 .suggestions button:hover,
 .suggestions button:focus-visible,
-.suggestions button[aria-selected="true"] {
+.suggestions button[aria-selected='true'] {
   background: #443451;
 }
 
@@ -176,7 +176,7 @@
   background: #fef2f2;
 }
 
-.tab[aria-pressed="true"] .icon {
+.tab[aria-pressed='true'] .icon {
   fill: currentcolor;
 }
 
@@ -233,4 +233,23 @@
   .tab {
     padding-inline: 4px;
   }
+}
+
+/* Consistent Resale Shop tab sizing */
+.tabs {
+  height: 100%;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.tab {
+  height: 100%;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 15px;
+  gap: 6px;
+}
+.tab .icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }

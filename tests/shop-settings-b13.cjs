@@ -86,9 +86,14 @@ async function main() {
     assert.equal(
       (sidebar.match(/useOwnShopProfile\(active === 'settings'\)/g) || [])
         .length,
-      1
+      0,
+      'Personal Settings does not fetch Shop settings.'
     )
-    assert.equal((sidebar.match(/ownShop=\{ownShop\}/g) || []).length, 2)
+    assert.equal(
+      (sidebar.match(/ownShop=\{ownShop\}/g) || []).length,
+      0,
+      'Personal Settings must not render Shop settings.'
+    )
     assert.equal(
       (sidebar.match(/key=\{seller\?\.id \|\| 'anonymous-settings'\}/g) || [])
         .length,

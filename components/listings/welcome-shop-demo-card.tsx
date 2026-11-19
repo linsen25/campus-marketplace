@@ -1,4 +1,4 @@
-import { ArrowRight } from 'lucide-react'
+import ShiningButton from '@/components/animata/button/shining-button'
 import { useState } from 'react'
 
 import { ShopCardPresentation } from '@/components/shops/shop-card-presentation'
@@ -23,14 +23,11 @@ export function WelcomeShopDemoCard() {
       }}
       favorite={favorite}
       action={
-        <button
-          className={styles.shopAction}
-          type="button"
-          aria-label="Go to shop (demo only)"
-          onClick={() => undefined}
-        >
-          Go to shop <ArrowRight size={18} aria-hidden="true" />
-        </button>
+        <div className={styles.shopActionWrapper}>
+          <ShiningButton variant="green" onClick={() => undefined}>
+            Go to shop
+          </ShiningButton>
+        </div>
       }
       onFavorite={setFavorite}
     />

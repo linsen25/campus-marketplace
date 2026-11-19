@@ -103,6 +103,8 @@ const base = {
   price: 0,
   currency: 'CAD',
   pickupArea: 'Campus',
+  preferredFulfillment: 'DELIVERY',
+  preferredPaymentMode: 'uu_pay',
   photoUrls: [],
   expectedImageCount: 1,
 }
@@ -124,10 +126,8 @@ for (const [category, children] of Object.entries(marketTaxonomy)) {
     const input = validateListingInput({ ...base, category, subcategory })
     assert.equal(input.subcategory, subcategory)
   }
-  assert.throws(
-    () => validateListingInput({ ...base, category }),
-    /Choose a marketplace subcategory/
-  )
+  const withoutSubcategory = validateListingInput({ ...base, category })
+  assert.equal(withoutSubcategory.subcategory, undefined)
 }
 assert.throws(
   () =>

@@ -10,15 +10,19 @@ const labels = [
   'Preparing your marketplace',
   'Opening Usual & Unusual',
 ]
+const readableStepDelay = 220
+const completionHold = 200
 
 export function SuccessThoughtLine({
   destinationReady,
+  profileReady,
   reduced,
   startedAt,
   readyAt,
   onComplete,
 }: {
   destinationReady: boolean
+  profileReady: boolean
   reduced: boolean
   startedAt: number
   readyAt: number | null
@@ -28,16 +32,17 @@ export function SuccessThoughtLine({
   const [visibleBoundary, setVisibleBoundary] = useState(0)
   const [elapsed, setElapsed] = useState(0)
   const lastUpdate = useRef(performance.now())
+  const completionStarted = useRef(false)
   useEffect(() => {
     const inspect = () => {
       const root = document.querySelector<HTMLElement>(
         '[data-market-preparation]'
       )
       const stage = root?.dataset.marketPreparation
-      let current = root ? 1 : 0
-      if (stage === 'assets') current = 2
-      if (stage === 'paint') current = 3
-      setBoundary((previous) => Math.max(previous, current))
+      // The destination owns this marker. Only a committed first paint means
+      // that marketplace preparation itself is complete; mounting the root or
+      // beginning asset work must not create a misleading completed check.
+      if (stage === 'paint') setBoundary(3)
     }
     const observer = new MutationObserver(inspect)
     observer.observe(document.body, {
@@ -59,24 +64,41 @@ export function SuccessThoughtLine({
     const timer = setInterval(paint, 100)
     return () => clearInterval(timer)
   }, [startedAt, readyAt])
-  const actualBoundary = destinationReady ? 4 : boundary
+  // The overlay is mounted only after authentication has succeeded. Profile
+  // readiness comes from the cookie-backed session refresh, and the remaining
+  // boundaries come from the destination's paint handshake and final promise.
+  const actualBoundary = destinationReady
+    ? 4
+    : Math.max(1, profileReady ? 2 : 1, boundary)
   useEffect(() => {
     if (visibleBoundary >= actualBoundary) return undefined
-    // Readability floor only acknowledges already reached real boundaries.
+    // A short floor only spaces already reached real boundaries. It never
+    // marks an operation complete before its source signal has arrived.
     const timer = setTimeout(
       () => {
         lastUpdate.current = performance.now()
-        setVisibleBoundary((current) =>
-          reduced ? actualBoundary : current + 1
-        )
+        setVisibleBoundary((current) => current + 1)
       },
-      reduced ? 0 : Math.max(0, 180 - (performance.now() - lastUpdate.current))
+      reduced
+        ? 0
+        : Math.max(
+            0,
+            readableStepDelay - (performance.now() - lastUpdate.current)
+          )
     )
     return () => clearTimeout(timer)
   }, [actualBoundary, visibleBoundary, reduced])
   useEffect(() => {
-    if (visibleBoundary === 4 && destinationReady) onComplete()
-  }, [visibleBoundary, destinationReady, onComplete])
+    if (
+      visibleBoundary !== labels.length ||
+      !destinationReady ||
+      completionStarted.current
+    )
+      return undefined
+    completionStarted.current = true
+    const timer = setTimeout(onComplete, reduced ? 0 : completionHold)
+    return () => clearTimeout(timer)
+  }, [visibleBoundary, destinationReady, onComplete, reduced])
   return (
     <div className={styles.thoughtLine}>
       <div className={styles.thoughtHeader} data-thought-header="true">

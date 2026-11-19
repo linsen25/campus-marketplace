@@ -2,7 +2,7 @@
 'use client'
 
 import cn from 'classnames'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode, RefObject } from 'react'
 
 import styles from './file-drop.module.css'
@@ -17,6 +17,7 @@ interface FileDropProps {
   multiple?: boolean
   className?: string
   inputRef?: RefObject<HTMLInputElement>
+  stopFileDialogCancelPropagation?: boolean
   files: File[]
   disabled?: boolean
 }
@@ -37,10 +38,19 @@ export function FileDrop({
   multiple = true,
   className,
   inputRef,
+  stopFileDialogCancelPropagation = false,
   files,
   disabled = false,
 }: FileDropProps) {
   const [over, setOver] = useState(false)
+  useEffect(() => {
+    if (!stopFileDialogCancelPropagation) return undefined
+    const input = inputRef?.current
+    if (!input) return undefined
+    const stopCancel = (event: Event) => event.stopPropagation()
+    input.addEventListener('cancel', stopCancel, true)
+    return () => input.removeEventListener('cancel', stopCancel, true)
+  }, [inputRef, stopFileDialogCancelPropagation])
   const acceptFiles = (list: FileList | null) => {
     if (disabled || !list?.length) return
     onFiles?.(Array.from(list))

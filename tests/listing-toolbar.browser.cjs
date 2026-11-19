@@ -124,6 +124,11 @@ const listing = (
           sort.boundingBox(),
           filter.boundingBox(),
         ])
+        const home =
+          width >= 1024
+            ? page.getByRole('link', { name: 'Home', exact: true })
+            : null
+        const homeBox = home ? await home.boundingBox() : null
         assert.equal(geometry[0].y, geometry[1].y)
         assert.equal(geometry[0].height, 48)
         assert.equal(geometry[1].height, geometry[0].height)
@@ -163,6 +168,38 @@ const listing = (
         })
         assert.equal(surface.blur, 'blur(4px)')
         assert.equal(surface.background, 'rgba(15, 10, 22, 0.18)')
+        if (name === 'market' && width >= 1024) {
+          const beforeSort = await sort.boundingBox()
+          const beforeFilter = await filter.boundingBox()
+          await page
+            .getByRole('button', { name: 'Price: Low to High', exact: true })
+            .click()
+          await page.waitForTimeout(40)
+          const longSort = page.getByRole('button', {
+            name: 'Price: Low to High',
+            exact: true,
+          })
+          const [afterSort, afterFilter] = await Promise.all([
+            longSort.boundingBox(),
+            filter.boundingBox(),
+          ])
+          assert.equal(
+            afterFilter.x,
+            beforeFilter.x,
+            'Changing Sort never moves Filter'
+          )
+          if (home && homeBox)
+            assert.equal(
+              (await home.boundingBox()).x,
+              homeBox.x,
+              'Changing Sort never moves Home'
+            )
+          assert.equal(
+            afterSort.x + afterSort.width,
+            beforeSort.x + beforeSort.width,
+            'Sort expands from its left edge'
+          )
+        }
         const panel = await page
           .getByRole('region', { name: 'Sort options', exact: true })
           .evaluate((el) => {
@@ -180,6 +217,17 @@ const listing = (
         await backdrop.waitFor({ state: 'detached' })
         await filter.click()
         await page.waitForTimeout(250)
+        assert(await page.getByRole('heading', { name: 'Filters' }).isVisible())
+        assert(
+          await page
+            .getByRole('button', { name: 'Close filters', exact: true })
+            .isVisible()
+        )
+        assert.equal(
+          await page.locator('[data-filter-divider]').count(),
+          2,
+          'Filter has header and action separators'
+        )
         await page.screenshot({
           path: path.join(output, `${width}-${name}-filter.png`),
         })
@@ -273,11 +321,50 @@ const listing = (
       await page
         .getByRole('option', { name: 'Home & Dorm', exact: true })
         .click()
-      await page.getByRole('button', { name: 'Confirm', exact: true }).click()
+      await page
+        .getByRole('button', { name: 'Close filters', exact: true })
+        .click()
+      await page
+        .locator('[data-market-focus-backdrop]')
+        .waitFor({ state: 'detached' })
+      assert.deepEqual(
+        await titles(),
+        ['Active expensive', 'Active cheap', 'Active furniture'],
+        'Closing Filter abandons its draft'
+      )
+      await page.getByRole('button', { name: 'Filter', exact: true }).click()
+      await page
+        .getByRole('combobox', { name: 'Category', exact: true })
+        .click()
+      await page
+        .getByRole('option', { name: 'Home & Dorm', exact: true })
+        .click()
+      await page
+        .getByRole('button', { name: 'Apply filters', exact: true })
+        .click()
       await page
         .locator('[data-market-focus-backdrop]')
         .waitFor({ state: 'detached' })
       assert.deepEqual(await titles(), ['Active furniture'])
+      await workspace
+        .getByRole('button', { name: 'Filter', exact: true })
+        .click()
+      await page.getByRole('button', { name: 'Reset', exact: true }).click()
+      assert(
+        await page.locator('[data-market-focus-backdrop]').isVisible(),
+        'Reset keeps the filter surface open so the draft can be changed again'
+      )
+      await page
+        .getByRole('button', { name: 'Apply filters', exact: true })
+        .click()
+      await page
+        .locator('[data-market-focus-backdrop]')
+        .waitFor({ state: 'detached' })
+      assert.deepEqual(await titles(), [
+        'Active expensive',
+        'Active cheap',
+        'Active furniture',
+      ])
       await workspace.getByRole('tab', { name: 'Sold', exact: true }).click()
       await page.waitForTimeout(400)
       assert.deepEqual(

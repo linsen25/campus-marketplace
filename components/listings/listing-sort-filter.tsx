@@ -1,11 +1,10 @@
 import { ArrowDownWideNarrow, ChevronDown } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 
 import FilterInteraction from '@/components/filter-interaction'
 import { marketSorts } from '@/lib/market-taxonomy'
 
-import { MarketControlGroup, MarketFocusBackdrop } from './market-control-group'
+import { MarketControlGroup } from './market-control-group'
 import MarketFilter from './market-filter'
 import type { MarketFilterValues } from './market-filter'
 
@@ -18,6 +17,7 @@ export function ListingSortFilter({
   triggerClassName,
   panelClassName,
   showSort = true,
+  showFilter = true,
   overlaySelects = false,
 }: {
   applied: MarketFilterValues
@@ -28,6 +28,7 @@ export function ListingSortFilter({
   triggerClassName?: string
   panelClassName?: string
   showSort?: boolean
+  showFilter?: boolean
   overlaySelects?: boolean
 }) {
   const [panel, setPanel] = useState<'filter' | 'sort' | null>(null)
@@ -49,18 +50,11 @@ export function ListingSortFilter({
   }, [])
   return (
     <MarketControlGroup>
-      {panel &&
-        createPortal(
-          <MarketFocusBackdrop
-            closing={closing}
-            onClose={() => toggle(panel, false)}
-          />,
-          document.body
-        )}
       {showSort && (
         <FilterInteraction
           label="Sort"
           triggerClassName={triggerClassName}
+          hasChevron={Boolean(triggerClassName)}
           triggerContent={
             triggerClassName ? (
               <>
@@ -81,28 +75,30 @@ export function ListingSortFilter({
           onChange={onSort}
         />
       )}
-      <FilterInteraction
-        label="Filter"
-        panelClassName={panelClassName}
-        topLayer={overlaySelects}
-        triggerClassName={triggerClassName}
-        mobileLabel={mobileLabels ? 'Filter' : undefined}
-        isOpen={panel === 'filter'}
-        isClosing={closing}
-        onOpenChange={(open) => toggle('filter', open)}
-      >
-        <MarketFilter
-          key={JSON.stringify(applied)}
-          applied={applied}
-          includeCondition={true}
-          overlaySelects={overlaySelects}
-          onCancel={() => toggle('filter', false)}
-          onConfirm={(values) => {
-            onFilter(values)
-            toggle('filter', false)
-          }}
-        />
-      </FilterInteraction>
+      {showFilter && (
+        <FilterInteraction
+          label="Filter"
+          panelClassName={panelClassName}
+          topLayer={overlaySelects}
+          triggerClassName={triggerClassName}
+          mobileLabel={mobileLabels ? 'Filter' : undefined}
+          isOpen={panel === 'filter'}
+          isClosing={closing}
+          onOpenChange={(open) => toggle('filter', open)}
+        >
+          <MarketFilter
+            key={JSON.stringify(applied)}
+            applied={applied}
+            onDismiss={() => toggle('filter', false)}
+            includeCondition={true}
+            overlaySelects={overlaySelects}
+            onConfirm={(values) => {
+              onFilter(values)
+              toggle('filter', false)
+            }}
+          />
+        </FilterInteraction>
+      )}
     </MarketControlGroup>
   )
 }

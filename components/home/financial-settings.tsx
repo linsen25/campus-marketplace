@@ -1,4 +1,4 @@
-﻿import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import {
   CalendarDays,
   ChevronDown,
@@ -7,18 +7,21 @@ import {
   Globe,
   UserRound,
 } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
-
-import sortStyles from '@/components/filter-interaction.module.css'
-import { DynamicAction } from '@/components/ui/dynamic-action'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { X } from 'lucide-react'
 import { FadingDialog } from '@/components/ui/fading-dialog'
+import { DialogActions } from '@/components/ui/dialog-actions'
+import sortStyles from '@/components/filter-interaction.module.css'
+import ShiningButton from '@/components/animata/button/shining-button'
+import { ActionRow } from '@/components/ui/action-row'
 import { Skeleton } from '@/components/ui/skeleton'
-import { StatefulButton } from '@/components/velora/stateful-button'
 import { useFinancialCapabilities } from '@/hooks/use-financial-capabilities'
 import { marketplaceRequest } from '@/lib/listings-api'
 
 import financialStyles from './financial-settings.module.css'
 import styles from './profile.module.css'
+import { ProfileStatus } from './profile-status'
+import type { ProfileStatusTone } from './profile-status'
 import { StripeCardSetup, stripeSetupAvailable } from './stripe-card-setup'
 
 const labels = {
@@ -27,11 +30,70 @@ const labels = {
   ready: 'Ready',
   needs_attention: 'Needs attention',
 }
+
 type Capability = 'payment_method' | 'payout_account'
 type SetupAction = { pending?: boolean; error?: string; onStart: () => unknown }
+type InteracSettings = { receivingEmail: string | null; verified: boolean }
 
-// Each section owns its action presentation. Phase 1B can provide independent
-// pending/error state and a real async onStart without changing this layout.
+function capabilityTitle(capability: Capability) {
+  return capability === 'payment_method'
+    ? 'Stripe payment method'
+    : 'Stripe payouts'
+}
+
+function capabilityDescription(capability: Capability) {
+  return capability === 'payment_method'
+    ? 'For secure UU purchases'
+    : 'For receiving eligible seller payouts'
+}
+
+function capabilityState(
+  status: keyof typeof labels | undefined,
+  failed: boolean
+) {
+  if (failed)
+    return {
+      label: 'Unable to load',
+      tone: 'error' as ProfileStatusTone,
+    }
+  if (status === 'set' || status === 'ready')
+    return { label: 'Configured', tone: 'success' as ProfileStatusTone }
+  if (status === 'needs_attention')
+    return {
+      label: 'Action required',
+      tone: 'warning' as ProfileStatusTone,
+    }
+  return { label: 'Not set up', tone: 'warning' as ProfileStatusTone }
+}
+
+function CapabilityAction({
+  configured,
+  failed,
+  pending,
+  onClick,
+}: {
+  configured: boolean
+  failed: boolean
+  pending?: boolean
+  onClick: () => unknown
+}) {
+  const outline = configured || failed
+  return (
+    <span className={financialStyles.setupAction}>
+      <ShiningButton
+        variant={outline ? 'outline' : 'purple'}
+        size="compact"
+        showArrow={false}
+        disabled={pending}
+        loading={pending}
+        onClick={() => void onClick()}
+      >
+        {failed ? 'Retry' : configured ? 'Manage' : 'Set up'}
+      </ShiningButton>
+    </span>
+  )
+}
+
 export function FinancialCapabilitySection({
   capability,
   status,
@@ -43,35 +105,11 @@ export function FinancialCapabilitySection({
   summary?: string
   action: SetupAction
 }) {
-  const payment = capability === 'payment_method'
   const ready = status === 'set' || status === 'ready'
   const attention = status === 'needs_attention'
-  const errorId = useId()
-  const title = payment ? 'Payment method' : 'Payout account'
-  const copy = {
-    payment_method: {
-      initial:
-        'Add a payment method to pay securely for purchases on Usual & Unusual.',
-      warning:
-        'Your payment method needs to be updated before it can be used for future purchases.',
-      unset: 'Set up payment method',
-      set: 'Change payment method',
-      ready: 'Change payment method',
-      needs_attention: 'Set up payment method',
-      pending: 'Preparing secure payment setup?',
-    },
-    payout_account: {
-      initial: 'Set up payouts to receive money from completed sales.',
-      warning:
-        'Additional information is required before you can receive payouts.',
-      unset: 'Set up payouts',
-      set: 'Manage payouts',
-      ready: 'Manage payouts',
-      needs_attention: 'Resolve issue',
-      pending: 'Preparing payout setup?',
-    },
-  }[capability]
-  const description = attention ? copy.warning : copy.initial
+  const failed = Boolean(action.error)
+  const title = capabilityTitle(capability)
+  const state = capabilityState(status, failed)
   const handleStart = () => action.onStart()
   return (
     <section
@@ -79,28 +117,253 @@ export function FinancialCapabilitySection({
       aria-label={title}
       data-financial-capability={capability}
     >
-      <div className={financialStyles.sectionHeading}>
-        <h4>{title}</h4>
-        {summary && <p className={financialStyles.summary}>{summary}</p>}
-        {(!ready || attention) && (
-          <p className={styles.caption}>{description}</p>
+      <div className={financialStyles.serviceIcon} aria-hidden="true">
+        {capability === 'payment_method' ? (
+          <img
+            className={financialStyles.brandIllustration}
+            src="/static/images/create-product/shop-payment-stripe.png"
+            alt=""
+            width={40}
+            height={40}
+          />
+        ) : (
+          <img
+            className={financialStyles.brandIllustration}
+            src="/static/images/create-product/shop-payment-stripe.png"
+            alt=""
+            width={40}
+            height={40}
+          />
         )}
       </div>
-      <StatefulButton
-        className={financialStyles.setupAction}
-        disabled={action.pending}
-        aria-busy={action.pending || undefined}
-        aria-describedby={action.error ? errorId : undefined}
-        onClick={handleStart}
-      >
-        {action.pending ? copy.pending : copy[status]}
-      </StatefulButton>
-      {action.error && (
-        <p id={errorId} className={styles.error} role="alert">
-          {action.error}
+      <div className={financialStyles.sectionHeading}>
+        <h4>{title}</h4>
+        <p className={financialStyles.serviceDescription}>
+          {capabilityDescription(capability)}
         </p>
-      )}
+        {summary && <p className={financialStyles.summary}>{summary}</p>}
+        <ProfileStatus tone={state.tone} alert={failed}>
+          {state.label}
+        </ProfileStatus>
+      </div>
+      <CapabilityAction
+        configured={ready && !attention}
+        failed={failed}
+        pending={action.pending}
+        onClick={handleStart}
+      />
     </section>
+  )
+}
+
+function InteracReceivingEmail({
+  userId,
+  settings,
+  onManage,
+}: {
+  userId?: string | null
+  settings: boolean
+  onManage?: () => void
+}) {
+  const [data, setData] = useState<InteracSettings | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [saving, setSaving] = useState(false)
+  const titleId = useId()
+  const descriptionId = useId()
+  const inputId = useId()
+  const errorId = useId()
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const result = await marketplaceRequest<InteracSettings>(
+        '/api/interac/settings',
+        'GET'
+      )
+      setData({
+        receivingEmail: result.receivingEmail || null,
+        verified: result.verified === true,
+      })
+    } catch {
+      setData(null)
+      setError('Unable to load e-Transfer settings.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+  useEffect(() => {
+    if (!userId) return undefined
+    let active = true
+    void load().then(() => {
+      if (!active) return
+    })
+    return () => {
+      active = false
+    }
+  }, [load, userId])
+  useEffect(() => {
+    setOpen(false)
+    setDraft('')
+  }, [userId])
+  const configured = Boolean(data?.receivingEmail)
+  const openDialog = () => {
+    setDraft(data?.receivingEmail || '')
+    setError('')
+    setOpen(true)
+  }
+  const save = async () => {
+    if (saving) return
+    setSaving(true)
+    setError('')
+    try {
+      const result = await marketplaceRequest<InteracSettings>(
+        '/api/interac/settings',
+        'PUT',
+        { receivingEmail: draft }
+      )
+      setData({
+        receivingEmail: result.receivingEmail || null,
+        verified: result.verified === true,
+      })
+      setOpen(false)
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : 'Unable to save e-Transfer settings.'
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+  let status: { label: string; tone: ProfileStatusTone } = {
+    label: 'Not set up',
+    tone: 'warning',
+  }
+  if (error) status = { label: 'Unable to load', tone: 'error' }
+  else if (configured && data?.verified)
+    status = { label: 'Verified for orders', tone: 'success' }
+  else if (configured)
+    status = { label: 'Email needs verification', tone: 'warning' }
+  return (
+    <>
+      <section
+        className={financialStyles.setupSection}
+        aria-label="Interac e-Transfer email"
+        data-financial-capability="interac_etransfer"
+        aria-busy={loading}
+      >
+        <div className={financialStyles.serviceIcon} aria-hidden="true">
+          <img
+            className={financialStyles.brandIllustration}
+            src="/static/images/create-product/shop-payment-interac.png"
+            alt=""
+            width={40}
+            height={40}
+          />
+        </div>
+        <div className={financialStyles.sectionHeading}>
+          <h4>Interac e-Transfer email</h4>
+          <p className={financialStyles.serviceDescription}>
+            For receiving direct Interac e-Transfers
+          </p>
+          {configured && (
+            <p className={financialStyles.summary}>{data?.receivingEmail}</p>
+          )}
+          {!loading && (
+            <ProfileStatus tone={status.tone}>{status.label}</ProfileStatus>
+          )}
+        </div>
+        {loading ? (
+          <Skeleton className={styles.actionSkeleton} />
+        ) : (
+          <span className={financialStyles.setupAction}>
+            <ShiningButton
+              variant={error || configured ? 'outline' : 'purple'}
+              size="compact"
+              showArrow={false}
+              onClick={
+                error
+                  ? () => void load()
+                  : settings
+                  ? openDialog
+                  : () => onManage?.()
+              }
+            >
+              {error
+                ? 'Retry'
+                : configured
+                ? settings
+                  ? 'Change'
+                  : 'Manage'
+                : 'Set up'}
+            </ShiningButton>
+          </span>
+        )}
+      </section>
+      <AnimatePresence>
+        {open && (
+          <FadingDialog
+            className={`${styles.dialog} ${financialStyles.setupDialog}`}
+            aria-labelledby={titleId}
+            aria-describedby={descriptionId}
+            onRequestClose={() => !saving && setOpen(false)}
+          >
+            <h3 id={titleId}>Set up e-Transfer email</h3>
+            <p id={descriptionId}>
+              This email is used to receive direct Interac e-Transfers from
+              buyers. Saving it does not confirm a bank deposit.
+            </p>
+            <label className={styles.fieldLabel} htmlFor={inputId}>
+              Receiving email
+            </label>
+            <input
+              id={inputId}
+              className={financialStyles.interacInput}
+              type="email"
+              autoComplete="email"
+              value={draft}
+              disabled={saving}
+              aria-describedby={error ? errorId : undefined}
+              onChange={(event) => setDraft(event.target.value)}
+            />
+            {error && (
+              <p id={errorId} className={styles.error} role="alert">
+                {error}
+              </p>
+            )}
+            <DialogActions>
+              <span>
+                <ShiningButton
+                  variant="red"
+                  size="compact"
+                  showArrow={false}
+                  disabled={saving}
+                  onClick={() => setOpen(false)}
+                >
+                  Cancel
+                </ShiningButton>
+              </span>
+              <span>
+                <ShiningButton
+                  variant="green"
+                  size="compact"
+                  showArrow={false}
+                  disabled={saving || !draft.trim()}
+                  loading={saving}
+                  onClick={() => void save()}
+                >
+                  Save
+                </ShiningButton>
+              </span>
+            </DialogActions>
+          </FadingDialog>
+        )}
+      </AnimatePresence>
+    </>
   )
 }
 
@@ -155,12 +418,15 @@ function CardFormPreview() {
 export function FinancialSettings({
   settings,
   onManage,
+  focusToken = 0,
 }: {
   settings: boolean
   onManage?: () => void
+  focusToken?: number
 }) {
   const { data, error, refresh, loading, userId } = useFinancialCapabilities()
   const [surface, setSurface] = useState<Capability | null>(null)
+  const [showPaymentInfo, setShowPaymentInfo] = useState(false)
   const [payoutPending, setPayoutPending] = useState(false)
   const [payoutError, setPayoutError] = useState('')
   const [reconcileErrors, setReconcileErrors] = useState<
@@ -182,14 +448,15 @@ export function FinancialSettings({
   useEffect(() => {
     if (
       settings &&
-      new URLSearchParams(window.location.search).get('focus') ===
-        'payments-payouts'
+      (focusToken > 0 ||
+        new URLSearchParams(window.location.search).get('focus') ===
+          'payments-payouts')
     ) {
       document
         .getElementById('payments-payouts')
         ?.scrollIntoView({ block: 'start' })
     }
-  }, [settings])
+  }, [focusToken, settings])
   useEffect(() => {
     setSurface(null)
     setPayoutError('')
@@ -311,34 +578,97 @@ export function FinancialSettings({
     <section
       id="payments-payouts"
       className={financialStyles.section}
-      aria-label="Payments & payouts"
+      aria-label="Payment & transfer setup"
       aria-busy={loading}
     >
-      <header className={styles.panelHeader}>
-        <h3>Payments &amp; payouts</h3>
+      <header className={`${styles.panelHeader} ${financialStyles.infoHeader}`}>
+        <h3>Payment &amp; transfer setup</h3>
+        <button
+          type="button"
+          className={financialStyles.infoButton}
+          aria-label="About payment and transfer setup"
+          onClick={() => setShowPaymentInfo(true)}
+        >
+          <CircleHelp size={20} aria-hidden="true" />
+        </button>
       </header>
+      {showPaymentInfo && (
+        <FadingDialog
+          className={`${styles.dialog} ${financialStyles.infoDialog}`}
+          aria-label="About payment and transfer setup"
+          onRequestClose={() => setShowPaymentInfo(false)}
+        >
+          <button
+            type="button"
+            className={financialStyles.infoClose}
+            aria-label="Close information"
+            onClick={() => setShowPaymentInfo(false)}
+          >
+            <X size={20} aria-hidden="true" />
+          </button>
+          <h3>About payment &amp; transfer setup</h3>
+          <div className={financialStyles.infoBody}>
+            <p>
+              Manage how you pay for purchases and receive money from sales.
+            </p>
+            <div>
+              <h4>Stripe payment method</h4>
+              <p>
+                Save a payment method for eligible UU purchases. Setup does not
+                charge you immediately.
+              </p>
+            </div>
+            <div>
+              <h4>Stripe payouts</h4>
+              <p>
+                Set up a separate seller payout account for eligible UU Pay
+                proceeds. Stripe may require identity and bank account
+                verification.
+              </p>
+            </div>
+            <div>
+              <h4>Interac e-Transfer email</h4>
+              <p>
+                Set an email for receiving direct Interac e-Transfers. Saving it
+                does not enable bank Autodeposit or confirm payment.
+              </p>
+            </div>
+            <p>
+              Buying and receiving seller payouts are separate payment flows.
+            </p>
+          </div>
+        </FadingDialog>
+      )}
       {(['payment_method', 'payout_account'] as const).map((capability) => {
         const isPayment = capability === 'payment_method'
         const value = isPayment ? data?.paymentMethod : data?.payoutAccount
         const display = isPayment
           ? data?.paymentMethod.brand
           : data?.payoutAccount.institution
-        if (settings && !loading && value) {
+        const capabilityError = error || reconcileErrors[capability]
+        if (!loading) {
           const summary =
-            value.status !== 'unset' && (display || value.last4)
+            value && value.status !== 'unset' && (display || value.last4)
               ? `${display || (isPayment ? 'Payment method' : 'Bank account')}${
-                  value.last4 ? ` •••• ${value.last4}` : ''
+                  value.last4 ? ` 閳モ懇鈧懇鈧懇鈧?${value.last4}` : ''
                 }`
               : undefined
           return (
             <FinancialCapabilitySection
               key={capability}
               capability={capability}
-              status={value.status}
-              summary={summary}
+              status={value?.status || 'unset'}
+              summary={settings ? summary : undefined}
               action={{
-                onStart: () => setSurface(capability),
-                error: reconcileErrors[capability],
+                onStart: () => {
+                  if (!settings) {
+                    onManage?.()
+                    return
+                  }
+                  if (capabilityError) return refresh()
+                  setSurface(capability)
+                },
+                error: capabilityError,
               }}
             />
           )
@@ -351,7 +681,7 @@ export function FinancialSettings({
           >
             <div>
               <span className={styles.fieldLabel}>
-                {isPayment ? 'Payment method' : 'Payout account'}
+                {capabilityTitle(capability)}
               </span>
             </div>
             {loading && (
@@ -361,37 +691,14 @@ export function FinancialSettings({
                 }
               />
             )}
-            {!loading && !settings && (
-              <span
-                className={
-                  value?.status === 'set' || value?.status === 'ready'
-                    ? styles.verified
-                    : styles.readOnly
-                }
-              >
-                {value ? labels[value.status] : 'Unavailable'}
-              </span>
-            )}
           </div>
         )
       })}
-      {error && (
-        <p className={styles.error} role="alert">
-          {error}{' '}
-          <button type="button" onClick={() => refresh().catch(() => {})}>
-            Retry
-          </button>
-        </p>
-      )}
-      {!settings && onManage && (
-        <button
-          type="button"
-          className={financialStyles.link}
-          onClick={onManage}
-        >
-          Manage in Settings
-        </button>
-      )}
+      <InteracReceivingEmail
+        userId={userId}
+        settings={settings}
+        onManage={onManage}
+      />
       <AnimatePresence>
         {settings && surface && (
           <FadingDialog
@@ -425,23 +732,31 @@ export function FinancialSettings({
                     {payoutError}
                   </p>
                 )}
-                <div className={financialStyles.actions}>
-                  <DynamicAction
-                    variant="red"
-                    showArrow={false}
-                    disabled={payoutPending}
-                    onClick={close}
-                  >
-                    Cancel
-                  </DynamicAction>
-                  <DynamicAction
-                    variant="green"
-                    disabled={!stripeSetupAvailable() || payoutPending}
-                    onClick={handlePayoutContinue}
-                  >
-                    Continue
-                  </DynamicAction>
-                </div>
+                <ActionRow align="between" compactBetween>
+                  <span>
+                    <ShiningButton
+                      variant="red"
+                      size="compact"
+                      showArrow={false}
+                      disabled={payoutPending}
+                      onClick={close}
+                    >
+                      Cancel
+                    </ShiningButton>
+                  </span>
+                  <span>
+                    <ShiningButton
+                      variant="green"
+                      size="compact"
+                      showArrow={false}
+                      disabled={!stripeSetupAvailable() || payoutPending}
+                      loading={payoutPending}
+                      onClick={() => void handlePayoutContinue()}
+                    >
+                      Continue
+                    </ShiningButton>
+                  </span>
+                </ActionRow>
               </>
             )}
           </FadingDialog>

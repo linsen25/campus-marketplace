@@ -3,7 +3,9 @@ import {
   CircleIcon,
   EyeIcon,
   EyeOffIcon,
+  MailIcon,
   ShieldCheckIcon,
+  UserRoundIcon,
   X,
 } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
@@ -215,16 +217,19 @@ function UsernameField({
   return (
     <div className={styles.field} data-help-field="username">
       <label htmlFor="signup-username">Username</label>
-      <input
-        className={styles.input}
-        id="signup-username"
-        name="signup-username"
-        autoComplete="section-signup username"
-        value={value}
-        disabled={disabled}
-        aria-describedby={`${id}-username-help`}
-        onChange={(event) => onChange(event.target.value)}
-      />
+      <div className={styles.usernameInput}>
+        <input
+          className={styles.input}
+          id="signup-username"
+          name="signup-username"
+          autoComplete="section-signup username"
+          value={value}
+          disabled={disabled}
+          aria-describedby={`${id}-username-help`}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <UserRoundIcon className={styles.inputIcon} aria-hidden={true} />
+      </div>
       <FieldHelp id={`${id}-username-help`} active={active}>
         <UsernameHelp value={value} />
         {value && !validUsername(value) && (
@@ -360,10 +365,11 @@ function AuthSubmit({
         <ShiningButton
           variant="purple"
           desktopAppearance={true}
+          loading={busy === 'submit'}
           disabled={disabled}
           onClick={() => form.current?.requestSubmit()}
         >
-          {busy === 'submit' ? 'Please wait…' : 'Log in'}
+          Log in
         </ShiningButton>
       </div>
     )
@@ -727,16 +733,23 @@ export function AuthSignupCard({
   const { title, subtitle, submit } = modeCopy[mode]
   const sendLabel = sendCodeLabel(sent, cooldown, busy)
   return (
-    <section className={styles.composition}>
+    <motion.section
+      className={styles.composition}
+      initial={false}
+      animate={phase}
+      variants={contentVariants}
+      onAnimationComplete={(definition: unknown) => {
+        if (definition === 'hidden') switchMode(requestedMode)
+      }}
+    >
       <div className={styles.header}>
-        <span className={styles.brand}>Usual & Unusual</span>
         <button
           type="button"
           className={styles.dismiss}
           aria-label="Close authentication"
           onClick={onClose}
         >
-          <X size={20} />
+          <X size={20} aria-hidden={true} />
         </button>
         <motion.h2
           id="auth-title"
@@ -770,9 +783,6 @@ export function AuthSignupCard({
           onFocusCapture={(event: FocusEvent<HTMLFormElement>) => {
             setActiveHelpField(focusedHelpField(event.target, activeHelpField))
           }}
-          onAnimationComplete={(definition: unknown) => {
-            if (definition === 'hidden') switchMode(requestedMode)
-          }}
           onSubmit={handleSubmit}
         >
           {error && (
@@ -787,28 +797,31 @@ export function AuthSignupCard({
           )}
           <div className={styles.field}>
             <label htmlFor={`${fieldPrefix}-email`}>Email</label>
-            <input
-              className={styles.input}
-              id={`${fieldPrefix}-email`}
-              name={mode === 'recovery' ? 'email' : `${fieldPrefix}-email`}
-              type="email"
-              required={true}
-              autoComplete={
-                {
-                  signin: 'username',
-                  signup: 'section-signup email',
-                  recovery: 'email',
-                }[mode]
-              }
-              placeholder="you@example.com"
-              value={email}
-              disabled={formDisabled || (mode === 'signup' && sent)}
-              aria-describedby={`${id}-access`}
-              onChange={(event) => {
-                setEmail(event.target.value)
-                setCode('')
-              }}
-            />
+            <div className={styles.emailInput}>
+              <input
+                className={styles.input}
+                id={`${fieldPrefix}-email`}
+                name={mode === 'recovery' ? 'email' : `${fieldPrefix}-email`}
+                type="email"
+                required={true}
+                autoComplete={
+                  {
+                    signin: 'username',
+                    signup: 'section-signup email',
+                    recovery: 'email',
+                  }[mode]
+                }
+                placeholder="you@example.com"
+                value={email}
+                disabled={formDisabled || (mode === 'signup' && sent)}
+                aria-describedby={`${id}-access`}
+                onChange={(event) => {
+                  setEmail(event.target.value)
+                  setCode('')
+                }}
+              />
+              <MailIcon className={styles.inputIcon} aria-hidden={true} />
+            </div>
             <p id={`${id}-access`} className={styles.helper}>
               Verify your email before using protected UU features.
             </p>
@@ -821,9 +834,7 @@ export function AuthSignupCard({
             id={id}
             value={username}
             disabled={formDisabled || sent}
-            active={
-              activeHelpField === 'username' || (attempted && !signupReady)
-            }
+            active={activeHelpField === 'username'}
             availability={availability}
             onChange={setUsername}
           />
@@ -892,9 +903,7 @@ export function AuthSignupCard({
               <>
                 <FieldHelp
                   id={`${id}-password-help`}
-                  active={
-                    activeHelpField === 'password' || Boolean(showPasswordError)
-                  }
+                  active={activeHelpField === 'password'}
                 >
                   <div aria-hidden={true} className={styles.progress}>
                     {RULES.map((rule, index) => (
@@ -1051,6 +1060,7 @@ export function AuthSignupCard({
           )}
           {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- The focusable requirements group exposes feedback when its native Hold button is disabled. */}
           <div
+            className={styles.submitRow}
             role={mode === 'signup' && !signupReady ? 'group' : undefined}
             tabIndex={mode === 'signup' && !signupReady ? 0 : undefined}
             aria-label={
@@ -1093,14 +1103,16 @@ export function AuthSignupCard({
             </p>
           )}
           {mode === 'signin' && (
-            <button
-              type="button"
-              className={styles.secondary}
-              disabled={formDisabled}
-              onClick={() => setRequestedMode('recovery')}
-            >
-              Forgot password?
-            </button>
+            <div className={styles.forgotRow}>
+              <button
+                type="button"
+                className={styles.secondary}
+                disabled={formDisabled}
+                onClick={() => setRequestedMode('recovery')}
+              >
+                Forgot password?
+              </button>
+            </div>
           )}
         </motion.form>
       </div>
@@ -1118,6 +1130,6 @@ export function AuthSignupCard({
       {showStandards && (
         <CommunityStandards onClose={() => setShowStandards(false)} />
       )}
-    </section>
+    </motion.section>
   )
 }

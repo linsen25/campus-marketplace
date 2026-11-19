@@ -51,6 +51,11 @@ const client = {
       )
     )
     calls.push({ actor, name, value })
+    // The public RPCs are SECURITY DEFINER but retain the database's own
+    // verified-Western predicate. Model that SQL boundary here rather than
+    // treating the broader open-registration API session guard as authority.
+    if (!confirmed || !/^[^\s@]+@uwo\.ca$/i.test(email))
+      return { data: null, error: { code: '42501' } }
     const p = invalid
       ? null
       : { ...projection, providerSecret: 'PRIVATE_DETAIL' }

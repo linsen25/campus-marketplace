@@ -99,15 +99,18 @@ async function main() {
     sql(
       `insert into auth.users(id,email,email_confirmed_at) values('99999999-9999-4999-8999-999999999999','outside@example.com',now());`
     )
+    const b12Migration = '202610190003_shop_membership_authority.sql'
     for (const file of fs
       .readdirSync('supabase/migrations')
       .filter((f) => f.endsWith('.sql'))
       .sort()) {
+      // This is a historical B12 migration test.  Later canonical migrations
+      // may legitimately depend on the membership tables B12 creates, so they
+      // are not prerequisites and must never be loaded before this stage.
+      if (file >= b12Migration) continue
       if (
         [
           '202610130007_staging_due_work_schedule.sql',
-          '202610190003_shop_membership_authority.sql',
-          '202610190005_public_shop_projection.sql',
           '202610150006_notification_scheduler_transport_privacy.sql',
         ].includes(file)
       )
@@ -124,7 +127,7 @@ async function main() {
       }
     }
     console.log(
-      'PASS isolated current-schema prerequisites; scheduler/network integrations excluded'
+      'PASS isolated B12 prerequisites; later migrations and scheduler/network integrations excluded'
     )
 
     sql(
@@ -138,18 +141,27 @@ async function main() {
         'utf8'
       )
     )
-    // B15 reads depend on the B12 evaluator; apply only after its explicit stage.
+    const b12Assertions = fs
+      .readFileSync('tests/shop-membership-b12-db.sql', 'utf8')
+      .split('-- B12_APPLY')[1]
+      .split('-- B12_POST_AUTHORITY')
+    sql(b12Assertions[0])
+    // B14 publishes Shop listings through the B12 entitlement evaluator, and
+    // B15 reads that projection. They are explicit post-B12 test stages, not
+    // generic prerequisites, so run the B12 non-regression assertions first.
+    sql(
+      fs.readFileSync(
+        'supabase/migrations/202610190004_shop_product_publication.sql',
+        'utf8'
+      )
+    )
     sql(
       fs.readFileSync(
         'supabase/migrations/202610190005_public_shop_projection.sql',
         'utf8'
       )
     )
-    sql(
-      fs
-        .readFileSync('tests/shop-membership-b12-db.sql', 'utf8')
-        .split('-- B12_APPLY')[1]
-    )
+    sql(b12Assertions[1])
     console.log(
       'PASS B12 actual migration, deterministic lifecycle/calendar/permissions/ownership/idempotency and unchanged existing authorities'
     )

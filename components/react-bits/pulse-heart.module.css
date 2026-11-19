@@ -173,12 +173,14 @@
   }
 }
 
-/* Opt-in photography overlay; default PulseHeart presentation stays unchanged. */
+/* Photography overlay: show only the heart until hover/focus/press. */
 .pulse-heart[data-appearance='image-overlay'] {
   border-radius: 50%;
-  background: rgba(25, 25, 25, 0.6);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: transform 160ms var(--ph-ease-out), background-color 160ms ease,
+    backdrop-filter 160ms ease;
 }
 
 .pulse-heart[data-appearance='image-overlay'] .pulse-heart__pill {
@@ -190,8 +192,20 @@
   color: #fafafa;
 }
 
+/* Keyboard and touch users also receive visible interaction feedback. */
+.pulse-heart[data-appearance='image-overlay']:focus-visible,
+.pulse-heart[data-appearance='image-overlay']:active,
+.pulse-heart[data-appearance='image-overlay'][data-pressed],
+.pulse-heart[data-appearance='image-overlay'][data-running] {
+  background: rgba(25, 25, 25, 0.72);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
 @media (hover: hover) and (pointer: fine) {
-  .pulse-heart[data-appearance='image-overlay']:not(:disabled):hover {
+  .pulse-heart[data-appearance='image-overlay']:hover {
     background: rgba(25, 25, 25, 0.72);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
   }
 }

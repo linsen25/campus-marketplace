@@ -39,7 +39,11 @@ export default function MyListingsPage({
         await deleteListing(listing.id)
         setListings((items) => items.filter((item) => item.id !== listing.id))
         setConfirmDelete(null)
-        setMessage(`${listing.title} deleted.`)
+        setMessage(
+          listing.listingChannel === 'shop'
+            ? `${listing.title} archived.`
+            : `${listing.title} deleted.`
+        )
       } else {
         const sold = await markListingSold(listing.id)
         setListings((items) =>

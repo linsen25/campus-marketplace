@@ -1,10 +1,10 @@
-﻿.section {
+.section {
   margin-top: 24px;
   min-width: 0;
 }
 .setupSection {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
   padding-block: 20px;
@@ -14,51 +14,70 @@
   border-top: 1px solid #ffffff0d;
 }
 .sectionHeading {
+  display: grid;
+  gap: 4px;
   min-width: 0;
 }
 .sectionHeading h4 {
   margin: 0;
+  font-weight: 600;
   font-size: 16px;
   line-height: 24px;
 }
+.serviceIcon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 12px;
+  background: rgb(124 58 237 / 15%);
+  color: #b995dc;
+}
+.serviceDescription {
+  margin: 0;
+  color: #b5a5c3;
+  font-size: 13px;
+  line-height: 19px;
+}
+.intro {
+  max-width: 560px;
+  margin: 6px 0 0;
+  color: #b5a5c3;
+  font-size: 13px;
+  line-height: 19px;
+}
 .summary {
-  margin-bottom: 8px;
+  margin: 2px 0 0;
   overflow-wrap: anywhere;
   font-size: 14px;
 }
 .setupAction {
-  --surface: #775497;
-
   max-width: 100%;
-  min-height: 44px;
   width: fit-content;
   min-width: 0;
+  flex-shrink: 0;
   justify-self: end;
-}
-.logoutAction {
-  --surface: #772d40;
-}
-.setupAction:not(.logoutAction):not(:disabled):not([data-state='error']) {
-  --surface: var(--color-primary-purple, #7c3aed);
+  white-space: nowrap;
 }
 .setupSection > [role='alert'] {
   grid-column: 1 / -1;
 }
 @media (max-width: 639px) {
   .setupSection {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .setupSection > .setupAction {
-    width: fit-content;
-    justify-self: end;
+    gap: 12px;
   }
 }
-.actions {
-  display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr);
-  align-items: center;
-  gap: 12px;
-  margin-top: 24px;
+
+@media (max-width: 359px) {
+  .setupSection {
+    grid-template-columns: 40px minmax(0, 1fr);
+    align-items: start;
+  }
+  .setupSection > .setupAction {
+    grid-column: 2;
+    width: fit-content;
+    justify-self: start;
+  }
 }
 .setupDialog {
   color: #f3edf8;
@@ -66,6 +85,22 @@
 .setupDialog > p {
   margin-top: 12px;
   overflow-wrap: anywhere;
+}
+.interacInput {
+  width: 100%;
+  min-height: 48px;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border: 1px solid #64526f;
+  border-radius: 12px;
+  background: #1a1222;
+  color: #f3edf8;
+  font: inherit;
+}
+.interacInput:focus-visible {
+  outline: 2px solid #d1b4f6;
+  outline-offset: 2px;
 }
 .setupDialog.paymentDialog {
   flex-direction: column;
@@ -257,5 +292,133 @@
     width: auto;
     max-width: 130px;
     flex: none;
+  }
+}
+
+.infoHeader.infoHeader {
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+.infoButton {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #bfaed2;
+  cursor: pointer;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+.infoButton:hover {
+  background: #ffffff12;
+  color: #fff;
+}
+.infoButton:focus-visible,
+.infoClose:focus-visible {
+  outline: 2px solid #cda8f6;
+  outline-offset: 3px;
+}
+.infoDialog {
+  position: relative;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 24px;
+  overflow-y: auto;
+}
+.infoClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #d9c8ea;
+  cursor: pointer;
+}
+.infoClose:hover {
+  background: #ffffff12;
+  color: #fff;
+}
+.infoDialog > h3 {
+  padding-right: 40px;
+}
+.infoBody {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+}
+.infoBody > div {
+  display: grid;
+  gap: 6px;
+}
+.infoBody h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.infoBody p {
+  margin: 0;
+  color: #cbbdd7;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+/* UU SHOP FINAL STEP345 + FINANCIAL ICONS v9: reused financial rows. */
+.serviceIcon:has(.brandIllustration) {
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border-radius: 0;
+}
+.brandIllustration {
+  display: block;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* UU Shop visual refinement v9.3 — larger payment artwork and compact Delivery */
+/* Shared FinancialSettings rows: both Profile and Settings, imagery only. */
+.setupSection:has(.brandIllustration) {
+  grid-template-columns: 88px minmax(0, 1fr) auto;
+  column-gap: 16px;
+}
+.serviceIcon:has(.brandIllustration) {
+  width: 88px;
+  height: 88px;
+}
+.brandIllustration {
+  width: 88px;
+  height: 88px;
+}
+@media (max-width: 520px) {
+  .setupSection:has(.brandIllustration) {
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+  .serviceIcon:has(.brandIllustration),
+  .brandIllustration {
+    width: 64px;
+    height: 64px;
+  }
+}
+@media (max-width: 359px) {
+  .setupSection:has(.brandIllustration) {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+  .setupSection:has(.brandIllustration) > .setupAction {
+    grid-column: 2;
+    justify-self: start;
   }
 }

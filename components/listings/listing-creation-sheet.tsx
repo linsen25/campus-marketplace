@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { Store, X } from 'lucide-react'
 import { useCallback, useRef } from 'react'
 
 import { FadingDialog } from '@/components/ui/fading-dialog'
@@ -15,15 +15,18 @@ export function ListingCreationSheet({
   onClose,
   onSaved,
   onGuardChange,
+  previewOnly = false,
 }: {
   mode: 'resale' | 'shop'
   listing?: Listing
   onClose: () => void
   onSaved: (listing: Listing) => void
   onGuardChange: (guard: ListingLeaveGuard | null) => void
+  previewOnly?: boolean
 }) {
   let heading: string = listingWizardModes[mode].heading
   if (listing) heading = mode === 'resale' ? 'Edit Resale' : 'Edit Product'
+  else if (mode === 'shop') heading = 'Add Shop Product'
   const guard = useRef<ListingLeaveGuard | null>(null)
   const setGuard = useCallback(
     (value: ListingLeaveGuard | null) => {
@@ -48,7 +51,21 @@ export function ListingCreationSheet({
       onRequestClose={close}
     >
       <header className={styles.header}>
-        <h2>{heading}</h2>
+        {mode === 'shop' && !listing ? (
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* UU Shop Create header accent: new Shop only. */}
+            <Store
+              size={26}
+              aria-hidden="true"
+              style={{ color: '#65f56d', flexShrink: 0 }}
+            />
+            <span>
+              Add <span style={{ color: '#65f56d' }}>Shop Product</span>
+            </span>
+          </h2>
+        ) : (
+          <h2>{heading}</h2>
+        )}
         <button type="button" aria-label={`Close ${heading}`} onClick={close}>
           <X size={21} aria-hidden={true} />
         </button>
@@ -58,6 +75,7 @@ export function ListingCreationSheet({
           key={listing?.id ?? 'create'}
           listing={listing}
           mode={mode}
+          previewOnly={previewOnly}
           presentation="sheet"
           onCancel={close}
           onSaved={onSaved}

@@ -35,7 +35,7 @@ async function main() {
     headless: true,
   })
   try {
-    for (const width of [390, 430, 820, 1280, 1536]) {
+    for (const width of [375, 390, 430, 768, 820, 1280, 1536]) {
       const p = await browser.newPage({
         viewport: { width, height: 900 },
         serviceWorkers: 'block',
@@ -60,31 +60,49 @@ async function main() {
         ['needs_attention', 'needs_attention'],
       ]) {
         await p.evaluate(([a, b]) => window.show(a, b), [payment, payout])
+        const statusLabel = (status) =>
+          status === 'set' || status === 'ready'
+            ? 'Configured'
+            : status === 'needs_attention'
+            ? 'Action required'
+            : 'Not set up'
         assert.equal(
           await section('payment_method')
-            .getByText(
-              payment === 'unset'
-                ? 'Not set'
-                : payment === 'set'
-                ? 'Ready'
-                : 'Needs attention',
-              { exact: true }
-            )
+            .getByText(statusLabel(payment), { exact: true })
             .count(),
-          0
+          1
         )
         assert.equal(
           await section('payout_account')
-            .getByText(
-              payout === 'unset'
-                ? 'Not set'
-                : payout === 'ready'
-                ? 'Ready'
-                : 'Needs attention',
-              { exact: true }
-            )
+            .getByText(statusLabel(payout), { exact: true })
             .count(),
-          0
+          1
+        )
+        assert.equal(
+          await section('payment_method')
+            .getByText('Stripe payment method', { exact: true })
+            .count(),
+          1
+        )
+        assert.equal(
+          await section('payment_method')
+            .getByText('For secure UU purchases', { exact: true })
+            .count(),
+          1
+        )
+        assert.equal(
+          await section('payout_account')
+            .getByText('Stripe payouts', { exact: true })
+            .count(),
+          1
+        )
+        assert.equal(
+          await section('payout_account')
+            .getByText('For receiving eligible seller payouts', {
+              exact: true,
+            })
+            .count(),
+          1
         )
         assert.equal(await p.getByText(/Simulate|STAGING ONLY/).count(), 0)
         assert(
@@ -98,13 +116,28 @@ async function main() {
           })
         for (const key of ['payment_method', 'payout_account']) {
           const button = section(key).getByRole('button')
+          const heading = section(key).locator('[class*="sectionHeading"]')
+          const configured =
+            (key === 'payment_method' ? payment : payout) === 'set' ||
+            (key === 'payment_method' ? payment : payout) === 'ready'
           assert.equal(
             await button.evaluate((node) =>
               getComputedStyle(node).getPropertyValue('--surface').trim()
             ),
-            '#7c3aed',
-            'Settings setup/manage/resolve actions use the primary purple'
+            configured ? 'transparent' : '#7c3aed',
+            'Only unconfigured actions use the primary purple'
           )
+          if (width >= 360 && width < 640) {
+            const [buttonBox, headingBox] = await Promise.all([
+              button.boundingBox(),
+              heading.boundingBox(),
+            ])
+            assert(
+              buttonBox.y < headingBox.y + headingBox.height &&
+                buttonBox.y + buttonBox.height > headingBox.y,
+              'Mobile action remains in the same service-row band as its details'
+            )
+          }
           await button.click()
           const dialog = p.getByRole('dialog')
           await dialog.waitFor()
@@ -304,8 +337,23 @@ async function main() {
         0
       )
       assert(await section('payment_method').getByRole('button').isEnabled())
+      assert.equal(
+        await section('payment_method')
+          .getByRole('button', { name: 'Retry', exact: true })
+          .count(),
+        1
+      )
+      assert.equal(
+        await section('payment_method')
+          .getByRole('button', { name: 'Retry', exact: true })
+          .evaluate((node) =>
+            getComputedStyle(node).getPropertyValue('--surface').trim()
+          ),
+        'transparent',
+        'Retry is an outlined action, never a purple setup button'
+      )
       await p.evaluate(() => window.show('set', 'ready', true))
-      assert.equal(await p.getByText('Manage in Settings').count(), 1)
+      assert.equal(await p.getByRole('button', { name: 'Manage' }).count(), 2)
       assert.equal(await p.getByText(/4242|1234/).count(), 0)
       assert.equal(requests, 0, 'no remote/provider/simulator requests')
       assert.deepEqual(errors, [])

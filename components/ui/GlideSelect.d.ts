@@ -12,6 +12,10 @@ export default function GlideSelect(props: {
   onChange?: (value: string) => void
   ariaLabel: string
   size?: 'lg' | 'md' | 'sm'
+  radius?: number
+  menuRadius?: number
+  optionRadius?: number
+  menuSurfaceColor?: string
   className?: string
   surfaceColor?: string
   highlightColor?: string

@@ -49,20 +49,73 @@
 }
 
 .field input,
-.field select,
-.field textarea {
+.field select {
   width: 100%;
   min-width: 0;
   padding: 12px;
   border: 1px solid #766183;
-  border-radius: 8px;
+  border-radius: 999px;
   background: #160f1d;
   color: #fff;
   font: inherit;
 }
 
 .field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #544161;
+  border-radius: 12px;
+  background: #211b29;
+  color: #ede6f3;
+  font: inherit;
   resize: vertical;
+}
+
+/* Fulfillment is its own two-column step in the resale wizard. The generic
+ * editor remains a single column and collapses naturally on smaller screens. */
+.fulfillmentDescriptionStep {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  min-width: 0;
+}
+
+.fulfillmentColumn,
+.descriptionColumn {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  min-width: 0;
+}
+
+.locationContractNote {
+  margin: 0;
+  color: #b9adc7;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.deliveryHint {
+  margin: 0;
+  color: #b9adc7;
+  font-size: 13px;
+  line-height: 20px;
+}
+.descriptionColumn :is(input:disabled, textarea:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.fulfillmentSegment {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .fulfillmentDescriptionStep {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+  }
 }
 
 .field input:focus-visible,
@@ -168,6 +221,26 @@
   position: fixed;
   opacity: 0%;
   pointer-events: none;
+}
+
+.ownerPreviewClose {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid #ffffff2e;
+  border-radius: 999px;
+  background: #201827e8;
+  color: #f7f1fb;
+  cursor: pointer;
+}
+
+.ownerPreviewClose:hover {
+  background: #35273f;
+}
+.ownerPreviewClose:focus-visible {
+  outline: 2px solid #d7bcff;
+  outline-offset: 3px;
 }
 
 .emptyState {
@@ -394,4 +467,1312 @@
     line-height: 20px;
     color: #b9adc7;
   }
+}
+
+/* Resale-only Create wizard illustrations. No changes to controls or publication. */
+.resaleIllustrationPhoto,
+.resaleIllustrationDetails,
+.resaleIllustrationFulfillment,
+.resaleIllustrationPayment {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.resaleIllustrationPhoto {
+  max-width: 280px;
+  max-height: 165px;
+  margin: 2px auto 0;
+}
+
+.resaleIllustrationDetails {
+  max-width: 320px;
+  max-height: 180px;
+  justify-self: center;
+  align-self: center;
+}
+
+.resaleFulfillmentLeft {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  min-width: 0;
+}
+
+.resaleIllustrationFulfillment {
+  max-width: 325px;
+  max-height: 190px;
+  justify-self: center;
+  align-self: center;
+}
+
+.resaleIllustrationPayment {
+  max-width: 410px;
+  max-height: 205px;
+  margin: 4px auto 0;
+  justify-self: center;
+}
+
+@media (min-width: 768px) {
+  /* Place Details art beneath Subcategory, alongside the Description textarea. */
+  :global([data-wizard-step='1']) > .resaleIllustrationDetails {
+    grid-column: 1;
+    grid-row: 4;
+  }
+  .creationForm
+    :global([data-wizard-step='1']):has(> .resaleIllustrationDetails)
+    > label:last-of-type {
+    grid-column: 2;
+    grid-row: 3 / span 2;
+  }
+
+  /* The artwork lives below the left-hand fulfillment controls. */
+  .fulfillmentDescriptionStep:has(.resaleIllustrationFulfillment) {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 767px) {
+  .resaleIllustrationPhoto,
+  .resaleIllustrationDetails,
+  .resaleIllustrationFulfillment,
+  .resaleIllustrationPayment {
+    max-height: 155px;
+    max-width: min(75vw, 270px);
+    margin-inline: auto;
+  }
+}
+
+/* Shop Create wizard — dedicated image-led layouts, isolated from Resale. */
+.shopWizardStep {
+  min-width: 0;
+}
+.shopWizardStep > * {
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  /* Step 2: details take left two-thirds, illustration takes the right third. */
+  .shopWizardStep[data-wizard-step='1'] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(190px, 0.95fr);
+    align-items: start;
+    gap: 18px 20px;
+  }
+  .shopWizardStep[data-wizard-step='1'] > :nth-child(1) {
+    grid-column: 1 / 3;
+  }
+  .shopWizardStep[data-wizard-step='1'] > :nth-child(2) {
+    grid-column: 1;
+  }
+  .shopWizardStep[data-wizard-step='1'] > :nth-child(3) {
+    grid-column: 2;
+  }
+  .shopWizardStep[data-wizard-step='1'] > :nth-child(4) {
+    grid-column: 1;
+  }
+  .shopWizardStep[data-wizard-step='1'] > :nth-child(5) {
+    grid-column: 2;
+  }
+  .shopWizardStep[data-wizard-step='1'] > :nth-child(6) {
+    grid-column: 1 / 3;
+  }
+  .shopWizardStep[data-wizard-step='1'] > .resaleIllustrationDetails {
+    grid-column: 3;
+    grid-row: 1 / span 5;
+    align-self: center;
+    justify-self: center;
+    max-width: 100%;
+    max-height: 350px;
+    width: 100%;
+    object-fit: contain;
+  }
+  /* Override Resale's special description placement, Shop only. */
+  .creationForm
+    .shopWizardStep[data-wizard-step='1']:has(> .resaleIllustrationDetails)
+    > label:last-of-type {
+    grid-column: 1 / 3;
+    grid-row: auto;
+  }
+
+  /* Step 3: fulfillment, place and location info left; illustration right. */
+  .shopWizardStep
+    .fulfillmentDescriptionStep:has(.resaleIllustrationFulfillment) {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(240px, 0.85fr);
+    gap: 18px 28px;
+    align-items: start;
+  }
+  .shopWizardStep .resaleFulfillmentLeft:has(.resaleIllustrationFulfillment) {
+    display: contents;
+  }
+  .shopWizardStep
+    .resaleFulfillmentLeft:has(.resaleIllustrationFulfillment)
+    > .fulfillmentColumn {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .shopWizardStep
+    .fulfillmentDescriptionStep:has(.resaleIllustrationFulfillment)
+    > .descriptionColumn {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .shopWizardStep .resaleIllustrationFulfillment {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    width: 100%;
+    max-height: 360px;
+    max-width: 100%;
+    justify-self: center;
+    align-self: center;
+  }
+
+  /* Step 4: payment cards on the left, dedicated artwork on the right. */
+  .shopWizardStep .resaleIllustrationPayment {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    width: 100%;
+    max-width: 100%;
+    max-height: 350px;
+    margin: 0;
+    align-self: center;
+  }
+  .shopWizardStep .resaleIllustrationPayment + * {
+    min-width: 0;
+  }
+}
+@media (min-width: 900px) {
+  /* No global .payment changes: only the Shop step 4 payment container. */
+  .shopWizardStep[data-wizard-step='3']
+    > :first-child:has(.resaleIllustrationPayment) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(210px, 0.86fr);
+    align-items: stretch;
+    column-gap: 28px;
+  }
+  .shopWizardStep[data-wizard-step='3']
+    > :first-child:has(.resaleIllustrationPayment)
+    > label,
+  .shopWizardStep[data-wizard-step='3']
+    > :first-child:has(.resaleIllustrationPayment)
+    > p {
+    grid-column: 1;
+  }
+}
+
+/* Shop Create demo — Details layout matched to approved 5-step visual reference.
+   Scope deliberately excludes Resale and non-preview Shop creation. */
+.shopInventoryPreview {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  color: #ede6f3;
+  font-size: 14px;
+}
+.shopInventoryStepper {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  min-height: 48px;
+  border: 1px solid #766183;
+  border-radius: 999px;
+  background: #211b29;
+  overflow: hidden;
+}
+.shopInventoryStepper output {
+  text-align: center;
+  color: #f5f1fa;
+  font-weight: 600;
+}
+.shopInventoryStepper button {
+  align-self: stretch;
+  border: 0;
+  background: transparent;
+  color: #f5f1fa;
+  font: inherit;
+  font-size: 22px;
+  cursor: pointer;
+}
+.shopInventoryStepper button:hover:not(:disabled) {
+  background: #34263f;
+}
+.shopInventoryStepper button:focus-visible {
+  outline: 2px solid #63f66a;
+  outline-offset: -3px;
+}
+.shopInventoryStepper button:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+@media (min-width: 900px) {
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(225px, 0.96fr);
+    gap: 12px 20px;
+    align-content: start;
+    align-items: start;
+  }
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > :nth-child(1) {
+    grid-column: 1 / 3;
+    grid-row: 1;
+  }
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > :nth-child(2) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > :nth-child(3) {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > :nth-child(4) {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > :nth-child(5) {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > :nth-child(6) {
+    grid-column: 1 / 3;
+    grid-row: 4;
+  }
+  .creationForm
+    .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > :nth-child(7) {
+    grid-column: 1 / 3;
+    grid-row: 5;
+  }
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > .resaleIllustrationDetails {
+    grid-column: 3;
+    grid-row: 1 / 6;
+    align-self: center;
+    justify-self: center;
+    width: 100%;
+    max-width: 100%;
+    max-height: 340px;
+  }
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > :nth-child(7)
+    textarea {
+    min-height: 86px;
+    height: 100px;
+    resize: vertical;
+  }
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > :nth-child(2)
+    > span {
+    font-size: 12px;
+  }
+}
+@media (max-width: 899px) {
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > :nth-child(1),
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > :nth-child(6),
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > :nth-child(7),
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > .resaleIllustrationDetails {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+}
+@media (max-width: 520px) {
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview) > * {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+}
+
+/* UU Shop Create phase 3 — photos, compact details, Shop only. */
+.shopPhotoStep {
+  min-width: 0;
+}
+.shopPhotoUpload {
+  min-width: 0;
+}
+.shopPhotoGallery {
+  min-width: 0;
+}
+.shopPhotoThumbnails {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+  width: 100%;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.shopPhotoThumbnails button {
+  min-width: 0;
+  padding: 2px;
+  border: 2px solid #544161;
+  background: #261d30;
+  border-radius: 12px;
+  cursor: pointer;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+}
+.shopPhotoThumbnails button[aria-pressed='true'] {
+  border-color: #69ff60;
+}
+.shopPhotoThumbnails button:focus-visible {
+  outline: 2px solid #69ff60;
+  outline-offset: 2px;
+}
+.shopPhotoThumbnails img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+@media (min-width: 768px) {
+  .shopPhotoStep.shopPhotoStep {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 22px;
+    width: 100%;
+  }
+  .shopPhotoStep.shopPhotoStep > .shopPhotoUpload {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: start;
+    padding: 0;
+    width: 100%;
+  }
+  .shopPhotoStep.shopPhotoStep > .shopPhotoGallery {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .shopPhotoUpload [data-slot='file-drop'] > label {
+    min-height: 205px;
+    box-sizing: border-box;
+  }
+  .shopPhotoGallery [class*='action'] {
+    min-width: 0;
+  }
+  .shopPhotoGallery [class*='action'] > * {
+    max-width: 100%;
+  }
+}
+@media (max-width: 767px) {
+  .shopPhotoStep.shopPhotoStep {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .shopPhotoGallery {
+    width: 100%;
+  }
+}
+/* Correct the old Resale-specific description-placement rule for Shop preview. */
+@media (min-width: 900px) {
+  .creationForm
+    .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > :nth-child(7) {
+    grid-column: 1 / 3 !important;
+    grid-row: 5 !important;
+    width: 100%;
+    min-width: 0;
+  }
+  .creationForm
+    .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > :nth-child(7)
+    textarea {
+    width: 100%;
+    min-height: 88px;
+    height: 96px;
+    box-sizing: border-box;
+  }
+  .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview) {
+    row-gap: 10px;
+  }
+}
+
+/* UU Shop Create photos + description targeted fix — new Shop only. */
+.shopPhotoMain {
+  position: relative;
+  width: 100%;
+  height: clamp(240px, 24vw, 340px);
+  border: 1px solid #665372;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #261d30;
+}
+.shopPhotoMainImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.shopPhotoEmpty {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  color: #d6cadd;
+  font-weight: 600;
+}
+.shopPhotoNav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: #251c2de8;
+  color: #fff;
+  cursor: pointer;
+}
+.shopPhotoNavPrev {
+  left: 10px;
+}
+.shopPhotoNavNext {
+  right: 10px;
+}
+.shopPhotoNav:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.shopPhotoNav:focus-visible {
+  outline: 2px solid #69ff60;
+  outline-offset: 2px;
+}
+.shopPhotoCounter {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #1a1423cc;
+  color: #fff;
+  font-size: 12px;
+}
+.shopPhotoGallery .shopPhotoThumbnails {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  margin: 6px 0 0;
+}
+.shopPhotoGallery .shopPhotoThumbnails button {
+  border-radius: 8px;
+}
+.shopPhotoGallery .shopPhotoThumbnails img {
+  border-radius: 5px;
+}
+/* Preserve Discard, but remove duplicate lower Prev/Next controls: arrows now overlay the main photo. */
+.shopPhotoGallery [class*='controls'] {
+  justify-content: center;
+  margin: 0;
+  gap: 0;
+}
+.shopPhotoGallery [class*='controls'] > :first-child,
+.shopPhotoGallery [class*='controls'] > :last-child {
+  display: none;
+}
+.shopPhotoGallery [class*='controls'] button {
+  min-height: 35px;
+}
+@media (min-width: 768px) {
+  .shopPhotoStep.shopPhotoStep {
+    align-items: start;
+  }
+  .shopPhotoStep.shopPhotoStep > .shopPhotoGallery {
+    gap: 6px;
+  }
+  /* Explicitly override older label:last-of-type placement rule and nth-child rules. */
+}
+@media (min-width: 900px) {
+  .creationForm
+    .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > label:last-of-type {
+    grid-column: 1 / 3 !important;
+    grid-row: 5 !important;
+    width: 100% !important;
+    min-width: 0;
+    justify-self: stretch;
+  }
+  .creationForm
+    .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > label:last-of-type
+    textarea {
+    display: block;
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box;
+    min-height: 88px;
+    height: 96px;
+  }
+}
+@media (max-width: 767px) {
+  .shopPhotoMain {
+    height: 280px;
+  }
+}
+
+/* UU Shop layout polish phase 4: Shop-only photos/details refinements. */
+.shopPhotoThumb {
+  position: relative;
+  min-width: 0;
+}
+.shopPhotoThumb > button:first-child {
+  display: block;
+  width: 100%;
+}
+.shopPhotoThumbnails .shopPhotoRemove {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #8e769a;
+  border-radius: 50%;
+  background: #2a1e32;
+  color: #fff;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  aspect-ratio: auto;
+}
+.shopPhotoThumbnails .shopPhotoRemove:focus-visible {
+  outline: 2px solid #69ff60;
+  outline-offset: 2px;
+}
+.shopPhotoThumbnails .shopPhotoRemove:hover {
+  background: #61334e;
+}
+@media (min-width: 768px) {
+  /* Equal column widths; the uploader and gallery fit the same overall height. */
+  .shopPhotoStep.shopPhotoStep {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+  }
+  .shopPhotoStep.shopPhotoStep .shopPhotoMain {
+    height: 276px;
+  }
+  .shopPhotoStep.shopPhotoStep .shopPhotoGallery .shopPhotoThumbnails {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    margin-top: 8px;
+    gap: 8px;
+  }
+  .shopPhotoStep.shopPhotoStep
+    .shopPhotoUpload
+    [data-slot='file-drop']
+    > label {
+    min-height: 338px;
+    height: 338px;
+  }
+  .shopPhotoStep.shopPhotoStep .shopPhotoGallery {
+    gap: 0;
+  }
+}
+@media (max-width: 767px) {
+  .shopPhotoStep.shopPhotoStep .shopPhotoMain {
+    height: 260px;
+  }
+  .shopPhotoStep.shopPhotoStep
+    .shopPhotoUpload
+    [data-slot='file-drop']
+    > label {
+    min-height: 190px;
+  }
+}
+@media (min-width: 900px) {
+  /* Use the actual description textarea rather than brittle nth-child numbering. */
+  .creationForm
+    .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > label:has(> textarea[name='description']) {
+    grid-column: 1 / 3 !important;
+    grid-row: 5 !important;
+    display: grid;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0;
+    justify-self: stretch;
+    box-sizing: border-box;
+  }
+  .creationForm
+    .shopWizardStep[data-wizard-step='1']:has(> .shopInventoryPreview)
+    > label:has(> textarea[name='description'])
+    > textarea {
+    display: block;
+    box-sizing: border-box;
+    width: 100% !important;
+    min-width: 0;
+    max-width: none !important;
+    height: 96px;
+    min-height: 96px;
+  }
+}
+
+/* UU Shop photo album fixed stack + six persistent slots v7.
+   Scope: Shop-specific classes only; AccessibleAction and Resale unchanged. */
+.shopPhotoCard {
+  position: relative;
+  width: min(100%, 360px);
+  height: 340px;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  isolation: isolate;
+}
+.shopPhotoCard > [class*='action'] {
+  width: 300px;
+  height: 300px;
+  max-width: 100%;
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* The shared uploader .action clips rotated corners and adds padding. */
+  box-sizing: border-box;
+  padding: 0;
+  overflow: visible;
+}
+.shopPhotoCard > [class*='action'] > * {
+  width: 300px;
+  height: 300px;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.shopPhotoCard .shopPhotoNav,
+.shopPhotoCard .shopPhotoCounter {
+  z-index: 5;
+}
+.shopPhotoCard .shopPhotoNavPrev {
+  left: max(9px, calc((100% - 300px) / 2 + 8px));
+}
+.shopPhotoCard .shopPhotoNavNext {
+  right: max(9px, calc((100% - 300px) / 2 + 8px));
+}
+.shopPhotoGallery .shopPhotoThumbnails {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  width: min(100%, 360px);
+  margin: 4px auto 0;
+}
+.shopPhotoGallery .shopPhotoThumb {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+}
+.shopPhotoGallery .shopPhotoThumb > button:first-child {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+.shopPhotoGallery .shopPhotoThumb .shopPhotoSlotEmpty {
+  border: 1px dashed #746481;
+  border-radius: 8px;
+  background: #2c2335;
+  color: #a99bb5;
+  font-size: 23px;
+  cursor: default;
+  pointer-events: none;
+  outline: none;
+}
+.shopPhotoGallery .shopPhotoThumb .shopPhotoSlotEmpty:hover,
+.shopPhotoGallery .shopPhotoThumb .shopPhotoSlotEmpty:focus,
+.shopPhotoGallery .shopPhotoThumb .shopPhotoSlotEmpty:focus-visible {
+  border-color: #746481;
+  background: #2c2335;
+  color: #a99bb5;
+  outline: none;
+}
+.shopPhotoGallery .shopPhotoThumb .shopPhotoSlotEmpty:disabled {
+  opacity: 1;
+  cursor: default;
+}
+@media (min-width: 768px) {
+  .shopPhotoStep.shopPhotoStep {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 24px;
+  }
+  .shopPhotoStep.shopPhotoStep > .shopPhotoUpload,
+  .shopPhotoStep.shopPhotoStep > .shopPhotoGallery {
+    min-width: 0;
+    width: 100%;
+  }
+  .shopPhotoStep.shopPhotoStep
+    .shopPhotoUpload
+    [data-slot='file-drop']
+    > label {
+    min-height: 340px;
+    height: 340px;
+    box-sizing: border-box;
+  }
+}
+@media (max-width: 767px) {
+  .shopPhotoCard {
+    width: min(100%, 330px);
+    height: 320px;
+  }
+  .shopPhotoCard > [class*='action'],
+  .shopPhotoCard > [class*='action'] > * {
+    width: min(300px, 100%);
+  }
+}
+@media (min-width: 900px) {
+  .shopWizardStep.shopWizardStep[data-wizard-step='1']
+    > .shopDescriptionField.shopDescriptionField {
+    grid-column: 1 / 3 !important;
+    grid-row: 5 !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0;
+    display: grid;
+    justify-self: stretch;
+    box-sizing: border-box;
+  }
+  .shopWizardStep.shopWizardStep[data-wizard-step='1']
+    > .shopDescriptionField.shopDescriptionField
+    > textarea[name='description'] {
+    display: block;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0;
+    min-height: 96px;
+    height: 96px;
+    box-sizing: border-box;
+  }
+}
+
+/* UU Shop Create review phase 5 -- Shop preview only */
+.shopReview {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 24px;
+  align-items: start;
+  width: 100%;
+  min-width: 0;
+}
+.shopReviewPhotos,
+.shopReviewInfo {
+  min-width: 0;
+}
+.shopReviewMain {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  max-height: 420px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border: 1px solid #604b70;
+  border-radius: 16px;
+  background: #292033;
+}
+.shopReviewImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.shopReviewEmpty {
+  color: #baaaca;
+  font-size: 14px;
+}
+.shopReviewArrow {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: #1c1529cc;
+  color: #fff;
+  cursor: pointer;
+}
+.shopReviewPrev {
+  left: 12px;
+}
+.shopReviewNext {
+  right: 12px;
+}
+.shopReviewArrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.shopReviewArrow:focus-visible,
+.shopReviewThumbs button:focus-visible {
+  outline: 2px solid #69ff60;
+  outline-offset: 2px;
+}
+.shopReviewCount {
+  position: absolute;
+  z-index: 2;
+  right: 12px;
+  bottom: 12px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #1b1426cc;
+  color: #fff;
+  font-size: 12px;
+}
+.shopReviewThumbs {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 10px;
+}
+.shopReviewThumbs button,
+.shopReviewThumbEmpty {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 2px;
+  aspect-ratio: 1;
+  border: 1px solid #5a476b;
+  border-radius: 9px;
+  background: #2a2034;
+  overflow: hidden;
+}
+.shopReviewThumbs button {
+  cursor: pointer;
+}
+.shopReviewThumbs button[aria-pressed='true'] {
+  border: 2px solid #69ff60;
+}
+.shopReviewThumbs img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.shopReviewInfo {
+  padding: 5px 2px;
+  color: #efeaf6;
+}
+.shopReviewInfo h3 {
+  font-size: clamp(21px, 2vw, 29px);
+  line-height: 1.2;
+  margin: 0 0 6px;
+  overflow-wrap: anywhere;
+}
+.shopReviewPrice {
+  display: block;
+  color: #69ff60;
+  font-size: clamp(20px, 2vw, 27px);
+  margin-bottom: 12px;
+}
+.shopReviewFacts {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid #51405c;
+}
+.shopReviewFacts > div {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.45fr) minmax(0, 1fr);
+  gap: 12px;
+  border-bottom: 1px solid #453750;
+  padding: 9px 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.shopReviewFacts dt {
+  color: #c6b7d2;
+}
+.shopReviewFacts dd {
+  margin: 0;
+  color: #f4eff8;
+  overflow-wrap: anywhere;
+}
+.shopReviewDescription {
+  padding: 12px 0;
+}
+.shopReviewDescription h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+.shopReviewDescription p {
+  margin: 0;
+  color: #d8ccdf;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .shopReview {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .shopReviewMain {
+    max-height: 330px;
+  }
+}
+
+/* Shop photo thumbnails: display only, no click or upload actions. */
+.shopPhotoGallery .shopPhotoThumbImage {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  padding: 2px;
+  border: 2px solid #544161;
+  border-radius: 8px;
+  background: #2c2335;
+  box-sizing: border-box;
+  overflow: hidden;
+  cursor: default;
+}
+.shopPhotoGallery .shopPhotoThumbImage[data-active-photo='true'] {
+  border-color: #69ff60;
+}
+.shopPhotoGallery .shopPhotoThumbImage img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 5px;
+}
+.shopPhotoGallery .shopPhotoThumb .shopPhotoSlotEmpty {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  cursor: default;
+  box-sizing: border-box;
+}
+.shopPhotoGallery .shopPhotoThumb .shopPhotoSlotEmpty:hover {
+  border-color: #746481;
+  color: #a99bb5;
+}
+
+/* UU SHOP FINAL STEP345 + FINANCIAL ICONS v9: Shop-only wizard presentation. */
+/* Step 3: compact location details so the desktop wizard normally fits. */
+@media (min-width: 900px) {
+  .shopWizardStep[data-wizard-step='2'] textarea[name='meetingLocationDetail'] {
+    box-sizing: border-box;
+    min-height: 88px;
+    height: 88px;
+    max-height: 112px;
+    overflow-y: auto;
+    resize: vertical;
+  }
+  .shopWizardStep[data-wizard-step='2'] .fulfillmentColumn {
+    gap: 12px;
+  }
+  .shopWizardStep[data-wizard-step='2'] .descriptionColumn {
+    gap: 12px;
+  }
+  .shopWizardStep[data-wizard-step='2'] .fulfillmentDescriptionStep {
+    row-gap: 12px;
+  }
+}
+/* Keep the shared sliding indicator and animation; Shop step 3 colors only. */
+.shopWizardStep[data-wizard-step='2'] .fulfillmentSegment {
+  border: 1px solid #65516e;
+  background: #21182b;
+}
+.shopWizardStep[data-wizard-step='2']
+  .fulfillmentSegment
+  > [class*='indicator'] {
+  box-sizing: border-box;
+  border: 2px solid #69ff60;
+  background: #283629;
+  box-shadow: inset 0 0 0 1px #69ff6026;
+}
+.shopWizardStep[data-wizard-step='2']
+  .fulfillmentSegment
+  button[aria-pressed='true'] {
+  color: #aaff9d;
+  font-weight: 650;
+}
+.shopWizardStep[data-wizard-step='2'] .fulfillmentSegment button:focus-visible {
+  outline-color: #69ff60;
+}
+/* Step 4: final approved transparent PNGs in existing payment choices. */
+.shopPaymentIllustration {
+  display: block;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  min-width: 52px;
+  object-fit: contain;
+  pointer-events: none;
+}
+.shopWizardStep[data-wizard-step='3']
+  [class*='payment']
+  > label:has(input[type='radio']:checked) {
+  border-color: #69ff60;
+  background: #25302a;
+  box-shadow: inset 0 0 0 1px #69ff6030;
+}
+.shopWizardStep[data-wizard-step='3']
+  [class*='payment']
+  > label
+  input[type='radio'] {
+  accent-color: #69ff60;
+}
+.shopWizardStep[data-wizard-step='3'] [class*='payment'] > label:focus-within {
+  outline-color: #69ff60;
+}
+@media (max-width: 520px) {
+  .shopPaymentIllustration {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    flex-basis: 44px;
+  }
+}
+/* Step 5: same tilted main card and passive six slots as Step 1. */
+.shopReviewPhotos.shopPhotoGallery {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  overflow: visible;
+}
+.shopReviewPhotos.shopPhotoGallery .shopPhotoThumbnails {
+  margin-top: 4px;
+}
+.shopReviewPhotos.shopPhotoGallery .shopPhotoSlotEmpty {
+  border: 1px dashed #746481;
+  border-radius: 8px;
+  background: #2c2335;
+  color: #a99bb5;
+  font-size: 23px;
+  pointer-events: none;
+}
+
+/* UU Shop visual refinement v9.3 — larger payment artwork and compact Delivery */
+/* Step 3: shrink the readonly Delivery destination-details area like Meeting. */
+@media (min-width: 900px) {
+  .shopWizardStep[data-wizard-step='2'] .descriptionColumn textarea:disabled {
+    box-sizing: border-box;
+    min-height: 88px;
+    height: 88px;
+    max-height: 112px;
+    overflow-y: auto;
+    resize: none;
+  }
+}
+/* Step 4: triple-option illustrations were too small for their detail. */
+.shopWizardStep[data-wizard-step='3'] .shopPaymentIllustration {
+  width: 96px;
+  height: 96px;
+  min-width: 96px;
+  flex: 0 0 96px;
+}
+@media (max-width: 520px) {
+  .shopWizardStep[data-wizard-step='3'] .shopPaymentIllustration {
+    width: 72px;
+    height: 72px;
+    min-width: 72px;
+    flex-basis: 72px;
+  }
+}
+
+/* UU Resale Create V1 — adopt the approved Shop composition, retain purple Resale accents.
+   Resale-only. Does not change Shop, editor, Billing or payment logic. */
+@media (min-width: 768px) {
+  .resaleLayoutPhotos.shopPhotoStep {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  .resaleLayoutPhotos.shopPhotoStep > .shopPhotoUpload {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: start;
+  }
+  .resaleLayoutPhotos.shopPhotoStep > .shopPhotoGallery {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .resaleLayoutPhotos .resaleIllustrationPhoto {
+    max-height: 150px;
+    margin-top: 10px;
+  }
+}
+@media (min-width: 900px) {
+  /* Step 2: compact two form columns plus right artwork, without Shop inventory. */
+  .resaleLayoutStep[data-wizard-step='1'] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(190px, 0.9fr);
+    grid-template-rows: auto auto auto auto;
+    gap: 12px 20px;
+    align-content: start;
+    align-items: start;
+  }
+  .resaleLayoutStep[data-wizard-step='1'] > :nth-child(1) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .resaleLayoutStep[data-wizard-step='1'] > :nth-child(2) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .resaleLayoutStep[data-wizard-step='1'] > :nth-child(3) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .resaleLayoutStep[data-wizard-step='1'] > :nth-child(4) {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .resaleLayoutStep[data-wizard-step='1'] > :nth-child(5) {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .creationForm
+    .resaleLayoutStep[data-wizard-step='1']
+    > label:has(> textarea[name='description']) {
+    grid-column: 2 !important;
+    grid-row: 3 / 5 !important;
+    min-width: 0;
+    width: 100% !important;
+    display: grid;
+    align-self: stretch;
+  }
+  .resaleLayoutStep[data-wizard-step='1'] textarea[name='description'] {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 96px;
+    height: 100px;
+    resize: vertical;
+  }
+  .resaleLayoutStep[data-wizard-step='1'] > .resaleIllustrationDetails {
+    grid-column: 3;
+    grid-row: 1 / 5;
+    width: 100%;
+    max-width: 100%;
+    max-height: 320px;
+    align-self: center;
+    justify-self: center;
+  }
+  /* Step 4: use Shop's two-column composition with the existing Resale art. */
+  .resaleLayoutStep[data-wizard-step='3']
+    > :first-child:has(.resaleIllustrationPayment) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(210px, 0.86fr);
+    align-items: center;
+    column-gap: 28px;
+  }
+  .resaleLayoutStep[data-wizard-step='3']
+    > :first-child:has(.resaleIllustrationPayment)
+    > label,
+  .resaleLayoutStep[data-wizard-step='3']
+    > :first-child:has(.resaleIllustrationPayment)
+    > p {
+    grid-column: 1;
+  }
+  .resaleLayoutStep[data-wizard-step='3'] .resaleIllustrationPayment {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    width: 100%;
+    max-width: 100%;
+    max-height: 350px;
+    margin: 0;
+    align-self: center;
+  }
+}
+/* Shared Shop gallery geometry; Resale-specific purple selection and focus. */
+.resaleLayoutPhotos .shopPhotoThumbImage[data-active-photo='true'],
+.resaleLayoutReview .shopPhotoThumbImage[data-active-photo='true'] {
+  border-color: #9d62f5;
+}
+.resaleLayoutPhotos .shopPhotoRemove:focus-visible,
+.resaleLayoutPhotos .shopPhotoNav:focus-visible,
+.resaleLayoutReview .shopPhotoNav:focus-visible {
+  outline-color: #b995dc;
+}
+.resaleLayoutReview .shopReviewPrice {
+  color: #cda8f6;
+}
+@media (max-width: 899px) {
+  .resaleLayoutStep[data-wizard-step='1'] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .resaleLayoutStep[data-wizard-step='1'] > .resaleIllustrationDetails {
+    grid-column: 1 / -1;
+    max-height: 190px;
+  }
+  .resaleLayoutStep[data-wizard-step='1']
+    > label:has(> textarea[name='description']) {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 520px) {
+  .resaleLayoutStep[data-wizard-step='1'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .resaleLayoutStep[data-wizard-step='1'] > * {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+}
+
+/* UU Resale layout V2 — shared payment icons, Resale-only purple highlights.
+   Large payment illustration remains channel-specific, as do other artwork. */
+.resaleLayoutStep[data-wizard-step='3'] .shopPaymentIllustration {
+  width: 96px;
+  height: 96px;
+  min-width: 96px;
+  flex: 0 0 96px;
+}
+@media (max-width: 520px) {
+  .resaleLayoutStep[data-wizard-step='3'] .shopPaymentIllustration {
+    width: 72px;
+    height: 72px;
+    min-width: 72px;
+    flex-basis: 72px;
+  }
+}
+.resaleLayoutReview .shopPhotoThumbnails button:focus-visible,
+.resaleLayoutReview .shopPhotoNav:focus-visible,
+.resaleLayoutReview .shopPhotoRemove:focus-visible {
+  outline-color: #b995dc;
+}
+.resaleLayoutReview .shopPhotoThumbnails button[aria-pressed='true'] {
+  border-color: #9d62f5;
 }

@@ -62,6 +62,8 @@ function DemoShopDirectoryWorkspace({
   directoryHeader,
   query = defaultShopDirectoryQuery,
   shops = [],
+  autoOpenDemo = false,
+  targetDemoProductId,
   onDetailActiveChange,
   onOverlayActiveChange,
   overlayClassName,
@@ -70,14 +72,18 @@ function DemoShopDirectoryWorkspace({
   directoryHeader?: ReactNode
   query?: ShopDirectoryQuery
   shops?: readonly ShopPreview[]
+  autoOpenDemo?: boolean
+  targetDemoProductId?: string
   onDetailActiveChange?: (active: boolean) => void
   onOverlayActiveChange?: (value: boolean) => void
   overlayClassName?: string
   overlayStyle?: CSSProperties
 }) {
   const reduced = useReducedMotion()
-  const [view, setView] = useState<View>('list')
-  const currentView = useRef<View>('list')
+  const [view, setView] = useState<View>(() =>
+    autoOpenDemo ? 'detail' : 'list'
+  )
+  const currentView = useRef<View>(autoOpenDemo ? 'detail' : 'list')
   const [favorite, setFavorite] = useState(false)
   const [directoryFavorites, setDirectoryFavorites] = useState<
     Record<string, boolean>
@@ -139,11 +145,11 @@ function DemoShopDirectoryWorkspace({
   }, [])
   useEffect(() => () => cancelJob(), [cancelJob])
   const open = useCallback(
-    (event: MouseEvent<HTMLButtonElement>) => {
+    (event?: MouseEvent<HTMLButtonElement>) => {
       if (job.current || currentView.current !== 'list') return undefined
       holdAnchor()
       directoryScroll.current = window.scrollY
-      opener.current = event.currentTarget
+      opener.current = event?.currentTarget ?? null
       return new Promise<void>((resolve) => {
         const skeleton = setTimeout(() => {
           currentView.current = 'loading'
@@ -160,6 +166,14 @@ function DemoShopDirectoryWorkspace({
     },
     [holdAnchor]
   )
+  const autoOpened = useRef(autoOpenDemo)
+  useEffect(() => {
+    if (!autoOpenDemo || autoOpened.current || currentView.current !== 'list')
+      return
+    autoOpened.current = true
+    currentView.current = 'detail'
+    setView('detail')
+  }, [autoOpenDemo])
   const returnToList = () => {
     holdAnchor()
     cancelJob()
@@ -345,6 +359,7 @@ function DemoShopDirectoryWorkspace({
                 <ShopDetailDemo
                   favorite={favorite}
                   favorites={favorites}
+                  autoOpenProductId={targetDemoProductId}
                   overlayClassName={overlayClassName}
                   overlayStyle={overlayStyle}
                   onFavorite={setFavorite}

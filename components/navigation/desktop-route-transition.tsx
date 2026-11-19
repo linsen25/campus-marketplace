@@ -7,7 +7,12 @@ import { pageSlideOptions } from '@/lib/page-slide'
 
 import styles from './desktop-route-transition.module.css'
 
-type Navigation = { source: string; destination: string }
+type Navigation = {
+  source: string
+  destination: string
+  destinationPath: string
+  destinationSearch: string
+}
 const PendingDestinationContext = createContext<string | null>(null)
 export function usePendingDestination() {
   return useContext(PendingDestinationContext)
@@ -26,7 +31,11 @@ export function usePageSlide() {
   return useContext(TransitionContext)
 }
 
-function homeReady(signal: AbortSignal): Promise<void> {
+export function navigationPathname(destination: string) {
+  return destination.split(/[?#]/, 1)[0] || '/'
+}
+
+function homeReady(signal: AbortSignal, shopPlans = false): Promise<void> {
   return new Promise((resolve, reject) => {
     let frame = 0
     const abort = () => {
@@ -43,10 +52,12 @@ function homeReady(signal: AbortSignal): Promise<void> {
       const region = root?.querySelector(
         desktop ? '[data-slot="sidebar-body"]' : '[data-home-mobile-header]'
       )
+      const plans = root?.querySelector('[aria-label="Shop membership"]')
       // Decorative WebGL readiness must not decide whether Home can open.
       if (
         !root?.getBoundingClientRect().width ||
-        !region?.getBoundingClientRect().width
+        !region?.getBoundingClientRect().width ||
+        (shopPlans && !plans?.getBoundingClientRect().width)
       ) {
         frame = requestAnimationFrame(check)
         return
@@ -179,10 +190,13 @@ export function DesktopRouteTransitionProvider({
     )
       return
     const source = router.pathname
+    const parsed = new URL(destination, window.location.origin)
+    const destinationPath = parsed.pathname
+    const destinationSearch = parsed.search
     if (
       !(
-        (source === '/listings' && destination === '/home') ||
-        (source === '/home' && destination === '/listings')
+        (source === '/listings' && destinationPath === '/home') ||
+        (source === '/home' && destinationPath === '/listings')
       )
     )
       return
@@ -196,7 +210,7 @@ export function DesktopRouteTransitionProvider({
       control.dataset.routePending = 'true'
     }
     router.prefetch(destination).catch(() => {})
-    setNavigation({ source, destination })
+    setNavigation({ source, destination, destinationPath, destinationSearch })
   }
   useEffect(() => {
     if (!navigation) return undefined
@@ -209,7 +223,7 @@ export function DesktopRouteTransitionProvider({
     document.documentElement.style.overflowX = 'clip'
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
     const mobile = matchMedia('(max-width: 1023px)').matches
-    const direction = navigation.destination === '/home' ? 1 : -1
+    const direction = navigation.destinationPath === '/home' ? 1 : -1
     let active = true
     let animation: Animation | undefined
     let timeout: ReturnType<typeof setTimeout>
@@ -264,13 +278,18 @@ export function DesktopRouteTransitionProvider({
         if (
           !active ||
           !navigated ||
-          location.pathname !== navigation.destination
+          location.pathname !== navigation.destinationPath ||
+          location.search !== navigation.destinationSearch
         )
           throw new Error('Navigation cancelled.')
         performance.mark('page-slide:route-mounted')
-        if (navigation.destination === '/listings')
+        if (navigation.destinationPath === '/listings')
           await waitForMarketReady(controller.signal)
-        else await homeReady(controller.signal)
+        else
+          await homeReady(
+            controller.signal,
+            navigation.destinationSearch.includes('section=shop-membership')
+          )
       }
       await Promise.race([
         destination(),

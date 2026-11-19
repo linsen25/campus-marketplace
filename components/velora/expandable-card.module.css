@@ -71,7 +71,7 @@
   overflow-y: auto;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
-  scrollbar-color: #f5f5f5 transparent;
+  scrollbar-color: transparent transparent;
   overscroll-behavior: contain;
 }
 .scrollArea::-webkit-scrollbar {
@@ -81,8 +81,14 @@
   background: transparent;
 }
 .scrollArea::-webkit-scrollbar-thumb {
-  background: #f5f5f5;
+  background: transparent;
   border-radius: 999px;
+}
+.scrollAreaScrolling:not(.scrollAreaTransitioning) {
+  scrollbar-color: #f5f5f5 transparent;
+}
+.scrollAreaScrolling:not(.scrollAreaTransitioning)::-webkit-scrollbar-thumb {
+  background: #f5f5f5;
 }
 .scrollAreaTransitioning {
   scrollbar-color: transparent transparent;
@@ -119,25 +125,24 @@
   padding-top: 24px;
   flex-shrink: 0;
 }
-.actions > button {
+.actions > button:not(:global(.shining-button)) {
   display: inline-flex;
   align-items: center;
-  width: var(--action-width);
+  width: max-content;
   height: var(--action-height);
   flex-shrink: 0;
-  padding: var(--action-inset);
-  border-width: var(--action-inset);
+  padding: 0;
+  border-width: 0;
   border-style: solid;
   border-radius: var(--action-radius);
 }
-.actions :global(.shining-button__body),
 .raisedButtonDangerSurface {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
-  padding: var(--action-surface-padding);
+  padding: 0 24px;
   border-radius: var(--action-surface-radius);
 }
 .raisedButtonDanger {
@@ -198,12 +203,20 @@
 }
 @media (max-width: 767px) {
   .overlay {
-    --mobile-dialog-top-inset: calc(var(--action-overlay-inset) + env(safe-area-inset-top, 0px));
-    --mobile-dialog-bottom-inset: calc(var(--action-overlay-inset) + env(safe-area-inset-bottom, 0px));
-    --mobile-dialog-max-height: calc(100dvh - var(--mobile-dialog-top-inset) - var(--mobile-dialog-bottom-inset));
+    --mobile-dialog-top-inset: calc(
+      var(--action-overlay-inset) + env(safe-area-inset-top, 0px)
+    );
+    --mobile-dialog-bottom-inset: calc(
+      var(--action-overlay-inset) + env(safe-area-inset-bottom, 0px)
+    );
+    --mobile-dialog-max-height: calc(
+      100dvh - var(--mobile-dialog-top-inset) -
+        var(--mobile-dialog-bottom-inset)
+    );
 
     height: 100dvh;
-    padding: var(--mobile-dialog-top-inset) var(--action-overlay-inset) var(--mobile-dialog-bottom-inset);
+    padding: var(--mobile-dialog-top-inset) var(--action-overlay-inset)
+      var(--mobile-dialog-bottom-inset);
   }
   .dialog {
     width: 100%;
@@ -246,5 +259,21 @@
   .actions {
     padding-top: 16px;
     margin-top: auto;
+  }
+}
+
+/* UU-OWNER-PREVIEW-CLOSE-TOP-RIGHT-20261118 */
+/* Owner Preview only: other ExpandableCard top actions keep their layout. */
+@media (max-width: 767px) {
+  .dialog:has(.topAction button[aria-label='Close product preview'])
+    .topAction {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    grid-column: auto;
+    grid-row: auto;
+    align-self: auto;
+    margin-top: 0;
+    z-index: 5;
   }
 }

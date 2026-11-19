@@ -24,6 +24,8 @@ select public.b12_assert(not exists((select data from public.b12_existing_shop e
  union all (select to_jsonb(s) from public.shops s except select data from public.b12_existing_shop)),'existing Shop records unchanged');
 select public.b12_assert(not exists(select 1 from public.b12_existing_policy x where not exists(select 1 from pg_policies p where to_jsonb(p)=x.data)),'existing RLS unchanged');
 
+-- B12_POST_AUTHORITY
+
 create function public.b12_cmd(owner_id uuid,action text,at_time timestamptz,value jsonb default '{}') returns jsonb language sql as $$
  select marketplace_private.shop_membership_command(owner_id,action,gen_random_uuid(),
   jsonb_build_object('expectedRevision',coalesce((select revision from marketplace_private.shop_memberships m where m.owner_id=b12_cmd.owner_id),0),
@@ -72,6 +74,7 @@ select public.b12_reject('select public.marketplace_shop_membership()','42501');
 select public.b12_reject('select public.marketplace_claim_shop_trial(gen_random_uuid())','42501');
 select set_config('request.jwt.claim.sub','99999999-9999-4999-8999-999999999999',false);
 select public.b12_reject('select public.marketplace_shop_membership()','42501');
+select public.b12_reject('select public.marketplace_claim_shop_trial(gen_random_uuid())','42501');
 select set_config('request.jwt.claim.sub','',false);
 select public.b12_reject('select public.marketplace_shop_membership()','42501');
 reset role;

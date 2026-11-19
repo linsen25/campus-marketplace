@@ -3,7 +3,6 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { validAccountActivity } from '@/lib/account-activity'
 import type { ActivityPeriod, ActivityPoint } from '@/lib/account-activity'
 import { ListingApiError } from '@/lib/listing-validation'
-import { requireFinancialEnvironment } from '@/lib/server/financial-capabilities-service'
 import { requireMarketplaceUser } from '@/lib/server/marketplace-auth'
 import { createMarketplaceClient } from '@/lib/supabase/server'
 
@@ -17,7 +16,6 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed.' })
   }
   try {
-    requireFinancialEnvironment()
     if (
       Object.keys(req.query).some((key) => key !== 'period') ||
       !['1D', '7D', '30D'].includes(String(req.query.period)) ||

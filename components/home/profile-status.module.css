@@ -1,0 +1,20 @@
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.success {
+  color: #79c69d;
+}
+
+.warning {
+  color: #e2b476;
+}
+
+.error {
+  color: #db8193;
+}

@@ -8,7 +8,8 @@ import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 
 import FilterInteraction from '@/components/filter-interaction'
-import { DynamicAction } from '@/components/ui/dynamic-action'
+import ShiningButton from '@/components/animata/button/shining-button'
+import { ActionRow } from '@/components/ui/action-row'
 import { Skeleton } from '@/components/ui/skeleton'
 import { billingCountryOptions } from '@/lib/billing-countries'
 import { marketplaceRequest } from '@/lib/listings-api'
@@ -203,23 +204,31 @@ function CardElement({
           </p>
         )}
       </div>
-      <div className={css.actions}>
-        <DynamicAction
-          variant="red"
-          showArrow={false}
-          disabled={busy}
-          onClick={onCancel}
-        >
-          Cancel
-        </DynamicAction>
-        <DynamicAction
-          variant="green"
-          disabled={busy || !stripe || !ready || (!complete && !checking)}
-          onClick={handleSave}
-        >
-          {checking ? 'Check status' : saveLabels[mode]}
-        </DynamicAction>
-      </div>
+      <ActionRow align="between" compactBetween>
+        <span>
+          <ShiningButton
+            variant="red"
+            size="compact"
+            showArrow={false}
+            disabled={busy}
+            onClick={onCancel}
+          >
+            Cancel
+          </ShiningButton>
+        </span>
+        <span>
+          <ShiningButton
+            variant="green"
+            size="compact"
+            showArrow={false}
+            disabled={busy || !stripe || !ready || (!complete && !checking)}
+            loading={busy}
+            onClick={() => void handleSave()}
+          >
+            {checking ? 'Check status' : saveLabels[mode]}
+          </ShiningButton>
+        </span>
+      </ActionRow>
     </>
   )
 }
@@ -302,18 +311,29 @@ export function StripeCardSetup({
           </p>
         )}
       </div>
-      <div className={css.actions}>
-        <DynamicAction variant="red" showArrow={false} onClick={onCancel}>
-          Cancel
-        </DynamicAction>
-        <DynamicAction
-          variant="green"
-          disabled={!error}
-          onClick={() => setRetry((value) => value + 1)}
-        >
-          {error ? 'Retry setup' : saveLabels[mode]}
-        </DynamicAction>
-      </div>
+      <ActionRow align="between" compactBetween>
+        <span>
+          <ShiningButton
+            variant="red"
+            size="compact"
+            showArrow={false}
+            onClick={onCancel}
+          >
+            Cancel
+          </ShiningButton>
+        </span>
+        <span>
+          <ShiningButton
+            variant="green"
+            size="compact"
+            showArrow={false}
+            disabled={!error}
+            onClick={() => setRetry((value) => value + 1)}
+          >
+            {error ? 'Retry setup' : saveLabels[mode]}
+          </ShiningButton>
+        </span>
+      </ActionRow>
     </>
   )
 }

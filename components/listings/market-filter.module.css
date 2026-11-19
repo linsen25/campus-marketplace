@@ -1,6 +1,60 @@
 .form {
   display: grid;
-  gap: 16px;
+  gap: 0;
+}
+
+.header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 40px;
+  padding: 4px 8px 14px;
+}
+
+.header h2 {
+  margin: 0;
+  color: #f5f1f8;
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 24px;
+}
+
+.close {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #d9cbe5;
+  cursor: pointer;
+}
+
+.close:hover:not(:disabled) {
+  background: rgb(213 180 246 / 12%);
+  color: #fff;
+}
+
+.close:focus-visible {
+  outline: 2px solid #d5b4f6;
+  outline-offset: 2px;
+}
+
+.divider {
+  height: 1px;
+  background: rgb(213 180 246 / 22%);
+}
+
+.body {
+  display: grid;
+  gap: 20px;
+  padding: 20px 8px 24px;
 }
 
 .field {
@@ -24,37 +78,81 @@
 
 .places > div {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
 }
 
 .places label {
   position: relative;
+  display: block;
 }
 
 .places input {
   position: absolute;
-  opacity: 0%;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
 }
 
 .places span {
-  display: block;
-  padding: 10px 8px;
-  border: 1px solid #78688a;
-  border-radius: 10px;
-  background: #2a2134;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #f5f5f5;
+  font-size: 12px;
+  text-align: left;
   cursor: pointer;
 }
 
+.places span:hover {
+  background: #30263c;
+}
+
+.places span::after {
+  content: '';
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 1px solid #79678a;
+  border-radius: 50%;
+}
+
+.places input:checked + span::after {
+  content: '✓';
+  border-color: transparent;
+  background: #eee7f5;
+  color: #211329;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.places input:focus-visible + span {
+  outline: 2px solid #d5b4f6;
+  outline-offset: 2px;
+}
+
+.places input:disabled + span {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .actions {
-  composes: contract from "../animata/button/action-button-sizing.module.css";
+  composes: contract from '../animata/button/action-button-sizing.module.css';
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  padding: 16px 8px 8px;
   gap: var(--action-gap);
 }
 
-.actions > button {
+.actions > :global(.shining-button) {
   display: inline-flex;
   width: var(--action-width);
   height: var(--action-height);
@@ -66,13 +164,16 @@
   line-height: var(--action-line-height);
 }
 
-.cancel {
-  composes: button from "../animata/button/action-button-sizing.module.css";
+.reset {
+  padding: 0;
+  border: 0;
   background: transparent;
-  color: #f5f5f5;
+  color: #d9cbe5;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
 }
 
-.actions .cancel span,
 .actions :global(.shining-button__body) {
   display: flex;
   align-items: center;
@@ -84,12 +185,14 @@
   font: inherit;
 }
 
-.actions .cancel span {
-  background: #44394f;
-  box-shadow: rgb(20 12 28 / 30%) 0 2px 4px, #2a2134 0 -3px 0 inset;
+.reset:hover:not(:disabled) {
+  color: #fff;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
 }
 
-.cancel:focus-visible {
+.reset:focus-visible {
   outline: 2px solid #d5b4f6;
   outline-offset: 2px;
 }
@@ -99,9 +202,8 @@
 }
 
 .places input:checked + span {
-  background: #443451;
-  border-color: #d5b4f6;
   color: #fff;
+  background: #30263c;
 }
 
 .places input:focus-visible + span {

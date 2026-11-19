@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 
 import actionStyles from '@/components/animata/button/action-button-sizing.module.css'
-import { ActionRow } from '@/components/ui/action-row'
-import { DynamicAction } from '@/components/ui/dynamic-action'
+import ShiningButton from '@/components/animata/button/shining-button'
+import { DialogActions } from '@/components/ui/dialog-actions'
 import { FadingDialog } from '@/components/ui/fading-dialog'
 import { UserAvatar } from '@/components/ui/user-avatar'
 import { FileDrop } from '@/components/velora/file-drop'
@@ -113,41 +113,50 @@ export function AvatarDialog({
           {error}
         </p>
       )}
-      <ActionRow>
-        <DynamicAction
-          variant="red"
-          footer={true}
-          showArrow={false}
-          onClick={onClose}
-        >
-          Cancel
-        </DynamicAction>
-        <DynamicAction
-          variant="green"
-          footer={true}
-          disabled={!file || !ready || saving}
-          onClick={async () => {
-            if (!file) return
-            setSaving(true)
-            setError('')
-            try {
-              await onSave(file)
-              if (mounted.current) onClose()
-            } catch (reason) {
-              if (mounted.current)
-                setError(
-                  reason instanceof Error
-                    ? reason.message
-                    : 'Unable to save your avatar. Please retry.'
-                )
-            } finally {
-              if (mounted.current) setSaving(false)
-            }
-          }}
-        >
-          Save
-        </DynamicAction>
-      </ActionRow>
+      <DialogActions>
+        <span>
+          <ShiningButton
+            variant="red"
+            size="compact"
+            showArrow={false}
+            disabled={saving}
+            onClick={onClose}
+          >
+            Cancel
+          </ShiningButton>
+        </span>
+        <span>
+          <ShiningButton
+            variant="green"
+            size="compact"
+            showArrow={false}
+            disabled={!file || !ready || saving}
+            loading={saving}
+            onClick={() => {
+              if (!file) return
+              setSaving(true)
+              setError('')
+              void Promise.resolve(onSave(file))
+                .then(() => {
+                  if (mounted.current) onClose()
+                })
+                .catch((reason) => {
+                  if (mounted.current)
+                    setError(
+                      reason instanceof Error
+                        ? reason.message
+                        : 'Unable to save your avatar. Please retry.'
+                    )
+                })
+                .finally(() => {
+                  if (mounted.current) setSaving(false)
+                })
+            }}
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </ShiningButton>
+        </span>
+      </DialogActions>
     </FadingDialog>
   )
 }

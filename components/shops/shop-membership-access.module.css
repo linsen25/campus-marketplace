@@ -1,0 +1,830 @@
+.page {
+  display: grid;
+  gap: clamp(16px, 2vw, 24px);
+  width: 100%;
+  min-width: 0;
+  padding-bottom: 8px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 540px);
+  grid-template-areas: 'details art';
+  align-items: center;
+  gap: 14px clamp(24px, 4vw, 64px);
+  min-width: 0;
+  padding: clamp(20px, 2.5vw, 34px);
+  overflow: hidden;
+  border: 1px solid #8f66bb4d;
+  border-radius: 20px;
+  background: radial-gradient(
+      ellipse at 84% 48%,
+      #0b0912 0%,
+      #100c18 28%,
+      transparent 63%
+    ),
+    radial-gradient(circle at 18% 90%, #7c3aed22 0, transparent 44%),
+    linear-gradient(130deg, #17101f 0%, #21172d 52%, #14131b 100%);
+}
+
+.heroDetails {
+  grid-area: details;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.heroTitle {
+  grid-area: title;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+}
+
+.icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid #79c69d44;
+  border-radius: 12px;
+  background: #79c69d14;
+  color: #9ee0b8;
+}
+
+.eyebrow {
+  margin: 0 0 3px;
+  color: #9ee0b8;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hero h2 {
+  margin: 0;
+  font-size: clamp(27px, 3vw, 42px);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.heroCopy {
+  grid-area: copy;
+  min-width: 0;
+}
+
+.heroCopy > p {
+  max-width: 570px;
+  margin: 0;
+  color: #bdb0c8;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.heroCopy ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 16px;
+  margin: 14px 0 0;
+  padding: 0;
+  color: #d8d0e1;
+  font-size: 12px;
+  list-style: none;
+}
+
+.heroCopy li::before {
+  content: '✓';
+  margin-right: 6px;
+  color: #79c69d;
+  font-weight: 800;
+}
+
+.heroBadges {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.heroArt {
+  position: relative;
+  grid-area: art;
+  justify-self: center;
+  width: min(100%, 540px);
+  aspect-ratio: 3 / 1;
+  height: auto;
+  margin: 0;
+}
+
+.heroImage {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.content {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+  align-items: stretch;
+  gap: clamp(16px, 2vw, 26px);
+  min-width: 0;
+}
+
+.showcase {
+  min-width: 0;
+  border: 1px solid #79c69d2b;
+  border-radius: 16px;
+  background: #1b2020b8;
+}
+
+.showcase {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(18px, 2.2vw, 28px);
+}
+
+.journey {
+  align-self: start;
+  padding: clamp(10px, 1.4vw, 18px);
+}
+
+.journeyImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.journeyZoom {
+  display: none;
+}
+
+.footer {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(280px, 1.05fr);
+  align-items: center;
+  gap: clamp(18px, 4vw, 58px);
+  min-width: 0;
+  padding: clamp(24px, 3.2vw, 44px);
+  overflow: hidden;
+  border: 1px solid #8f66bb4d;
+  border-radius: 20px;
+  background: radial-gradient(circle at 82% 74%, #79c69d1a 0, transparent 34%),
+    radial-gradient(circle at 18% 12%, #7c3aed22 0, transparent 46%),
+    linear-gradient(130deg, #17101f 0%, #21172d 52%, #14131b 100%);
+}
+
+.footerCopy {
+  min-width: 0;
+}
+
+.footerCopy h3,
+.footerCopy p,
+.footerCopy small {
+  display: block;
+  margin: 0;
+}
+
+.footerCopy h3 {
+  max-width: 520px;
+  color: #f5eff8;
+  font-size: clamp(24px, 3vw, 39px);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.footerCopy p {
+  max-width: 460px;
+  margin-top: 14px;
+  color: #d8d0e1;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.footerCopy small {
+  margin-top: 9px;
+  color: #9ee0b8;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.footerImage {
+  justify-self: end;
+  display: block;
+  width: min(100%, 620px);
+  height: auto;
+  object-fit: contain;
+}
+
+.showcase > header h3 {
+  margin: 0;
+  font-size: clamp(18px, 1.7vw, 24px);
+  line-height: 1.25;
+}
+
+.showcase > header p {
+  margin: 7px 0 0;
+  color: #bdb0c8;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.feature {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #ffffff12;
+  border-radius: 13px;
+  background: #100d15a8;
+}
+
+.featureIcon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: #79c69d18;
+  color: #9ee0b8;
+}
+
+.feature h4 {
+  margin: 9px 0 0;
+  font-size: 14px;
+  line-height: 19px;
+}
+
+.feature p {
+  min-height: 34px;
+  margin: 3px 0 10px;
+  color: #bdb0c8;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.preview {
+  display: grid;
+  min-height: 128px;
+  overflow: hidden;
+  border: 1px solid #ffffff0d;
+  border-radius: 9px;
+  background: #211b2b;
+}
+
+.miniProducts,
+.miniFavorites,
+.miniAnalysis,
+.miniSettings {
+  width: 100%;
+  min-width: 0;
+  padding: 9px;
+}
+
+.miniToolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  color: #cfc5da;
+  font-size: 8px;
+}
+.miniSearch {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 5px;
+  overflow: hidden;
+  border: 1px solid #ffffff1c;
+  border-radius: 5px;
+  color: #8f849b;
+  white-space: nowrap;
+}
+.miniAdd {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 5px;
+  background: #79c69d;
+  color: #102417;
+  font-weight: 800;
+}
+.miniProductRows {
+  display: grid;
+  grid-template-columns: 23px minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  margin-top: 9px;
+}
+.miniProductImage {
+  grid-row: span 1;
+  width: 23px;
+  height: 23px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, #d3a166, #765c9a);
+}
+.miniProductImageAlt {
+  background: linear-gradient(135deg, #7c3aed, #9ee0b8);
+}
+.miniProductRows p {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+  color: #f4eff7;
+  font-size: 8px;
+  line-height: 11px;
+}
+.miniProductRows small {
+  color: #bdb0c8;
+  font-size: 7px;
+}
+.miniProductRows em {
+  padding: 3px 4px;
+  border-radius: 99px;
+  background: #79c69d1c;
+  color: #9ee0b8;
+  font-size: 7px;
+  font-style: normal;
+}
+.miniProductRows em[data-sold='true'] {
+  background: #a77bcc22;
+  color: #d9c4ee;
+}
+
+.miniTabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid #ffffff14;
+  border-radius: 7px;
+  font-size: 8px;
+}
+.miniTabs > * {
+  flex: 1;
+  padding: 4px;
+  text-align: center;
+  color: #aaa0b5;
+}
+.miniTabs b {
+  border-radius: 5px;
+  background: #7c3aed;
+  color: #fff;
+}
+.miniFavoriteCard {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 7px;
+  border: 1px solid #ffffff14;
+  border-radius: 8px;
+  background: #ffffff08;
+}
+.miniFavoriteImage {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #7c3aed, #c99bdc);
+}
+.miniFavoriteCard p {
+  display: grid;
+  margin: 0;
+  color: #f4eff7;
+  font-size: 8px;
+  line-height: 12px;
+}
+.miniFavoriteCard small {
+  color: #aca0b7;
+  font-size: 7px;
+}
+.miniFavoriteCard svg {
+  color: #db8193;
+}
+
+.miniMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+.miniMetrics span {
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 7px;
+  background: #ffffff0b;
+}
+.miniMetrics small {
+  color: #aaa0b5;
+  font-size: 7px;
+}
+.miniMetrics b {
+  color: #f6f2f8;
+  font-size: 10px;
+}
+.miniTrend {
+  position: relative;
+  height: 51px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: linear-gradient(180deg, #79c69d15, transparent);
+}
+.miniTrend b {
+  position: absolute;
+  z-index: 1;
+  top: 7px;
+  left: 8px;
+  color: #9ee0b8;
+  font-size: 10px;
+}
+.miniTrend svg {
+  position: absolute;
+  right: 4px;
+  bottom: 0;
+  width: 78%;
+  height: 42px;
+}
+.miniTrend path {
+  fill: #79c69d12;
+}
+.miniTrend polyline {
+  fill: none;
+  stroke: #79c69d;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.miniSettings {
+  position: relative;
+  display: grid;
+  gap: 6px;
+}
+.miniSettings p {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 0;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #ffffff10;
+  color: #e7e1eb;
+  font-size: 8px;
+}
+.miniSettings small {
+  color: #a99fb2;
+  font-size: 7px;
+}
+.miniSettings b {
+  color: #f8f5fa;
+  font-size: 8px;
+}
+.miniSettings > span {
+  position: absolute;
+  right: 8px;
+  bottom: 7px;
+  padding: 3px 5px;
+  border-radius: 99px;
+  background: #79c69d1c;
+  color: #9ee0b8;
+  font-size: 7px;
+}
+
+.purchase {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: clamp(14px, 1.8vw, 22px);
+  border: 1px solid rgba(93, 224, 156, 0.38);
+  border-radius: 24px;
+  box-shadow: 0 0 0 1px rgba(64, 190, 122, 0.08),
+    0 0 28px rgba(44, 190, 112, 0.12), inset 0 1px 0 rgba(139, 255, 186, 0.12);
+}
+
+.pricing {
+  min-width: 0;
+}
+
+.previewNotice {
+  margin: 12px 0 0;
+  color: #9ee0b8;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.loading {
+  margin: 0;
+  color: #bdb0c8;
+  font-size: 13px;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #db819344;
+  border-radius: 10px;
+  background: #db81930f;
+  color: #f0a7b5;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.developer {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px dashed #79c69d66;
+  border-radius: 10px;
+  background: #79c69d0d;
+  color: #cbe9d5;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.developer > span {
+  color: #9ee0b8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.developer p {
+  margin: 4px 0 9px;
+}
+
+.developer > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 639px) {
+  .hero {
+    grid-template-columns: 1fr;
+    grid-template-areas: 'details' 'art';
+    gap: 10px;
+    padding: 20px;
+  }
+
+  .heroArt {
+    width: min(100%, 350px);
+    height: auto;
+    aspect-ratio: 4 / 3;
+  }
+
+  .heroCopy > p {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .content {
+    grid-template-columns: 1fr;
+  }
+
+  .footer {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 22px 20px 18px;
+  }
+
+  .footerImage {
+    justify-self: center;
+    width: min(100%, 440px);
+  }
+
+  .journey {
+    padding: 8px;
+  }
+
+  .journeyZoom {
+    display: inline-flex;
+    align-self: center;
+    margin: 12px auto 2px;
+    color: #cfe8d7;
+    font-size: 13px;
+    font-weight: 700;
+    text-underline-offset: 3px;
+  }
+
+  .featureGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .preview {
+    min-height: 150px;
+  }
+
+  .miniProducts,
+  .miniFavorites,
+  .miniAnalysis,
+  .miniSettings {
+    padding: 12px;
+  }
+
+  /* The preview cards receive more horizontal space in the one-column layout;
+     use it for readable, still-static product and analytics details. */
+  .miniToolbar,
+  .miniTabs,
+  .miniProductRows p,
+  .miniFavoriteCard p,
+  .miniSettings p {
+    font-size: 10px;
+  }
+
+  .miniProductRows small,
+  .miniProductRows em,
+  .miniFavoriteCard small,
+  .miniMetrics small,
+  .miniSettings small,
+  .miniSettings b,
+  .miniSettings > span {
+    font-size: 9px;
+  }
+
+  .miniMetrics b,
+  .miniTrend b {
+    font-size: 12px;
+  }
+
+  .notice {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .developer {
+    width: auto;
+  }
+}
+
+@media (max-width: 1100px) {
+  .content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .purchase {
+    width: min(100%, 720px);
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 820px) {
+  .page {
+    gap: 12px;
+  }
+  .hero {
+    padding: 18px 22px;
+  }
+  .heroArt {
+    width: min(100%, 260px);
+  }
+  .heroCopy ul {
+    margin-top: 9px;
+  }
+  .heroBadges {
+    margin-top: 10px;
+  }
+  .featureGrid {
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .feature {
+    padding: 10px;
+  }
+  .feature h4 {
+    margin-top: 6px;
+  }
+  .feature p {
+    min-height: 0;
+    margin-bottom: 7px;
+  }
+  .preview {
+    min-height: 92px;
+  }
+  .showcase {
+    padding: 18px;
+  }
+  .purchase {
+    padding: 14px;
+  }
+}
+
+/* Responsive Shop Hero layout */
+@media (max-width: 1199px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'details' 'art';
+    row-gap: 12px;
+  }
+  .heroArt {
+    width: min(100%, 620px);
+    height: auto;
+    aspect-ratio: 3 / 1;
+    justify-self: center;
+  }
+}
+@media (max-width: 639px) {
+  .hero {
+    row-gap: 8px;
+  }
+  .heroDetails {
+    gap: 12px;
+  }
+  .heroArt {
+    width: 100%;
+    max-width: 620px;
+  }
+}
+
+/* The Home sidebar changes the usable panel width, so the plans body uses a
+   container query instead of relying only on the browser viewport. */
+.page {
+  container-type: inline-size;
+}
+
+@container (max-width: 1100px) {
+  .content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .purchase {
+    width: min(100%, 720px);
+    margin-inline: auto;
+  }
+}
+
+.footer {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, auto);
+  gap: clamp(16px, 3vw, 40px);
+  padding: clamp(18px, 2vw, 28px) clamp(20px, 3vw, 38px);
+}
+
+.footerCopy h3 {
+  max-width: 540px;
+  font-size: clamp(22px, 2.25vw, 31px);
+}
+
+.footerCopy p {
+  margin-top: 9px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.footerCopy small {
+  margin-top: 5px;
+  font-size: 12px;
+}
+
+.footerImage {
+  width: auto;
+  max-width: min(44%, 320px);
+  height: clamp(110px, 10vw, 150px);
+  max-height: 150px;
+}
+
+/* Keep the desktop banner led by its copy rather than by the illustration.
+   Tablet and phone dimensions remain on their already-approved base rules. */
+@media (min-width: 1024px) {
+  .footer {
+    padding-block: 24px;
+  }
+
+  .footerImage {
+    height: clamp(110px, 8vw, 140px);
+    max-height: 140px;
+  }
+}
+
+@media (max-width: 639px) {
+  .footer {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 20px;
+  }
+
+  .footerImage {
+    justify-self: center;
+    width: min(100%, 360px);
+    max-width: 100%;
+    height: auto;
+    max-height: 190px;
+  }
+}

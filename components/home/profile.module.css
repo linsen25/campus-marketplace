@@ -34,7 +34,7 @@
 
 .desktopChange {
   /* stylelint-disable-next-line property-no-unknown -- Reuse Welcome's actual expanded action layout. */
-  composes: actions from "../velora/expandable-card.module.css";
+  composes: actions from '../velora/expandable-card.module.css';
   display: none;
   padding-top: 0;
   flex-shrink: 0;
@@ -145,12 +145,12 @@
   cursor: pointer;
 }
 
-.analytics .segment button[aria-pressed="true"] {
+.analytics .segment button[aria-pressed='true'] {
   background: var(--color-primary-purple, #7c3aed);
   color: #fff;
 }
 
-.listingChoices button[aria-pressed="true"] {
+.listingChoices button[aria-pressed='true'] {
   background: #664780;
   color: #fff;
 }
@@ -272,11 +272,11 @@
 }
 
 .rules li::before {
-  content: "○ ";
+  content: '○ ';
 }
 
 .rules li[data-met]::before {
-  content: "✓ ";
+  content: '✓ ';
 }
 
 .notice {
@@ -307,8 +307,11 @@
   }
 }
 
-.overview .accountRow > span {
-  flex: 0 1 220px;
+.overview .accountRow > .emailStatus {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  margin-left: auto;
 }
 
 @media (max-width: 479px) {
@@ -317,14 +320,15 @@
     gap: 16px;
   }
 
-  .overview .accountRow > span {
-    flex: 1 1 100%;
+  .overview .accountRow > .emailStatus {
+    flex: 0 0 auto;
+    margin-left: auto;
   }
 }
 
 .logout {
   /* stylelint-disable-next-line property-no-unknown -- Reuse the accepted Back to Market control. */
-  composes: mark from "./animated-sidebar-demo.module.css";
+  composes: mark from './animated-sidebar-demo.module.css';
 }
 
 @media (max-width: 1023px) {
@@ -366,15 +370,15 @@
   gap: 16px;
   min-height: 88px;
 }
+
 .settings .sessionRow {
   margin-top: 24px;
   border-top: 1px solid #ffffff0d;
 }
 
-.settings .accountRow > span {
-  --action-width: 200px;
-
+.settings .accountRow > .accountAction {
   width: 200px;
+  justify-content: flex-end;
 }
 
 @media (max-width: 359px) {
@@ -383,10 +387,8 @@
     padding-block: 16px;
   }
 
-  .settings .accountRow > span {
-    --action-width: min(200px, 100%);
-
-    width: var(--action-width);
+  .settings .accountRow > .accountAction {
+    width: min(200px, 100%);
   }
 }
 
@@ -420,17 +422,22 @@
   height: 360px;
 }
 
-.avatarUnset {
-  /* Existing destructive action red (#772d40), with a soft outline/tint. */
-  border-color: #772d408c;
-  background: #772d4017;
-  color: #fff;
-}
-
 .avatarIdentity {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.avatarDetails {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.accountAction {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
 }
 
 .profileAvatar,
@@ -487,8 +494,36 @@
   height: 16px;
 }
 
+@media (max-width: 1023px) {
+  .overview {
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @media (max-width: 479px) {
   .overview .accountRow > .badgeSkeleton {
     flex: 1 1 100%;
   }
+
+  .overview .accountRow > .emailStatus {
+    flex: 0 0 auto;
+  }
+}
+
+.westernBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #68b88955;
+  border-radius: 999px;
+  background: #235a3938;
+  white-space: nowrap;
+}
+
+.westernBadge:has(:global(.warning)) {
+  border-color: #e2b47655;
+  background: #e2b47612;
 }

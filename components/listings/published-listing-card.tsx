@@ -66,18 +66,26 @@ export function PublishedListingCard({
   listing,
   owner = false,
   initiallyFavorited = false,
+  favoriteDisabled = false,
   onUnfavorite,
   onOverlayActiveChange,
   onIntentionalOpen,
+  openOnMount = false,
+  onGoToShop,
   overlayClassName,
   overlayStyle,
 }: {
   listing: Listing
   owner?: boolean
   initiallyFavorited?: boolean
+  /** Demo-only callers retain the marketplace card without allowing writes. */
+  favoriteDisabled?: boolean
   onUnfavorite?: (id: string) => void
   onOverlayActiveChange?: (active: boolean) => void
   onIntentionalOpen?: () => void
+  openOnMount?: boolean
+  /** Shop Favorites detail action only; normal Market cards remain unchanged. */
+  onGoToShop?: () => void
   overlayClassName?: string
   overlayStyle?: React.CSSProperties
 }) {
@@ -99,6 +107,9 @@ export function PublishedListingCard({
   }, [])
   const messaging = useMessageSeller(listing.id)
   const shopReadOnly = listing.listingChannel === 'shop'
+  // Shop products are browse-only, but their public listings may still be
+  // saved. Keep this capability separate from messaging and offers.
+  const canFavorite = !own
   const canInteract = !own && !shopReadOnly
   const offerContext = useListingOfferContext(
     listing.id,
@@ -106,7 +117,7 @@ export function PublishedListingCard({
     !shopReadOnly
   )
   useEffect(() => {
-    if (!seller || own || initiallyFavorited || shopReadOnly) return undefined
+    if (!seller || !canFavorite || initiallyFavorited) return undefined
     let active = true
     const version = favoriteVersion.current
     favoriteState(listing.id)
@@ -121,7 +132,7 @@ export function PublishedListingCard({
     return () => {
       active = false
     }
-  }, [listing.id, seller, own, initiallyFavorited, shopReadOnly])
+  }, [listing.id, seller, canFavorite, initiallyFavorited])
   async function toggle(liked: boolean) {
     if (saving.current) return
     if (!seller) {
@@ -147,27 +158,50 @@ export function PublishedListingCard({
     }
   }
   const favoriteControl =
-    canInteract && listing.status === 'available' ? (
+    canFavorite && listing.status === 'available' ? (
       <ListingFavoriteControl
         liked={favorite}
-        disabled={busy}
+        disabled={busy || favoriteDisabled}
         onChange={(liked) => toggle(liked)}
       />
     ) : undefined
   return (
     <div className={styles.shell} data-published-listing={listing.id}>
       <ExpandableCard
+        openOnMount={openOnMount}
         className={styles.card}
-        renderCloseAction={(close) => (
-          <ShiningButton
-            variant="red"
-            desktopAppearance={true}
-            showArrow={false}
-            onClick={close}
-          >
-            Close
-          </ShiningButton>
-        )}
+        renderCloseAction={(close) =>
+          onGoToShop ? (
+            <div className={styles.shopFavoriteFooter}>
+              <div className={styles.shopFavoriteActions}>
+                <ShiningButton
+                  variant="red"
+                  desktopAppearance={true}
+                  showArrow={false}
+                  onClick={close}
+                >
+                  Close
+                </ShiningButton>
+                <ShiningButton
+                  variant="green"
+                  desktopAppearance={true}
+                  onClick={onGoToShop}
+                >
+                  View in Shop
+                </ShiningButton>
+              </div>
+            </div>
+          ) : (
+            <ShiningButton
+              variant="red"
+              desktopAppearance={true}
+              showArrow={false}
+              onClick={close}
+            >
+              Close
+            </ShiningButton>
+          )
+        }
         visualRadius={listingCardRadius}
         collapsedContent={<ListingCardSummary listing={listing} />}
         title={listing.price === 0 ? 'Free' : formatListingPrice(listing.price)}

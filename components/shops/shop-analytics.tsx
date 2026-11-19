@@ -988,6 +988,27 @@ function DemoShopAnalysis({
                 <LockKeyhole size={25} />
                 <h3>Unlock advanced Shop insights</h3>
                 <p>Locked preview - no Pro-exclusive account data is loaded.</p>
+                <div
+                  className={styles.lockedDemo}
+                  aria-label="Disabled Pro demonstration data"
+                  aria-disabled="true"
+                >
+                  <span>Demo Data</span>
+                  <div>
+                    <p>
+                      <b>Product performance</b>
+                      <small>Illustrative only</small>
+                    </p>
+                    <strong>—</strong>
+                  </div>
+                  <div>
+                    <p>
+                      <b>Featured Shop visits</b>
+                      <small>Illustrative only</small>
+                    </p>
+                    <strong>—</strong>
+                  </div>
+                </div>
                 <ul>
                   <li>Product Performance</li>
                   <li>Product Revenue Distribution</li>

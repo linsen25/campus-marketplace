@@ -12,10 +12,14 @@ function load(file) {
   if (cache.has(full)) return cache.get(full)
   const module = { exports: {} }
   const code = ts.transpileModule(fs.readFileSync(full, 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+    },
   }).outputText
   new Function('require', 'module', 'exports', code)(
-    (name) => (name.startsWith('@/') ? load(name.slice(2) + '.ts') : require(name)),
+    (name) =>
+      name.startsWith('@/') ? load(name.slice(2) + '.ts') : require(name),
     module,
     module.exports
   )
@@ -30,14 +34,25 @@ const ref = environment.canonicalUuProjectRef
 
 const nextConfig = fs.readFileSync('next.config.js', 'utf8')
 const launcher = fs.readFileSync('scripts/dev-v1-uu.cjs', 'utf8')
-assert.match(nextConfig, /distDir:\s*process\.env\.NEXT_DIST_DIR\s*\|\|\s*'\.next'/)
+assert.match(
+  nextConfig,
+  /distDir:\s*process\.env\.NEXT_DIST_DIR\s*\|\|\s*'\.next'/
+)
 assert.match(launcher, /NEXT_DIST_DIR:\s*'\.next-v1-uu-dev'/)
+assert.doesNotMatch(
+  launcher,
+  /GOOGLE_PLACES_API_KEY:\s*''/,
+  'The local UU launcher must pass through its server-only Places key.'
+)
 
 process.env.APP_ENV = 'uu'
 process.env.NEXT_PUBLIC_SUPABASE_URL = `https://${ref}.supabase.co`
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'sb_publishable_unit'
 assert.equal(environment.configuredUuProjectRef(), ref)
-assert.equal(environment.isConfiguredUuProject('uu', `https://${ref}.supabase.co`), true)
+assert.equal(
+  environment.isConfiguredUuProject('uu', `https://${ref}.supabase.co`),
+  true
+)
 assert.equal(messages.requireMessagesEnvironment(), ref)
 delete process.env.SUPABASE_SECRET_KEY
 assert.throws(() => secrets.requireUuServerSecret())
@@ -71,15 +86,25 @@ try {
     `APP_ENV=uu\nNEXT_PUBLIC_SUPABASE_URL=https://${ref}.supabase.co\nNEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_unit\nSTRIPE_PROVIDER_ENABLED=true\n`,
   ]) {
     fs.writeFileSync(path.join(directory, '.env.uu.local'), body)
-    const result = spawnSync(process.execPath, [path.resolve('scripts/dev-v1-uu.cjs')], {
-      cwd: directory,
-      windowsHide: true,
-      encoding: 'utf8',
-    })
-    assert.notEqual(result.status, 0, 'Unsafe UU configuration must fail before Next starts')
+    const result = spawnSync(
+      process.execPath,
+      [path.resolve('scripts/dev-v1-uu.cjs')],
+      {
+        cwd: directory,
+        windowsHide: true,
+        encoding: 'utf8',
+      }
+    )
+    assert.notEqual(
+      result.status,
+      0,
+      'Unsafe UU configuration must fail before Next starts'
+    )
   }
 } finally {
   fs.rmSync(directory, { recursive: true, force: true })
 }
 
-console.log('PASS: canonical UU environment accepts only exact uu URL and publishable/secret key formats; legacy refs fail closed')
+console.log(
+  'PASS: canonical UU environment accepts only exact uu URL and publishable/secret key formats; legacy refs fail closed'
+)

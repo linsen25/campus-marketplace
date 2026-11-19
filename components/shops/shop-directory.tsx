@@ -11,6 +11,9 @@ import { ShopProPromoBanner } from './shop-pro-promo-banner'
 export function ShopDirectory({
   shops = [],
   query = defaultShopDirectoryQuery,
+  demo = false,
+  autoOpenDemo = false,
+  targetDemoProductId,
   onDetailActiveChange,
   onOverlayActiveChange,
   overlayClassName,
@@ -18,6 +21,9 @@ export function ShopDirectory({
 }: {
   shops?: readonly ShopPreview[]
   query?: ShopDirectoryQuery
+  demo?: boolean
+  autoOpenDemo?: boolean
+  targetDemoProductId?: string
   onDetailActiveChange?: (active: boolean) => void
   onOverlayActiveChange?: (active: boolean) => void
   overlayClassName?: string
@@ -28,6 +34,9 @@ export function ShopDirectory({
       <ShopDirectoryWorkspace
         query={query}
         shops={shops}
+        demo={demo}
+        autoOpenDemo={autoOpenDemo}
+        targetDemoProductId={demo ? targetDemoProductId : undefined}
         directoryHeader={<ShopProPromoBanner />}
         overlayClassName={overlayClassName}
         overlayStyle={overlayStyle}

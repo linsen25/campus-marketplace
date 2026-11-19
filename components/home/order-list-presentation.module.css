@@ -1,56 +1,3 @@
-.tabs {
-  display: inline-flex;
-  align-self: flex-start;
-  max-width: 100%;
-  gap: 4px;
-  padding: 4px;
-  margin-bottom: 20px;
-  border: 1px solid #b995dc29;
-  border-radius: 999px;
-  background: #18121f;
-}
-.tabs button {
-  position: relative;
-  min-width: 100px;
-  min-height: 36px;
-  border: 0;
-  border-radius: 999px;
-  padding: 0 16px;
-  background: transparent;
-  color: #bfb0cc;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-}
-.tabs button[aria-pressed='true'] {
-  color: #fff;
-}
-.indicator {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: #7c3aed;
-}
-.tabLabel {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.count {
-  display: inline-grid;
-  place-items: center;
-  min-width: 20px;
-  height: 20px;
-  padding-inline: 5px;
-  border-radius: 999px;
-  background: #f5efff;
-  color: #57317a;
-  font-size: 11px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
 .list {
   display: grid;
   gap: 12px;
@@ -228,4 +175,8 @@
   .mobileOpen svg {
     flex-shrink: 0;
   }
+}
+.tabs {
+  align-self: flex-start;
+  margin-bottom: 20px;
 }

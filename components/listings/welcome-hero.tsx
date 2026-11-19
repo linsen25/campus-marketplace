@@ -48,7 +48,6 @@ export function WelcomeHero({
         <div className={styles.actions}>
           <ShiningButton
             variant="green"
-            desktopAppearance={true}
             onClick={() => openAuth({ mode: 'signin', intent: 'login' })}
           />
         </div>

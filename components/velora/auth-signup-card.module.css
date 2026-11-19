@@ -17,6 +17,7 @@
   max-height: calc(100dvh - 32px);
   padding: 0;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   overscroll-behavior: contain;
   border: 0;
   background: transparent;
@@ -97,10 +98,14 @@
   }
 }
 .composition {
+  --auth-control-height: 48px;
+  /* The Hold button is the canonical primary-action geometry for Auth. */
+  --auth-hold-submit-height: 58px;
+
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
   padding: 26px 32px 24px;
   border: 1px solid #463b50;
   border-radius: 16px;
@@ -110,15 +115,10 @@
 .header {
   position: relative;
   text-align: center;
-  padding: 0 28px;
-}
-.brand {
-  font-size: 14px;
-  font-weight: 600;
-  color: #c1adcf;
+  padding: 0 40px;
 }
 .header h2 {
-  margin-top: 12px;
+  margin: 0;
   font-size: 30px;
   font-weight: 600;
   line-height: 1.2;
@@ -131,16 +131,34 @@
 }
 .dismiss {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  top: -8px;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
   color: #c9bed1;
+  cursor: pointer;
+  transition: background-color 160ms ease-out, transform 160ms ease-out;
+}
+.dismiss:not(:disabled):hover {
+  background: #ffffff12;
+}
+.dismiss:not(:disabled):active {
+  transform: scale(0.94);
+}
+.dismiss:focus-visible {
+  outline: 2px solid var(--color-primary-purple, #7c3aed);
+  outline-offset: 2px;
 }
 .card {
-  margin-top: 0;
-  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
 }
 .switch {
   display: grid;
@@ -175,7 +193,7 @@
 }
 .input {
   width: 100%;
-  height: 48px;
+  height: var(--auth-control-height);
   padding: 0 12px;
   border: 1px solid #594961;
   border-radius: 8px;
@@ -187,11 +205,25 @@
 .input::placeholder {
   color: #9989a6;
 }
+.emailInput,
+.usernameInput,
 .password {
   position: relative;
 }
+.emailInput .input,
+.usernameInput .input,
 .password .input {
   padding-right: 44px;
+}
+.inputIcon {
+  position: absolute;
+  top: 50%;
+  right: 11px;
+  width: 18px;
+  height: 18px;
+  color: #b7acbf;
+  pointer-events: none;
+  transform: translateY(-50%);
 }
 .reveal {
   position: absolute;
@@ -294,11 +326,14 @@
   margin-left: 0;
 }
 .modeTabs {
-  composes: contract from '../animata/button/action-button-sizing.module.css';
-  --action-height: 44px;
+  --action-height: var(--auth-control-height);
+  --action-gap: 16px;
   --action-width: calc((100% - var(--action-gap)) / 2);
+  --action-font-size: 14px;
+  --action-font-weight: 600;
+  --action-line-height: 20px;
 
-  margin-bottom: 28px;
+  margin: 0;
 }
 .modeTabList {
   display: flex;
@@ -307,12 +342,18 @@
   gap: var(--action-gap);
 }
 .modeTab {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
   width: var(--action-width);
   height: var(--action-height);
+  max-height: var(--action-height);
+  min-height: 0;
   min-width: 0;
+  padding: 0;
   flex: 1 1 0;
   border: 1px solid #594961;
-  border-radius: var(--action-surface-radius);
+  border-radius: 9999px;
   background: #241c2e;
   color: #f5f2f8;
   cursor: pointer;
@@ -320,11 +361,8 @@
   font-size: var(--action-font-size);
   font-weight: var(--action-font-weight);
   line-height: var(--action-line-height);
-  transition:
-    transform 170ms ease-out,
-    background-color 170ms ease-out,
-    border-color 170ms ease-out,
-    color 170ms ease-out;
+  transition: transform 170ms ease-out, background-color 170ms ease-out,
+    border-color 170ms ease-out, color 170ms ease-out;
   will-change: transform;
 }
 .modeTab[aria-selected='true'] {
@@ -357,10 +395,16 @@
   .modeTab:not(:disabled):active {
     transform: none;
   }
+  .dismiss {
+    transition: none;
+  }
+  .dismiss:not(:disabled):active {
+    transform: none;
+  }
 }
-.holdSubmit {
+.holdSubmit.holdSubmit {
   width: 100%;
-  height: 52px;
+  height: var(--auth-hold-submit-height);
   border: 1px solid #a99bb7;
 }
 .holdSubmit.holdSubmit:not(:disabled)[data-phase='idle'] {
@@ -375,12 +419,24 @@
 .loginAction :global(.shining-button) {
   box-sizing: border-box;
   width: 100%;
-  height: 52px;
+  height: var(--auth-hold-submit-height);
+  border: 0;
+  padding: 0;
+}
+.loginAction :global(.shining-button:focus-visible) {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
 .loginAction :global(.shining-button__body) {
   width: 100%;
   height: 100%;
   padding: 0 24px;
+}
+.submitRow {
+  margin-top: 4px;
+}
+.forgotRow {
+  margin-top: -4px;
 }
 .information {
   display: inline-grid;
@@ -404,7 +460,7 @@
   font-weight: 600;
 }
 .form .primary {
-  height: 52px;
+  height: var(--auth-hold-submit-height);
 }
 .dialog .primary:not(:disabled):hover {
   filter: brightness(1.08);
@@ -427,7 +483,8 @@
   min-width: 0;
   flex: 1;
 }
-.send {
+.send.send {
+  height: var(--auth-control-height);
   padding: 0 12px;
   white-space: nowrap;
   font-size: 12px;
@@ -441,7 +498,7 @@
 .privacy {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   margin: 0;
   padding-top: 16px;
   border-top: 1px solid #463b50;
@@ -449,8 +506,8 @@
 }
 .privacy svg {
   flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   margin-top: 1px;
   color: #c1adcf;
 }
@@ -459,9 +516,11 @@
   color: #e8e0ee;
   font-size: 12px;
   font-weight: 600;
+  line-height: 18px;
 }
 .privacy p {
-  margin-top: 3px;
+  margin-top: 2px;
+  line-height: 1.4;
 }
 .error {
   color: #ffc1cf;

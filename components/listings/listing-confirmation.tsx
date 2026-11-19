@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
 
+import ShiningButton from '@/components/animata/button/shining-button'
 import { ActionRow } from '@/components/ui/action-row'
-import { DynamicAction } from '@/components/ui/dynamic-action'
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
 import { FadingDialog } from '@/components/ui/fading-dialog'
 
-import { CardAction } from './card-actions'
 import styles from './listing-workspace.module.css'
 
 export function ListingConfirmation({
@@ -28,6 +28,33 @@ export function ListingConfirmation({
   saveDisabled?: boolean
   onConfirm: () => void
 }) {
+  if (!onSave) {
+    return (
+      <ConfirmationDialog
+        className={styles.confirmation}
+        title={title}
+        description={children}
+        error={error}
+        dismissDisabled={Boolean(busy)}
+        onRequestClose={onCancel}
+        cancel={{
+          label: 'Cancel',
+          variant: 'purple',
+          showArrow: false,
+          disabled: busy,
+          onClick: onCancel,
+        }}
+        confirm={{
+          label: confirm,
+          variant: 'red',
+          showArrow: false,
+          disabled: busy,
+          loading: busy,
+          onClick: onConfirm,
+        }}
+      />
+    )
+  }
   return (
     <FadingDialog
       className={styles.confirmation}
@@ -39,28 +66,42 @@ export function ListingConfirmation({
       <h3>{title}</h3>
       <p>{children}</p>
       {error && <p role="alert">{error}</p>}
-      <ActionRow three={Boolean(onSave)}>
-        <CardAction
-          className={styles.neutralButton}
-          surfaceClassName={styles.neutralSurface}
-          disabled={busy}
-          onClick={onCancel}
-        >
-          Cancel
-        </CardAction>
-        <CardAction disabled={busy} onClick={onConfirm}>
-          {busy ? 'Working...' : confirm}
-        </CardAction>
-        {onSave && (
-          <DynamicAction
+
+      <ActionRow three={true}>
+        <span>
+          <ShiningButton
+            variant="purple"
+            showArrow={false}
+            disabled={busy}
+            onClick={onCancel}
+          >
+            Cancel
+          </ShiningButton>
+        </span>
+
+        <span>
+          <ShiningButton
+            variant="red"
+            showArrow={false}
+            disabled={busy}
+            loading={false}
+            onClick={onConfirm}
+          >
+            {confirm}
+          </ShiningButton>
+        </span>
+
+        <span>
+          <ShiningButton
             variant="green"
-            footer={true}
+            showArrow={false}
             disabled={busy || saveDisabled}
+            loading={busy}
             onClick={onSave}
           >
-            {busy ? 'Saving...' : 'Save'}
-          </DynamicAction>
-        )}
+            Save
+          </ShiningButton>
+        </span>
       </ActionRow>
     </FadingDialog>
   )

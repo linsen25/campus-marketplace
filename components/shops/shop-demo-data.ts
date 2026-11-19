@@ -4,6 +4,22 @@ import type { Listing } from '@/types/listing'
 
 import type { ShopCardVisual } from './shop-card-presentation'
 
+const targetUserId = process.env.NEXT_PUBLIC_SHOP_DEMO_USER_ID || ''
+
+/**
+ * The Shop demo is intentionally opt-in, local to development, and bound to
+ * the authenticated user id. It is presentation data only and never gives a
+ * caller server-side Shop authority.
+ */
+export function shopDemoEnabledFor(userId: string | undefined) {
+  return (
+    process.env.NODE_ENV === 'development' &&
+    process.env.NEXT_PUBLIC_SHOP_DEMO === 'true' &&
+    Boolean(targetUserId) &&
+    userId === targetUserId
+  )
+}
+
 /** Local prototype fixtures. Never public Shop, membership, review or Listing authority. */
 export const lunaStudioDemo: ShopCardVisual & {
   id: string
@@ -23,6 +39,15 @@ export const lunaStudioDemo: ShopCardVisual & {
   about:
     'Handmade accessories made by a Western student. Each piece is carefully designed and crafted. Available for campus pickup.',
 }
+
+/** A safe, static identity shared by every local Shop presentation fixture. */
+export const demoShopIdentity = {
+  id: lunaStudioDemo.id,
+  shopName: lunaStudioDemo.name,
+  username: 'luna-studio-demo',
+  membershipPlan: 'Pro',
+  billingStatus: 'Demo preview — no billing',
+} as const
 export const demoShopLoading = { skeletonAfterMs: 120, readyAfterMs: 480 }
 const rows = [
   ['Wooden accent chair', 4500, 'Home & Living', TEST_PICTURES.chair],
@@ -56,7 +81,7 @@ export const demoShopProducts: ReadonlyArray<{
       'Illustrative local demo product and image. No live Listing or transaction is available.',
     photoUrls: [image],
     seller: { id: lunaStudioDemo.id, displayName: lunaStudioDemo.name },
-    status: 'available',
+    status: index >= 9 ? 'sold' : 'available',
     createdAt: new Date(Date.UTC(2026, 9, 17, 12, -index)).toISOString(),
     updatedAt: '2026-10-17T12:00:00Z',
   },

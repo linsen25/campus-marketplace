@@ -3,8 +3,12 @@ import { listingConditions } from '@/lib/listing-metadata'
 import { validateListingInput } from '@/lib/listing-validation'
 import { isMarketPair } from '@/lib/market-taxonomy'
 import { parseOfferAmount } from '@/lib/offer-amount'
-import type { Listing, ListingCondition } from '@/types/listing'
-import type { MeetingLocation } from '@/types/meeting-location'
+import type {
+  Listing,
+  ListingCondition,
+  ListingPaymentMode,
+} from '@/types/listing'
+import type { MeetingArea, MeetingLocation } from '@/types/meeting-location'
 import { parseListingPrice } from '@/utils/parse-listing-price'
 
 export type ListingFields = {
@@ -14,26 +18,33 @@ export type ListingFields = {
   subcategory: string
   condition: string
   estimatedDeliveryFee: string
-  preferredPaymentMode: 'external' | 'uu_pay'
+  preferredPaymentMode: ListingPaymentMode
   preferredFulfillment: 'DELIVERY' | 'ON_CAMPUS'
+  meetingArea: MeetingArea
   meetingLocation: MeetingLocation | null
+  meetingLocationDetail: string
   description: string
 }
 
-export function initialListingFields(listing?: Listing): ListingFields {
+export function initialListingFields(
+  listing?: Listing,
+  channel: Listing['listingChannel'] = 'resale'
+): ListingFields {
   const estimate = listing?.estimatedDeliveryFeeCents ?? 0
   return {
     title: listing?.title ?? '',
-    price: listing ? (listing.price / 100).toFixed(2) : '',
+    price: listing ? (listing.price / 100).toFixed(2) : '0',
     category: listing?.category ?? '',
     subcategory: listing?.subcategory ?? '',
-    condition: listing?.condition ?? '',
+    condition: listing?.condition ?? (channel === 'shop' ? 'new' : 'good'),
     estimatedDeliveryFee: `${Math.floor(estimate / 100)}.${String(
       estimate % 100
     ).padStart(2, '0')}`,
     preferredPaymentMode: listing?.preferredPaymentMode ?? 'uu_pay',
     preferredFulfillment: listing?.preferredFulfillment ?? 'ON_CAMPUS',
+    meetingArea: listing?.meetingArea ?? 'ON_CAMPUS',
     meetingLocation: listing?.meetingLocation ?? null,
+    meetingLocationDetail: listing?.meetingLocationDetail ?? '',
     description: listing?.description ?? '',
   }
 }

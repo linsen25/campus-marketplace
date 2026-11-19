@@ -4,6 +4,7 @@ import { validUsername } from '@/lib/auth-username'
 import { ListingApiError } from '@/lib/listing-validation'
 import type { Listing } from '@/types/listing'
 import type {
+  ShopListingIdentity,
   PublicShopDirectory,
   PublicShopListingResult,
   PublicShopProducts,
@@ -75,6 +76,17 @@ export function shopProjection(input: unknown): ShopPreview {
     ...(s.avatarUrl ? { avatarUrl: image(s.avatarUrl) } : {}),
   }
 }
+
+/** Validate the only Shop fields that a product favorite may use for navigation. */
+export function shopListingIdentityProjection(
+  input: unknown
+): ShopListingIdentity {
+  const shop = record(input)
+  const id = text(shop.id)
+  const username = text(shop.username)
+  if (!uuid.test(id) || !validUsername(username)) throw unavailable()
+  return { id, username, shopName: text(shop.shopName) }
+}
 export function publicShopListingProjection(input: unknown): Listing {
   const v = record(input)
   const seller = record(v.seller)
@@ -91,6 +103,23 @@ export function publicShopListingProjection(input: unknown): Listing {
       throw unavailable()
     return url as string
   })
+  const meetingArea =
+    v.meetingArea === 'ON_CAMPUS' || v.meetingArea === 'OTHER'
+      ? v.meetingArea
+      : null
+  const meetingLocationDetail =
+    typeof v.meetingLocationDetail === 'string'
+      ? v.meetingLocationDetail.trim() || null
+      : null
+  if (meetingLocationDetail && meetingLocationDetail.length > 100)
+    throw unavailable()
+  const preferredPaymentMode = text(v.preferredPaymentMode)
+  if (
+    !['external', 'in_person', 'interac_etransfer', 'uu_pay'].includes(
+      preferredPaymentMode
+    )
+  )
+    throw unavailable()
   return {
     id: v.id as string,
     listingChannel: 'shop',
@@ -99,23 +128,32 @@ export function publicShopListingProjection(input: unknown): Listing {
     price: number(v.price),
     currency: 'CAD',
     category: text(v.category) as Listing['category'],
-    subcategory: text(v.subcategory) as Listing['subcategory'],
+    ...(typeof v.subcategory === 'string'
+      ? { subcategory: text(v.subcategory) as Listing['subcategory'] }
+      : {}),
     ...(v.condition
       ? { condition: text(v.condition) as Listing['condition'] }
       : {}),
-    preferredPaymentMode: text(
-      v.preferredPaymentMode
-    ) as Listing['preferredPaymentMode'],
+    preferredPaymentMode:
+      preferredPaymentMode as Listing['preferredPaymentMode'],
     preferredFulfillment: text(
       v.preferredFulfillment
     ) as Listing['preferredFulfillment'],
+    meetingArea,
     meetingLocation: v.meetingLocation
       ? { label: text(record(v.meetingLocation).label) }
       : null,
+    meetingLocationDetail,
     estimatedDeliveryFeeCents: number(v.estimatedDeliveryFeeCents),
+    ...(v.inventoryStatus === 'in_stock' ||
+    v.inventoryStatus === 'low_stock' ||
+    v.inventoryStatus === 'out_of_stock'
+      ? { inventoryStatus: v.inventoryStatus }
+      : {}),
     photoUrls: photos,
     status: 'available',
     seller: { id: seller.id as string, displayName: text(seller.displayName) },
+    shop: shopListingIdentityProjection(v.shop),
     createdAt: text(v.createdAt),
     updatedAt: text(v.updatedAt),
     publishedAt: text(v.publishedAt),

@@ -85,7 +85,7 @@
 }
 
 .toolbar {
-  --market-control-height: 60px;
+  --market-control-height: 44px;
 }
 
 .batchActions,
@@ -143,32 +143,6 @@
 }
 
 /* Shared responsive inbox presentation; feed and action authority stay unchanged. */
-.toolbar {
-  --market-control-height: 36px;
-}
-.statusTabs {
-  display: flex;
-  align-items: center;
-  padding: 3px;
-  border: 1px solid #4e4059;
-  border-radius: 999px;
-  background: #17121d;
-  flex-shrink: 0;
-}
-.statusTabs button {
-  min-height: 30px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: #c8bcd1;
-  font-size: 12px;
-  font-weight: 500;
-}
-.statusTabs button[aria-pressed='true'] {
-  background: var(--color-primary-purple, #7c3aed);
-  color: #fff;
-}
 .toolbarRight {
   display: flex;
   align-items: center;
@@ -181,55 +155,154 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 36px;
-  min-height: 36px;
-  padding: 0 12px;
+  height: var(--market-control-height, 48px);
+  min-height: var(--market-control-height, 48px);
+  padding: 0 16px;
   border: 1px solid #554761;
-  border-radius: 10px;
-  background: #201a29;
-  color: #f5f5f5;
-  font-size: 12px;
+  border-radius: 999px;
+  background: #fff;
+  color: #18181b;
+  font-size: 13px;
   cursor: pointer;
 }
 .filterTrigger.filterTrigger:hover {
-  background: #30263c;
+  background: #eee;
 }
 .filterPanel.filterPanel {
-  width: min(300px, calc(100vw - 32px));
+  width: min(340px, calc(100vw - 32px));
 }
 .filterOptions {
   display: grid;
-  gap: 14px;
-  padding: 4px;
+  gap: 0;
   color: #f5f5f5;
+}
+.filterHeader {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 4px 8px 14px;
+}
+.filterHeader h2 {
+  margin: 0;
+  color: #f5f1f8;
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 24px;
+}
+.filterClose {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #d9cbe5;
+  cursor: pointer;
+}
+.filterClose:hover:not(:disabled) {
+  background: rgb(213 180 246 / 12%);
+  color: #fff;
+}
+.filterDivider {
+  height: 1px;
+  background: rgb(213 180 246 / 22%);
+}
+.filterBody {
+  display: grid;
+  gap: 20px;
+  padding: 20px 8px 24px;
 }
 .filterOptions fieldset {
   border: 0;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 8px;
+  gap: 4px;
   font-size: 13px;
 }
 .filterOptions legend {
   margin-bottom: 8px;
-  color: #bfb1cd;
-  font-size: 12px;
+  color: #d9cbe5;
+  font-size: 13px;
 }
 .filterOptions label {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 8px;
+  border-radius: 12px;
+  color: #f5f5f5;
+  font-size: 12px;
   cursor: pointer;
 }
-.filterOptions input {
-  accent-color: #9375c4;
+.filterOptions label:hover {
+  background: #30263c;
 }
-.filterOptions > button {
-  border: 1px solid #554761;
-  border-radius: 8px;
-  padding: 8px 12px;
+.filterOptions input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.filterOptions label::after {
+  content: '';
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 1px solid #79678a;
+  border-radius: 50%;
+}
+.filterOptions label:has(input:checked) {
+  background: #30263c;
+}
+.filterOptions label:has(input:checked)::after {
+  content: '✓';
+  border-color: transparent;
+  background: #eee7f5;
+  color: #211329;
   font-size: 12px;
+  font-weight: 600;
+}
+.filterOptions input:focus-visible + span {
+  outline: 2px solid #d5b4f6;
+  outline-offset: 2px;
+}
+.filterActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 8px 8px;
+}
+.reset {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #d9cbe5;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.reset:hover:not(:disabled) {
+  color: #fff;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+.reset:focus-visible,
+.filterClose:focus-visible {
+  outline: 2px solid #d5b4f6;
+  outline-offset: 2px;
 }
 .helper:empty {
   display: none;
@@ -477,9 +550,6 @@
   }
 }
 @media (max-width: 639px) {
-  .statusTabs button {
-    padding-inline: 12px;
-  }
   .rowOpen {
     gap: 7px 8px;
     padding: 14px;

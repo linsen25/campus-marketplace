@@ -9,9 +9,13 @@ import {
 import { isMarketFilterPair } from '@/lib/market-taxonomy'
 import { removeListingImageObjects } from '@/lib/server/listing-image-storage'
 import { requireMarketplaceUser } from '@/lib/server/marketplace-auth'
+import { assertMeetingPlaceSelection } from '@/lib/server/places-service'
+import { projectShopInventory } from '@/lib/server/shop-inventory-repository'
 import {
   getPublicShopListing,
   getPublicShopProducts,
+  publicShopListingProjection,
+  shopListingIdentityProjection,
 } from '@/lib/server/public-shop'
 import type { ListingRow } from '@/lib/supabase/listing-mapper'
 import { mapListing } from '@/lib/supabase/listing-mapper'
@@ -24,11 +28,62 @@ import type {
   OwnerListingQuery,
   UpdateListingInput,
 } from '@/types/listing'
+import type { FavoriteShopProducts } from '@/types/shop'
 
 const selection: string =
   '*,profiles!listings_seller_id_fkey(id,display_name,uwo_email_verified),listing_images(id,path,slot,ready,storage_bucket)'
 export const listingBucket = 'listing-images'
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+type FavoriteShopProductsQuery = {
+  page?: number
+  pageSize?: number
+  shopId?: string
+  search?: string
+  category?: string
+  sort?: string
+}
+
+function favoriteShopProductsProjection(input: unknown): FavoriteShopProducts {
+  if (!input || typeof input !== 'object' || Array.isArray(input))
+    throw new ListingApiError(
+      'Shop favorites are temporarily unavailable.',
+      503
+    )
+  const result = input as Record<string, unknown>
+  const { items, shops, page, hasNextPage, refreshAfterMs } = result
+  if (
+    !Array.isArray(items) ||
+    !Array.isArray(shops) ||
+    !Number.isSafeInteger(page) ||
+    (page as number) < 1 ||
+    typeof hasNextPage !== 'boolean' ||
+    !Number.isSafeInteger(refreshAfterMs)
+  )
+    throw new ListingApiError(
+      'Shop favorites are temporarily unavailable.',
+      503
+    )
+  const projectItem = (value: unknown) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+      throw new ListingApiError(
+        'Shop favorites are temporarily unavailable.',
+        503
+      )
+    const item = value as Record<string, unknown>
+    return {
+      listing: publicShopListingProjection(item.listing),
+      shop: shopListingIdentityProjection(item.shop),
+    }
+  }
+  return {
+    items: items.map(projectItem),
+    shops: shops.map(shopListingIdentityProjection),
+    page: page as number,
+    hasNextPage,
+    refreshAfterMs: Math.max(100, Math.min(30000, refreshAfterMs as number)),
+  }
+}
 
 export function databaseError(
   error: { code?: string; message?: string } | null
@@ -64,18 +119,38 @@ function fields(input: CreateListingInput) {
     condition: input.condition || null,
     pickup_area: input.pickupArea ?? null,
     ...(listingFulfillmentEnabled() && {
-      preferred_payment_mode:
-        input.preferredFulfillment === 'DELIVERY'
-          ? 'uu_pay'
-          : input.preferredPaymentMode ?? 'uu_pay',
+      preferred_payment_mode: input.preferredPaymentMode ?? 'uu_pay',
       preferred_fulfillment: input.preferredFulfillment ?? 'ON_CAMPUS',
+      meeting_area: input.meetingArea ?? null,
       meeting_location: input.meetingLocation?.label ?? null,
       meeting_location_provider: input.meetingLocation?.provider ?? null,
       meeting_place_id: input.meetingLocation?.placeId ?? null,
+      meeting_location_detail: input.meetingLocationDetail ?? null,
       estimated_delivery_fee_cents: input.estimatedDeliveryFeeCents ?? 0,
     }),
     expected_image_count: input.expectedImageCount,
   }
+}
+
+async function ownerShopIdentity(
+  client: ReturnType<typeof createMarketplaceClient>,
+  ownerId: string
+) {
+  const { data, error } = await client
+    .from('shops')
+    .select('id,name,profiles!shops_owner_id_fkey(username)')
+    .eq('owner_id', ownerId)
+    .maybeSingle()
+  databaseError(error)
+  if (!data) return null
+  const profile = Array.isArray(data.profiles)
+    ? data.profiles[0]
+    : data.profiles
+  return shopListingIdentityProjection({
+    id: data.id,
+    shopName: data.name,
+    username: profile?.username,
+  })
 }
 
 function validateQuery(query: ListingQuery) {
@@ -151,6 +226,31 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
         client.storage.from(listingBucket).getPublicUrl(path).data.publicUrl
     )
 
+  async function withOwnerShopIdentity(listing: Listing, ownerId: string) {
+    if (listing.listingChannel !== 'shop') return listing
+    const shop = await ownerShopIdentity(client, ownerId)
+    const { data, error } = await client.rpc('marketplace_shop_inventory', {
+      p_listing_id: listing.id,
+      p_change: null,
+    })
+    // C2 deliberately skipped ambiguous legacy pending/reserved listings.
+    // Keep those owner listings readable rather than fabricating a quantity.
+    if (error?.code === '23514') return { ...listing, shop }
+    databaseError(error)
+    const inventory = projectShopInventory(data)
+    return {
+      ...listing,
+      shop,
+      inventory,
+      inventoryStatus: (inventory.availableQuantity <= 0
+        ? 'out_of_stock'
+        : inventory.lowStockThreshold > 0 &&
+          inventory.availableQuantity <= inventory.lowStockThreshold
+        ? 'low_stock'
+        : 'in_stock') as NonNullable<Listing['inventoryStatus']>,
+    }
+  }
+
   async function readListing(
     id: string,
     publicOnly = true
@@ -179,7 +279,7 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
     if (!listing) throw new ListingApiError('Listing not found.', 404)
     if (listing.seller.id !== user.id)
       throw new ListingApiError('You can only manage your own listings.', 403)
-    return listing
+    return withOwnerShopIdentity(listing, user.id)
   }
 
   async function getListings(
@@ -251,8 +351,10 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
         'condition',
         'pickupArea',
         'preferredFulfillment',
+        'meetingArea',
         'preferredPaymentMode',
         'meetingLocation',
+        'meetingLocationDetail',
         'estimatedDeliveryFeeCents',
         'expectedImageCount',
         'photoUrls',
@@ -260,6 +362,11 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
       if (Object.keys(metadata).some((key) => !allowed.includes(key)))
         throw new ListingApiError('Only product metadata is accepted.')
       const validated = validateListingInput(metadata)
+      await assertMeetingPlaceSelection(
+        validated.preferredFulfillment ?? 'ON_CAMPUS',
+        validated.meetingArea,
+        validated.meetingLocation
+      )
       if (validated.photoUrls.length)
         throw new ListingApiError('Upload images after creating the listing.')
       const { data, error } = await client.rpc(
@@ -270,10 +377,12 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
             ...fields(validated),
             preferred_payment_mode: validated.preferredPaymentMode,
             preferred_fulfillment: validated.preferredFulfillment,
+            meeting_area: validated.meetingArea,
             meeting_location: validated.meetingLocation?.label,
             meeting_location_provider:
               validated.meetingLocation?.provider ?? null,
             meeting_place_id: validated.meetingLocation?.placeId ?? null,
+            meeting_location_detail: validated.meetingLocationDetail,
             estimated_delivery_fee_cents:
               validated.estimatedDeliveryFeeCents ?? 0,
           },
@@ -292,6 +401,46 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
     async getFavoriteListings(query: ListingQuery = {}) {
       const user = await requireMarketplaceUser(client)
       return getListings({ ...query, status: 'available' }, user.id)
+    },
+    async getFavoriteShopProducts(
+      query: FavoriteShopProductsQuery = {}
+    ): Promise<FavoriteShopProducts> {
+      await requireMarketplaceUser(client)
+      const page = query.page ?? 1
+      const pageSize = query.pageSize ?? 20
+      if (
+        !Number.isSafeInteger(page) ||
+        page < 1 ||
+        !Number.isSafeInteger(pageSize) ||
+        pageSize < 1 ||
+        pageSize > 100 ||
+        (query.shopId !== undefined && !uuid.test(query.shopId)) ||
+        (query.search !== undefined &&
+          (typeof query.search !== 'string' || query.search.length > 200)) ||
+        (query.category !== undefined &&
+          (typeof query.category !== 'string' ||
+            query.category.length > 120)) ||
+        (query.sort !== undefined &&
+          !['newest', 'name', 'price-asc', 'price-desc'].includes(query.sort))
+      )
+        throw new ListingApiError('Invalid Shop favorites query.')
+      const { data, error } = await client.rpc(
+        'marketplace_favorite_shop_products',
+        {
+          p_query: {
+            page,
+            pageSize,
+            ...(query.shopId ? { shopId: query.shopId } : {}),
+            ...(query.search?.trim() ? { search: query.search.trim() } : {}),
+            ...(query.category ? { category: query.category } : {}),
+            ...(query.sort && query.sort !== 'newest'
+              ? { sort: query.sort }
+              : {}),
+          },
+        }
+      )
+      databaseError(error)
+      return favoriteShopProductsProjection(data)
     },
     async favoriteState(id: string) {
       if (!uuid.test(id)) throw new ListingApiError('Invalid listing ID.')
@@ -383,15 +532,28 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
         .eq('seller_id', user.id)
         .filter('published_at', 'not.is', 'null')
       if (query.channel) request = request.eq('listing_channel', query.channel)
+      if (query.channel === 'shop') request = request.is('archived_at', null)
+      else if (!query.channel)
+        request = request.or('listing_channel.neq.shop,archived_at.is.null')
       const { data, error } = await request.order('created_at', {
         ascending: false,
       })
       databaseError(error)
-      return (data || []).map(toListing)
+      const listings = (data || []).map(toListing)
+      if (!listings.some((listing) => listing.listingChannel === 'shop'))
+        return listings
+      return Promise.all(
+        listings.map((listing) => withOwnerShopIdentity(listing, user.id))
+      )
     },
     async createListing(input: CreateListingInput) {
       await requireMarketplaceUser(client)
       const validated = validateListingInput(input)
+      await assertMeetingPlaceSelection(
+        validated.preferredFulfillment ?? 'ON_CAMPUS',
+        validated.meetingArea,
+        validated.meetingLocation
+      )
       if (validated.photoUrls.length)
         throw new ListingApiError('Upload images after creating the listing.')
       const { data, error } = await client
@@ -414,6 +576,11 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
       const editable: Record<string, unknown> = { ...merged }
       delete editable.listingChannel
       const validated = validateListingInput(editable)
+      await assertMeetingPlaceSelection(
+        validated.preferredFulfillment ?? 'ON_CAMPUS',
+        validated.meetingArea,
+        validated.meetingLocation
+      )
       const { data, error } = await client
         .from('listings')
         .update({
@@ -425,10 +592,12 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
           ...(listingFulfillmentEnabled() && {
             preferred_payment_mode: validated.preferredPaymentMode,
             preferred_fulfillment: validated.preferredFulfillment,
+            meeting_area: validated.meetingArea,
             meeting_location: validated.meetingLocation?.label ?? null,
             meeting_location_provider:
               validated.meetingLocation?.provider ?? null,
             meeting_place_id: validated.meetingLocation?.placeId ?? null,
+            meeting_location_detail: validated.meetingLocationDetail ?? null,
             estimated_delivery_fee_cents:
               validated.estimatedDeliveryFeeCents ?? 0,
           }),
@@ -442,7 +611,10 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
           'Listing not found or no longer owned by you.',
           404
         )
-      return toListing(data)
+      return {
+        ...toListing(data),
+        ...(listing.listingChannel === 'shop' ? { shop: listing.shop } : {}),
+      }
     },
     async markListingSold(id: string) {
       const listing = await owned(id)
@@ -456,10 +628,20 @@ export function createSupabaseListingsRepository(context: MarketplaceContext) {
         .maybeSingle()
       databaseError(error)
       if (!data) throw new ListingApiError('Listing not found.', 404)
-      return toListing(data)
+      return {
+        ...toListing(data),
+        ...(listing.listingChannel === 'shop' ? { shop: listing.shop } : {}),
+      }
     },
     async deleteListing(id: string) {
-      await owned(id)
+      const listing = await owned(id)
+      if (listing.listingChannel === 'shop') {
+        const { error } = await client.rpc('marketplace_archive_shop_listing', {
+          p_listing_id: id,
+        })
+        databaseError(error)
+        return
+      }
       const { data: images, error: imageError } = await client
         .from('listing_images')
         .select('path,storage_bucket')

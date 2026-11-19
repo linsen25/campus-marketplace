@@ -31,8 +31,20 @@ new Function(
       }
     if (name === './stripe-card-setup')
       return { StripeCardSetup: () => null, stripeSetupAvailable: () => false }
-    if (name === '@/components/ui/dynamic-action')
-      return { DynamicAction: () => null }
+    if (name === '@/components/animata/button/shining-button')
+      return {
+        __esModule: true,
+        default: ({ children, ...props }) => {
+          delete props.showArrow
+          delete props.size
+          delete props.loading
+          return React.createElement('button', props, children)
+        },
+      }
+    if (name === '@/components/ui/action-row')
+      return {
+        ActionRow: ({ children }) => React.createElement('div', null, children),
+      }
     if (name === '@/components/ui/fading-dialog')
       return { FadingDialog: () => null }
     if (name === '@/components/ui/skeleton')
@@ -40,10 +52,10 @@ new Function(
         Skeleton: () =>
           React.createElement('span', { 'data-slot': 'skeleton' }),
       }
-    if (name === '@/components/velora/stateful-button')
+    if (name === './profile-status')
       return {
-        StatefulButton: ({ children, ...props }) =>
-          React.createElement('button', props, children),
+        ProfileStatus: ({ children }) =>
+          React.createElement('span', null, children),
       }
     return require(name)
   },
@@ -57,7 +69,7 @@ const render = (settings = true) =>
       onManage: () => {},
     })
   )
-assert.equal((render().match(/data-slot="skeleton"/g) || []).length, 2)
+assert.equal((render().match(/data-slot="skeleton"/g) || []).length, 3)
 state = {
   ...state,
   loading: false,
@@ -66,10 +78,10 @@ state = {
     payoutAccount: { status: 'unset' },
   },
 }
-assert.equal((render().match(/>Not set</g) || []).length, 0)
-assert.equal((render(false).match(/>Unset</g) || []).length, 2)
-assert(render().includes('Set up payment method'))
-assert(render().includes('Set up payouts'))
+assert.equal((render().match(/>Not set up</g) || []).length, 2)
+assert.equal((render(false).match(/>Not set up</g) || []).length, 2)
+assert.equal((render().match(/>Set up</g) || []).length, 2)
+assert(render().includes('Interac e-Transfer email'))
 assert(!render().includes('Simulate'))
 state.data = {
   paymentMethod: { status: 'set', brand: 'Visa', last4: '4242' },
@@ -80,17 +92,17 @@ state.data = {
   },
 }
 assert(render().includes('Visa •••• 4242'))
-assert.equal((render().match(/>Ready</g) || []).length, 0)
-assert(render(false).includes('>Set<'))
-assert(render(false).includes('>Ready<'))
+assert.equal((render().match(/>Configured</g) || []).length, 2)
+assert.equal((render(false).match(/>Configured</g) || []).length, 2)
+assert.equal((render(false).match(/>Manage</g) || []).length, 2)
 assert(!render(false).includes('4242'))
-assert(render(false).includes('Manage in Settings'))
 state.data.paymentMethod.status = 'needs_attention'
 state.data.payoutAccount.status = 'needs_attention'
-assert.equal((render().match(/>Needs attention</g) || []).length, 0)
-assert.equal((render(false).match(/>Needs attention</g) || []).length, 2)
+assert.equal((render().match(/>Action required</g) || []).length, 2)
+assert.equal((render(false).match(/>Action required</g) || []).length, 2)
 state.error = 'Unable to load'
-assert(render().includes('role="alert"'))
+assert.equal((render().match(/>Unable to load</g) || []).length, 2)
+assert.equal((render().match(/>Retry</g) || []).length, 2)
 assert(!source.includes('/api/financial-capabilities/test-state'))
 console.log(
   'PASS financial Settings states, safe summaries, Profile regression, no simulator calls'

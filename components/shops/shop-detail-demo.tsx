@@ -1,5 +1,5 @@
 import { ArrowRight, Check, Star } from 'lucide-react'
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent } from 'react'
 
 import FilterInteraction from '@/components/filter-interaction'
@@ -198,6 +198,7 @@ export function ShopDetailDemo({
   onFavorite,
   favorites,
   onProductFavorite,
+  autoOpenProductId,
   onOverlayActiveChange,
   overlayClassName,
   overlayStyle,
@@ -206,11 +207,56 @@ export function ShopDetailDemo({
   onFavorite: (value: boolean) => void
   favorites: Record<string, boolean>
   onProductFavorite: (id: string, value: boolean) => void
+  autoOpenProductId?: string
   onOverlayActiveChange?: (value: boolean) => void
   overlayClassName?: string
   overlayStyle?: CSSProperties
 }) {
   const id = useId()
+  // Complete the route slide, position the requested product, and ONLY THEN
+  // trigger the existing ExpandableCard animation.
+  const [readyProductId, setReadyProductId] = useState<string | undefined>()
+  useEffect(() => {
+    setReadyProductId(undefined)
+    if (!autoOpenProductId) return undefined
+
+    let expandTimer: number | undefined
+    const enterTimer = window.setTimeout(() => {
+      // This is a locally known demo ID; select the actual rendered card.
+      const target = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-demo-listing]')
+      ).find((node) => node.dataset.demoListing === autoOpenProductId)
+      if (!target) return
+
+      // The Market header is sticky. Put the card just below it, rather than
+      // aligning the card behind the toolbar.
+      const header = document.querySelector<HTMLElement>('main > header')
+      const headerHeight = header?.getBoundingClientRect().height ?? 0
+      const destination = Math.max(
+        0,
+        window.scrollY + target.getBoundingClientRect().top - headerHeight - 24
+      )
+      const reduced = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches
+      window.scrollTo({
+        top: destination,
+        behavior: reduced ? 'auto' : 'smooth',
+      })
+
+      // Give the scroll its own moment before expanding. Ordinary in-Shop
+      // card clicks still open immediately with their original animation.
+      expandTimer = window.setTimeout(
+        () => setReadyProductId(autoOpenProductId),
+        reduced ? 100 : 700
+      )
+    }, 650)
+
+    return () => {
+      window.clearTimeout(enterTimer)
+      if (expandTimer !== undefined) window.clearTimeout(expandTimer)
+    }
+  }, [autoOpenProductId])
   const [tab, setTab] = useState<Tab>('Products')
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('newest')
@@ -313,6 +359,7 @@ export function ShopDetailDemo({
                     key={listing.id}
                     listing={listing}
                     categoryLabel={categoryLabel}
+                    openOnMount={readyProductId === listing.id}
                     favorite={Boolean(favorites[listing.id])}
                     overlayClassName={overlayClassName}
                     overlayStyle={overlayStyle}

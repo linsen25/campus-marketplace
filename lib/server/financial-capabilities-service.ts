@@ -69,11 +69,10 @@ export async function getOwnFinancialCapabilities(context: MarketplaceContext) {
   requireFinancialEnvironment()
   const client = createMarketplaceClient(context)
   const user = await requireMarketplaceUser(client)
-  if (stripeRequested()) return getFinancialCapabilities(user.id)
-  const { data, error } = await client.rpc('marketplace_financial_capabilities')
-  if (error)
-    throw new ListingApiError('Unable to load financial capabilities.', 503)
-  return projectFinancialCapabilities(data)
+  // The deployed compatibility RPC still carries a historical Western-only
+  // guard. The server has already authenticated this caller, and the trusted
+  // projection remains service-role-only and returns only the safe allowlist.
+  return getFinancialCapabilities(user.id)
 }
 
 export function createTrustedFinancialClient() {

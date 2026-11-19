@@ -19,6 +19,7 @@ import {
 } from '@/lib/order-schedule-preview'
 import type { ScheduleDraft } from '@/lib/order-schedule-preview'
 import type { ChatListing } from '@/types/conversation'
+import type { ListingPaymentMode } from '@/types/listing'
 import type { MeetingPlaceReference } from '@/types/meeting-location'
 import type { Agreement, Offer, OfferTerms } from '@/types/offer'
 
@@ -31,6 +32,11 @@ import profile from './profile.module.css'
 
 function decimal(cents: number) {
   return `${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, '0')}`
+}
+function offerPaymentMode(value?: ListingPaymentMode): 'external' | 'uu_pay' {
+  // Offer/payment execution currently supports these two established modes.
+  // Listings may still display newer preference labels without widening Order flow.
+  return value === 'external' ? 'external' : 'uu_pay'
 }
 function OfferMedia({ listing }: { listing: ChatListing }) {
   return (
@@ -473,7 +479,7 @@ export function OfferEditor({
   const [paymentMode, setPaymentMode] = useState<'external' | 'uu_pay'>(
     original
       ? original.paymentMode ?? 'uu_pay'
-      : listing.live?.preferredPaymentMode ?? 'uu_pay'
+      : offerPaymentMode(listing.live?.preferredPaymentMode)
   )
   const [confirmation, setConfirmation] = useState<OfferTerms | null>(null)
   const [discard, setDiscard] = useState(false)
@@ -845,7 +851,9 @@ export function OfferEditor({
               confirmation,
               original ?? {
                 itemAmountCents: askingPrice,
-                paymentMode: listing.live?.preferredPaymentMode ?? 'uu_pay',
+                paymentMode: offerPaymentMode(
+                  listing.live?.preferredPaymentMode
+                ),
                 fulfillment:
                   listing.live?.preferredFulfillment === 'DELIVERY'
                     ? 'delivery'

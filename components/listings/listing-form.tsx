@@ -1,7 +1,13 @@
 /* eslint @next/next/no-img-element: off -- Local object URLs and immutable listing photos. */
-
+import ShiningButton from '@/components/animata/button/shining-button'
 import { AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Banknote,
+  CreditCard,
+  Landmark,
+} from 'lucide-react'
 import type { SetStateAction } from 'react'
 /* eslint jsx-a11y/no-onchange: off -- Form controls update only the local preview. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -14,13 +20,13 @@ import wizard from '@/components/multi-step-form.module.css'
 import GlideSelect from '@/components/ui/GlideSelect'
 import { ActionRow } from '@/components/ui/action-row'
 import { DynamicAction } from '@/components/ui/dynamic-action'
+import { SegmentedControl } from '@/components/ui/segmented-control'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   ExpandableCard,
   ExpandedCardPreview,
 } from '@/components/velora/expandable-card'
 import { FileDrop } from '@/components/velora/file-drop'
-import { StatefulButton } from '@/components/velora/stateful-button'
 import {
   changeBuilderCategory,
   initialListingFields,
@@ -93,7 +99,11 @@ export function ListingForm({
     loading: sessionLoading,
     error: sessionError,
   } = useMarketplaceSession()
-  const initial = useMemo(() => initialListingFields(listing), [listing])
+  const channel = listing?.listingChannel ?? mode
+  const initial = useMemo(
+    () => initialListingFields(listing, channel),
+    [channel, listing]
+  )
   const form = useForm<ListingFields>({ defaultValues: initial })
   const fields = useWatch({ control: form.control }) as ListingFields
   const setFields = useCallback(
@@ -107,10 +117,11 @@ export function ListingForm({
     },
     [form]
   )
-  const channel = listing?.listingChannel ?? mode
   const wizardPresentation = !listing || presentation === 'sheet'
   const resaleUpload =
     !listing && channel === 'resale' && presentation === 'sheet'
+  const shopCreationIllustrations =
+    !listing && channel === 'shop' && presentation === 'sheet'
   const context = {
     ...listingWizardModes[channel],
     heading:
@@ -118,6 +129,8 @@ export function ListingForm({
   }
   const shopCreationId = useRef<string | null>(null)
   const [stepError, setStepError] = useState('')
+  // Shop demo UX only; do NOT pass this value to create/update listing APIs.
+  const [shopPreviewQuantity, setShopPreviewQuantity] = useState(1)
   form.register('title', {
     validate: (value) =>
       (Boolean(value.trim()) && value.trim().length <= listingLimits.title) ||
@@ -144,6 +157,7 @@ export function ListingForm({
   })
   form.register('subcategory', {
     validate: (value) =>
+      !value ||
       isMarketPair(form.getValues('category'), value) ||
       'Choose a marketplace subcategory.',
   })
@@ -154,15 +168,29 @@ export function ListingForm({
   })
   form.register('meetingLocation', {
     validate: (value) => {
+      if (form.getValues('preferredFulfillment') === 'DELIVERY') return true
       try {
+        const location = parseMeetingLocation(value)
         return (
-          Boolean(parseMeetingLocation(value)) ||
-          'Meeting location is required.'
+          Boolean(location?.provider && location.placeId) ||
+          'Choose a suggested Google Place for the meeting.'
         )
       } catch (reason) {
         return message(reason)
       }
     },
+  })
+  form.register('meetingArea', {
+    validate: (value) =>
+      form.getValues('preferredFulfillment') === 'DELIVERY' ||
+      value === 'ON_CAMPUS' ||
+      value === 'OTHER' ||
+      'Choose an on-campus or other meeting area.',
+  })
+  form.register('meetingLocationDetail', {
+    validate: (value) =>
+      value.length <= listingLimits.meetingLocationDetail ||
+      `Location detail must be at most ${listingLimits.meetingLocationDetail} characters.`,
   })
   form.register('estimatedDeliveryFee', {
     validate: (value) =>
@@ -172,10 +200,13 @@ export function ListingForm({
   })
   form.register('preferredPaymentMode', {
     validate: (value) =>
-      (['external', 'uu_pay'].includes(value) &&
+      (['external', 'in_person', 'interac_etransfer', 'uu_pay'].includes(
+        value
+      ) &&
         (form.getValues('preferredFulfillment') !== 'DELIVERY' ||
-          value === 'uu_pay')) ||
-      'Delivery uses UU Pay.',
+          value === 'uu_pay' ||
+          value === 'interac_etransfer')) ||
+      'Delivery supports Interac e-Transfer or UU Pay.',
   })
   const [files, setFiles] = useState<File[]>([])
   const [urls, setUrls] = useState<string[]>([])
@@ -187,8 +218,12 @@ export function ListingForm({
   const [successReady, setSuccessReady] = useState(false)
   const [createGeneration, setCreateGeneration] = useState(0)
   const builderRef = useRef<HTMLDivElement>(null)
-  const createStateChanged = useCallback((state: string) => {
-    if (state === 'success') setSuccessReady(true)
+  const shopScrollbarTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    return () => {
+      if (shopScrollbarTimer.current !== null)
+        clearTimeout(shopScrollbarTimer.current)
+    }
   }, [])
   const [previewOpen, setPreviewOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -285,6 +320,8 @@ export function ListingForm({
   } catch {
     /* Empty preview starts at Free. */
   }
+  const { subcategory: previewSubcategory, ...previewFields } = fields
+  void previewSubcategory
   const preview: Listing = {
     ...(listing ?? {
       listingChannel: channel,
@@ -294,13 +331,15 @@ export function ListingForm({
       status: 'available',
       publishedAt: null,
     }),
-    ...fields,
+    ...previewFields,
     estimatedDeliveryFeeCents:
       parseOfferAmount(fields.estimatedDeliveryFee.trim() || '0', true) ?? 0,
     price,
     currency: 'CAD',
     category: fields.category as Listing['category'],
-    subcategory: fields.subcategory as Listing['subcategory'],
+    ...(fields.subcategory
+      ? { subcategory: fields.subcategory as Listing['subcategory'] }
+      : {}),
     condition: fields.condition as Listing['condition'],
     photoUrls: listing?.photoUrls ?? urls,
     seller: listing?.seller ?? seller ?? { id: '', displayName: 'You' },
@@ -328,7 +367,9 @@ export function ListingForm({
           condition: input.condition ?? null,
           preferredPaymentMode: input.preferredPaymentMode,
           preferredFulfillment: input.preferredFulfillment,
+          meetingArea: input.meetingArea,
           meetingLocation: input.meetingLocation,
+          meetingLocationDetail: input.meetingLocationDetail,
           estimatedDeliveryFeeCents: input.estimatedDeliveryFeeCents,
         })
         if (leave) {
@@ -359,7 +400,10 @@ export function ListingForm({
         shopCreationId.current = null
         setPending(null)
         if (presentation === 'sheet') complete(result.listing)
-        else setCreated(result.listing)
+        else {
+          setCreated(result.listing)
+          setSuccessReady(true)
+        }
         return true
       }
       setPending(result)
@@ -447,17 +491,24 @@ export function ListingForm({
       <div
         className={`${styles.field} ${
           wizardPresentation ? wizard.photos : ''
-        } ${resaleUpload ? styles.resalePhotoStep : ''}`}
+        } ${
+          resaleUpload || shopCreationIllustrations ? styles.shopPhotoStep : ''
+        } ${resaleUpload ? styles.resaleLayoutPhotos : ''}`}
       >
         <div
           className={`${wizard.photoUpload} ${
-            resaleUpload ? styles.resalePhotoUpload : ''
+            resaleUpload || shopCreationIllustrations
+              ? styles.shopPhotoUpload
+              : ''
           }`}
           data-resale-photo-upload={resaleUpload || undefined}
         >
           <span>Photos</span>
           {!listing && (
             <FileDrop
+              stopFileDialogCancelPropagation={
+                shopCreationIllustrations || resaleUpload
+              }
               accept="image/jpeg,image/png,image/webp"
               inputRef={fileInputRef}
               files={files}
@@ -471,6 +522,8 @@ export function ListingForm({
               ? 'Photos cannot be changed after publishing.'
               : '1-6 photos. JPEG, PNG or WebP. Maximum 3 MB each.'}
           </p>
+          {/* UU Resale Create V4 — delete Step 1 decorative phone illustration
+          render. */}
         </div>
         {listing ? (
           <div ref={photosRef} className={styles.photos}>
@@ -479,15 +532,71 @@ export function ListingForm({
             ))}
           </div>
         ) : (
-          <div ref={photosRef} data-selected-photos={true}>
-            <div className={uploaderStyles.action}>
-              <AccessibleAction
-                items={photoCards}
-                activeIndex={photoIndex}
-                maxVisible={6}
-              />
-            </div>
-            {urls.length > 0 && (
+          <div
+            ref={photosRef}
+            data-selected-photos={true}
+            className={
+              shopCreationIllustrations || resaleUpload
+                ? styles.shopPhotoGallery
+                : undefined
+            }
+          >
+            {shopCreationIllustrations || resaleUpload ? (
+              <div
+                className={styles.shopPhotoCard}
+                aria-label="Product photo album"
+              >
+                <div className={uploaderStyles.action}>
+                  <AccessibleAction
+                    items={photoCards}
+                    activeIndex={photoIndex}
+                    maxVisible={6}
+                    cardWidth={300}
+                    cardHeight={300}
+                  />
+                </div>
+                {urls.length > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      className={`${styles.shopPhotoNav} ${styles.shopPhotoNavPrev}`}
+                      aria-label="Previous product photo"
+                      disabled={photoIndex === 0}
+                      onClick={() =>
+                        setPhotoIndex((current) => Math.max(0, current - 1))
+                      }
+                    >
+                      <ArrowLeft size={18} aria-hidden={true} />
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.shopPhotoNav} ${styles.shopPhotoNavNext}`}
+                      aria-label="Next product photo"
+                      disabled={photoIndex >= urls.length - 1}
+                      onClick={() =>
+                        setPhotoIndex((current) =>
+                          Math.min(urls.length - 1, current + 1)
+                        )
+                      }
+                    >
+                      <ArrowRight size={18} aria-hidden={true} />
+                    </button>
+                    <span className={styles.shopPhotoCounter}>
+                      {photoIndex + 1} / {urls.length}
+                    </span>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className={uploaderStyles.action}>
+                <AccessibleAction
+                  items={photoCards}
+                  activeIndex={photoIndex}
+                  maxVisible={6}
+                />
+              </div>
+            )}
+            {urls.length > 0 && !shopCreationIllustrations && !resaleUpload && (
               <div className={uploaderStyles.controls}>
                 <WorkButton
                   appearance="pagination"
@@ -497,7 +606,9 @@ export function ListingForm({
                 >
                   <ArrowLeft size={18} aria-hidden={true} />
                 </WorkButton>
-                <CardAction
+                <ShiningButton
+                  variant="red"
+                  showArrow={false}
                   onClick={() => {
                     setFiles((current) =>
                       current.filter((_, index) => index !== photoIndex)
@@ -509,7 +620,7 @@ export function ListingForm({
                   }}
                 >
                   Discard
-                </CardAction>
+                </ShiningButton>
                 <WorkButton
                   appearance="pagination"
                   aria-label="Next selected photo"
@@ -518,6 +629,68 @@ export function ListingForm({
                 >
                   <ArrowRight size={18} aria-hidden={true} />
                 </WorkButton>
+              </div>
+            )}
+            {(shopCreationIllustrations || resaleUpload) && (
+              <div
+                className={styles.shopPhotoThumbnails}
+                aria-label="Selected product photos, six slots"
+              >
+                {Array.from({ length: 6 }, (_, index) => {
+                  const url = urls[index]
+                  return (
+                    <div
+                      className={styles.shopPhotoThumb}
+                      key={`shop-photo-slot-${index}`}
+                    >
+                      {url ? (
+                        <>
+                          <div
+                            className={styles.shopPhotoThumbImage}
+                            data-active-photo={
+                              photoIndex === index || undefined
+                            }
+                            aria-label={`Product photo ${index + 1}`}
+                            role="img"
+                          >
+                            <img src={url} alt="" loading="lazy" />
+                          </div>
+                          <button
+                            type="button"
+                            className={styles.shopPhotoRemove}
+                            aria-label={`Remove product photo ${index + 1}`}
+                            onClick={() => {
+                              setFiles((current) =>
+                                current.filter(
+                                  (_, itemIndex) => itemIndex !== index
+                                )
+                              )
+                              setPhotoIndex((current) =>
+                                Math.max(
+                                  0,
+                                  Math.min(
+                                    current > index ? current - 1 : current,
+                                    files.length - 2
+                                  )
+                                )
+                              )
+                              setPhotoError('')
+                            }}
+                          >
+                            <span aria-hidden="true">×</span>
+                          </button>
+                        </>
+                      ) : (
+                        <div
+                          className={styles.shopPhotoSlotEmpty}
+                          aria-hidden="true"
+                        >
+                          <span>+</span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -564,7 +737,7 @@ export function ListingForm({
           <span>Category</span>
           <p>{listing.category}</p>
           <span>Subcategory</span>
-          <p>{listing.subcategory}</p>
+          {listing.subcategory && <p>{listing.subcategory}</p>}
           <p>Category cannot be changed after publishing.</p>
         </div>
       ) : (
@@ -575,6 +748,10 @@ export function ListingForm({
               overlay={wizardPresentation}
               ariaLabel="Category"
               size="lg"
+              radius={999}
+              menuRadius={20}
+              optionRadius={12}
+              menuSurfaceColor="#201a29"
               surfaceColor="#2a2134"
               highlightColor="#443451"
               value={fields.category}
@@ -593,12 +770,16 @@ export function ListingForm({
               key={fields.category}
               ariaLabel="Subcategory"
               size="lg"
+              radius={999}
+              menuRadius={20}
+              optionRadius={12}
+              menuSurfaceColor="#201a29"
               surfaceColor="#2a2134"
               highlightColor="#443451"
               value={fields.subcategory}
               disabled={!fields.category || busy || Boolean(pending)}
               options={[
-                { value: '', label: 'Choose a subcategory' },
+                { value: '', label: 'No subcategory' },
                 ...marketSubcategoryOptions(fields.category),
               ]}
               onChange={(value: string) => change('subcategory', value)}
@@ -616,6 +797,10 @@ export function ListingForm({
           overlay={wizardPresentation}
           ariaLabel="Condition"
           size="lg"
+          radius={999}
+          menuRadius={20}
+          optionRadius={12}
+          menuSurfaceColor="#201a29"
           surfaceColor="#2a2134"
           highlightColor="#443451"
           value={fields.condition}
@@ -635,80 +820,40 @@ export function ListingForm({
   const fulfillmentField = (
     <>
       {(!listing || listingFulfillmentEnabled()) && (
-        <div className={styles.field}>
-          <span>Preferred fulfillment</span>
-          <GlideSelect
-            overlay={wizardPresentation}
-            ariaLabel="Preferred fulfillment"
-            size="lg"
-            surfaceColor="#2a2134"
-            highlightColor="#443451"
-            value={fields.preferredFulfillment}
-            disabled={busy || Boolean(pending)}
-            options={[
-              { value: 'ON_CAMPUS', label: 'Meeting' },
-              { value: 'DELIVERY', label: 'Delivery' },
-            ]}
-            onChange={(value: string) => {
-              if (value === 'DELIVERY' || value === 'ON_CAMPUS')
-                change('preferredFulfillment', value)
-            }}
-          />
-          <small>Buyers may propose another fulfillment mode.</small>
-          {listing && fields.preferredFulfillment === 'ON_CAMPUS' && (
-            <label className={styles.field}>
-              Preferred payment
-              <GlideSelect
-                overlay={wizardPresentation}
-                ariaLabel="Payment method"
-                value={fields.preferredPaymentMode}
-                disabled={busy || Boolean(pending)}
-                options={[
-                  { value: 'uu_pay', label: 'Pay by UU (recommended)' },
-                  { value: 'external', label: 'Pay independently' },
-                ]}
-                onChange={(value: string) =>
-                  change('preferredPaymentMode', value as 'external' | 'uu_pay')
-                }
-              />
-              <small>
-                A default preference. Buyers may propose the other payment
-                method.
-              </small>
-            </label>
+        <div className={styles.fulfillmentColumn}>
+          <div className={styles.field}>
+            <span>Preferred fulfillment</span>
+            <SegmentedControl
+              ariaLabel="Preferred fulfillment"
+              value={fields.preferredFulfillment}
+              disabled={busy || Boolean(pending)}
+              items={[
+                { value: 'ON_CAMPUS', label: 'Meeting' },
+                { value: 'DELIVERY', label: 'Delivery' },
+              ]}
+              onChange={(value) => change('preferredFulfillment', value)}
+              className={styles.fulfillmentSegment}
+            />
+            <small>Buyers may propose another fulfillment mode.</small>
+          </div>
+          {fields.preferredFulfillment === 'ON_CAMPUS' && (
+            <>
+              <div className={styles.field}>
+                <span>Meeting area</span>
+                <SegmentedControl
+                  ariaLabel="Meeting area"
+                  value={fields.meetingArea}
+                  disabled={busy || Boolean(pending)}
+                  items={[
+                    { value: 'ON_CAMPUS', label: 'On campus' },
+                    { value: 'OTHER', label: 'Other' },
+                  ]}
+                  onChange={(value) => change('meetingArea', value)}
+                  className={styles.fulfillmentSegment}
+                />
+              </div>
+            </>
           )}
-          <MeetingLocationInput
-            required={true}
-            value={fields.meetingLocation?.label || ''}
-            selected={
-              fields.meetingLocation?.provider && fields.meetingLocation.placeId
-                ? {
-                    provider: 'google',
-                    placeId: fields.meetingLocation.placeId,
-                  }
-                : null
-            }
-            disabled={busy || Boolean(pending)}
-            onChange={(value) =>
-              setFields((current) => ({
-                ...current,
-                meetingLocation: value.trim() ? { label: value } : null,
-              }))
-            }
-            onSelect={(place) =>
-              setFields((current) => ({
-                ...current,
-                meetingLocation: current.meetingLocation
-                  ? {
-                      label: current.meetingLocation.label,
-                      ...(place
-                        ? { provider: 'google', placeId: place.placeId }
-                        : {}),
-                    }
-                  : null,
-              }))
-            }
-          />
           {fields.preferredFulfillment === 'DELIVERY' && (
             <label className={styles.field}>
               Estimated delivery fee (CA$)
@@ -731,24 +876,113 @@ export function ListingForm({
       )}
     </>
   )
-  const descriptionField = (
-    <>
+  const meetingLocationField =
+    fields.preferredFulfillment === 'ON_CAMPUS' ? (
+      <MeetingLocationInput
+        required={true}
+        meetingArea={fields.meetingArea}
+        label="Place"
+        helper="Choose a Google Place from the suggestions."
+        value={fields.meetingLocation?.label || ''}
+        selected={
+          fields.meetingLocation?.provider && fields.meetingLocation.placeId
+            ? {
+                provider: 'google',
+                placeId: fields.meetingLocation.placeId,
+              }
+            : null
+        }
+        disabled={busy || Boolean(pending)}
+        error={
+          form.formState.errors.meetingLocation?.message as string | undefined
+        }
+        onChange={(value) =>
+          setFields((current) => ({
+            ...current,
+            meetingLocation: value.trim() ? { label: value } : null,
+          }))
+        }
+        onSelect={(place) =>
+          setFields((current) => ({
+            ...current,
+            meetingLocation: place
+              ? {
+                  label:
+                    place.displayName ||
+                    place.formattedAddress ||
+                    current.meetingLocation?.label ||
+                    '',
+                  provider: 'google',
+                  placeId: place.placeId,
+                }
+              : null,
+          }))
+        }
+      />
+    ) : null
+  const deliveryDestinationField =
+    fields.preferredFulfillment === 'DELIVERY' ? (
+      <>
+        <label className={styles.field}>
+          Delivery destination
+          <input
+            disabled={true}
+            value="Confirmed when arranging the transaction"
+            aria-describedby="delivery-destination-help"
+            readOnly={true}
+          />
+        </label>
+        <label className={styles.field}>
+          Destination details
+          <textarea disabled={true} rows={3} value="" readOnly={true} />
+        </label>
+        <p id="delivery-destination-help" className={styles.deliveryHint}>
+          Delivery address is confirmed when arranging the transaction.
+        </p>
+      </>
+    ) : null
+  const locationDetailField =
+    fields.preferredFulfillment === 'ON_CAMPUS' ? (
       <label className={styles.field}>
-        Description
+        Location detail
         <textarea
-          name="description"
-          rows={5}
-          maxLength={listingLimits.description}
-          value={fields.description}
-          onChange={(event) => change('description', event.target.value)}
+          {...form.register('meetingLocationDetail')}
+          name="meetingLocationDetail"
+          maxLength={listingLimits.meetingLocationDetail}
+          rows={3}
+          placeholder="Entrance, floor, room, or meeting instructions (optional)"
+          value={fields.meetingLocationDetail}
+          onChange={(event) =>
+            change('meetingLocationDetail', event.target.value)
+          }
         />
       </label>
-    </>
+    ) : null
+  const descriptionField = (
+    <label
+      className={`${styles.field} ${
+        shopCreationIllustrations ? styles.shopDescriptionField : ''
+      }`}
+    >
+      Description
+      <textarea
+        name="description"
+        rows={5}
+        maxLength={listingLimits.description}
+        value={fields.description}
+        onChange={(event) => change('description', event.target.value)}
+      />
+    </label>
   )
   const stepFields: Array<Array<keyof ListingFields>> = [
     [],
     ['title', 'price', 'condition', 'category', 'subcategory'],
-    ['meetingLocation', 'estimatedDeliveryFee', 'description'],
+    [
+      'meetingArea',
+      'meetingLocation',
+      'meetingLocationDetail',
+      'estimatedDeliveryFee',
+    ],
     ['preferredPaymentMode'],
   ]
   const validateStep = async (step: number) => {
@@ -766,195 +1000,484 @@ export function ListingForm({
         return false
       }
     }
+
     const valid = await form.trigger(stepFields[step], { shouldFocus: true })
+
     if (!valid) {
       const errors = form.formState.errors
       const first = stepFields[step]
         .map((key) => form.getFieldState(key).error?.message)
         .find(Boolean)
+
       setStepError(
         String(first || errors.root?.message || 'Check the required fields.')
       )
+      return false
     }
-    return valid
+
+    if (
+      step === 2 &&
+      fields.preferredFulfillment !== 'DELIVERY' &&
+      (fields.meetingArea === 'ON_CAMPUS' || fields.meetingArea === 'OTHER')
+    ) {
+      const placeId = fields.meetingLocation?.placeId
+
+      if (fields.meetingLocation?.provider !== 'google' || !placeId) {
+        const error = 'Choose a suggested Google Place.'
+        form.setError('meetingLocation', {
+          type: 'manual',
+          message: error,
+        })
+        setStepError(error)
+        return false
+      }
+
+      try {
+        const response = await fetch('/api/places/validate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-marketplace-request': '1',
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            placeId,
+            meetingArea: fields.meetingArea,
+            sessionToken: crypto.randomUUID(),
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Location validation unavailable.')
+        }
+
+        const result: { valid?: boolean } = await response.json()
+
+        if (result.valid !== true) {
+          const error =
+            fields.meetingArea === 'ON_CAMPUS'
+              ? 'This location is outside the Western University campus. Choose an on-campus location or select Other.'
+              : 'This location is within the Western University campus. Choose an off-campus location or select On campus.'
+
+          form.setError('meetingLocation', {
+            type: 'manual',
+            message: error,
+          })
+          setStepError(error)
+          return false
+        }
+
+        form.clearErrors('meetingLocation')
+      } catch {
+        const error = 'Unable to verify this location right now. Please retry.'
+
+        form.setError('meetingLocation', {
+          type: 'manual',
+          message: error,
+        })
+        setStepError(error)
+        return false
+      }
+    }
+
+    return true
   }
+
+  const paymentOptions: Array<{
+    value: ListingFields['preferredPaymentMode']
+    title: string
+    description: string
+    Icon: typeof Banknote
+    disabled?: boolean
+  }> = [
+    {
+      value: 'in_person',
+      title: 'Cash / In-Person',
+      description: 'Pay in cash or confirm payment together when you meet.',
+      Icon: Banknote,
+      disabled: fields.preferredFulfillment === 'DELIVERY',
+    },
+    {
+      value: 'interac_etransfer',
+      title: 'Interac e-Transfer',
+      description: 'Arrange an Interac e-Transfer directly with the buyer.',
+      Icon: Landmark,
+    },
+    {
+      value: 'uu_pay',
+      title: 'UU Pay (Stripe)',
+      description:
+        'Payment is processed by Stripe when UU Pay is available for the exchange.',
+      Icon: CreditCard,
+    },
+  ]
   const paymentField = (
     <div className={wizard.payment}>
-      <label>
-        <input
-          type="radio"
-          name="wizardPayment"
-          value="external"
-          checked={fields.preferredPaymentMode === 'external'}
-          disabled={
-            fields.preferredFulfillment === 'DELIVERY' ||
-            busy ||
-            Boolean(pending)
-          }
-          onChange={() => change('preferredPaymentMode', 'external')}
-        />
-        <span>
-          <strong>Arrange Payment Directly</strong>
-          {channel === 'resale' ? (
-            <>
+      {paymentOptions.map(({ Icon, ...option }) => (
+        <label key={option.value}>
+          <span>
+            {shopCreationIllustrations || resaleUpload ? (
+              <img
+                className={styles.shopPaymentIllustration}
+                src={
+                  option.value === 'in_person'
+                    ? '/static/images/create-product/shop-payment-cash.png'
+                    : option.value === 'interac_etransfer'
+                    ? '/static/images/create-product/shop-payment-interac.png'
+                    : '/static/images/create-product/shop-payment-stripe.png'
+                }
+                alt=""
+                aria-hidden={true}
+                width={52}
+                height={52}
+              />
+            ) : (
+              <Icon aria-hidden="true" size={20} />
+            )}
+            <span>
+              <strong>{option.title}</strong>
               <p>
-                {fields.preferredFulfillment === 'DELIVERY'
+                {option.disabled
                   ? 'Unavailable for Delivery. Delivery requires UU Pay.'
-                  : 'You and the buyer arrange payment outside UU.'}
+                  : option.description}
               </p>
-              <p>Before completing the exchange:</p>
-              <ul>
-                <li>
-                  Confirm funds in your own bank or payment account.
-                  Screenshots, emails and messages are not proof of payment.
-                </li>
-                <li>
-                  Do not hand over or ship the item until you have confirmed
-                  payment yourself.
-                </li>
-                <li>
-                  Meet in a public, appropriate location and allow inspection
-                  where practical.
-                </li>
-                <li>Keep a record of the agreed price and exchange details.</li>
-              </ul>
-              <p>
-                Never send money to receive money. Be cautious of overpayment or
-                refund requests.
-              </p>
-              <p>
-                External payments happen outside UU. UU cannot verify, reverse,
-                refund or provide payment protection for them.
-              </p>
-            </>
-          ) : (
-            <p>
-              {fields.preferredFulfillment === 'DELIVERY'
-                ? 'Unavailable for Delivery. Delivery uses UU Pay.'
-                : 'You and the buyer arrange payment outside UU. UU does not process, hold, reverse or protect this payment. Verify the item and payment details before completing the exchange; do not rely on payment screenshots alone.'}
-            </p>
-          )}
-        </span>
-      </label>
-      <label>
-        <input
-          type="radio"
-          name="wizardPayment"
-          value="uu_pay"
-          checked={fields.preferredPaymentMode === 'uu_pay'}
-          disabled={busy || Boolean(pending)}
-          onChange={() => change('preferredPaymentMode', 'uu_pay')}
-        />
-        <span>
-          <strong>UU Pay</strong>
-          <p>Payment is securely processed by Stripe.</p>
-          {channel === 'resale' && (
-            <>
-              <ul>
-                <li>
-                  Stripe is the third-party payment processor. Confirm payment
-                  status in the supported UU/Stripe flow, rather than relying on
-                  another user&apos;s screenshot.
-                </li>
-                {fields.preferredFulfillment === 'DELIVERY' ? (
-                  <>
-                    <li>
-                      Delivery requires UU Pay. Keep tracking or other
-                      verifiable delivery evidence where practical.
-                    </li>
-                    <li>
-                      Keep photos of the item&apos;s condition and packaging,
-                      plus shipping or delivery receipts.
-                    </li>
-                  </>
-                ) : (
-                  <li>
-                    Meet in a public, appropriate location and allow the buyer
-                    to inspect the item where practical.
-                  </li>
-                )}
-                <li>
-                  Keep transaction and fulfillment records until the exchange is
-                  complete.
-                </li>
-              </ul>
-              <p>{context.serviceFee}</p>
-            </>
-          )}
-
-          <p>
-            Stripe processing fees may apply. The exact fee will be shown before
-            payment is confirmed.
-          </p>
-        </span>
-      </label>
+            </span>
+          </span>
+          <input
+            type="radio"
+            name="wizardPayment"
+            value={option.value}
+            checked={
+              (fields.preferredPaymentMode === 'external'
+                ? 'in_person'
+                : fields.preferredPaymentMode) === option.value
+            }
+            disabled={Boolean(option.disabled) || busy || Boolean(pending)}
+            onChange={() => change('preferredPaymentMode', option.value)}
+          />
+        </label>
+      ))}
       <p className={wizard.notice}>
         This is your default preference. Buyers may propose another supported
         payment method. Creating a Listing does not charge anyone.
       </p>
+      {(resaleUpload || shopCreationIllustrations) && (
+        <img
+          className={styles.resaleIllustrationPayment}
+          src={
+            shopCreationIllustrations
+              ? '/static/images/create-product/shop-payment-method.png'
+              : '/static/images/create-product/payment-method.png'
+          }
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+        />
+      )}
     </div>
   )
-  const reviewField = (
-    <div className={wizard.review} data-review-channel={channel}>
-      <ExpandedCardPreview
-        {...previewProps}
-        className={`${styles.inlinePreview} ${wizard.reviewCard}`}
+  const reviewField =
+    (shopCreationIllustrations && previewOnly) || resaleUpload ? (
+      <div
+        className={`${styles.shopReview} ${
+          resaleUpload ? styles.resaleLayoutReview : ''
+        }`}
+        data-review-channel={channel}
       >
-        <PublishedListingDetails listing={preview} />
-        {fields.preferredFulfillment === 'DELIVERY' &&
-          fields.meetingLocation && (
-            <p className={wizard.notice}>
-              Meeting location: {fields.meetingLocation.label}
-            </p>
-          )}
-      </ExpandedCardPreview>
-    </div>
-  )
+        <section
+          className={`${styles.shopReviewPhotos} ${styles.shopPhotoGallery}`}
+          aria-label="Review product photos"
+        >
+          <div
+            className={styles.shopPhotoCard}
+            aria-label="Product photo album"
+          >
+            <div className={uploaderStyles.action}>
+              <AccessibleAction
+                items={photoCards}
+                activeIndex={photoIndex}
+                maxVisible={6}
+              />
+            </div>
+            {urls.length > 0 && (
+              <>
+                <button
+                  type="button"
+                  className={`${styles.shopPhotoNav} ${styles.shopPhotoNavPrev}`}
+                  aria-label="Previous review photo"
+                  disabled={photoIndex === 0}
+                  onClick={() =>
+                    setPhotoIndex((current) => Math.max(0, current - 1))
+                  }
+                >
+                  <ArrowLeft size={18} aria-hidden={true} />
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.shopPhotoNav} ${styles.shopPhotoNavNext}`}
+                  aria-label="Next review photo"
+                  disabled={photoIndex >= urls.length - 1}
+                  onClick={() =>
+                    setPhotoIndex((current) =>
+                      Math.min(urls.length - 1, current + 1)
+                    )
+                  }
+                >
+                  <ArrowRight size={18} aria-hidden={true} />
+                </button>
+                <span className={styles.shopPhotoCounter}>
+                  {photoIndex + 1} / {urls.length}
+                </span>
+              </>
+            )}
+          </div>
+          <div
+            className={styles.shopPhotoThumbnails}
+            aria-label="Product photo thumbnails"
+          >
+            {Array.from({ length: 6 }, (_, index) => {
+              const url = urls[index]
+              return (
+                <div
+                  className={styles.shopPhotoThumb}
+                  key={`review-photo-slot-${index}`}
+                >
+                  {url ? (
+                    <div
+                      className={styles.shopPhotoThumbImage}
+                      data-active-photo={photoIndex === index || undefined}
+                      role="img"
+                      aria-label={`Product photo ${index + 1}`}
+                    >
+                      <img src={url} alt="" loading="lazy" />
+                    </div>
+                  ) : (
+                    <div
+                      className={styles.shopPhotoSlotEmpty}
+                      aria-hidden={true}
+                    >
+                      <span>+</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+        <section
+          className={styles.shopReviewInfo}
+          aria-label="Review product information"
+        >
+          <h3>
+            {fields.title.trim() ||
+              (resaleUpload ? 'Untitled listing' : 'Untitled product')}
+          </h3>
+          <strong className={styles.shopReviewPrice}>
+            {price === 0 ? 'Free' : formatListingPrice(price)}
+          </strong>
+          <dl className={styles.shopReviewFacts}>
+            {shopCreationIllustrations && (
+              <div>
+                <dt>Inventory</dt>
+                <dd>{shopPreviewQuantity}</dd>
+              </div>
+            )}
+            <div>
+              <dt>Condition</dt>
+              <dd>{fields.condition || 'Not selected'}</dd>
+            </div>
+            <div>
+              <dt>Category</dt>
+              <dd>{fields.category || 'Not selected'}</dd>
+            </div>
+            <div>
+              <dt>Subcategory</dt>
+              <dd>{fields.subcategory || 'Not selected'}</dd>
+            </div>
+          </dl>
+          <div className={styles.shopReviewDescription}>
+            <h4>Description</h4>
+            <p>{fields.description.trim() || 'No description entered'}</p>
+          </div>
+          <dl className={styles.shopReviewFacts}>
+            <div>
+              <dt>Fulfillment</dt>
+              <dd>
+                {fields.preferredFulfillment === 'DELIVERY'
+                  ? 'Delivery'
+                  : 'Meeting'}
+              </dd>
+            </div>
+            {fields.preferredFulfillment === 'DELIVERY' ? (
+              <>
+                <div>
+                  <dt>Delivery estimate</dt>
+                  <dd>
+                    {Number(fields.estimatedDeliveryFee || 0) === 0
+                      ? 'Free'
+                      : `CA$${fields.estimatedDeliveryFee}`}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Destination</dt>
+                  <dd>Confirmed when arranging the transaction</dd>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <dt>Meeting area</dt>
+                  <dd>
+                    {fields.meetingArea === 'ON_CAMPUS' ? 'On campus' : 'Other'}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Place</dt>
+                  <dd>{fields.meetingLocation?.label || 'Not selected'}</dd>
+                </div>
+                {!!fields.meetingLocationDetail.trim() && (
+                  <div>
+                    <dt>Location detail</dt>
+                    <dd>{fields.meetingLocationDetail}</dd>
+                  </div>
+                )}
+              </>
+            )}
+            <div>
+              <dt>Payment</dt>
+              <dd>
+                {fields.preferredPaymentMode === 'uu_pay'
+                  ? 'UU Pay (Stripe)'
+                  : fields.preferredPaymentMode === 'interac_etransfer'
+                  ? 'Interac e-Transfer'
+                  : 'Cash / In-Person'}
+              </dd>
+            </div>
+          </dl>
+        </section>
+      </div>
+    ) : (
+      <div className={wizard.review} data-review-channel={channel}>
+        <ExpandedCardPreview
+          {...previewProps}
+          className={`${styles.inlinePreview} ${wizard.reviewCard}`}
+        >
+          <PublishedListingDetails listing={preview} />
+        </ExpandedCardPreview>
+      </div>
+    )
   let publishLabel: string = context.publish
   if (channel === 'resale') publishLabel = 'Confirm & Publish'
   if (listing) publishLabel = 'Save Changes'
   const publishAction = (
-    <StatefulButton
-      key={createGeneration}
-      className={wizard.publish}
-      disabled={disabled || Boolean(created) || previewOnly}
-      resetAfter={2000}
-      successText={listing ? 'Saved' : 'Published'}
-      errorText="Retry"
-      onStateChange={createStateChanged}
+    <ShiningButton
+      variant="purple"
+      desktopAppearance
+      loading={busy}
+      disabled={disabled || Boolean(created) || previewOnly || busy}
+      showArrow={true}
       onClick={async () => {
-        if (!(await save())) throw new Error('Publication was not confirmed.')
+        await save()
       }}
     >
       {publishLabel}
-    </StatefulButton>
+    </ShiningButton>
   )
   const stepContents = [
     photosField,
     <>
       {titleField}
       {priceField}
+      {shopCreationIllustrations && previewOnly && (
+        <div className={styles.shopInventoryPreview}>
+          <span>Inventory Quantity</span>
+          <div
+            className={styles.shopInventoryStepper}
+            role="group"
+            aria-label="Inventory Quantity"
+          >
+            <button
+              type="button"
+              aria-label="Decrease inventory quantity"
+              disabled={shopPreviewQuantity <= 1}
+              onClick={() =>
+                setShopPreviewQuantity((value) => Math.max(1, value - 1))
+              }
+            >
+              −
+            </button>
+            <output aria-live="polite">{shopPreviewQuantity}</output>
+            <button
+              type="button"
+              aria-label="Increase inventory quantity"
+              disabled={shopPreviewQuantity >= 9999}
+              onClick={() =>
+                setShopPreviewQuantity((value) => Math.min(9999, value + 1))
+              }
+            >
+              +
+            </button>
+          </div>
+        </div>
+      )}
       {conditionField}
       {categoryField}
-    </>,
-    <>
-      {fulfillmentField}
       {descriptionField}
+      {(resaleUpload || shopCreationIllustrations) && (
+        <img
+          className={styles.resaleIllustrationDetails}
+          src={
+            shopCreationIllustrations
+              ? '/static/images/create-product/shop-listing-details.png'
+              : '/static/images/create-product/listing-details.png'
+          }
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+        />
+      )}
     </>,
+    <div
+      key="fulfillment-description"
+      className={styles.fulfillmentDescriptionStep}
+    >
+      <div className={styles.resaleFulfillmentLeft}>
+        {fulfillmentField}
+        {(resaleUpload || shopCreationIllustrations) && (
+          <img
+            className={styles.resaleIllustrationFulfillment}
+            src={
+              shopCreationIllustrations
+                ? '/static/images/create-product/shop-fulfillment-location.png'
+                : '/static/images/create-product/fulfillment-location.png'
+            }
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+          />
+        )}
+      </div>
+      <div className={styles.descriptionColumn}>
+        {meetingLocationField}
+        {fields.preferredFulfillment === 'ON_CAMPUS'
+          ? locationDetailField
+          : deliveryDestinationField}
+      </div>
+    </div>,
     paymentField,
     reviewField,
   ]
   const stepTitles = [
     'Photos',
     context.details,
-    'Fulfillment & Description',
+    'Fulfillment & Location',
     'Payment',
     'Review & Publish',
   ]
   const stepDescriptions = [
     'Add 1-6 photos. The first image is the cover.',
     'Describe your item using its current details.',
-    'Choose how to exchange the item and add its description.',
+    'Choose how and where you can fulfill the exchange.',
     'Choose a supported payment preference.',
     'Review your item before publishing.',
   ]
@@ -964,7 +1487,9 @@ export function ListingForm({
   const creationWizard = (
     <MultiStepForm
       embedded={presentation === 'sheet'}
-      contentSizedDesktop={presentation === 'sheet' && channel === 'resale'}
+      contentSizedDesktop={
+        presentation === 'sheet' && channel === 'resale' && Boolean(listing)
+      }
       key={createGeneration}
       disabled={busy || Boolean(pending) || Boolean(created)}
       publishAction={publishAction}
@@ -977,6 +1502,13 @@ export function ListingForm({
         content: (
           <fieldset
             data-wizard-step={index}
+            className={
+              shopCreationIllustrations
+                ? styles.shopWizardStep
+                : resaleUpload
+                ? styles.resaleLayoutStep
+                : undefined
+            }
             disabled={busy || Boolean(pending)}
           >
             {stepContents[index]}
@@ -1030,6 +1562,22 @@ export function ListingForm({
       <div
         ref={builderRef}
         className={wizardPresentation ? wizard.creation : styles.builder}
+        onScrollCapture={(event) => {
+          if (channel !== 'shop' || !wizardPresentation) return
+          const target = event.target
+          if (
+            !(target instanceof HTMLElement) ||
+            !target.matches('[class*="viewport"]')
+          )
+            return
+          target.dataset.scrolling = 'true'
+          if (shopScrollbarTimer.current !== null)
+            clearTimeout(shopScrollbarTimer.current)
+          shopScrollbarTimer.current = setTimeout(() => {
+            delete target.dataset.scrolling
+            shopScrollbarTimer.current = null
+          }, 1000)
+        }}
         data-listing-channel={channel}
         data-listing-builder={listing ? 'edit' : 'create'}
       >
@@ -1054,6 +1602,8 @@ export function ListingForm({
               {categoryField}
               {conditionField}
               {fulfillmentField}
+              {meetingLocationField}
+              {locationDetailField}
               {descriptionField}
             </fieldset>
           )}
@@ -1138,7 +1688,7 @@ export function ListingForm({
             workspace={builderRef.current}
             onReset={() => {
               setCreateGeneration((current) => current + 1)
-              setFields(initialListingFields())
+              setFields(initialListingFields(undefined, channel))
               setFiles([])
               setUrls([])
               setPhotoIndex(0)

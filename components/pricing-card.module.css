@@ -8,6 +8,7 @@
   font-size: 14px;
   line-height: 20px;
 }
+
 .intro h2 {
   margin: 0;
   font-size: 28px;
@@ -138,35 +139,20 @@
   flex-direction: column;
   gap: 12px;
 }
-.actions button {
+.actions :global(.shining-button) {
+  width: 100%;
+  min-height: 48px;
+}
+.actions :global(.shining-button__body) {
+  box-sizing: border-box;
   width: 100%;
   min-height: 48px;
   padding: 12px 16px;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  font: inherit;
   font-size: 14px;
   line-height: 22px;
-  font-weight: 600;
-  cursor: pointer;
 }
-.continue {
-  background: #fff;
-  color: #101714;
-}
-.continue:hover {
-  background: #eaf0ec;
-}
-.trial {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: #15803d;
-  color: #fff;
-}
-.trial:hover {
-  background: #166534;
+.actions :global(.shining-button--green) {
+  --shine-color: #15803d;
 }
 .disclaimer,
 .note {
@@ -175,6 +161,13 @@
   text-align: center;
   font-size: 12px;
   line-height: 18px;
+}
+.preview {
+  margin: -4px 0 0;
+  color: #9ee0b8;
+  text-align: center;
+  font-size: 11px;
+  line-height: 16px;
 }
 .or {
   display: flex;

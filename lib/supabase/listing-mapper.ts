@@ -1,5 +1,5 @@
 import { listingImageUrl } from '@/lib/listing-media'
-import type { Listing } from '@/types/listing'
+import type { Listing, ListingPaymentMode } from '@/types/listing'
 
 export type ListingRow = {
   id: string
@@ -10,15 +10,17 @@ export type ListingRow = {
   price_cents: number
   currency: 'CAD'
   category: Listing['category']
-  subcategory: Listing['subcategory']
+  subcategory: Listing['subcategory'] | null
   condition: Listing['condition'] | null
   pickup_area: string | null
   estimated_delivery_fee_cents?: number | null
-  preferred_payment_mode?: 'external' | 'uu_pay'
+  preferred_payment_mode?: ListingPaymentMode
   preferred_fulfillment?: 'DELIVERY' | 'ON_CAMPUS'
+  meeting_area?: 'ON_CAMPUS' | 'OTHER' | null
   meeting_location?: string | null
   meeting_location_provider?: 'google' | null
   meeting_place_id?: string | null
+  meeting_location_detail?: string | null
   status: Listing['status']
   created_at: string
   updated_at: string
@@ -50,12 +52,13 @@ export function mapListing(
     price: row.price_cents,
     currency: row.currency,
     category: row.category,
-    subcategory: row.subcategory,
+    ...(row.subcategory ? { subcategory: row.subcategory } : {}),
     ...(row.condition ? { condition: row.condition } : {}),
     pickupArea: row.pickup_area ?? undefined,
     estimatedDeliveryFeeCents: row.estimated_delivery_fee_cents ?? 0,
     preferredPaymentMode: row.preferred_payment_mode ?? 'uu_pay',
     preferredFulfillment: row.preferred_fulfillment ?? 'ON_CAMPUS',
+    meetingArea: row.meeting_area ?? null,
     meetingLocation: row.meeting_location
       ? {
           label: row.meeting_location,
@@ -64,6 +67,7 @@ export function mapListing(
             : {}),
         }
       : null,
+    meetingLocationDetail: row.meeting_location_detail ?? null,
     status: row.status,
     photoUrls: row.listing_images
       .filter((image) => image.ready)

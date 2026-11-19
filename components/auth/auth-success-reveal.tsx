@@ -66,13 +66,12 @@ export function AuthSuccessReveal({
   }, [preparation])
   useEffect(() => {
     if (phase !== 'hold' && !(reduced && phase === 'covered')) return undefined
-    if (!usernameReady) return undefined
     const timer = setTimeout(() => {
       setTextReady(true)
       setPhase('waiting')
     }, 150)
     return () => clearTimeout(timer)
-  }, [phase, reduced, usernameReady])
+  }, [phase, reduced])
   useLayoutEffect(() => {
     const element = dialog.current
     element?.showModal()
@@ -131,8 +130,7 @@ export function AuthSuccessReveal({
           </div>
         </div>
       ) : (
-        phase !== 'cover' &&
-        usernameReady && (
+        phase !== 'cover' && (
           <motion.div
             className={styles.content}
             data-success-content="true"
@@ -163,6 +161,7 @@ export function AuthSuccessReveal({
               </p>
               <SuccessThoughtLine
                 destinationReady={destinationReady}
+                profileReady={usernameReady}
                 startedAt={startedAt}
                 readyAt={readyAt}
                 reduced={Boolean(reduced)}

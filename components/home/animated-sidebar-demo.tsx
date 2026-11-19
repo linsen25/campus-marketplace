@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   Bell,
+  LockKeyhole,
   MessageCircle,
   Package,
   Store,
@@ -25,6 +26,12 @@ import { NotificationBell } from '@/components/notifications/notification-bell'
 import { NotificationsView } from '@/components/notifications/notifications-view'
 import shopAnalysisStyles from '@/components/shops/shop-analysis.module.css'
 import { ShopAnalysis } from '@/components/shops/shop-analytics'
+import { ShopMembershipAccess } from '@/components/shops/shop-membership-access'
+import { ShopMembershipSettings } from '@/components/shops/shop-membership-settings'
+import {
+  demoShopProducts,
+  shopDemoEnabledFor,
+} from '@/components/shops/shop-demo-data'
 import { ShopProBadge } from '@/components/shops/shop-pro-badge'
 import MenuInteraction from '@/components/smooth-dropdown'
 import { LocalTabContent } from '@/components/ui/local-tab-content'
@@ -33,8 +40,8 @@ import {
   SidebarBody,
   SidebarLink,
 } from '@/components/velora/animated-sidebar'
-import { useOwnShopProfile } from '@/hooks/use-own-shop-profile'
 import { useProfileAvatar } from '@/hooks/use-profile-avatar'
+import { useShopMembershipAccess } from '@/hooks/use-shop-membership-access'
 import { Link } from '@ui/link/link'
 
 import { AccountAnalysis } from './account-analysis'
@@ -108,6 +115,11 @@ const groups: Array<{
         label: 'Shop Analysis',
         heading: 'Shop Analysis',
       },
+      {
+        id: 'shop-settings',
+        label: 'Shop Settings',
+        heading: 'Shop Settings',
+      },
     ],
   },
   {
@@ -142,8 +154,11 @@ export function AnimatedSidebarDemo() {
     useState<HTMLDivElement | null>(null)
   const [username, setUsername] = useState<string | null>(null)
   const { seller } = useMarketplaceSession()
+  const shopAccess = useShopMembershipAccess()
+  const shopDemoEnabled = shopDemoEnabledFor(seller?.id)
   const { avatarImage, saveAvatar } = useProfileAvatar(seller?.id)
   const [chartReplayToken, setChartReplayToken] = useState(0)
+  const [financialFocusToken, setFinancialFocusToken] = useState(0)
   const chartReplayHistory = useRef<ChartReplayHistory>({
     activity: 0,
     marketplace: 0,
@@ -188,9 +203,8 @@ export function AnimatedSidebarDemo() {
   const [active, setActive] = useState<Group | 'notifications' | 'settings'>(
     'profile'
   )
-  const ownShop = useOwnShopProfile(active === 'settings')
   useEffect(() => {
-    if (pendingDestination === '/home') {
+    if (pendingDestination && pendingDestination.startsWith('/home')) {
       arrivingFromMarket.current = true
     } else if (pendingDestination === null && arrivingFromMarket.current) {
       arrivingFromMarket.current = false
@@ -207,6 +221,23 @@ export function AnimatedSidebarDemo() {
     orders: 'purchases',
   })
   const [expanded, setExpanded] = useState<Group | null>(null)
+  // Do not reject a deep-linked Shop destination until the server's read-only
+  // membership projection has resolved. Once it resolves without access, every
+  // Shop entry converges on the local plans surface.
+  const shopLocked =
+    shopAccess.status !== 'loading' &&
+    !shopAccess.canAccessShopUi &&
+    !shopDemoEnabled
+  const navigationGroups = groups.map((item) =>
+    item.id !== 'shop'
+      ? item
+      : {
+          ...item,
+          icon: shopLocked ? <LockKeyhole /> : <Store />,
+          badge: item.badge,
+          children: shopLocked ? [] : item.children,
+        }
+  )
   // Preview navigation follows Home's existing local destination pattern. No route/API request.
   useEffect(() => {
     if (!orderVisuals.selection) return
@@ -220,6 +251,12 @@ export function AnimatedSidebarDemo() {
   useEffect(() => {
     const syncSection = () => {
       const section = router.query.section
+      if (section === 'shop-membership') {
+        setActive('shop')
+        setExpanded(shopLocked ? null : 'shop')
+        setSelected((current) => ({ ...current, shop: 'shop-membership' }))
+        return
+      }
       if (section === 'settings') setActive('settings')
       if (section === 'notifications') setActive('notifications')
       if (section === 'orders') {
@@ -251,16 +288,31 @@ export function AnimatedSidebarDemo() {
       }
       if (section === 'create-shop-listing') {
         setActive('shop')
-        setExpanded('shop')
-        setSelected((current) => ({ ...current, shop: 'create-shop-listing' }))
+        setExpanded(shopLocked ? null : 'shop')
+        setSelected((current) => ({
+          ...current,
+          shop: shopLocked ? 'shop-membership' : 'create-shop-listing',
+        }))
+      }
+      if (section === 'shop') {
+        setActive('shop')
+        setExpanded(shopLocked ? null : 'shop')
+        setSelected((current) => ({
+          ...current,
+          shop: shopLocked ? 'shop-membership' : 'my-shop',
+        }))
       }
       const target = groups.find((item) =>
         item.children.some((child) => child.id === section)
       )
       if (target) {
         setActive(target.id)
-        setExpanded(target.id)
-        setSelected((current) => ({ ...current, [target.id]: String(section) }))
+        const lockedShopTarget = target.id === 'shop' && shopLocked
+        setExpanded(lockedShopTarget ? null : target.id)
+        setSelected((current) => ({
+          ...current,
+          [target.id]: lockedShopTarget ? 'shop-membership' : String(section),
+        }))
       }
       if (section === 'profile' || section === 'analytics') setActive('profile')
     }
@@ -269,7 +321,17 @@ export function AnimatedSidebarDemo() {
     // when a Settings link navigates to the same query as a previous visit.
     router.events.on('routeChangeComplete', syncSection)
     return () => router.events.off('routeChangeComplete', syncSection)
-  }, [router, router.query.section, router.query.destination])
+  }, [router, router.query.section, router.query.destination, shopLocked])
+  useEffect(() => {
+    if (
+      shopLocked &&
+      active === 'shop' &&
+      selected.shop !== 'shop-membership'
+    ) {
+      setExpanded(null)
+      setSelected((current) => ({ ...current, shop: 'shop-membership' }))
+    }
+  }, [active, selected.shop, shopLocked])
   // Primary entries classify child pages; explicit group selection starts at
   // its first child. Rail width/hover/pinning never calls this selection path.
   const selectSection = (
@@ -297,6 +359,12 @@ export function AnimatedSidebarDemo() {
       orderVisuals.showList()
       if (replayCharts) setChartReplayToken((token) => token + 1)
       if (alreadySelected) return
+      if (id === 'shop' && shopLocked) {
+        setActive('shop')
+        setExpanded(null)
+        setSelected((current) => ({ ...current, shop: 'shop-membership' }))
+        return
+      }
       setActive(id)
       const section = groups.find((item) => item.id === id)
       if (section) {
@@ -307,8 +375,16 @@ export function AnimatedSidebarDemo() {
     if (listingGuard.current) listingGuard.current(select)
     else select()
   }
+  const focusFinancialSettings = () => {
+    setFinancialFocusToken((current) => current + 1)
+    selectSection('settings')
+  }
+  const openAccountSettings = () => selectSection('settings')
   const group = groups.find((item) => item.id === active)
   const heading =
+    (active === 'shop' && selected.shop === 'shop-membership'
+      ? 'Shop Plans'
+      : undefined) ??
     creationHeadings.get(group ? selected[group.id] : '') ??
     group?.children.find((child) => child.id === selected[group.id])?.heading ??
     group?.label ??
@@ -399,7 +475,7 @@ export function AnimatedSidebarDemo() {
           <MenuInteraction
             compact={true}
             items={[
-              ...groups,
+              ...navigationGroups,
               {
                 id: 'notifications',
                 label: 'Notifications',
@@ -421,7 +497,8 @@ export function AnimatedSidebarDemo() {
               <ProfileOverview
                 showHeading={false}
                 avatarImage={avatarImage}
-                onFinancialSettings={() => selectSection('settings')}
+                onAccountSettings={openAccountSettings}
+                onFinancialSettings={focusFinancialSettings}
                 onUsername={setUsername}
                 onAvatarSave={saveAvatar}
               />
@@ -446,27 +523,56 @@ export function AnimatedSidebarDemo() {
             <ProfileOverview
               settings={true}
               key={seller?.id || 'anonymous-settings'}
-              ownShop={ownShop}
               avatarImage={avatarImage}
+              financialFocusToken={financialFocusToken}
               sessionAction={
                 <SettingsLogout onConfirm={() => logout(username)} />
               }
-              onFinancialSettings={() => selectSection('settings')}
+              onFinancialSettings={focusFinancialSettings}
               onAvatarSave={saveAvatar}
               onUsername={setUsername}
             />
           )}
           {!desktop &&
             active === 'shop' &&
+            selected.shop === 'shop-membership' && (
+              <ShopMembershipAccess
+                status={shopAccess.status}
+                membership={shopAccess.membership}
+                error={shopAccess.error}
+                devSimulationEnabled={shopAccess.devSimulationEnabled}
+                userId={shopAccess.userId}
+                onRetry={shopAccess.refresh}
+                onSimulate={shopAccess.simulate}
+              />
+            )}
+          {!desktop &&
+            active === 'shop' &&
+            selected.shop === 'shop-settings' && (
+              <ShopMembershipSettings
+                membership={shopAccess.membership}
+                simulation={shopAccess.simulation}
+                simulationStartedAt={shopAccess.simulationStartedAt}
+                onExitSimulation={shopAccess.clearSimulation}
+                demo={shopDemoEnabled}
+              />
+            )}
+          {!desktop &&
+            active === 'shop' &&
             selected.shop === 'shop-analysis' && (
               <ShopAnalysis
                 replayToken={chartReplayToken}
                 headerActionsTarget={analysisHeaderTarget}
+                demoAccess={
+                  shopAccess.simulation ?? (shopDemoEnabled ? 'pro' : undefined)
+                }
               />
             )}
           {!desktop &&
             (active === 'resale' || active === 'shop') &&
-            selected[active] !== 'shop-analysis' && (
+            !['shop-analysis', 'shop-membership', 'shop-settings'].includes(
+              selected[active]
+            ) && (
               <HomeListings
                 key={active}
                 page={selected[active]}
@@ -475,6 +581,11 @@ export function AnimatedSidebarDemo() {
                   listingGuard.current = null
                   setSelected((current) => ({ ...current, [active]: page }))
                 }}
+                demoProducts={
+                  shopDemoEnabled
+                    ? demoShopProducts.map((product) => product.listing)
+                    : undefined
+                }
               />
             )}
         </main>
@@ -518,7 +629,7 @@ export function AnimatedSidebarDemo() {
             </>
           }
         >
-          {groups.map((item) => (
+          {navigationGroups.map((item) => (
             <div key={item.id}>
               <SidebarLink
                 href={`#${item.id}`}
@@ -532,7 +643,9 @@ export function AnimatedSidebarDemo() {
                 }
                 onClick={(event) => {
                   event.preventDefault()
-                  if (item.id === 'resale' || item.id === 'shop') {
+                  if (item.id === 'shop' && shopLocked) {
+                    selectSection('shop')
+                  } else if (item.id === 'resale' || item.id === 'shop') {
                     setExpanded((current) =>
                       current === item.id ? null : item.id
                     )
@@ -590,7 +703,8 @@ export function AnimatedSidebarDemo() {
             <>
               <ProfileOverview
                 avatarImage={avatarImage}
-                onFinancialSettings={() => selectSection('settings')}
+                onAccountSettings={openAccountSettings}
+                onFinancialSettings={focusFinancialSettings}
                 onUsername={setUsername}
                 onAvatarSave={saveAvatar}
               />
@@ -615,27 +729,56 @@ export function AnimatedSidebarDemo() {
             <ProfileOverview
               settings={true}
               key={seller?.id || 'anonymous-settings'}
-              ownShop={ownShop}
               avatarImage={avatarImage}
+              financialFocusToken={financialFocusToken}
               sessionAction={
                 <SettingsLogout onConfirm={() => logout(username)} />
               }
-              onFinancialSettings={() => selectSection('settings')}
+              onFinancialSettings={focusFinancialSettings}
               onAvatarSave={saveAvatar}
               onUsername={setUsername}
             />
           )}
           {desktop &&
             active === 'shop' &&
+            selected.shop === 'shop-membership' && (
+              <ShopMembershipAccess
+                status={shopAccess.status}
+                membership={shopAccess.membership}
+                error={shopAccess.error}
+                devSimulationEnabled={shopAccess.devSimulationEnabled}
+                userId={shopAccess.userId}
+                onRetry={shopAccess.refresh}
+                onSimulate={shopAccess.simulate}
+              />
+            )}
+          {desktop &&
+            active === 'shop' &&
+            selected.shop === 'shop-settings' && (
+              <ShopMembershipSettings
+                membership={shopAccess.membership}
+                simulation={shopAccess.simulation}
+                simulationStartedAt={shopAccess.simulationStartedAt}
+                onExitSimulation={shopAccess.clearSimulation}
+                demo={shopDemoEnabled}
+              />
+            )}
+          {desktop &&
+            active === 'shop' &&
             selected.shop === 'shop-analysis' && (
               <ShopAnalysis
                 replayToken={chartReplayToken}
                 headerActionsTarget={analysisHeaderTarget}
+                demoAccess={
+                  shopAccess.simulation ?? (shopDemoEnabled ? 'pro' : undefined)
+                }
               />
             )}
           {desktop &&
             (active === 'resale' || active === 'shop') &&
-            selected[active] !== 'shop-analysis' && (
+            !['shop-analysis', 'shop-membership', 'shop-settings'].includes(
+              selected[active]
+            ) && (
               <HomeListings
                 key={active}
                 page={selected[active]}
@@ -644,6 +787,11 @@ export function AnimatedSidebarDemo() {
                   listingGuard.current = null
                   setSelected((current) => ({ ...current, [active]: page }))
                 }}
+                demoProducts={
+                  shopDemoEnabled
+                    ? demoShopProducts.map((product) => product.listing)
+                    : undefined
+                }
               />
             )}
         </main>

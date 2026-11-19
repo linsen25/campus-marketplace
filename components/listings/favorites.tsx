@@ -20,6 +20,8 @@ export function Favorites({ channel }: { channel?: ListingChannel }) {
   const reveal = useContentReveal(loading)
   const [error, setError] = useState('')
   const version = useRef(0)
+  const unfavoritedInView = useRef(new Set<string>())
+
   const load = useCallback(async () => {
     const request = ++version.current
     setError('')
@@ -31,9 +33,22 @@ export function Favorites({ channel }: { channel?: ListingChannel }) {
         pageSize: 20,
       })
       if (request !== version.current) return
-      setItems(
-        result.filter((item) => item.publishedAt && item.status === 'available')
+
+      const incoming = result.filter(
+        (item) => item.publishedAt && item.status === 'available'
       )
+
+      setItems((current) => {
+        const incomingById = new Map(incoming.map((item) => [item.id, item]))
+
+        const retained = current.filter(
+          (item) =>
+            unfavoritedInView.current.has(item.id) && !incomingById.has(item.id)
+        )
+
+        return [...incoming, ...retained]
+      })
+
       setHasNext(result.length === 20)
     } catch (reason) {
       if (request === version.current) {
@@ -46,6 +61,7 @@ export function Favorites({ channel }: { channel?: ListingChannel }) {
     }
   }, [page, channel])
   useEffect(() => {
+    unfavoritedInView.current.clear()
     setLoading(true)
     setItems([])
     load()
@@ -102,9 +118,9 @@ export function Favorites({ channel }: { channel?: ListingChannel }) {
             <PublishedListingCard
               listing={listing}
               initiallyFavorited={true}
-              onUnfavorite={(id) =>
-                setItems((current) => current.filter((item) => item.id !== id))
-              }
+              onUnfavorite={(id) => {
+                unfavoritedInView.current.add(id)
+              }}
             />
           </article>
         ))}

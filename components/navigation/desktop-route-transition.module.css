@@ -33,3 +33,29 @@
     background: #0b0b0b;
   }
 }
+
+/* Keep route-transition scrollbars visually hidden without changing
+   scroll containers, gutter geometry, or page-slide animation. */
+.sliding .surface {
+  scrollbar-color: transparent transparent;
+}
+
+.sliding .surface::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sliding .surface::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+@media (min-width: 1024px) {
+  /* Keep the document scrollbar invisible during Market -> Home handoff,
+     even after Market removes its route-specific scrollbar class. */
+  .documentViewport {
+    scrollbar-color: transparent transparent;
+  }
+
+  .documentViewport::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+}

@@ -5,13 +5,21 @@ import {
   isMarketSubcategory,
 } from '@/lib/market-taxonomy'
 import { parseMeetingLocation } from '@/lib/meeting-location'
-import type { CreateListingInput } from '@/types/listing'
+import type { CreateListingInput, ListingPaymentMode } from '@/types/listing'
+
+const listingPaymentModes: readonly ListingPaymentMode[] = [
+  'uu_pay',
+  'external',
+  'in_person',
+  'interac_etransfer',
+]
 
 export const listingLimits = {
   title: 120,
   description: 5000,
   pickupArea: 120,
   photos: 6,
+  meetingLocationDetail: 100,
 }
 
 export class ListingApiError extends Error {
@@ -40,14 +48,30 @@ export function validateListingInput(input: unknown): CreateListingInput {
   )
   if (
     data.preferredPaymentMode !== undefined &&
-    !['uu_pay', 'external'].includes(String(data.preferredPaymentMode))
+    !listingPaymentModes.includes(
+      data.preferredPaymentMode as ListingPaymentMode
+    )
   )
     throw new ListingApiError('Choose a valid payment preference.')
-  const preferredPaymentMode =
-    preferredFulfillment === 'DELIVERY'
-      ? 'uu_pay'
-      : ((data.preferredPaymentMode ?? 'uu_pay') as 'external' | 'uu_pay')
-  const meetingLocation = requireMeetingLocation(data.meetingLocation)
+  const preferredPaymentMode = (data.preferredPaymentMode ??
+    'uu_pay') as ListingPaymentMode
+  if (
+    preferredFulfillment === 'DELIVERY' &&
+    !['uu_pay', 'interac_etransfer'].includes(preferredPaymentMode)
+  )
+    throw new ListingApiError('Delivery supports Interac e-Transfer or UU Pay.')
+  const meetingArea = validateMeetingArea(
+    data.meetingArea,
+    preferredFulfillment
+  )
+  const meetingLocation = requireMeetingLocation(
+    data.meetingLocation,
+    preferredFulfillment
+  )
+  const meetingLocationDetail = validateMeetingLocationDetail(
+    data.meetingLocationDetail,
+    preferredFulfillment
+  )
   const estimatedDeliveryFeeCents = validateDeliveryEstimate(
     data.estimatedDeliveryFeeCents
   )
@@ -106,7 +130,9 @@ export function validateListingInput(input: unknown): CreateListingInput {
     subcategory,
     ...(condition ? { condition } : {}),
     pickupArea,
+    meetingArea,
     meetingLocation,
+    meetingLocationDetail,
     estimatedDeliveryFeeCents,
     preferredPaymentMode,
     preferredFulfillment: preferredFulfillment as 'DELIVERY' | 'ON_CAMPUS',
@@ -120,15 +146,46 @@ function rejectClientChannel(data: Record<string, unknown>) {
     )
 }
 
-function requireMeetingLocation(value: unknown) {
+function requireMeetingLocation(
+  value: unknown,
+  fulfillment: 'DELIVERY' | 'ON_CAMPUS'
+) {
+  if (fulfillment === 'DELIVERY') return null
   let location
   try {
     location = parseMeetingLocation(value)
   } catch {
     throw new ListingApiError('Check the Meeting location.')
   }
-  if (!location) throw new ListingApiError('Meeting location is required.')
+  if (!location?.provider || !location.placeId)
+    throw new ListingApiError(
+      'Choose a suggested Google Place for the meeting.'
+    )
   return location
+}
+function validateMeetingArea(
+  value: unknown,
+  fulfillment: 'DELIVERY' | 'ON_CAMPUS'
+) {
+  if (fulfillment === 'DELIVERY') return null
+  if (value !== 'ON_CAMPUS' && value !== 'OTHER')
+    throw new ListingApiError('Choose an on-campus or other meeting area.')
+  return value
+}
+function validateMeetingLocationDetail(
+  value: unknown,
+  fulfillment: 'DELIVERY' | 'ON_CAMPUS'
+) {
+  if (fulfillment === 'DELIVERY') return null
+  if (value === undefined || value === null) return null
+  if (typeof value !== 'string')
+    throw new ListingApiError('Check the Location detail.')
+  const detail = value.trim()
+  if (detail.length > listingLimits.meetingLocationDetail)
+    throw new ListingApiError(
+      `Location detail must be at most ${listingLimits.meetingLocationDetail} characters.`
+    )
+  return detail || null
 }
 function validateDeliveryEstimate(value: unknown): number {
   const cents = value ?? 0
@@ -168,8 +225,10 @@ export function validateListingPatch(input: unknown): Record<string, unknown> {
     'condition',
     'pickupArea',
     'preferredFulfillment',
+    'meetingArea',
     'preferredPaymentMode',
     'meetingLocation',
+    'meetingLocationDetail',
     'estimatedDeliveryFeeCents',
   ]
   if (Object.keys(patch).some((key) => !allowed.includes(key)))
@@ -183,6 +242,8 @@ function requireListingTaxonomy(data: Record<string, unknown>) {
   const { category, subcategory } = data
   if (!isMarketCategory(category))
     throw new ListingApiError('Choose a marketplace category.')
+  if (subcategory === undefined || subcategory === null || subcategory === '')
+    return { category, subcategory: undefined }
   if (!isMarketSubcategory(subcategory))
     throw new ListingApiError('Choose a marketplace subcategory.')
   if (!isMarketPair(category, subcategory))

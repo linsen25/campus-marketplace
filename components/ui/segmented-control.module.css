@@ -1,0 +1,85 @@
+.root {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(248px, 100%);
+  min-height: 44px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #b995dc29;
+  border-radius: 999px;
+  background: #18121f;
+  isolation: isolate;
+}
+
+.indicator {
+  position: absolute;
+  z-index: 0;
+  inset: 0 auto 0 0;
+  width: 50%;
+  border-radius: 999px;
+  background: var(--color-primary-purple, #7c3aed);
+  pointer-events: none;
+}
+
+.root button {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 34px;
+  gap: 7px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #bfb0cc;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  cursor: pointer;
+  transition: color 180ms ease;
+}
+
+.root button[aria-pressed='true'] {
+  color: #fff;
+}
+
+.root button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.root button:focus-visible {
+  outline: 2px solid #c5a5e9;
+  outline-offset: -1px;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  display: inline-grid;
+  flex: 0 0 auto;
+  min-width: 20px;
+  height: 20px;
+  padding-inline: 5px;
+  place-items: center;
+  border-radius: 999px;
+  background: #f5efff;
+  color: #57317a;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root button {
+    transition: none;
+  }
+}

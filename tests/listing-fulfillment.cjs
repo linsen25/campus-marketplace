@@ -31,14 +31,18 @@ const fields = {
   subcategory: 'Cameras',
   condition: 'good',
   description: 'Synthetic',
-  meetingLocation: { label: 'Front entrance' },
+  meetingLocation: {
+    label: 'Front entrance',
+    provider: 'google',
+    placeId: 'fixture_1',
+  },
 }
 const file = { type: 'image/jpeg', size: 100 },
   validate = (f) => validateBuilder(f, [file])
-for (const preferredFulfillment of ['ON_CAMPUS', 'DELIVERY']) {
+for (const preferredFulfillment of ['ON_CAMPUS']) {
   assert.throws(
     () => validate({ ...fields, preferredFulfillment, meetingLocation: null }),
-    /Meeting location is required/
+    /suggested Google Place/
   )
   for (const [text, cents] of [
     ['', 0],
@@ -57,6 +61,14 @@ for (const preferredFulfillment of ['ON_CAMPUS', 'DELIVERY']) {
     assert.equal(input.meetingLocation.label, 'Front entrance')
   }
 }
+assert.equal(
+  validate({
+    ...fields,
+    preferredFulfillment: 'DELIVERY',
+    meetingLocation: null,
+  }).meetingLocation,
+  null
+)
 for (const text of ['-1', '1.234', 'Infinity', '1e3', '90071992547409.92'])
   assert.throws(
     () =>
@@ -109,5 +121,5 @@ assert.equal(
   '10.50'
 )
 console.log(
-  'PASS Listing required Meeting for both modes, optional estimate blank/zero/custom/safe maximum, invalid money, legacy read/edit, nullable legacy place, integer DTO round trip; no network'
+  'PASS Meeting requires a selected Google Place; Delivery clears Meeting validation; optional estimate and legacy DTO contracts remain local-only.'
 )

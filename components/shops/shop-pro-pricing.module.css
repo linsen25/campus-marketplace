@@ -159,7 +159,7 @@
 .banner {
   position: relative;
   display: grid;
-  grid-template-columns: 130px minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 20px;
   padding: 24px 24px 20px;
@@ -173,10 +173,12 @@
   align-self: end;
   margin-top: 24px;
 }
-.illustration {
-  flex: 0 0 130px;
-  width: 130px;
-  height: 100px;
+.promoImage {
+  display: block;
+  width: clamp(240px, 27vw, 510px);
+  height: auto;
+  max-height: 170px;
+  object-fit: contain;
 }
 .bannerCopy {
   flex: 1;
@@ -312,13 +314,18 @@
   }
   .banner {
     display: grid;
-    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
     padding: 24px 20px 20px;
   }
-  .illustration {
-    width: 64px;
-    height: 84px;
+  .promoImage {
+    display: block;
+    width: min(100%, 420px);
+    height: auto;
+    max-height: none;
+    aspect-ratio: auto;
+    justify-self: center;
+    object-fit: contain;
   }
   .banner h2 {
     font-size: 19px;
@@ -352,5 +359,81 @@
   }
   .plan {
     transition: none;
+  }
+}
+
+/* Shop promo mobile title/action alignment */
+@media (max-width: 639px) {
+  .banner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    row-gap: 10px;
+  }
+  .promoImage {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .bannerCopy {
+    display: contents;
+  }
+  .banner h2 {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: center;
+    margin: 0;
+  }
+  .banner p {
+    grid-column: 1;
+    grid-row: 3;
+    overflow-wrap: anywhere;
+  }
+  .banner > button:not(.dismiss) {
+    grid-column: 2;
+    grid-row: 2 / 4;
+    justify-self: end;
+    align-self: center;
+    margin: 0;
+    white-space: nowrap;
+  }
+}
+
+/* Shop promo centered illustration */
+@media (max-width: 639px) {
+  .banner > .promoImage {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    display: block;
+    width: 90%;
+    max-width: 520px;
+    height: auto;
+    max-height: none;
+    aspect-ratio: 3 / 1;
+    justify-self: center;
+    align-self: center;
+    object-fit: contain;
+    object-position: center;
+    margin: 0;
+  }
+}
+
+/* Shop promo artwork wrapper layout */
+.promoArt {
+  width: clamp(240px, 27vw, 510px);
+  min-width: 0;
+}
+.promoArt .promoImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: none;
+  object-fit: contain;
+}
+@media (max-width: 639px) {
+  .promoArt {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 90%;
+    max-width: 520px;
+    justify-self: center;
   }
 }

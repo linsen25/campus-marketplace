@@ -10,35 +10,6 @@
   border: 1px solid rgba(20, 70, 54, 0.08);
   border-bottom: 0;
   border-radius: 24px 24px 0 0;
-  background: radial-gradient(
-      ellipse 72% 17% at 46% -4%,
-      rgba(42, 188, 123, 0.24) 0%,
-      rgba(22, 126, 85, 0.09) 48%,
-      transparent 100%
-    ),
-    radial-gradient(
-      ellipse 48% 24% at 102% 1%,
-      rgba(18, 130, 87, 0.09) 0%,
-      transparent 100%
-    ),
-    radial-gradient(
-      ellipse 95% 46% at 48% 31%,
-      rgba(2, 10, 8, 0.18) 0%,
-      rgba(3, 13, 10, 0.08) 52%,
-      transparent 100%
-    ),
-    linear-gradient(
-      180deg,
-      #07513b 0%,
-      #073d2f 9%,
-      #0a2c23 20%,
-      #0b201a 31%,
-      #0b1714 43%,
-      #0a100f 58%,
-      #090b0b 100%
-    );
-  box-shadow: 0 0 26px rgba(15, 145, 90, 0.045), 0 24px 80px rgba(0, 0, 0, 0.54);
-  color: #fff;
 }
 .dialog[open] {
   display: flex;

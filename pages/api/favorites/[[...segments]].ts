@@ -14,7 +14,12 @@ export default async function handler(
   const segments = req.query.segments || []
   const parts = Array.isArray(segments) ? segments : [segments]
   if (parts.length > 1) return res.status(404).json({ error: 'Not found.' })
-  const allowed = parts.length ? ['GET', 'POST', 'DELETE'] : ['GET']
+  const isShopProducts = parts[0] === 'shop-products'
+  const allowed = isShopProducts
+    ? ['GET']
+    : parts.length
+    ? ['GET', 'POST', 'DELETE']
+    : ['GET']
   if (!allowed.includes(req.method || '')) {
     res.setHeader('Allow', allowed.join(', '))
     return res.status(405).json({ error: 'Method not allowed.' })
@@ -22,6 +27,36 @@ export default async function handler(
   try {
     if (req.method !== 'GET') requireSameOriginWrite(req)
     const repository = createSupabaseListingsRepository({ req, res })
+    if (isShopProducts) {
+      const { page, pageSize, shopId, search, category, sort } = req.query
+      if (
+        (page !== undefined && typeof page !== 'string') ||
+        (pageSize !== undefined && typeof pageSize !== 'string') ||
+        (shopId !== undefined && typeof shopId !== 'string') ||
+        (search !== undefined &&
+          (typeof search !== 'string' || search.length > 200)) ||
+        (category !== undefined &&
+          (typeof category !== 'string' || category.length > 120)) ||
+        (sort !== undefined &&
+          (typeof sort !== 'string' ||
+            !['newest', 'name', 'price-asc', 'price-desc'].includes(sort)))
+      )
+        throw new ListingApiError(
+          'Use one value for each Shop favorites filter.'
+        )
+      return res.status(200).json(
+        await repository.getFavoriteShopProducts({
+          ...(page ? { page: Number(page) } : {}),
+          ...(pageSize ? { pageSize: Number(pageSize) } : {}),
+          ...(shopId ? { shopId } : {}),
+          ...(search && typeof search === 'string'
+            ? { search: search.trim() }
+            : {}),
+          ...(category && typeof category === 'string' ? { category } : {}),
+          ...(sort && typeof sort === 'string' ? { sort } : {}),
+        })
+      )
+    }
     if (!parts.length) {
       const query = queryFromRequest(req)
       if (req.query.place !== undefined) {

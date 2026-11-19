@@ -1,9 +1,8 @@
 import { ChevronRight } from 'lucide-react'
-import { LayoutGroup, motion, useReducedMotion } from 'motion/react'
-import { useId } from 'react'
 import type { ReactNode } from 'react'
 
 import { ListingMedia } from '@/components/listings/listing-media'
+import { SegmentedControl } from '@/components/ui/segmented-control'
 import type { OrderListBucket } from '@/lib/order-list-presentation'
 
 import styles from './order-list-presentation.module.css'
@@ -11,46 +10,25 @@ import styles from './order-list-presentation.module.css'
 export function OrderStatusTabs({
   bucket,
   activeCount,
+  historyCount,
   onChange,
 }: {
   bucket: OrderListBucket
   activeCount: number
+  historyCount: number
   onChange: (bucket: OrderListBucket) => void
 }) {
-  const id = useId()
-  const reduced = useReducedMotion()
   return (
-    <LayoutGroup id={id}>
-      <div className={styles.tabs} role="group" aria-label="Order list view">
-        {(['active', 'history'] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={bucket === value}
-            onClick={() => onChange(value)}
-          >
-            {bucket === value && (
-              <motion.span
-                className={styles.indicator}
-                layoutId="order-list-tab"
-                initial={false}
-                transition={{
-                  type: 'tween',
-                  duration: reduced ? 0 : 0.2,
-                  ease: 'easeOut',
-                }}
-              />
-            )}
-            <span className={styles.tabLabel}>
-              {value === 'active' ? 'Active' : 'History'}
-              {value === 'active' && (
-                <span className={styles.count}>{activeCount}</span>
-              )}
-            </span>
-          </button>
-        ))}
-      </div>
-    </LayoutGroup>
+    <SegmentedControl
+      ariaLabel="Order list view"
+      className={styles.tabs}
+      value={bucket}
+      items={[
+        { value: 'active', label: 'Active', count: activeCount },
+        { value: 'history', label: 'History', count: historyCount },
+      ]}
+      onChange={onChange}
+    />
   )
 }
 

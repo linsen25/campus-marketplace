@@ -27,7 +27,13 @@ export function createShopFavoritesRepository(context: MarketplaceContext) {
     return data as Record<string, unknown>
   }
   return {
-    async list(query: { page: number; pageSize: number }) {
+    async list(query: {
+      page: number
+      pageSize: number
+      search?: string
+      category?: string
+      sort?: 'newest' | 'name'
+    }) {
       const data = await call('marketplace_favorite_shops', { p_query: query })
       if (
         !Array.isArray(data.shops) ||

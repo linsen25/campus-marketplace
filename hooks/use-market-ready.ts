@@ -33,7 +33,7 @@ export function useMarketReady(root: RefObject<HTMLElement>) {
       const check = async () => {
         if (cancelled) return
         element.dataset.marketPreparation = 'assets'
-        const toolbar = element.querySelector('#listing-sort-label')
+        const toolbar = element.querySelector('[data-market-controls="true"]')
         const background = element.querySelector('canvas[data-rendered="true"]')
         const images = Array.from(
           element.querySelectorAll<HTMLImageElement>('[data-market-card] img')

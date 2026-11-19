@@ -300,8 +300,8 @@ const stubs = {
   '@/lib/server/messages-environment': {
     requireMessagesEnvironment: () =>
       process.env.NEXT_PUBLIC_SUPABASE_URL ===
-      'https://pcaqxezdfxofysghssyo.supabase.co'
-        ? 'pcaqxezdfxofysghssyo'
+      'https://uqhyjpjiznpgomuizfqe.supabase.co'
+        ? 'uqhyjpjiznpgomuizfqe'
         : 'wrong',
   },
   '@/lib/server/financial-capabilities-service': {
@@ -359,8 +359,8 @@ function load(file) {
 }
 const original = { ...process.env }
 Object.assign(process.env, {
-  APP_ENV: 'staging',
-  NEXT_PUBLIC_SUPABASE_URL: 'https://pcaqxezdfxofysghssyo.supabase.co',
+  APP_ENV: 'uu',
+  NEXT_PUBLIC_SUPABASE_URL: 'https://uqhyjpjiznpgomuizfqe.supabase.co',
   STRIPE_PROVIDER_ENABLED: 'true',
   STRIPE_WORKER_SECRET: 'SyntheticWorkerCredentialNotARealSecret',
   STRIPE_SECRET_KEY: 'sk_test_SyntheticOnly',

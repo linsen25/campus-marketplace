@@ -119,3 +119,44 @@
   align-items: center;
   flex-shrink: 0;
 }
+
+/* Shop Favorites preview only. Other Market card actions keep their template. */
+.shopFavoriteFooter {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+.shopFavoriteActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+}
+.shopProductBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border: 1px solid #544161;
+  border-radius: 999px;
+  background: #261c31;
+  color: #e6d9f1;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.shopFavoriteFooter :global(.shining-button) {
+  flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .shopFavoriteFooter {
+    gap: 8px;
+  }
+  .shopProductBadge {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}

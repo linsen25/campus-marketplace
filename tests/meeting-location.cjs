@@ -64,18 +64,27 @@ const fields = {
 const input = validateBuilder(fields, [{ type: 'image/jpeg', size: 100 }])
 assert.equal(input.pickupArea, 'Near campus')
 assert.deepEqual(input.meetingLocation, location)
+assert.equal(input.meetingArea, 'ON_CAMPUS')
 assert.throws(
   () =>
     validateBuilder({ ...fields, meetingLocation: null }, [
       { type: 'image/jpeg', size: 100 },
     ]),
-  /Meeting location is required/
+  /suggested Google Place/
 )
 assert.equal(
-  validateBuilder({ ...fields, preferredFulfillment: 'DELIVERY' }, [
-    { type: 'image/jpeg', size: 100 },
-  ]).preferredFulfillment,
+  validateBuilder(
+    { ...fields, preferredFulfillment: 'DELIVERY', meetingLocation: null },
+    [{ type: 'image/jpeg', size: 100 }]
+  ).preferredFulfillment,
   'DELIVERY'
+)
+assert.equal(
+  validateBuilder(
+    { ...fields, preferredFulfillment: 'DELIVERY', meetingLocation: null },
+    [{ type: 'image/jpeg', size: 100 }]
+  ).meetingLocation,
+  null
 )
 const row = {
   id: 'listing',

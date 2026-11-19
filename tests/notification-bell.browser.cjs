@@ -71,7 +71,7 @@ fs.writeFileSync(
           'filter value selected ' + label
         )
         await page
-          .getByRole('button', { name: 'Close filters', exact: true })
+          .getByRole('button', { name: 'Apply filters', exact: true })
           .click()
         await page
           .getByRole('region', { name: 'Filter options', exact: true })
@@ -531,12 +531,29 @@ fs.writeFileSync(
           .getByRole('radio', { name: 'Orders', exact: true })
           .isChecked()
       )
+      await page.getByRole('button', { name: 'Reset', exact: true }).click()
+      assert(
+        await page
+          .getByRole('radio', { name: 'All notifications', exact: true })
+          .isChecked(),
+        'reset changes only the draft category'
+      )
       await page
         .getByRole('button', { name: 'Close filters', exact: true })
         .click()
       await page
         .getByRole('region', { name: 'Filter options', exact: true })
         .waitFor({ state: 'hidden' })
+      await page.getByRole('button', { name: 'Filter', exact: true }).click()
+      assert(
+        await page
+          .getByRole('radio', { name: 'Orders', exact: true })
+          .isChecked(),
+        'closing cancels the reset draft'
+      )
+      await page
+        .getByRole('button', { name: 'Close filters', exact: true })
+        .click()
       assert.equal(await page.evaluate(() => window.channels), 1)
       await page.evaluate(() => (window.delayCategory = false))
       await filter.selectOption('')

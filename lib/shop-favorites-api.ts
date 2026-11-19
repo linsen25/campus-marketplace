@@ -7,11 +7,26 @@ export type ShopFavoriteResult = { shopId: string; favorited: boolean }
 export const shopUuid =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export function readFavoriteShops(page = 1): Promise<PublicShopDirectory> {
-  return marketplaceRequest(
-    `/api/shop-favorites?page=${page}&pageSize=20`,
-    'GET'
-  )
+export type FavoriteShopsQuery = {
+  page?: number
+  pageSize?: number
+  search?: string
+  category?: string
+  sort?: string
+}
+
+export function readFavoriteShops(
+  pageOrQuery: number | FavoriteShopsQuery = 1
+): Promise<PublicShopDirectory> {
+  const query =
+    typeof pageOrQuery === 'number' ? { page: pageOrQuery } : pageOrQuery
+  const params = new URLSearchParams()
+  params.set('page', String(query.page ?? 1))
+  params.set('pageSize', String(query.pageSize ?? 20))
+  if (query.search?.trim()) params.set('search', query.search.trim())
+  if (query.category) params.set('category', query.category)
+  if (query.sort && query.sort !== 'newest') params.set('sort', query.sort)
+  return marketplaceRequest(`/api/shop-favorites?${params}`, 'GET')
 }
 export function readShopFavoriteStates(
   ids: string[]

@@ -101,7 +101,10 @@ async function main() {
     )
     for (const file of fs
       .readdirSync('supabase/migrations')
-      .filter((f) => f.endsWith('.sql'))
+      .filter(
+        (f) =>
+          f.endsWith('.sql') && f < '202610190003_shop_membership_authority.sql'
+      )
       .sort()) {
       if (
         [

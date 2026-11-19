@@ -1,0 +1,408 @@
+.page {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+  padding-bottom: 24px;
+}
+.panel,
+.testing {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid #79c69d33;
+  border-radius: 18px;
+  background: #1d2722b8;
+}
+.panel > header,
+.testing > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.eyebrow {
+  margin: 0 0 8px;
+  color: #9ee0b8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.panel h2,
+.testing h2 {
+  margin: 0;
+  color: #f5f8f5;
+  font-size: 19px;
+  line-height: 28px;
+}
+.subtitle {
+  margin: 7px 0 0;
+  color: #c1cfc4;
+  font-size: 13px;
+  line-height: 20px;
+}
+.demo {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border: 1px solid #79c69d44;
+  border-radius: 999px;
+  color: #9ee0b8;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.rows {
+  margin: 20px 0 0;
+}
+.rows > div {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.36fr) minmax(0, 1fr);
+  gap: 18px;
+  padding: 13px 0;
+  border-top: 1px solid #ffffff0d;
+}
+.rows dt {
+  color: #abc9b4;
+  font-size: 13px;
+}
+.rows dd {
+  min-width: 0;
+  margin: 0;
+  color: #f5f8f5;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 21px;
+}
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.actionNote {
+  margin: 14px 0 0;
+  color: #aebcb2;
+  font-size: 12px;
+  line-height: 19px;
+}
+.testing {
+  background: #211c29;
+  border-color: #7c708244;
+}
+.exit {
+  min-height: 40px;
+  margin-top: 18px;
+  padding: 8px 14px;
+  border: 1px solid #79c69d77;
+  border-radius: 999px;
+  background: transparent;
+  color: #bce7ca;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.exit:hover {
+  background: #79c69d14;
+}
+.exit:focus-visible {
+  outline: 2px solid #9ee0b8;
+  outline-offset: 3px;
+}
+.changeDialog {
+  width: min(880px, calc(100vw - 32px));
+  max-height: calc(100dvh - 40px);
+  padding: 24px;
+  overflow: auto;
+  color: #f5f8f5;
+  background: #241b30;
+  border: 1px solid #705383;
+  border-radius: 20px;
+}
+.changeHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 20px;
+}
+.changeHeading h3 {
+  margin: 0;
+  font-size: 22px;
+}
+.changeHeading p {
+  margin: 6px 0 0;
+  color: #c8b9d4;
+  font-size: 13px;
+}
+.close {
+  min-width: 36px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
+  font-size: 26px;
+}
+.close:hover {
+  background: #ffffff18;
+}
+.close:focus-visible {
+  outline: 2px solid #c7a2f4;
+}
+.previewWarning {
+  color: #cfbfe1;
+  font-size: 13px;
+  line-height: 21px;
+}
+.pricingPreview {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+@media (max-width: 639px) {
+  .panel,
+  .testing {
+    padding: 18px;
+  }
+  .rows > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .changeDialog {
+    padding: 16px;
+  }
+}
+
+/* UU Shop Settings V2 — balanced two-column settings; neutral surfaces. */
+@media (min-width: 980px) {
+  .page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
+    column-gap: 32px;
+    row-gap: 28px;
+    align-items: start;
+  }
+  /* Put store settings on the left and membership management on the right. */
+  .page > .panel[aria-label='Shop configuration'] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .page > .panel[data-shop-membership-settings='true'] {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .page > .testing {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .panel .rows > div {
+    grid-template-columns: minmax(128px, 0.48fr) minmax(0, 0.52fr);
+    gap: 14px;
+  }
+}
+/* No green-outlined cards: preserve text accent, use understated purple surfaces. */
+.panel {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 12px 4px 20px;
+}
+.panel > header {
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ffffff1c;
+}
+.panel .rows {
+  margin-top: 0;
+}
+.panel .rows > div:first-child {
+  border-top: 0;
+}
+.testing {
+  background: #261e2b80;
+  border: 1px solid #ffffff1c;
+  border-radius: 16px;
+}
+@media (max-width: 979px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .panel {
+    padding: 10px 2px 18px;
+  }
+}
+
+/* UU Shop Settings V3 — responsive placement: desktop details left; tablets/phones settings first. */
+@media (min-width: 1024px) {
+  .page {
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+    column-gap: 32px;
+    align-items: start;
+  }
+  .page > .panel[data-shop-membership-settings='true'] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .page > .panel[aria-label='Shop configuration'] {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .page > .testing {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+@media (max-width: 1023px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 24px;
+  }
+  .page > .panel[aria-label='Shop configuration'] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .page > .panel[data-shop-membership-settings='true'] {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .page > .testing {
+    grid-column: 1;
+    grid-row: 3;
+  }
+}
+
+/* Shop profile editor */
+.editActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.editDialog {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100dvh - 40px);
+  padding: 24px;
+  overflow: auto;
+  color: #f5f8f5;
+  background: #241b30;
+  border: 1px solid #705383;
+  border-radius: 20px;
+}
+
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 26px;
+}
+
+.editField {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  color: #f5f8f5;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.editField input,
+.editField select,
+.editField textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid #705383;
+  border-radius: 10px;
+  background: #30263c;
+  color: #f5f8f5;
+  font: inherit;
+  font-weight: 400;
+  outline: none;
+}
+
+.editField textarea {
+  min-height: 112px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.editField input:focus,
+.editField select:focus,
+.editField textarea:focus {
+  border-color: #a777f4;
+  box-shadow: 0 0 0 2px #a777f426;
+}
+
+.editField small {
+  align-self: flex-end;
+  color: #b9a9c8;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.editError {
+  margin: 0;
+  color: #ffb9c7;
+  font-size: 12px;
+  line-height: 19px;
+}
+
+.editFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.editCancel,
+.editSave {
+  min-height: 46px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.editCancel {
+  border: 1px solid #705383;
+  background: transparent;
+  color: #e7deed;
+}
+
+.editSave {
+  border: 0;
+  background: #7938e8;
+  color: #fff;
+}
+
+.editCancel:hover:not(:disabled) {
+  background: #ffffff12;
+}
+
+.editSave:hover:not(:disabled) {
+  background: #8e50f5;
+}
+
+.editCancel:focus-visible,
+.editSave:focus-visible {
+  outline: 2px solid #c7a2f4;
+  outline-offset: 3px;
+}
+
+.editCancel:disabled,
+.editSave:disabled,
+.editField input:disabled,
+.editField select:disabled,
+.editField textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 639px) {
+  .editDialog {
+    padding: 18px;
+  }
+}

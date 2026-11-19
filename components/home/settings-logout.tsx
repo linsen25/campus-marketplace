@@ -1,12 +1,10 @@
 import { AnimatePresence } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 
-import { ActionRow } from '@/components/ui/action-row'
-import { DynamicAction } from '@/components/ui/dynamic-action'
-import { FadingDialog } from '@/components/ui/fading-dialog'
-import { StatefulButton } from '@/components/velora/stateful-button'
+import actionStyles from '@/components/animata/button/action-button-sizing.module.css'
+import ShiningButton from '@/components/animata/button/shining-button'
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
 
-import financialStyles from './financial-settings.module.css'
 import styles from './profile.module.css'
 
 export function SettingsLogout({
@@ -30,20 +28,23 @@ export function SettingsLogout({
   }
   return (
     <>
-      <StatefulButton
-        className={`${financialStyles.setupAction} ${financialStyles.logoutAction}`}
-        onClick={() => {
-          active.current = true
-          confirmed.current = null
-          pending.current = false
-          setBusy(false)
-          setSucceeded(false)
-          setError('')
-          setOpen(true)
-        }}
-      >
-        Log out
-      </StatefulButton>
+      <span className={styles.accountAction}>
+        <ShiningButton
+          variant="red"
+          size="compact"
+          onClick={() => {
+            active.current = true
+            confirmed.current = null
+            pending.current = false
+            setBusy(false)
+            setSucceeded(false)
+            setError('')
+            setOpen(true)
+          }}
+        >
+          Log out
+        </ShiningButton>
+      </span>
       <AnimatePresence
         onExitComplete={() => {
           if (confirmed.current) {
@@ -54,40 +55,40 @@ export function SettingsLogout({
         }}
       >
         {open && (
-          <FadingDialog
-            className={styles.dialog}
-            aria-labelledby="logout-confirm-title"
+          <ConfirmationDialog
+            className={`${styles.dialog} ${actionStyles.contract}`}
+            title="Log out?"
             onRequestClose={close}
-          >
-            <h3 id="logout-confirm-title">Log out?</h3>
-            <p className={styles.caption}>
-              Are you sure you want to log out of this account?
-            </p>
-            {error && <p role="alert">{error}</p>}
-            <ActionRow>
-              <DynamicAction
-                disabled={busy}
-                variant="red"
-                showArrow={false}
-                onClick={close}
-              >
-                Cancel
-              </DynamicAction>
-              <DynamicAction
-                variant="red"
-                disabled={busy}
-                onClick={async () => {
-                  pending.current = true
-                  setBusy(true)
-                  setError('')
-                  try {
-                    confirmed.current = await onConfirm()
+            dismissDisabled={busy}
+            error={error}
+            cancel={{
+              label: 'Cancel',
+              variant: 'green',
+              showArrow: false,
+              disabled: busy,
+              onClick: close,
+            }}
+            confirm={{
+              label: succeeded ? 'Signed out' : 'Log out',
+              variant: 'red',
+              showArrow: false,
+              disabled: busy,
+              loading: busy,
+              onClick: () => {
+                if (busy) return
+                pending.current = true
+                setBusy(true)
+                setError('')
+                void onConfirm()
+                  .then((reveal) => {
+                    confirmed.current = reveal
                     setSucceeded(true)
                     successTimer.current = setTimeout(() => {
                       active.current = false
                       setOpen(false)
                     }, 450)
-                  } catch (reason) {
+                  })
+                  .catch((reason) => {
                     pending.current = false
                     setBusy(false)
                     setError(
@@ -95,13 +96,14 @@ export function SettingsLogout({
                         ? reason.message
                         : 'Unable to sign out. Please retry.'
                     )
-                  }
-                }}
-              >
-                {succeeded ? 'Signed out' : 'Log out'}
-              </DynamicAction>
-            </ActionRow>
-          </FadingDialog>
+                  })
+              },
+            }}
+          >
+            <p className={styles.caption}>
+              Are you sure you want to log out of this account?
+            </p>
+          </ConfirmationDialog>
         )}
       </AnimatePresence>
     </>

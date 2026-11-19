@@ -32,6 +32,27 @@ export type ShopPreview = {
   avatarUrl?: string
 }
 
+/** Minimal, navigable identity attached to a publicly eligible Shop Listing. */
+export type ShopListingIdentity = {
+  id: string
+  shopName: string
+  username: string
+}
+
+/** A current user's saved public Shop product and its safe navigation data. */
+export type FavoriteShopProduct = {
+  listing: Listing
+  shop: ShopListingIdentity
+}
+
+export type FavoriteShopProducts = {
+  items: FavoriteShopProduct[]
+  shops: ShopListingIdentity[]
+  page: number
+  hasNextPage: boolean
+  refreshAfterMs: number
+}
+
 export type PublicShop = {
   shop: ShopPreview
   listings: Listing[]

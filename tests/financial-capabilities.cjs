@@ -131,8 +131,8 @@ async function invoke(request = {}) {
 }
 ;(async () => {
   config()
-  assert.deepEqual((await invoke()).data, empty)
   process.env.SUPABASE_SECRET_KEY = 'sb_secret_unit'
+  assert.deepEqual((await invoke()).data, empty)
   for (const request of [
     { query: { userId: other } },
     {
@@ -212,7 +212,10 @@ async function invoke(request = {}) {
     assert.equal(response.statusCode, 200)
     assert.deepEqual(response.data, empty)
     assert.deepEqual(calls, [
-      { name: 'marketplace_financial_capabilities', args: undefined },
+      {
+        name: 'marketplace_financial_capabilities_for_user',
+        args: { p_user_id: user },
+      },
     ])
   }
   identity = null

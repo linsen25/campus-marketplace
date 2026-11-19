@@ -23,6 +23,9 @@ function stateIds(query: NextApiRequest['query']) {
     typeof query.ids !== 'string' ||
     query.page !== undefined ||
     query.pageSize !== undefined ||
+    query.search !== undefined ||
+    query.category !== undefined ||
+    query.sort !== undefined ||
     query.ids.length > 3700
   )
     throw new ListingApiError('Invalid Shop IDs.', 400)
@@ -49,7 +52,7 @@ export default async function handler(
     }
     const keys = segments.length
       ? ['segments']
-      : ['segments', 'ids', 'page', 'pageSize']
+      : ['segments', 'ids', 'page', 'pageSize', 'search', 'category', 'sort']
     if (Object.keys(req.query).some((k) => !keys.includes(k)))
       throw new ListingApiError('Invalid Shop favorite query.', 400)
     const repo = createShopFavoritesRepository({ req, res })
@@ -70,10 +73,25 @@ export default async function handler(
     if (req.query.ids !== undefined) {
       return res.status(200).json(await repo.states(stateIds(req.query)))
     }
+    const { search, category, sort } = req.query
+    if (
+      (search !== undefined &&
+        (typeof search !== 'string' || search.length > 200)) ||
+      (category !== undefined &&
+        (typeof category !== 'string' || category.length > 120)) ||
+      (sort !== undefined &&
+        (typeof sort !== 'string' || !['newest', 'name'].includes(sort)))
+    )
+      throw new ListingApiError('Invalid Shop favorites filter.', 400)
     return res.status(200).json(
       await repo.list({
         page: integer(req.query.page, 1, 1000),
         pageSize: integer(req.query.pageSize, 20, 100),
+        ...(typeof search === 'string' && search.trim()
+          ? { search: search.trim() }
+          : {}),
+        ...(typeof category === 'string' && category ? { category } : {}),
+        ...(sort === 'name' ? { sort: 'name' as const } : {}),
       })
     )
   } catch (error) {
